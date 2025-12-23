@@ -18,7 +18,12 @@ urlpatterns = [
     # Redoc (optional)
     path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
 
+    # reset password
+    path('api/password/', include('django_rest_passwordreset.urls')),
+
+
     path('admin/', admin.site.urls),
+    path('api/admins/', include('apps.admins.urls')),
     path('api/auth/', include('apps.accounts.urls')),
     path('api/agents/',include('apps.agents.urls')),
     path('api/customers/', include('apps.customers.urls')),
