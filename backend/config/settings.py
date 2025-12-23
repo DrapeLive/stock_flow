@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'rest_framework_simplejwt',
+    'drf_spectacular',
 
     'apps.accounts',
     'apps.agents',
@@ -139,9 +140,28 @@ AUTH_USER_MODEL = 'accounts.User'
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
-    )
+    ),
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(days=30),
+}
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Stock Management System API',
+    'DESCRIPTION': 'Backend APIs for Admin & Agent stock/order management',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+
+    'COMPONENT_SPLIT_REQUEST': True,
+    'SECURITY': [{'BearerAuth': []}],
+    'SECURITY_DEFINITIONS': {
+        'BearerAuth': {
+            'type': 'apiKey',
+            'name': 'Authorization',
+            'in': 'header',
+            'description': 'JWT Authorization header. Example: Bearer <token>',
+        }
+    },
 }

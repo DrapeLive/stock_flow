@@ -6,6 +6,7 @@ from .models import Order, OrderItem, OrderStatus
 from .serializers import OrderSerializer, AddOrderItemSerializer
 from apps.accounts.permissions import IsAdmin, IsAgent
 from rest_framework.permissions import IsAuthenticated
+from drf_spectacular.utils import extend_schema
 
 class OrderViewSet(ModelViewSet):
     serializer_class = OrderSerializer
@@ -25,6 +26,12 @@ class OrderViewSet(ModelViewSet):
 
 class AddOrderItemView(APIView):
     permission_classes = [IsAgent]
+
+    @extend_schema(
+        request=AddOrderItemSerializer,
+        responses={201: {"message": "Item added"}},
+        tags=['Orders']
+    )
 
     def post(self, request, order_id):
         serializer = AddOrderItemSerializer(data=request.data)
