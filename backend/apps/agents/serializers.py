@@ -1,0 +1,29 @@
+from rest_framework import serializers
+from django.contrib.auth.hashers import make_password
+from .models import Agent
+from apps.accounts.models import User
+
+class AgentSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(write_only=True)
+    password = serializers.CharField(write_only=True)
+    email = serializers.EmailField(write_only=True)
+
+    class Meta:
+        model = Agent
+        fields = ('id', 'username', 'email', 'password', 'contact')
+
+    def create(self, validated_data):
+        user = User.objects.create(
+            username=validated_data["username"],
+            email=validated_data["email"],
+            password=make_password(validated_data["password"]),
+            role="AGENT"
+        )
+
+        agent = Agent.objects.create(
+            user=user,
+            contact=validated_data['contact']
+        )
+
+        return agent
+
