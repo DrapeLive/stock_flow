@@ -3,14 +3,20 @@ from django.contrib.auth.hashers import make_password
 from .models import Agent
 from apps.accounts.models import User
 
+class AgentUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields=('id', 'username','email', 'role')
+
 class AgentSerializer(serializers.ModelSerializer):
+    user = AgentUserSerializer(read_only=True)
     username = serializers.CharField(write_only=True)
     password = serializers.CharField(write_only=True)
     email = serializers.EmailField(write_only=True)
 
     class Meta:
         model = Agent
-        fields = ('id', 'username', 'email', 'password', 'contact')
+        fields = ('id', 'username', 'user', 'email', 'password', 'contact')
 
     def create(self, validated_data):
         user = User.objects.create(
