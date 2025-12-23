@@ -41,13 +41,16 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'drf_spectacular',
+    'django_rest_passwordreset',
+
 
     'apps.accounts',
     'apps.agents',
     'apps.customers',
     'apps.items',
     'apps.orders',
-    'apps.dashboard'
+    'apps.dashboard',
+    'apps.admins'
 ]
 
 MIDDLEWARE = [
