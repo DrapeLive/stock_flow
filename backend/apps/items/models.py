@@ -4,7 +4,7 @@ import uuid
 # Create your models here.
 class Item(models.Model):
     name = models.CharField(max_length=100)
-    photo = models.ImageField(upload_to='items/',blank=True, null=True)
+    photo = models.URLField(blank=True, null=True,)
     description = models.TextField(blank=True)
     color = models.CharField(max_length=50)
     size = models.CharField(max_length=20)

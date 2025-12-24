@@ -5,16 +5,18 @@ from apps.items.models import Item
 
 # Create your models here.
 
-class OrderStatus(models.Model):
-    name = models.CharField(max_length=50)
-
-    def __str__(self):
-        return self.name
 
 class Order(models.Model):
+
+    STATUS_CHOICES = (
+        ('PENDING', 'Pending'),
+        ('PACKED', 'Packed'),
+        ('DISPATCHED', 'Dispatched')
+    )
+
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
     agent = models.ForeignKey(Agent, on_delete=models.CASCADE)
-    status = models.ForeignKey(OrderStatus, on_delete=models.PROTECT)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
