@@ -33,3 +33,21 @@ class AgentSerializer(serializers.ModelSerializer):
 
         return agent
 
+    def update(self, instance, validated_data):
+        user = instance.user
+
+        if 'username' in validated_data:
+            user.username = validated_data['username']
+
+        if 'email' in validated_data:
+            user.email = validated_data['email']
+
+        if 'password' in validated_data:
+            user.password = make_password(validated_data['password'])
+
+        user.save()
+
+        instance.contact = validated_data.get('contact', instance.contact)
+        instance.save()
+
+        return instance
