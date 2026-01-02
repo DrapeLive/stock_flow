@@ -1,0 +1,19 @@
+type: http_request
+model: http_request
+id: rq_Mr8TJLFpKJ
+createdAt: 2025-12-24T13:51:08.642527350
+updatedAt: 2025-12-24T13:56:58.584082764
+workspaceId: wk_Wx4mNs5A2J
+folderId: fl_MBp5nCvrPQ
+authentication:
+  token: ${[ TOKEN ]}
+authenticationType: bearer
+body: {}
+bodyType: null
+description: ''
+headers: []
+method: GET
+name: get 1 Agent
+sortPriority: -1766583527706.998
+url: ${[ BASE_URL ]}/agents/2/
+urlParameters: []

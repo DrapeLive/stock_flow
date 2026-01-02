@@ -1,0 +1,19 @@
+type: http_request
+model: http_request
+id: rq_Eh9nPX2AmT
+createdAt: 2025-12-24T15:17:02.972776884
+updatedAt: 2025-12-24T15:21:54.566301380
+workspaceId: wk_Wx4mNs5A2J
+folderId: fl_R3n2mRa8qW
+authentication:
+  token: ${[ TOKEN ]}
+authenticationType: bearer
+body: {}
+bodyType: null
+description: ''
+headers: []
+method: DELETE
+name: Delete Item
+sortPriority: -1766583527706.995
+url: ${[ BASE_URL ]}/items/2/
+urlParameters: []

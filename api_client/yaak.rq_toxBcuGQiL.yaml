@@ -1,0 +1,30 @@
+type: http_request
+model: http_request
+id: rq_toxBcuGQiL
+createdAt: 2025-12-24T14:10:27.617468972
+updatedAt: 2025-12-24T14:12:25.192140409
+workspaceId: wk_Wx4mNs5A2J
+folderId: fl_n9tGQA4kHp
+authentication:
+  token: ${[ TOKEN ]}
+authenticationType: bearer
+body:
+  text: |-
+    {
+      "name": "mishu",
+      "address": "kachadi",
+      "contact": "0987654323",
+      "agent": 1
+    }
+bodyType: application/json
+description: ''
+headers:
+- enabled: true
+  name: Content-Type
+  value: application/json
+  id: Vci9J4vSii
+method: POST
+name: Register Customers
+sortPriority: -1766583527706.999
+url: ${[ BASE_URL ]}/customers/
+urlParameters: []

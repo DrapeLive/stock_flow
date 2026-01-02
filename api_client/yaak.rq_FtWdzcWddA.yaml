@@ -1,0 +1,26 @@
+type: http_request
+model: http_request
+id: rq_FtWdzcWddA
+createdAt: 2025-12-24T15:29:07.634631346
+updatedAt: 2025-12-24T15:31:09.445904607
+workspaceId: wk_Wx4mNs5A2J
+folderId: fl_JpcUygWtGU
+authentication: {}
+authenticationType: null
+body:
+  text: |-
+    {
+      "email": "muhammedmuflih9605@gmail.com"
+    }
+bodyType: application/json
+description: ''
+headers:
+- enabled: true
+  name: Content-Type
+  value: application/json
+  id: jV7PEgExVw
+method: POST
+name: Reset Password
+sortPriority: 4999.9998
+url: ${[ BASE_URL ]}/password/
+urlParameters: []

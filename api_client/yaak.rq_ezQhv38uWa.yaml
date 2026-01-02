@@ -1,0 +1,30 @@
+type: http_request
+model: http_request
+id: rq_ezQhv38uWa
+createdAt: 2025-12-24T13:51:08.977129402
+updatedAt: 2025-12-24T13:58:30.397491965
+workspaceId: wk_Wx4mNs5A2J
+folderId: fl_MBp5nCvrPQ
+authentication:
+  token: ${[ TOKEN ]}
+authenticationType: bearer
+body:
+  text: |-
+    {
+      "username": "muflih",
+      "email": "muhammedmuflih9605@gmail.com",
+      "password": "muflih123",
+      "contact": "9605123456"
+    }
+bodyType: application/json
+description: ''
+headers:
+- enabled: true
+  name: Content-Type
+  value: application/json
+  id: mVC5rUCvRr
+method: PUT
+name: Update 1 Agent
+sortPriority: -1766583527706.997
+url: ${[ BASE_URL ]}/agents/1/
+urlParameters: []

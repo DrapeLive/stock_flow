@@ -1,0 +1,29 @@
+type: http_request
+model: http_request
+id: rq_FjuFmjxnh9
+createdAt: 2025-12-24T13:40:57.806704226
+updatedAt: 2025-12-24T13:43:45.809320385
+workspaceId: wk_Wx4mNs5A2J
+folderId: fl_wocUDoc799
+authentication:
+  token: ${[ TOKEN ]}
+authenticationType: bearer
+body:
+  text: |-
+    {
+      "username": "admin1",
+      "email": "admin1@gmail.com",
+      "password": "admin123"
+    }
+bodyType: application/json
+description: ''
+headers:
+- enabled: true
+  name: Content-Type
+  value: application/json
+  id: Vci9J4vSii
+method: POST
+name: Register Admin
+sortPriority: -1766583527706.999
+url: ${[ BASE_URL ]}/admins/
+urlParameters: []

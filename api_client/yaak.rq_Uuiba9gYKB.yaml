@@ -1,0 +1,30 @@
+type: http_request
+model: http_request
+id: rq_Uuiba9gYKB
+createdAt: 2025-12-24T13:51:08.242807919
+updatedAt: 2025-12-24T13:55:58.151152916
+workspaceId: wk_Wx4mNs5A2J
+folderId: fl_MBp5nCvrPQ
+authentication:
+  token: ${[ TOKEN ]}
+authenticationType: bearer
+body:
+  text: |-
+    {
+      "username": "aju",
+      "email": "aju@gmail.com",
+      "password": "aju123",
+      "contact": "9605124567"
+    }
+bodyType: application/json
+description: ''
+headers:
+- enabled: true
+  name: Content-Type
+  value: application/json
+  id: DYSW93BcUA
+method: POST
+name: Add Agent
+sortPriority: -1766583527706.999
+url: ${[ BASE_URL ]}/agents/
+urlParameters: []

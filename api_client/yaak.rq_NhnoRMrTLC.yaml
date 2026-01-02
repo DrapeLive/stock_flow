@@ -1,0 +1,30 @@
+type: http_request
+model: http_request
+id: rq_NhnoRMrTLC
+createdAt: 2025-12-24T14:10:27.616942966
+updatedAt: 2025-12-24T14:13:53.730847614
+workspaceId: wk_Wx4mNs5A2J
+folderId: fl_n9tGQA4kHp
+authentication:
+  token: ${[ TOKEN ]}
+authenticationType: bearer
+body:
+  text: |-
+    {
+      "name": "mushab",
+      "address": "kachadi,",
+      "contact": "95487845",
+      "agent": 1
+    }
+bodyType: application/json
+description: ''
+headers:
+- enabled: true
+  name: Content-Type
+  value: application/json
+  id: J6FNEdJv3a
+method: PUT
+name: Update 1Customer
+sortPriority: -1766583527706.997
+url: ${[ BASE_URL ]}/customers/2/
+urlParameters: []

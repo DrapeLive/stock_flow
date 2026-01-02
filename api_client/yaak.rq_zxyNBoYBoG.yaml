@@ -1,0 +1,19 @@
+type: http_request
+model: http_request
+id: rq_zxyNBoYBoG
+createdAt: 2025-12-24T13:51:09.792906326
+updatedAt: 2025-12-24T14:09:59.747671804
+workspaceId: wk_Wx4mNs5A2J
+folderId: fl_MBp5nCvrPQ
+authentication:
+  token: ${[ TOKEN ]}
+authenticationType: bearer
+body: {}
+bodyType: null
+description: ''
+headers: []
+method: DELETE
+name: Delete Agent
+sortPriority: -1766583527706.995
+url: ${[ BASE_URL ]}/agents/2/
+urlParameters: []

@@ -1,0 +1,27 @@
+type: http_request
+model: http_request
+id: rq_TxpFZ2HeFF
+createdAt: 2025-12-24T13:38:47.709792771
+updatedAt: 2025-12-24T15:22:49.001524636
+workspaceId: wk_Wx4mNs5A2J
+folderId: fl_iBwtyBUcic
+authentication: {}
+authenticationType: null
+body:
+  text: |-
+    {
+      "email": "muhammedmuflih9605@gmail.com",
+      "password": "muflih123"
+    }
+bodyType: application/json
+description: ''
+headers:
+- enabled: true
+  name: Content-Type
+  value: application/json
+  id: jSVBUkACrb
+method: POST
+name: Login
+sortPriority: -1766583527707.0
+url: ${[ BASE_URL ]}/auth/login/
+urlParameters: []

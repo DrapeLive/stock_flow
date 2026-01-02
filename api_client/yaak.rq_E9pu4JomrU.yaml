@@ -1,0 +1,29 @@
+type: http_request
+model: http_request
+id: rq_E9pu4JomrU
+createdAt: 2025-12-24T15:22:04.578603385
+updatedAt: 2025-12-24T15:27:10.272520008
+workspaceId: wk_Wx4mNs5A2J
+folderId: fl_yqp9XHzb55
+authentication:
+  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzY5MTgxNzcxLCJpYXQiOjE3NjY1ODk3NzEsImp0aSI6IjMwYWY2ZGI5MDI3MTRjY2JhNGE4OTZjZWNhN2NlOWM3IiwidXNlcl9pZCI6IjIifQ.Ptu7DTdP-ToqwCSQeIIe6XZMpaNbfv0wUs4qucZp1rQ
+authenticationType: bearer
+body:
+  text: |-
+    {
+      "status": "PENDING",
+      "customer": 1,
+      "agent": 1
+    }
+bodyType: application/json
+description: ''
+headers:
+- enabled: true
+  name: Content-Type
+  value: application/json
+  id: Vci9J4vSii
+method: POST
+name: Register orders
+sortPriority: 1000.0
+url: ${[ BASE_URL ]}/orders/
+urlParameters: []
