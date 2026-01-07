@@ -1,0 +1,19 @@
+type: http_request
+model: http_request
+id: rq_9C3cAmMRvy
+createdAt: 2025-12-24T13:40:51.882716042
+updatedAt: 2025-12-24T13:42:09.321427283
+workspaceId: wk_Wx4mNs5A2J
+folderId: fl_wocUDoc799
+authentication:
+  token: ${[ TOKEN ]}
+authenticationType: bearer
+body: {}
+bodyType: null
+description: ''
+headers: []
+method: GET
+name: Show All Admins
+sortPriority: -1766583527707.0
+url: ${[ BASE_URL ]}/admins/
+urlParameters: []

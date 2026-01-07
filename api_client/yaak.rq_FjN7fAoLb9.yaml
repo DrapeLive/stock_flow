@@ -1,0 +1,33 @@
+type: http_request
+model: http_request
+id: rq_FjN7fAoLb9
+createdAt: 2025-12-24T15:17:02.971639476
+updatedAt: 2025-12-24T15:19:37.655818411
+workspaceId: wk_Wx4mNs5A2J
+folderId: fl_R3n2mRa8qW
+authentication:
+  token: ${[ TOKEN ]}
+authenticationType: bearer
+body:
+  text: |-
+    {
+      "name": "shirt",
+      "photo": "https://i.imgur.com/jl2PmMZ.jpeg",
+      "description": "Blue Shirt",
+      "color": "Blue",
+      "size": "XL",
+      "stock": 21474836,
+      "price": "500"
+    }
+bodyType: application/json
+description: ''
+headers:
+- enabled: true
+  name: Content-Type
+  value: application/json
+  id: Vci9J4vSii
+method: POST
+name: Register Items
+sortPriority: -1766583527706.999
+url: ${[ BASE_URL ]}/items/
+urlParameters: []

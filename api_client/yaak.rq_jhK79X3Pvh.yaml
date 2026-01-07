@@ -1,0 +1,29 @@
+type: http_request
+model: http_request
+id: rq_jhK79X3Pvh
+createdAt: 2025-12-24T15:22:04.575815998
+updatedAt: 2025-12-24T15:27:14.381139819
+workspaceId: wk_Wx4mNs5A2J
+folderId: fl_yqp9XHzb55
+authentication:
+  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzY5MTgxNzcxLCJpYXQiOjE3NjY1ODk3NzEsImp0aSI6IjMwYWY2ZGI5MDI3MTRjY2JhNGE4OTZjZWNhN2NlOWM3IiwidXNlcl9pZCI6IjIifQ.Ptu7DTdP-ToqwCSQeIIe6XZMpaNbfv0wUs4qucZp1rQ
+authenticationType: bearer
+body:
+  text: |
+    {
+      "status": "PENDING",
+      "customer": 0,
+      "agent": 0
+    }
+bodyType: application/json
+description: ''
+headers:
+- enabled: true
+  name: Content-Type
+  value: application/json
+  id: IRDYCzGmWI
+method: PATCH
+name: Partial Update
+sortPriority: 4000.0
+url: ${[ BASE_URL ]}/orders/2/
+urlParameters: []

@@ -1,0 +1,30 @@
+type: http_request
+model: http_request
+id: rq_zThxMDJGc3
+createdAt: 2025-12-24T13:51:09.428085277
+updatedAt: 2025-12-24T14:00:13.997084865
+workspaceId: wk_Wx4mNs5A2J
+folderId: fl_MBp5nCvrPQ
+authentication:
+  token: ${[ TOKEN ]}
+authenticationType: bearer
+body:
+  text: |-
+    {
+      "username": "muflih",
+      "email": "muhammedmuflih9605@gmail.com",
+      "password": "muflih123",
+      "contact": "960512345"
+    }
+bodyType: application/json
+description: ''
+headers:
+- enabled: true
+  name: Content-Type
+  value: application/json
+  id: PKKE6nsQB0
+method: PATCH
+name: Partial Update 1 Agent
+sortPriority: -1766583527706.996
+url: ${[ BASE_URL ]}/agents/1/
+urlParameters: []

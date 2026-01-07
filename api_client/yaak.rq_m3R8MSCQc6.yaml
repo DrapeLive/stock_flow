@@ -1,0 +1,29 @@
+type: http_request
+model: http_request
+id: rq_m3R8MSCQc6
+createdAt: 2025-12-24T13:41:00.727586348
+updatedAt: 2025-12-24T13:49:46.543597154
+workspaceId: wk_Wx4mNs5A2J
+folderId: fl_wocUDoc799
+authentication:
+  token: ${[ TOKEN ]}
+authenticationType: bearer
+body:
+  text: |-
+    {
+      "username": "admin",
+      "email": "admin@gmail.com",
+      "password": "admin123"
+    }
+bodyType: application/json
+description: ''
+headers:
+- enabled: true
+  name: Content-Type
+  value: application/json
+  id: IRDYCzGmWI
+method: PATCH
+name: Partial Update
+sortPriority: -1766583527706.996
+url: ${[ BASE_URL ]}/admins/1/
+urlParameters: []

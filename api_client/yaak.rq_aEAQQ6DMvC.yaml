@@ -1,0 +1,29 @@
+type: http_request
+model: http_request
+id: rq_aEAQQ6DMvC
+createdAt: 2025-12-24T15:27:55.090534198
+updatedAt: 2025-12-24T15:28:42.909596190
+workspaceId: wk_Wx4mNs5A2J
+folderId: fl_yqp9XHzb55
+authentication: {}
+authenticationType: null
+body:
+  text: |-
+    {
+      "qr_code": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+      "quantity": 0,
+      "selected_color": "string",
+      "selected_size": "string"
+    }
+bodyType: application/json
+description: ''
+headers:
+- enabled: true
+  name: Content-Type
+  value: application/json
+  id: kVskpMI47J
+method: POST
+name: Add Item
+sortPriority: 4999.9999
+url: ${[ BASE_URL ]}/orders/1/add-item/
+urlParameters: []

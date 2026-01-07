@@ -1,0 +1,19 @@
+type: http_request
+model: http_request
+id: rq_Wy2SGvUcKJ
+createdAt: 2025-12-24T15:17:02.971879849
+updatedAt: 2025-12-24T15:20:00.323580935
+workspaceId: wk_Wx4mNs5A2J
+folderId: fl_R3n2mRa8qW
+authentication:
+  token: ${[ TOKEN ]}
+authenticationType: bearer
+body: {}
+bodyType: null
+description: ''
+headers: []
+method: GET
+name: Show 1 item
+sortPriority: -1766583527706.998
+url: ${[ BASE_URL ]}/items/1
+urlParameters: []

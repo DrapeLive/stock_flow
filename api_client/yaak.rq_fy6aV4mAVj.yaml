@@ -1,0 +1,19 @@
+type: http_request
+model: http_request
+id: rq_fy6aV4mAVj
+createdAt: 2025-12-24T14:10:27.617751083
+updatedAt: 2025-12-24T14:11:16.300481313
+workspaceId: wk_Wx4mNs5A2J
+folderId: fl_n9tGQA4kHp
+authentication:
+  token: ${[ TOKEN ]}
+authenticationType: bearer
+body: {}
+bodyType: null
+description: ''
+headers: []
+method: GET
+name: Show All Customers
+sortPriority: -1766583527707.0
+url: ${[ BASE_URL ]}/customers/
+urlParameters: []

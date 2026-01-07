@@ -1,0 +1,19 @@
+type: http_request
+model: http_request
+id: rq_qxw2B3UMST
+createdAt: 2025-12-24T13:45:16.881879097
+updatedAt: 2025-12-24T13:52:37.265829891
+workspaceId: wk_Wx4mNs5A2J
+folderId: fl_wocUDoc799
+authentication:
+  token: ${[ TOKEN ]}
+authenticationType: bearer
+body: {}
+bodyType: null
+description: ''
+headers: []
+method: DELETE
+name: Delete Admin
+sortPriority: -1766583527706.995
+url: ${[ BASE_URL ]}/admins/4/
+urlParameters: []
