@@ -1,11 +1,18 @@
 @import "tailwindcss";
 
+:root {
+    --color-primary: #FF6200;
+    --color-pending: #FF0000;
+    --color-packed: #FF6200;
+    --color-dispatched: #096700;
+    --color-border: #D9D9D9;
+}
+
 @theme {
   --text-h1: clamp(2.5rem, 5vw + 1rem, 4rem);  
   --text-h2: clamp(2rem, 4vw + 1rem, 3rem);    
   --text-h3: clamp(1.5rem, 3vw + 1rem, 2.25rem);
   
-  --color-heading: #111827; 
 }
 
 @layer base {
