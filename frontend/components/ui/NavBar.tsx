@@ -58,18 +58,18 @@ const NavBar: React.FC = () => {
         )}
 
         <button
-          onClick={() => router.push("/settings")}
+          onClick={() => router.push("/profile")}
           className="flex flex-col items-center gap-1"
         >
           <Settings
             size={22}
             className={
-              pathname === "/settings" ? "text-(--color-primary)" : "text-black"
+              pathname === "/profile" ? "text-(--color-primary)" : "text-black"
             }
           />
           <span
             className={`text-xs ${
-              pathname === "/settings" ? "text-(--color-primary)" : "text-black"
+              pathname === "/profile" ? "text-(--color-primary)" : "text-black"
             }`}
           >
             Settings
