@@ -8,6 +8,7 @@ const poppins = Poppins({
   subsets: ["latin"],
   weight: ["300", "400", "500", "600", "700"],
 });
+
 export const metadata: Metadata = {
   title: "Stock Flow",
   description: "Manage all your orders in one place",
@@ -19,10 +20,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={`${poppins.variable} antialiased`}>
+    <html lang="en" className={poppins.variable}>
+      <body className="font-poppins antialiased">
         {children}
-        <NavBar/>
+        <NavBar />
       </body>
     </html>
   );
