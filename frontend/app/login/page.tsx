@@ -1,7 +1,7 @@
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { LogIn, X } from "lucide-react";
+import { LogIn } from "lucide-react";
 
 export default function Login() {
   return (
@@ -21,7 +21,6 @@ export default function Login() {
           </Field>
 
           <div className="flex justify-center gap-2.5">
-            <StockFlowButton variant="outline" text="Back" icon={<X />} />
             <StockFlowButton variant="filled" text="Login" icon={<LogIn />} />
           </div>
         </div>
