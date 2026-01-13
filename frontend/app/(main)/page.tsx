@@ -1,5 +1,5 @@
 import { Filter, Search } from "lucide-react";
-import { order } from "./dummy_data/orders";
+import { order } from "../dummy_data/orders";
 import { Input } from "@/components/ui/input"
 
 export default function Home() {
