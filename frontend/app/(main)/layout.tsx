@@ -8,6 +8,7 @@ const poppins = Poppins({
   subsets: ["latin"],
   weight: ["300", "400", "500", "600", "700"],
 });
+
 export const metadata: Metadata = {
   title: "Stock Flow",
   description: "Manage all your orders in one place",
@@ -22,7 +23,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${poppins.variable} antialiased bg-linear-to-t from-[#EEEEEE] to-white`}>
         {children}
-        <NavBar/>
+        <NavBar />
       </body>
     </html>
   );
