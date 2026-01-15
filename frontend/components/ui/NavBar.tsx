@@ -33,7 +33,7 @@ const NavBar: React.FC = () => {
 
         {isHome ? (
           <button
-            onClick={() => router.push("/add")}
+            onClick={() => router.push("/order/new")}
             className="bg-(--color-primary) text-white px-10 py-3 rounded-xl flex items-center justify-center"
           >
             <Plus size={26} />
