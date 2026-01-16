@@ -10,15 +10,15 @@ export default function ResetPassword(){
             <div className="absolute inset-0 p-5 flex justify-center flex-col gap-6">
                 <Field>
                     <FieldLabel>Current Password</FieldLabel>
-                    <Input type="text" placeholder="example@gmail.com"></Input>
+                    <Input type="password" placeholder="********"></Input>
                 </Field>
                 <Field>
                     <FieldLabel>New Password</FieldLabel>
-                    <Input type="text" placeholder="example@gmail.com"></Input>
+                    <Input type="password" placeholder="********"></Input>
                 </Field>
                 <Field>
                     <FieldLabel>Re-enter new Password</FieldLabel>
-                    <Input type="text" placeholder="example@gmail.com"></Input>
+                    <Input type="password" placeholder="********"></Input>
                 </Field>
             </div>
             <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full">
