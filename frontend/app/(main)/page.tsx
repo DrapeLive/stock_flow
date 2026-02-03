@@ -1,15 +1,19 @@
 import { Filter, Search } from "lucide-react";
 import { order } from "../dummy_data/orders";
-import { Input } from "@/components/ui/input"
+import { Input } from "@/components/ui/input";
 
 export default function Home() {
   return (
-    <div className="min-h-screen min-w-full py-3 px-3">
-      <div className='relative'>
-        <div className='text-muted-foreground pointer-events-none absolute inset-y-0 left-0 flex items-center justify-center pl-3 peer-disabled:opacity-50'>
-          <Search className='size-4' />
+    <div className="min-h-screen min-w-full">
+      <div className="relative">
+        <div className="text-muted-foreground pointer-events-none absolute inset-y-0 left-0 flex items-center justify-center pl-3 peer-disabled:opacity-50">
+          <Search className="size-4" />
         </div>
-        <Input type='text' placeholder='search orders..' className='peer pl-9 py-6' />
+        <Input
+          type="text"
+          placeholder="search orders.."
+          className="peer pl-9 py-6"
+        />
       </div>
       <div className="pt-3 flex justify-between">
         <div className="flex gap-1 items-center">
@@ -19,17 +23,13 @@ export default function Home() {
           </div>
         </div>
         <div className="p-0.5 rounded-[3px] border border-(--color-border)">
-          <Filter className="text-(--color-border) w-2.5 h-2.5"/>
+          <Filter className="text-(--color-border) w-2.5 h-2.5" />
         </div>
       </div>
       <div>
-        {
-          order.map((item, index) => (
-            <div key={index}>
-              
-            </div>
-          ))
-        }
+        {order.map((item, index) => (
+          <div key={index}></div>
+        ))}
       </div>
     </div>
   );
