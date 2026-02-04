@@ -3,7 +3,8 @@ from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import User
 
-class LoginSerializer(serializers.Serializer):
+
+class LoginRequestSerializer(serializers.Serializer):
     username = serializers.CharField(required=False)
     email = serializers.EmailField(required=False)
     password = serializers.CharField(write_only=True)
@@ -13,26 +14,30 @@ class LoginSerializer(serializers.Serializer):
         email = data.get('email')
         password = data.get('password')
 
+        if not (username or email):
+            raise serializers.ValidationError("Username or email is required")
+
         if email:
             try:
                 user_obj = User.objects.get(email=email)
                 username = user_obj.username
             except User.DoesNotExist:
-                raise serializers.ValidationError("Invalid credentials")
+                raise serializers.ValidationError("Invalid email")
 
         user = authenticate(username=username, password=password)
 
         if not user:
-            raise serializers.ValidationError("Invalid credentials")
+            raise serializers.ValidationError("Invalid password")
 
-        refresh = RefreshToken.for_user(user)
+        data['user'] = user
+        return data
 
-        return {
-            "access": str(refresh.access_token),
-            "refresh": str(refresh),
-            "role": user.role,
-            "user_id": user.id
-        }
+
+class LoginResponseSerializer(serializers.Serializer):
+    access = serializers.CharField()
+    refresh = serializers.CharField()
+    role = serializers.CharField()
+    user_id = serializers.IntegerField()
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
