@@ -6,6 +6,7 @@ interface StockFlowButtonProps {
   icon?: React.ReactNode;
   onClick?: () => void;
   className?: string;
+  disabled?: boolean;
 }
 
 const StockFlowButton: React.FC<StockFlowButtonProps> = ({
@@ -14,6 +15,7 @@ const StockFlowButton: React.FC<StockFlowButtonProps> = ({
   icon,
   onClick,
   className = "",
+  disabled = false,
 }) => {
   const baseStyles =
     "flex items-center gap-1 px-3 py-3 font-medium text-sm rounded-[var(--radius)] transition-all";
@@ -22,7 +24,7 @@ const StockFlowButton: React.FC<StockFlowButtonProps> = ({
     filled: `
       ${baseStyles}
       bg-[var(--color-primary)]
-      text-white
+      ${disabled ? "text-gray" : "text-white"}
       hover:brightness-110
     `,
     outline: `

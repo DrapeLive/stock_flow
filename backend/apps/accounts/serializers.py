@@ -36,7 +36,7 @@ class LoginRequestSerializer(serializers.Serializer):
 class LoginResponseSerializer(serializers.Serializer):
     access = serializers.CharField()
     refresh = serializers.CharField()
-    role = serializers.CharField()
+    role = serializers.ChoiceField(choices=User.ROLE_CHOICES)
     user_id = serializers.IntegerField()
 
 class UserSerializer(serializers.ModelSerializer):

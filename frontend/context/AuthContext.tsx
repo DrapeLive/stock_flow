@@ -1,47 +1,61 @@
 "use client";
 
+import { AuthUser, LoginResponse } from "@/types/user";
 import { createContext, useContext, useState } from "react";
 
 type AuthContextType = {
-  user: any;
-  login: (email: string, password: string) => Promise<void>;
+  user: AuthUser | null;
+  accessToken: string | null;
+  refreshToken: string | null;
+  isAuthenticated: boolean;
+
+  login: (data: LoginResponse) => void;
   logout: () => void;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [refreshToken, setRefreshToken] = useState<string | null>(null);
 
-  const login = async (email: string, password: string) => {
-    const res = await fetch("http://localhost:8000/auth/login/", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username: email, password }),
+  const login = (data: LoginResponse) => {
+    setAccessToken(data.access);
+    setRefreshToken(data.refresh);
+
+    setUser({
+      id: data.user_id,
+      role: data.role,
     });
-
-    if (!res.ok) throw new Error("Login failed");
-
-    const data = await res.json();
-
-    // store token securely
-    document.cookie = `access=${data.access}; path=/`;
-    document.cookie = `refresh=${data.refresh}; path=/`;
-
-    setUser({ email });
   };
 
   const logout = () => {
-    document.cookie = "access=; Max-Age=0";
-    document.cookie = "refresh=; Max-Age=0";
     setUser(null);
+    setAccessToken(null);
+    setRefreshToken(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        accessToken,
+        refreshToken,
+        isAuthenticated: !!accessToken,
+        login,
+        logout,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
 }
 
-export const useAuth = () => useContext(AuthContext)!;
+export function useAuth() {
+  const ctx = useContext(AuthContext);
+  if (!ctx) {
+    throw new Error("useAuth must be used inside AuthProvider");
+  }
+  return ctx;
+}
