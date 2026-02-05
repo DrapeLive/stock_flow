@@ -1,6 +1,6 @@
 "use client";
 
-import { AuthUser, LoginResponse } from "@/types/user";
+import { AuthUser, LoginResponse } from "@/types/auth";
 import { createContext, useContext, useState } from "react";
 
 type AuthContextType = {

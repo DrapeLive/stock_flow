@@ -4,6 +4,7 @@ import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/context/AuthContext";
+import { authApi } from "@/lib/api";
 import { LogIn } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -30,12 +31,12 @@ export default function Login() {
     setError(null);
 
     try {
-      const res = await loginApi({
+      const res = await authApi.login({
         email,
         password,
       });
 
-      login(res.data); // 🔥 this updates AuthContext
+      login(res);
     } catch (err) {
       setError("Invalid email or password");
     } finally {
@@ -51,7 +52,7 @@ export default function Login() {
         </h2>
         <div className="flex flex-col gap-6">
           <Field>
-            <FieldLabel>Email</FieldLabel>
+            <FieldLabel htmlFor="email">Email</FieldLabel>
             <Input
               type="text"
               placeholder="example@gmail.com"
@@ -60,7 +61,7 @@ export default function Login() {
             ></Input>
           </Field>
           <Field>
-            <FieldLabel>Password</FieldLabel>
+            <FieldLabel htmlFor="password">Password</FieldLabel>
             <Input
               type="password"
               placeholder="*****"
