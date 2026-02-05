@@ -3,7 +3,7 @@ model: environment
 id: ev_Frac6wFyYb
 workspaceId: wk_Wx4mNs5A2J
 createdAt: 2026-01-03T05:49:07.265241
-updatedAt: 2026-01-03T05:57:57.602138
+updatedAt: 2026-02-04T18:03:51.837030
 name: Global Variables
 public: true
 base: true
@@ -16,7 +16,7 @@ variables:
   id: dh0XBtdyeF
 - enabled: true
   name: TOKEN
-  value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzcwMDExNzA0LCJpYXQiOjE3Njc0MTk3MDQsImp0aSI6IjFjMTIzZDgwMWFmNTRhYzVhYWMzNGViZjhiNjJmZDhiIiwidXNlcl9pZCI6IjEifQ.sNHgSyNtxVL3bG74OPhEMqjQoW7yLPy9HF8T9Xu7nC4
+  value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzcyODIwMjI0LCJpYXQiOjE3NzAyMjgyMjQsImp0aSI6ImUyNzRiZmVlZTVhMDQ3OWFhYzM3NTZkMWZhZWE3YWJkIiwidXNlcl9pZCI6IjEifQ.eUbC9Ey-jzHOGEyxpD7EGClbWVpFgWS-X66ap3EsKEw
   id: 2rqeHkH6xM
 color: null
 sortPriority: 0.0
