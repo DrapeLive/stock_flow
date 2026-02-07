@@ -2,22 +2,34 @@ type: http_request
 model: http_request
 id: rq_FjN7fAoLb9
 createdAt: 2025-12-24T15:17:02.971639476
-updatedAt: 2025-12-24T15:19:37.655818411
+updatedAt: 2026-02-07T14:00:46.923910153
 workspaceId: wk_Wx4mNs5A2J
 folderId: fl_R3n2mRa8qW
 authentication:
   token: ${[ TOKEN ]}
 authenticationType: bearer
 body:
-  text: |-
+  text: |
     {
-      "name": "shirt",
-      "photo": "https://i.imgur.com/jl2PmMZ.jpeg",
-      "description": "Blue Shirt",
-      "color": "Blue",
-      "size": "XL",
-      "stock": 21474836,
-      "price": "500"
+      "variants": [
+        {
+          "color": "Green",
+          "image": "https://picsum.photos/seed/gents-tshirt-green/400/400",
+          "stock": 80,
+          "type": "gents",
+          "size": "S"
+        },
+        {
+          "color": "Maroon",
+          "image": "https://picsum.photos/seed/gents-tshirt-maroon/400/400",
+          "stock": 65,
+          "type": "gents",
+          "size": "M"
+        }
+      ],
+      "name": "Gents Cotton T-Shirt",
+      "description": "Soft cotton T-shirt perfect for everyday comfort.",
+      "price": "499"
     }
 bodyType: application/json
 description: ''

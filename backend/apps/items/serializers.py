@@ -8,6 +8,7 @@ class ItemVariantSerializer(serializers.ModelSerializer):
     class Meta:
         model = ItemVariant
         fields = '__all__'
+        read_only_fields = ['item']
 
     def validate(self, data):
         item_type = data.get("type")
@@ -22,9 +23,18 @@ class ItemVariantSerializer(serializers.ModelSerializer):
         return data
 
 class ItemSerializer(serializers.ModelSerializer):
-    variants = ItemVariantSerializer(many=True, read_only=True)
+    variants = ItemVariantSerializer(many=True)
     class Meta:
         model = Item
         fields = '__all__'
+
+    def create(self, validated_data):
+        variants_data = validated_data.pop('variants')
+        item = Item.objects.create(**validated_data)
+
+        for variant_data in variants_data:
+            ItemVariant.objects.create(item=item, **variant_data)
+
+        return item
 
 

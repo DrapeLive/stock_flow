@@ -1,3 +1,5 @@
+from django.db import transaction
+from django.shortcuts import get_object_or_404
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -7,6 +9,9 @@ from .serializers import OrderSerializer, AddOrderItemSerializer
 from apps.accounts.permissions import IsAdmin, IsAgent
 from rest_framework.permissions import IsAuthenticated
 from drf_spectacular.utils import extend_schema
+
+from ..items.models import ItemVariant
+
 
 class OrderViewSet(ModelViewSet):
     serializer_class = OrderSerializer
@@ -28,7 +33,7 @@ class AddOrderItemView(APIView):
 
     @extend_schema(
         request=AddOrderItemSerializer,
-        responses={201: {"message": "Item added"}},
+        responses={201: {"message": "Item added"}, 400: {"error": "Message"}},
         tags=['Orders']
     )
 
@@ -36,15 +41,36 @@ class AddOrderItemView(APIView):
         serializer = AddOrderItemSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        order = Order.objects.get(id=order_id)
-        item = serializer.validated_data['item']
+        order = get_object_or_404(Order,id=order_id)
+        item = serializer.validated_data["item"]
+        variant_id = serializer.validated_data["variant"]
+        qty = serializer.validated_data['quantity']
 
-        OrderItem.objects.create(
-            order=order,
-            item=item,
-            quantity=serializer.validated_data['quantity'],
-            selected_color=serializer.validated_data['selected_color'],
-            selected_size=serializer.validated_data['selected_size'],
-        )
+        with transaction.atomic():
+            try:
+                variant = ItemVariant.objects.select_for_update().get(
+                    id=variant_id,
+                )
+            except ItemVariant.DoesNotExist:
+                return Response(
+                    {"error": "This specific color/size variant does not exist for this item."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
 
-        return Response({"message": "Item added"}, status=status.HTTP_201_CREATED)
+            if variant.stock < qty:
+                return Response(
+                    {"error": f"Insufficient stock. Only {variant.stock} units available."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            OrderItem.objects.create(
+                order=order,
+                item=item,
+                quantity=qty,
+                variant=variant
+            )
+
+            variant.stock -= qty
+            variant.save()
+
+            return Response({"message": "Item added"}, status=status.HTTP_201_CREATED)

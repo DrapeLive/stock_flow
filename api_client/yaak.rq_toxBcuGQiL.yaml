@@ -2,19 +2,19 @@ type: http_request
 model: http_request
 id: rq_toxBcuGQiL
 createdAt: 2025-12-24T14:10:27.617468972
-updatedAt: 2025-12-24T14:12:25.192140409
+updatedAt: 2026-02-07T13:31:23.748390829
 workspaceId: wk_Wx4mNs5A2J
 folderId: fl_n9tGQA4kHp
 authentication:
-  token: ${[ TOKEN ]}
+  token: ${[ AGENT_TOKEN ]}
 authenticationType: bearer
 body:
-  text: |-
+  text: |
     {
-      "name": "mishu",
-      "address": "kachadi",
-      "contact": "0987654323",
-      "agent": 1
+      "name": "Anjali",
+      "address": "Ernakulam",
+      "contact": "9765432109",
+      "agent": 3
     }
 bodyType: application/json
 description: ''

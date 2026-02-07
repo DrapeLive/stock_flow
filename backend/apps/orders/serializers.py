@@ -19,8 +19,7 @@ class OrderSerializer(serializers.ModelSerializer):
 class AddOrderItemSerializer(serializers.Serializer):
     qr_code = serializers.UUIDField()
     quantity = serializers.IntegerField()
-    selected_color = serializers.CharField()
-    selected_size = serializers.CharField()
+    variant = serializers.IntegerField()
 
     def validate(self, attrs):
         try:
