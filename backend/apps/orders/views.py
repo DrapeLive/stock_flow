@@ -19,9 +19,14 @@ class OrderViewSet(ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
+        qs = Order.objects.prefetch_related(
+            "items__variant",
+            "items__item"
+        )
+
         if user.role == 'ADMIN':
-            return Order.objects.all()
-        return Order.objects.filter(agent__user=user)
+            return qs
+        return qs.filter(agent__user=user)
 
     def perform_create(self, serializer):
         serializer.save(
