@@ -11,15 +11,14 @@ export const api = axios.create({
   },
 });
 
-let accessToken: string | null = null;
-
-export const setAccessToken = (token: string | null) => {
-  accessToken = token;
-};
-
 api.interceptors.request.use((config) => {
-  if (accessToken) {
-    config.headers.Authorization = `Bearer ${accessToken}`;
+  if (typeof window !== "undefined") {
+    const accessToken = localStorage.getItem("auth_access");
+
+    if (accessToken) {
+      config.headers.Authorization = `Bearer ${accessToken}`;
+    }
   }
+
   return config;
 });
