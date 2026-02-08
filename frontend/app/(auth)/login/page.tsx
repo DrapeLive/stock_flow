@@ -22,7 +22,7 @@ export default function Login() {
   useEffect(() => {
     if (isAuthenticated) {
       if (user?.role === "ADMIN") router.push("/admin");
-      else router.push("/agent");
+      else router.push("/");
     }
   }, [isAuthenticated, user, router]);
 
