@@ -2,6 +2,12 @@ from rest_framework import serializers
 from .models import Order, OrderItem
 from apps.items.models import Item
 from apps.items.serializers import ItemVariantSerializer
+from apps.customers.models import Customer
+
+class SimpleCustomerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Customer
+        fields = ["id","name"]
 
 class SimpleItemSerializer(serializers.ModelSerializer):
     class Meta:
@@ -20,6 +26,15 @@ class OrderItemSerializer(serializers.ModelSerializer):
 class OrderSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True, read_only=True)
     total_quantity = serializers.SerializerMethodField()
+    customer = serializers.PrimaryKeyRelatedField(
+        queryset=Customer.objects.all(),
+        write_only=True
+    )
+
+    customer_details = SimpleCustomerSerializer(
+        source="customer",
+        read_only=True
+    )
 
     class Meta:
         model = Order
