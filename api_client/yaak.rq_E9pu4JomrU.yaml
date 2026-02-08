@@ -2,7 +2,7 @@ type: http_request
 model: http_request
 id: rq_E9pu4JomrU
 createdAt: 2025-12-24T15:22:04.578603385
-updatedAt: 2026-02-07T14:02:33.267455532
+updatedAt: 2026-02-08T07:08:11.024165785
 workspaceId: wk_Wx4mNs5A2J
 folderId: fl_yqp9XHzb55
 authentication:
@@ -12,7 +12,7 @@ body:
   text: |-
     {
       "status": "PENDING",
-      "customer": 3,
+      "customer": 4,
       "agent": 3
     }
 bodyType: application/json

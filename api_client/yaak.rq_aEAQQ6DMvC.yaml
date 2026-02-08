@@ -2,19 +2,19 @@ type: http_request
 model: http_request
 id: rq_aEAQQ6DMvC
 createdAt: 2025-12-24T15:27:55.090534198
-updatedAt: 2026-02-07T14:49:14.405057334
+updatedAt: 2026-02-08T07:20:56.062904655
 workspaceId: wk_Wx4mNs5A2J
 folderId: fl_yqp9XHzb55
 authentication:
   token: ${[ AGENT_TOKEN ]}
 authenticationType: bearer
 body:
-  text: |-
-    {
-      "qr_code": "6ace94e9-ab91-4347-a034-6a82373a0524",
-      "quantity": 40,
-      "variant": 1
-    }
+  text: |2-
+      {
+        "qr_code": "5a3ade05-ccae-4d1c-8f31-1115e323cfaa",
+        "quantity": 10,
+        "variant": 6
+      }
 bodyType: application/json
 description: ''
 headers:
@@ -25,5 +25,5 @@ headers:
 method: POST
 name: Add Item
 sortPriority: 4999.9999
-url: ${[ BASE_URL ]}/orders/3/add-item/
+url: ${[ BASE_URL ]}/orders/6/add-item/
 urlParameters: []
