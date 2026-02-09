@@ -14,9 +14,14 @@ class AgentSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
     email = serializers.EmailField(write_only=True)
 
+    total_customers = serializers.SerializerMethodField()
+
     class Meta:
         model = Agent
-        fields = ('id', 'username', 'user', 'email', 'password', 'contact')
+        fields = ('id', 'username', 'user', 'email', 'password', 'contact','total_customers')
+
+    def get_total_customers(self, obj):
+        return obj.customers.count()
 
     def create(self, validated_data):
         user = User.objects.create(
