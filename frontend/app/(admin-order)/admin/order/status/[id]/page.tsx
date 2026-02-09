@@ -1,4 +1,5 @@
-import { Plus } from "lucide-react";
+import { ChevronLeft, Plus } from "lucide-react";
+import Link from "next/link";
 
 export default async function Page({
   params,
@@ -9,6 +10,15 @@ export default async function Page({
 
   return (
     <div className="min-h-screen min-w-full">
+      <div className="w-full">
+        <Link
+          className="flex text-(--color-primary) items-center"
+          href={"/admin/"}
+        >
+          <ChevronLeft size={18} />
+          <h5>Back</h5>
+        </Link>
+      </div>
       <div className="border p-1 mt-2 flex items-center justify-center space-x-1 border-(--color-border) rounded-full">
         <button className="bg-(--color-primary) rounded-full px-12 py-1 text-white font-semibold text-xs">
           Packing
