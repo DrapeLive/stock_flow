@@ -15,25 +15,55 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
+const STORAGE_KEYS = {
+  user: "auth_user",
+  access: "auth_access",
+  refresh: "auth_refresh",
+};
+
+const getStoredUser = (): AuthUser | null => {
+  if (typeof window === "undefined") return null;
+  const user = localStorage.getItem(STORAGE_KEYS.user);
+  return user ? JSON.parse(user) : null;
+};
+
+const getStoredToken = (key: string): string | null => {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(key);
+};
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [accessToken, setAccessToken] = useState<string | null>(null);
-  const [refreshToken, setRefreshToken] = useState<string | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(() => getStoredUser());
+  const [accessToken, setAccessToken] = useState<string | null>(() =>
+    getStoredToken(STORAGE_KEYS.access),
+  );
+  const [refreshToken, setRefreshToken] = useState<string | null>(() =>
+    getStoredToken(STORAGE_KEYS.refresh),
+  );
 
   const login = (data: LoginResponse) => {
+    const authUser: AuthUser = {
+      id: data.user_id,
+      role: data.role,
+    };
+
+    setUser(authUser);
     setAccessToken(data.access);
     setRefreshToken(data.refresh);
 
-    setUser({
-      id: data.user_id,
-      role: data.role,
-    });
+    localStorage.setItem(STORAGE_KEYS.user, JSON.stringify(authUser));
+    localStorage.setItem(STORAGE_KEYS.access, data.access);
+    localStorage.setItem(STORAGE_KEYS.refresh, data.refresh);
   };
 
   const logout = () => {
     setUser(null);
     setAccessToken(null);
     setRefreshToken(null);
+
+    localStorage.removeItem(STORAGE_KEYS.user);
+    localStorage.removeItem(STORAGE_KEYS.access);
+    localStorage.removeItem(STORAGE_KEYS.refresh);
   };
 
   return (
