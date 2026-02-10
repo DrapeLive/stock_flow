@@ -307,8 +307,7 @@ export interface components {
             /** Format: uuid */
             qr_code: string;
             quantity: number;
-            selected_color: string;
-            selected_size: string;
+            variant: number;
         };
         Admin: {
             readonly id: number;
@@ -379,7 +378,7 @@ export interface components {
         };
         Item: {
             readonly id: number;
-            readonly variants: components["schemas"]["ItemVariant"][];
+            variants: components["schemas"]["ItemVariant"][];
             name: string;
             description?: string;
             /** Format: decimal */
@@ -388,6 +387,7 @@ export interface components {
             readonly qr_code: string;
         };
         ItemRequest: {
+            variants: components["schemas"]["ItemVariantRequest"][];
             name: string;
             description?: string;
             /** Format: decimal */
@@ -401,7 +401,7 @@ export interface components {
             stock: number;
             type: components["schemas"]["TypeEnum"];
             size: string;
-            item: number;
+            readonly item: number;
         };
         ItemVariantRequest: {
             color: string;
@@ -410,47 +410,44 @@ export interface components {
             stock: number;
             type: components["schemas"]["TypeEnum"];
             size: string;
-            item: number;
         };
-        Login: {
-            username?: string;
-            /** Format: email */
-            email?: string;
-        };
-        LoginRequest: {
+        LoginRequestRequest: {
             username?: string;
             /** Format: email */
             email?: string;
             password: string;
         };
+        LoginResponse: {
+            access: string;
+            refresh: string;
+            role: components["schemas"]["RoleEnum"];
+            user_id: number;
+        };
         Order: {
             readonly id: number;
             readonly items: components["schemas"]["OrderItem"][];
+            readonly total_quantity: string;
+            readonly customer_details: components["schemas"]["SimpleCustomer"];
             status?: components["schemas"]["StatusEnum"];
             /** Format: date-time */
             readonly created_at: string;
-            customer: number;
             agent: number;
         };
         OrderItem: {
             readonly id: number;
+            readonly item: components["schemas"]["SimpleItem"];
+            readonly variant: components["schemas"]["ItemVariant"];
             quantity: number;
             packed_quantity?: number;
-            selected_color: string;
-            selected_size: string;
             readonly order: number;
-            item: number;
         };
         OrderItemRequest: {
             quantity: number;
             packed_quantity?: number;
-            selected_color: string;
-            selected_size: string;
-            item: number;
         };
         OrderRequest: {
-            status?: components["schemas"]["StatusEnum"];
             customer: number;
+            status?: components["schemas"]["StatusEnum"];
             agent: number;
         };
         PasswordToken: {
@@ -482,6 +479,7 @@ export interface components {
             agent?: number;
         };
         PatchedItemRequest: {
+            variants?: components["schemas"]["ItemVariantRequest"][];
             name?: string;
             description?: string;
             /** Format: decimal */
@@ -494,11 +492,10 @@ export interface components {
             stock?: number;
             type?: components["schemas"]["TypeEnum"];
             size?: string;
-            item?: number;
         };
         PatchedOrderRequest: {
-            status?: components["schemas"]["StatusEnum"];
             customer?: number;
+            status?: components["schemas"]["StatusEnum"];
             agent?: number;
         };
         ResetToken: {
@@ -513,6 +510,24 @@ export interface components {
          * @enum {string}
          */
         RoleEnum: "ADMIN" | "AGENT";
+        SimpleCustomer: {
+            readonly id: number;
+            name: string;
+        };
+        SimpleCustomerRequest: {
+            name: string;
+        };
+        SimpleItem: {
+            readonly id: number;
+            name: string;
+            /** Format: decimal */
+            price: string;
+        };
+        SimpleItemRequest: {
+            name: string;
+            /** Format: decimal */
+            price: string;
+        };
         /**
          * @description * `PENDING` - Pending
          *     * `PACKED` - Packed
@@ -830,9 +845,9 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["LoginRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["LoginRequest"];
-                "multipart/form-data": components["schemas"]["LoginRequest"];
+                "application/json": components["schemas"]["LoginRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["LoginRequestRequest"];
+                "multipart/form-data": components["schemas"]["LoginRequestRequest"];
             };
         };
         responses: {
@@ -841,7 +856,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Login"];
+                    "application/json": components["schemas"]["LoginResponse"];
                 };
             };
         };
@@ -1351,6 +1366,14 @@ export interface operations {
         };
         responses: {
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            400: {
                 headers: {
                     [name: string]: unknown;
                 };
