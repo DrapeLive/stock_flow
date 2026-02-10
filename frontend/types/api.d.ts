@@ -307,7 +307,8 @@ export interface components {
             /** Format: uuid */
             qr_code: string;
             quantity: number;
-            variant: number;
+            selected_color: string;
+            selected_size: string;
         };
         Admin: {
             readonly id: number;
@@ -327,6 +328,7 @@ export interface components {
             readonly id: number;
             readonly user: components["schemas"]["AgentUser"];
             contact: string;
+            readonly total_customers: string;
         };
         AgentRequest: {
             username: string;
@@ -354,6 +356,8 @@ export interface components {
         BlankEnum: "";
         Customer: {
             readonly id: number;
+            readonly total_orders: string;
+            readonly agent_name: string;
             name: string;
             address: string;
             contact: string;
@@ -375,7 +379,7 @@ export interface components {
         };
         Item: {
             readonly id: number;
-            variants: components["schemas"]["ItemVariant"][];
+            readonly variants: components["schemas"]["ItemVariant"][];
             name: string;
             description?: string;
             /** Format: decimal */
@@ -384,7 +388,6 @@ export interface components {
             readonly qr_code: string;
         };
         ItemRequest: {
-            variants: components["schemas"]["ItemVariantRequest"][];
             name: string;
             description?: string;
             /** Format: decimal */
@@ -398,7 +401,7 @@ export interface components {
             stock: number;
             type: components["schemas"]["TypeEnum"];
             size: string;
-            readonly item: number;
+            item: number;
         };
         ItemVariantRequest: {
             color: string;
@@ -407,44 +410,47 @@ export interface components {
             stock: number;
             type: components["schemas"]["TypeEnum"];
             size: string;
+            item: number;
         };
-        LoginRequestRequest: {
+        Login: {
+            username?: string;
+            /** Format: email */
+            email?: string;
+        };
+        LoginRequest: {
             username?: string;
             /** Format: email */
             email?: string;
             password: string;
         };
-        LoginResponse: {
-            access: string;
-            refresh: string;
-            role: components["schemas"]["RoleEnum"];
-            user_id: number;
-        };
         Order: {
             readonly id: number;
             readonly items: components["schemas"]["OrderItem"][];
-            readonly total_quantity: string;
-            readonly customer_details: components["schemas"]["SimpleCustomer"];
             status?: components["schemas"]["StatusEnum"];
             /** Format: date-time */
             readonly created_at: string;
+            customer: number;
             agent: number;
         };
         OrderItem: {
             readonly id: number;
-            readonly item: components["schemas"]["SimpleItem"];
-            readonly variant: components["schemas"]["ItemVariant"];
             quantity: number;
             packed_quantity?: number;
+            selected_color: string;
+            selected_size: string;
             readonly order: number;
+            item: number;
         };
         OrderItemRequest: {
             quantity: number;
             packed_quantity?: number;
+            selected_color: string;
+            selected_size: string;
+            item: number;
         };
         OrderRequest: {
-            customer: number;
             status?: components["schemas"]["StatusEnum"];
+            customer: number;
             agent: number;
         };
         PasswordToken: {
@@ -476,7 +482,6 @@ export interface components {
             agent?: number;
         };
         PatchedItemRequest: {
-            variants?: components["schemas"]["ItemVariantRequest"][];
             name?: string;
             description?: string;
             /** Format: decimal */
@@ -489,10 +494,11 @@ export interface components {
             stock?: number;
             type?: components["schemas"]["TypeEnum"];
             size?: string;
+            item?: number;
         };
         PatchedOrderRequest: {
-            customer?: number;
             status?: components["schemas"]["StatusEnum"];
+            customer?: number;
             agent?: number;
         };
         ResetToken: {
@@ -507,24 +513,6 @@ export interface components {
          * @enum {string}
          */
         RoleEnum: "ADMIN" | "AGENT";
-        SimpleCustomer: {
-            readonly id: number;
-            name: string;
-        };
-        SimpleCustomerRequest: {
-            name: string;
-        };
-        SimpleItem: {
-            readonly id: number;
-            name: string;
-            /** Format: decimal */
-            price: string;
-        };
-        SimpleItemRequest: {
-            name: string;
-            /** Format: decimal */
-            price: string;
-        };
         /**
          * @description * `PENDING` - Pending
          *     * `PACKED` - Packed
@@ -842,9 +830,9 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["LoginRequestRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["LoginRequestRequest"];
-                "multipart/form-data": components["schemas"]["LoginRequestRequest"];
+                "application/json": components["schemas"]["LoginRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["LoginRequest"];
+                "multipart/form-data": components["schemas"]["LoginRequest"];
             };
         };
         responses: {
@@ -853,7 +841,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["LoginResponse"];
+                    "application/json": components["schemas"]["Login"];
                 };
             };
         };
@@ -1363,14 +1351,6 @@ export interface operations {
         };
         responses: {
             201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            400: {
                 headers: {
                     [name: string]: unknown;
                 };
