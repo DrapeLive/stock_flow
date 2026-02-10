@@ -11,7 +11,7 @@ import Image from "next/image";
 import groupOrders from "@/util/groupOrders";
 
 export default function Home() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
 
   const [data, setData] = useState<OrderAllResponse>([]);
   const [loading, setLoading] = useState(true);
@@ -26,11 +26,15 @@ export default function Home() {
       return;
     }
 
+    if (isAuthenticated) {
+      if (user?.role === "ADMIN") router.push("/admin");
+      else router.push("/");
+    }
+
     const fetchData = async () => {
       try {
         const response = await orderApi.getAll();
         setData(response);
-        console.log(response);
       } catch (error) {
         console.error("Error fetching data:", error);
       } finally {
@@ -39,13 +43,14 @@ export default function Home() {
     };
 
     fetchData();
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, router, user]);
 
   const { pendingPacked } = groupOrders(data ?? []);
 
   const order_len = pendingPacked.length;
 
   if (loading) return <p>Loading</p>;
+  if (order_len == 0) <h2 className="flex justify-center">No Orders</h2>;
 
   return (
     <div className="min-h-screen min-w-full">
