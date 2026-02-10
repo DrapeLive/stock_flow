@@ -4,7 +4,7 @@ from apps.orders.models import Order
 
 class CustomerSerializer(serializers.ModelSerializer):
     total_orders = serializers.SerializerMethodField()
-    agent_name = serializers.CharField(source="agent.user.get_name", read_only=True)
+    agent_name = serializers.CharField(source="agent.user.username", read_only=True)
 
     class Meta:
         model = Customer
