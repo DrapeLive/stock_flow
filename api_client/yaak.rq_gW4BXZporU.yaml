@@ -1,0 +1,18 @@
+type: http_request
+model: http_request
+id: rq_gW4BXZporU
+createdAt: 2026-02-11T14:37:37.328638927
+updatedAt: 2026-02-11T14:43:57.254219887
+workspaceId: wk_Wx4mNs5A2J
+folderId: fl_MBp5nCvrPQ
+authentication: {}
+authenticationType: null
+body: {}
+bodyType: null
+description: ''
+headers: []
+method: GET
+name: ''
+sortPriority: -1766583527706.998
+url: ${[ BASE_URL ]}/agents/profile/8
+urlParameters: []
