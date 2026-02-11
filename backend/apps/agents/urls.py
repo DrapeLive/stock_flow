@@ -3,7 +3,7 @@ from rest_framework.routers import DefaultRouter
 from .views import AgentViewSet, AgentDetail
 
 router = DefaultRouter()
-router.register('agents', AgentViewSet, basename='agent')
+router.register('', AgentViewSet, basename='agent')
 
 urlpatterns = [
     path('', include(router.urls)),
