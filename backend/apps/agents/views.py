@@ -1,9 +1,17 @@
 from rest_framework.viewsets import ModelViewSet
 from .models import Agent
 from .serializers import AgentSerializer
-from apps.accounts.permissions import IsAdmin
+from apps.accounts.permissions import IsAdminOrSelfAgent
+
 
 class AgentViewSet(ModelViewSet):
-    queryset = Agent.objects.all()
     serializer_class = AgentSerializer
-    permission_classes = [IsAdmin]
+    permission_classes = [IsAdminOrSelfAgent]
+
+    def get_queryset(self):
+        user = self.request.user
+
+        if user.role == 'ADMIN':
+            return Agent.objects.all()
+
+        return Agent.objects.filter(user=user)
