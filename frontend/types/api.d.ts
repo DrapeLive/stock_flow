@@ -68,6 +68,22 @@ export interface paths {
         patch: operations["agents_partial_update"];
         trace?: never;
     };
+    "/api/agents/profile/{user_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["agents_profile_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/auth/login/": {
         parameters: {
             query?: never;
@@ -162,6 +178,38 @@ export interface paths {
         options?: never;
         head?: never;
         patch: operations["items_partial_update"];
+        trace?: never;
+    };
+    "/api/items/item-size/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["items_item_size_list"];
+        put?: never;
+        post: operations["items_item_size_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/items/item-size/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["items_item_size_retrieve"];
+        put: operations["items_item_size_update"];
+        post?: never;
+        delete: operations["items_item_size_destroy"];
+        options?: never;
+        head?: never;
+        patch: operations["items_item_size_partial_update"];
         trace?: never;
     };
     "/api/items/variants/": {
@@ -379,37 +427,45 @@ export interface components {
         Item: {
             readonly id: number;
             variants: components["schemas"]["ItemVariant"][];
+            size: components["schemas"]["ItemSize"][];
             name: string;
             description?: string;
             /** Format: decimal */
             price: string;
+            type?: (components["schemas"]["TypeEnum"] | components["schemas"]["NullEnum"]) | null;
             /** Format: uuid */
             readonly qr_code: string;
         };
         ItemRequest: {
             variants: components["schemas"]["ItemVariantRequest"][];
+            size: components["schemas"]["ItemSizeRequest"][];
             name: string;
             description?: string;
             /** Format: decimal */
             price: string;
+            type?: (components["schemas"]["TypeEnum"] | components["schemas"]["NullEnum"]) | null;
+        };
+        ItemSize: {
+            readonly id: number;
+            stock: number;
+            size: string;
+            readonly item: number;
+        };
+        ItemSizeRequest: {
+            stock: number;
+            size: string;
         };
         ItemVariant: {
             readonly id: number;
             color: string;
             /** Format: uri */
             image: string;
-            stock: number;
-            type: components["schemas"]["TypeEnum"];
-            size: string;
             readonly item: number;
         };
         ItemVariantRequest: {
             color: string;
             /** Format: uri */
             image: string;
-            stock: number;
-            type: components["schemas"]["TypeEnum"];
-            size: string;
         };
         LoginRequestRequest: {
             username?: string;
@@ -423,6 +479,8 @@ export interface components {
             role: components["schemas"]["RoleEnum"];
             user_id: number;
         };
+        /** @enum {unknown} */
+        NullEnum: null;
         Order: {
             readonly id: number;
             readonly items: components["schemas"]["OrderItem"][];
@@ -480,18 +538,21 @@ export interface components {
         };
         PatchedItemRequest: {
             variants?: components["schemas"]["ItemVariantRequest"][];
+            size?: components["schemas"]["ItemSizeRequest"][];
             name?: string;
             description?: string;
             /** Format: decimal */
             price?: string;
+            type?: (components["schemas"]["TypeEnum"] | components["schemas"]["NullEnum"]) | null;
+        };
+        PatchedItemSizeRequest: {
+            stock?: number;
+            size?: string;
         };
         PatchedItemVariantRequest: {
             color?: string;
             /** Format: uri */
             image?: string;
-            stock?: number;
-            type?: components["schemas"]["TypeEnum"];
-            size?: string;
         };
         PatchedOrderRequest: {
             customer?: number;
@@ -742,8 +803,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description A unique integer value identifying this agent. */
-                id: number;
+                id: string;
             };
             cookie?: never;
         };
@@ -764,8 +824,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description A unique integer value identifying this agent. */
-                id: number;
+                id: string;
             };
             cookie?: never;
         };
@@ -792,8 +851,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description A unique integer value identifying this agent. */
-                id: number;
+                id: string;
             };
             cookie?: never;
         };
@@ -813,8 +871,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description A unique integer value identifying this agent. */
-                id: number;
+                id: string;
             };
             cookie?: never;
         };
@@ -833,6 +890,26 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["Agent"];
                 };
+            };
+        };
+    };
+    agents_profile_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -1157,6 +1234,149 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Item"];
+                };
+            };
+        };
+    };
+    items_item_size_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ItemSize"][];
+                };
+            };
+        };
+    };
+    items_item_size_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ItemSizeRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ItemSizeRequest"];
+                "multipart/form-data": components["schemas"]["ItemSizeRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ItemSize"];
+                };
+            };
+        };
+    };
+    items_item_size_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this item size. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ItemSize"];
+                };
+            };
+        };
+    };
+    items_item_size_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this item size. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ItemSizeRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ItemSizeRequest"];
+                "multipart/form-data": components["schemas"]["ItemSizeRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ItemSize"];
+                };
+            };
+        };
+    };
+    items_item_size_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this item size. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    items_item_size_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this item size. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedItemSizeRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedItemSizeRequest"];
+                "multipart/form-data": components["schemas"]["PatchedItemSizeRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ItemSize"];
                 };
             };
         };

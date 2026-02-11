@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 export default function Profile() {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, logout } = useAuth();
 
   const [data, setData] = useState<AgentResponse>();
   const [loading, setLoading] = useState(true);
@@ -36,7 +36,7 @@ export default function Profile() {
     fetchData();
   }, [isAuthenticated, router, user]);
 
-  if (loading) <h2 className="flex justify-center">Not Found</h2>;
+  if (loading) <h2 className="flex justify-center">Loading</h2>;
 
   return (
     <div className="min-h-screen min-w-full py-3 px-3">
@@ -63,7 +63,10 @@ export default function Profile() {
           <h3>Change Password</h3>
           <ChevronRight className="w-5 h-5" />
         </button>
-        <button className="flex text-(--color-pending) justify-between items-center w-full">
+        <button
+          onClick={() => logout()}
+          className="flex text-(--color-pending) justify-between items-center w-full"
+        >
           <h3 className="text-(--color-pending)">Logout</h3>
           <LogOut className="w-5 h-5" />
         </button>
