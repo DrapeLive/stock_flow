@@ -1,4 +1,5 @@
 "use client";
+import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 import { useAuth } from "@/context/AuthContext";
 import { agentApi } from "@/lib/api/agents";
 import { AgentAllResponse } from "@/types/agent";
@@ -47,10 +48,12 @@ const AgentsList: React.FC = () => {
           </div>
         </div>
         <button className="p-1 rounded-md bg-(--color-primary) text-white border border-(--color-border)">
-          <div className="flex items-center gap-1">
-            <p>Add new Agents</p>
-            <Plus size={16} />
-          </div>
+          <StockFlowButton
+            text="Add new Agent"
+            variant="filled"
+            icon={<Plus />}
+            onClick={() => router.push("/admin/users/agents/new")}
+          />
         </button>
       </div>
       <div>
