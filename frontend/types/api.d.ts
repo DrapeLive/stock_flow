@@ -427,7 +427,7 @@ export interface components {
         Item: {
             readonly id: number;
             variants: components["schemas"]["ItemVariant"][];
-            size: components["schemas"]["ItemSize"][];
+            sizes: components["schemas"]["ItemSize"][];
             name: string;
             description?: string;
             /** Format: decimal */
@@ -438,7 +438,7 @@ export interface components {
         };
         ItemRequest: {
             variants: components["schemas"]["ItemVariantRequest"][];
-            size: components["schemas"]["ItemSizeRequest"][];
+            sizes: components["schemas"]["ItemSizeRequest"][];
             name: string;
             description?: string;
             /** Format: decimal */
@@ -538,7 +538,7 @@ export interface components {
         };
         PatchedItemRequest: {
             variants?: components["schemas"]["ItemVariantRequest"][];
-            size?: components["schemas"]["ItemSizeRequest"][];
+            sizes?: components["schemas"]["ItemSizeRequest"][];
             name?: string;
             description?: string;
             /** Format: decimal */
