@@ -1,4 +1,5 @@
 "use client";
+import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 import { useAuth } from "@/context/AuthContext";
 import { itemApi } from "@/lib/api/item";
 import { ItemAllResponse } from "@/types/item";
@@ -45,12 +46,11 @@ const ListItems: React.FC = () => {
             <p className="font-bold">{data.length}</p>
           </div>
         </div>
-        <button className="p-1 rounded-md bg-(--color-primary) text-white border border-(--color-border)">
-          <div className="flex items-center gap-1">
-            <p>Add new Item</p>
-            <Plus size={16} />
-          </div>
-        </button>
+        <StockFlowButton
+          text="Add new Item"
+          icon={<Plus />}
+          onClick={() => router.push("/admin/items/new")}
+        />
       </div>
       <div>
         {data?.map((item, index) => (
@@ -60,14 +60,18 @@ const ListItems: React.FC = () => {
           >
             <div className="min-w-12">
               <h6>{item.name}</h6>
+<<<<<<< Updated upstream
               <p className="text-(--color-text) truncate">{item.description}</p>
+=======
+              {/*<p className="text-(--color-text) truncate">{item.address}</p>*/}
+>>>>>>> Stashed changes
             </div>
             <div className="flex flex-col items-center">
-              <h6>{item.agent_name}</h6>
+              {/*<h6>{item.agent_name}</h6>*/}
               <p className="text-(--color-text)">Agent</p>
             </div>
             <div className="flex flex-col items-center">
-              <h3>{item.total_orders}</h3>
+              {/*<h3>{item.total_orders}</h3>*/}
               <p className="text-(--color-text)">Order</p>
             </div>
             <Info />
