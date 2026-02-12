@@ -1,13 +1,42 @@
+"use client";
+import OrderItem from "@/components/pages/admin/order-item/OrderItem";
+import { orderApi } from "@/lib/api/order";
+import { OrderResponse } from "@/types/order";
 import { ChevronLeft, Save } from "lucide-react";
 import Link from "next/link";
+import { useParams } from "next/navigation";
+import { useEffect, useState } from "react";
 
 export default function EditOrderPage() {
+  const params = useParams();
+  const id = params.id as string;
+  const [loading, setLoading] = useState(false);
+  const [data, setData] = useState<OrderResponse>();
+
+  useEffect(() => {
+    setLoading(true);
+
+    const fetchData = async () => {
+      try {
+        const response = await orderApi.getOne(Number(id));
+        setData(response);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [id]);
+
+  if (loading) return <h2 className="flex justify-center">Loading</h2>;
   return (
     <div className="min-h-screen min-w-full">
       <div className="w-full">
         <Link
           className="flex text-(--color-primary) items-center"
-          href={"/admin/order/status/1"}
+          href={`/admin/order/status/${id}`}
         >
           <ChevronLeft size={18} />
           <h5>Back</h5>
@@ -20,6 +49,7 @@ export default function EditOrderPage() {
           <Save />
         </button>
       </div>
+      <OrderItem items={data?.items} />
     </div>
   );
 }
