@@ -10,9 +10,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
-import { X } from "lucide-react";
+import { itemApi } from "@/lib/api/item";
 import SizesSection from "./addSizeSection";
 import ColorsSection from "./addColorSection";
+import { ItemRequest } from "@/types/item";
+import { useRouter } from "next/navigation";
 
 interface Size {
   id: string;
@@ -26,13 +28,22 @@ interface Color {
   image: string | null;
 }
 
+interface ItemFormData {
+  name: ItemRequest["name"];
+  description: ItemRequest["description"];
+  type: ItemRequest["type"];
+  price: ItemRequest["price"];
+}
+
 export default function NewItemPage() {
+  const router = useRouter();
+
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<ItemFormData>({
     name: "",
     description: "",
-    type: "",
+    type: "gents",
     price: "",
   });
 
@@ -90,14 +101,32 @@ export default function NewItemPage() {
   };
 
   const handleSubmit = () => {
-    const payload = {
-      ...formData,
-      sizes,
-      colors,
+    const createItem = async () => {
+      try {
+        const response = await itemApi.create({
+          name: formData.name,
+          description: formData.description,
+          type: formData.type,
+          price: formData.price,
+          sizes: sizes.map((size) => ({
+            size: size.label,
+            stock: parseInt(size.quantity, 10),
+          })),
+          variants: colors.map((color) => ({
+            color: color.name,
+            image:
+              "https://unsplash.com/photos/black-crew-neck-t-shirt-6Nub980bI3I",
+          })),
+        });
+        console.log("Item created successfully:", response);
+        router.push("/admin/items");
+      } catch (error) {
+        console.error("Error creating item:", error);
+        // Optionally, show an error message to the user
+      }
     };
 
-    console.log("Submitting:", payload);
-    // 🔥 API integration later
+    createItem();
   };
 
   /* ------------------ UI ------------------ */
@@ -154,7 +183,11 @@ export default function NewItemPage() {
 
       <ColorsSection colors={colors} setColors={setColors} />
       <div className="flex justify-between items-center pt-6">
-        <StockFlowButton variant="outline" text="Cancel" />
+        <StockFlowButton
+          variant="outline"
+          text="Cancel"
+          onClick={() => router.back()}
+        />
         <StockFlowButton
           variant="filled"
           text="Create new Item"
