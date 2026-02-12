@@ -10,7 +10,7 @@ from apps.accounts.permissions import IsAdmin, IsAgent
 from rest_framework.permissions import IsAuthenticated
 from drf_spectacular.utils import extend_schema
 
-from ..items.models import ItemVariant
+from ..items.models import ItemVariant, ItemSize
 
 
 class OrderViewSet(ModelViewSet):
@@ -49,10 +49,14 @@ class AddOrderItemView(APIView):
         order = get_object_or_404(Order,id=order_id)
         item = serializer.validated_data["item"]
         variant_id = serializer.validated_data["variant"]
+        size_id = serializer.validated_data["size"]
         qty = serializer.validated_data['quantity']
 
         with transaction.atomic():
             try:
+                size = ItemSize.objects.select_for_update().get(
+                    id=size_id,
+                )
                 variant = ItemVariant.objects.select_for_update().get(
                     id=variant_id,
                 )
@@ -62,9 +66,9 @@ class AddOrderItemView(APIView):
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
-            if variant.stock < qty:
+            if size.stock < qty:
                 return Response(
-                    {"error": f"Insufficient stock. Only {variant.stock} units available."},
+                    {"error": f"Insufficient stock. Only {size.stock} units available."},
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
@@ -72,10 +76,11 @@ class AddOrderItemView(APIView):
                 order=order,
                 item=item,
                 quantity=qty,
-                variant=variant
+                variant=variant,
+                size=size
             )
 
-            variant.stock -= qty
-            variant.save()
+            size.stock -= qty
+            size.save()
 
             return Response({"message": "Item added"}, status=status.HTTP_201_CREATED)

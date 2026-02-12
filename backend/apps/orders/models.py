@@ -1,7 +1,7 @@
 from django.db import models
 from apps.customers.models import Customer
 from apps.agents.models import Agent
-from apps.items.models import Item, ItemVariant
+from apps.items.models import Item, ItemVariant, ItemSize
 
 
 # Create your models here.
@@ -27,6 +27,7 @@ class OrderItem(models.Model):
     order = models.ForeignKey(Order, related_name='items', on_delete=models.CASCADE)
     item = models.ForeignKey(Item, on_delete=models.PROTECT)
     variant = models.ForeignKey(ItemVariant, on_delete=models.PROTECT,null=True, blank=True)
+    size = models.ForeignKey(ItemSize, on_delete=models.PROTECT,null=True, blank=True)
     quantity = models.PositiveIntegerField()
     packed_quantity = models.PositiveIntegerField(default=0)
 

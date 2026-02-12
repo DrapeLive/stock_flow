@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from .models import Order, OrderItem
 from apps.items.models import Item
-from apps.items.serializers import ItemVariantSerializer
+from apps.items.serializers import ItemVariantSerializer, ItemSizeSerializer
 from apps.customers.models import Customer
 from apps.agents.models import Agent
 
@@ -24,6 +24,7 @@ class SimpleAgentSerializer(serializers.ModelSerializer):
 class OrderItemSerializer(serializers.ModelSerializer):
     item = SimpleItemSerializer(read_only=True)
     variant = ItemVariantSerializer(read_only=True)
+    size = ItemSizeSerializer(read_only=True)
 
     class Meta:
         model = OrderItem
@@ -64,6 +65,7 @@ class AddOrderItemSerializer(serializers.Serializer):
     qr_code = serializers.UUIDField()
     quantity = serializers.IntegerField()
     variant = serializers.IntegerField()
+    size = serializers.IntegerField()
 
     def validate(self, attrs):
         try:
