@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { adminApi } from "@/lib/api/admin";
 import {
   Field,
   FieldContent,
@@ -9,8 +10,10 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
+import { useRouter } from "next/navigation";
 
 export default function NewAdminPage() {
+  const router = useRouter();
   const [formData, setFormData] = useState({
     adminName: "",
     email: "",
@@ -25,8 +28,21 @@ export default function NewAdminPage() {
   };
 
   const handleSubmit = () => {
-    console.log("Submitting:", formData);
-    // 🔥 API integration later
+    const createAdmin = async () => {
+      try {
+        await adminApi.create({
+          username: formData.adminName,
+          email: formData.email,
+          password: formData.password,
+        });
+        console.log("Admin created successfully");
+        router.push("/admin/users/");
+      } catch (error) {
+        console.error("Error creating admin:", error);
+      }
+    };
+
+    createAdmin();
   };
 
   return (
@@ -72,9 +88,17 @@ export default function NewAdminPage() {
 
       {/* Buttons */}
       <div className="flex justify-between items-center mt-8">
-        <StockFlowButton variant="outline" text="Cancel" />
+        <StockFlowButton
+          variant="outline"
+          text="Cancel"
+          onClick={() => router.back()}
+        />
 
-        <StockFlowButton variant="filled" text="Create new Admin" />
+        <StockFlowButton
+          variant="filled"
+          text="Create new Admin"
+          onClick={handleSubmit}
+        />
       </div>
     </div>
   );
