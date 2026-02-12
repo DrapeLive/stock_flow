@@ -3,6 +3,7 @@ from .models import Order, OrderItem
 from apps.items.models import Item
 from apps.items.serializers import ItemVariantSerializer
 from apps.customers.models import Customer
+from apps.agents.models import Agent
 
 class SimpleCustomerSerializer(serializers.ModelSerializer):
     class Meta:
@@ -13,6 +14,12 @@ class SimpleItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = Item
         fields = ["id", "name", "price",]
+
+class SimpleAgentSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(source="user.username")
+    class Meta:
+        model = Agent
+        fields = ["id", "username"]
 
 class OrderItemSerializer(serializers.ModelSerializer):
     item = SimpleItemSerializer(read_only=True)
@@ -29,6 +36,15 @@ class OrderSerializer(serializers.ModelSerializer):
     customer = serializers.PrimaryKeyRelatedField(
         queryset=Customer.objects.all(),
         write_only=True
+    )
+    agent = serializers.PrimaryKeyRelatedField(
+        queryset=Customer.objects.all(),
+        write_only=True
+    )
+
+    agent_details = SimpleAgentSerializer(
+        source="agent",
+        read_only=True
     )
 
     customer_details = SimpleCustomerSerializer(
