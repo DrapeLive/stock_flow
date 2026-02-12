@@ -18,14 +18,14 @@ class ItemSizeSerializer(serializers.ModelSerializer):
 
 class ItemSerializer(serializers.ModelSerializer):
     variants = ItemVariantSerializer(many=True)
-    size = ItemSizeSerializer(many=True)
+    sizes = ItemSizeSerializer(many=True)
     class Meta:
         model = Item
         fields = '__all__'
 
     def create(self, validated_data):
         variants_data = validated_data.pop('variants')
-        size_data = validated_data.pop('size')
+        size_data = validated_data.pop('sizes')
         item = Item.objects.create(**validated_data)
 
         for variant_data in variants_data:
