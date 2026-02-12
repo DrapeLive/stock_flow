@@ -485,11 +485,11 @@ export interface components {
             readonly id: number;
             readonly items: components["schemas"]["OrderItem"][];
             readonly total_quantity: string;
+            readonly agent_details: components["schemas"]["SimpleAgent"];
             readonly customer_details: components["schemas"]["SimpleCustomer"];
             status?: components["schemas"]["StatusEnum"];
             /** Format: date-time */
             readonly created_at: string;
-            agent: number;
         };
         OrderItem: {
             readonly id: number;
@@ -505,8 +505,8 @@ export interface components {
         };
         OrderRequest: {
             customer: number;
-            status?: components["schemas"]["StatusEnum"];
             agent: number;
+            status?: components["schemas"]["StatusEnum"];
         };
         PasswordToken: {
             password: string;
@@ -556,8 +556,8 @@ export interface components {
         };
         PatchedOrderRequest: {
             customer?: number;
-            status?: components["schemas"]["StatusEnum"];
             agent?: number;
+            status?: components["schemas"]["StatusEnum"];
         };
         ResetToken: {
             token: string;
@@ -571,6 +571,13 @@ export interface components {
          * @enum {string}
          */
         RoleEnum: "ADMIN" | "AGENT";
+        SimpleAgent: {
+            readonly id: number;
+            username: string;
+        };
+        SimpleAgentRequest: {
+            username: string;
+        };
         SimpleCustomer: {
             readonly id: number;
             name: string;
