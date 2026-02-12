@@ -56,7 +56,13 @@ const Pending: React.FC = () => {
           const previewImages = order.items.slice(0, 3);
 
           return (
-            <div key={order.id} className="flex p-1 border-b">
+            <button
+              onClick={() => {
+                router.push(`/admin/order/status/${order.id}`);
+              }}
+              key={order.id}
+              className="flex p-1 border-b"
+            >
               <div className="relative w-16 h-16">
                 {previewImages[0] && (
                   <div className="absolute left-0 z-30 rotate-0">
@@ -127,7 +133,7 @@ const Pending: React.FC = () => {
               <div className="flex justify-center items-center">
                 <Info />
               </div>
-            </div>
+            </button>
           );
         })}
       </div>
