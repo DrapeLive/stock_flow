@@ -356,6 +356,7 @@ export interface components {
             qr_code: string;
             quantity: number;
             variant: number;
+            size: number;
         };
         Admin: {
             readonly id: number;
@@ -495,6 +496,7 @@ export interface components {
             readonly id: number;
             readonly item: components["schemas"]["SimpleItem"];
             readonly variant: components["schemas"]["ItemVariant"];
+            readonly size: components["schemas"]["ItemSize"];
             quantity: number;
             packed_quantity?: number;
             readonly order: number;
