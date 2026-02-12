@@ -6,5 +6,8 @@ export type AgentAllResponse =
 export type AgentResponse =
   operations["agents_retrieve"]["responses"][200]["content"]["application/json"];
 
+export type AgentRequest =
+  operations["agents_create"]["requestBody"]["content"]["application/json"];
+
 export type ProfileResponse =
   operations["agents_profile_retrieve"]["responses"][200];

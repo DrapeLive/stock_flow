@@ -11,20 +11,20 @@ const AdminNavBar: React.FC = () => {
     <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full">
       <div className="bg-white py-4 flex gap-16 items-center justify-center shadow-[0_-6px_20px_rgba(0,0,0,0.1)]">
         <button
-          onClick={() => router.push("/admin/users/customers")}
+          onClick={() => router.push("/admin/users/")}
           className="flex flex-col items-center gap-1"
         >
           <Users
             size={24}
             className={
-              pathname === "/admin/users/customers"
+              pathname === "/admin/users"
                 ? "text-(--color-primary)"
                 : "text-black"
             }
           />
           <span
             className={`text-[8px] ${
-              pathname === "/admin/users/customers"
+              pathname === "/admin/users"
                 ? "text-(--color-primary)"
                 : "text-black"
             }`}

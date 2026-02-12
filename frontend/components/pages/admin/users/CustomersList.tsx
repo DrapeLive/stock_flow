@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { CustomerAllResponse } from "@/types/customer";
 import { customerApi } from "@/lib/api/customer";
+import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 
 const CustomerList: React.FC = () => {
   const { isAuthenticated } = useAuth();
@@ -46,12 +47,12 @@ const CustomerList: React.FC = () => {
             <p className="font-bold">{data.length}</p>
           </div>
         </div>
-        <button className="p-1 rounded-md bg-(--color-primary) text-white border border-(--color-border)">
-          <div className="flex items-center gap-1">
-            <p>Add new Customers</p>
-            <Plus size={16} />
-          </div>
-        </button>
+        <StockFlowButton
+          text="Add new Customer"
+          variant="filled"
+          icon={<Plus />}
+          onClick={() => router.push("/admin/users/customers/new")}
+        />
       </div>
       <div>
         {data?.map((item, index) => (

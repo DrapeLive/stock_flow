@@ -1,16 +1,16 @@
 "use client";
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 import { useAuth } from "@/context/AuthContext";
-import { agentApi } from "@/lib/api/agents";
-import { AgentAllResponse } from "@/types/agent";
+import { adminApi } from "@/lib/api/admin";
+import { AdminAllResponse } from "@/types/admin";
 import { Info, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
-const AgentsList: React.FC = () => {
+const AdminsList: React.FC = () => {
   const { isAuthenticated } = useAuth();
 
-  const [data, setData] = useState<AgentAllResponse>([]);
+  const [data, setData] = useState<AdminAllResponse>([]);
   const [loading, setLoading] = useState(true);
 
   const router = useRouter();
@@ -20,7 +20,7 @@ const AgentsList: React.FC = () => {
 
     const fetchData = async () => {
       try {
-        const response = await agentApi.getAll();
+        const response = await adminApi.getAll();
         setData(response);
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -57,19 +57,14 @@ const AgentsList: React.FC = () => {
       <div>
         {data?.map((item, index) => (
           <div
-            className="flex border-b border-(--color-border) py-2"
+            className="flex border-b border-(--color-border) py-2 justify-between"
             key={index}
           >
             <div className="min-w-38">
-              <h6>{item.user.username}</h6>
-              <p className="text-(--color-text)">{item.user.email}</p>
+              <h6>{item.username}</h6>
+              <p className="text-(--color-text)">{item.email}</p>
             </div>
-            <div className="flex w-full justify-between">
-              <h6 className="flex items-center">+91 {item.contact}</h6>
-              <div className="flex flex-col items-center">
-                <h3>{item.total_customers}</h3>
-                <p className="text-(--color-text)">Customers</p>
-              </div>
+            <div className="flex w-fit justify-end">
               <Info />
             </div>
           </div>
@@ -79,4 +74,4 @@ const AgentsList: React.FC = () => {
   );
 };
 
-export default AgentsList;
+export default AdminsList;
