@@ -11,12 +11,12 @@ export function proxy(request: NextRequest) {
 
   const token = request.cookies.get("token")?.value;
 
-  // 🚫 Not logged in → redirect to login
+  // Not logged in -> redirect to login
   if (!token && !isPublic) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  // ✅ Logged in but trying to access login page → redirect home
+  // Logged in but trying to access login page -> redirect home
   if (token && isPublic) {
     return NextResponse.redirect(new URL("/", request.url));
   }
