@@ -1,4 +1,4 @@
-import { AgentAllResponse, AgentResponse } from "@/types/agent";
+import { AgentAllResponse, AgentRequest, AgentResponse } from "@/types/agent";
 import { api } from "./axios";
 
 export const agentApi = {
@@ -9,6 +9,11 @@ export const agentApi = {
 
   async getOne(id: number | undefined): Promise<AgentResponse> {
     const res = await api.get<AgentResponse>(`/api/agents/profile/${id}`);
+    return res.data;
+  },
+
+  async postOne(data: AgentRequest): Promise<AgentResponse> {
+    const res = await api.post<AgentResponse>("/api/agents/", data);
     return res.data;
   },
 };

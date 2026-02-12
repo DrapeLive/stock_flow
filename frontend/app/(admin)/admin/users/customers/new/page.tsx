@@ -1,7 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import StockFlowSelect from "@/components/ui/custom/stockFlowSelect";
+import { agentApi } from "@/lib/api/agents";
+import { customerApi } from "@/lib/api/customer";
+import { CustomerCreateRequest } from "@/types/customer";
 import {
   Field,
   FieldContent,
@@ -11,6 +14,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
+import { useAuth } from "@/context/AuthContext";
+import { useRouter } from "next/navigation";
 
 export default function NewCustomerPage() {
   const [formData, setFormData] = useState({
@@ -27,9 +32,47 @@ export default function NewCustomerPage() {
     }));
   };
 
-  const handleSubmit = () => {
-    console.log("Submitting:", formData);
-    // 🔥 API integration later
+  const { isAuthenticated } = useAuth();
+
+  const [agents, setAgents] = useState<{ value: string; label: string }[]>([]);
+
+  const router = useRouter();
+  const [loadingAgents, setLoadingAgents] = useState(true);
+
+  useEffect(() => {
+    const fetchAgents = async () => {
+      setLoadingAgents(true);
+      try {
+        const response = await agentApi.getAll();
+        const formattedAgents = response.map((agent) => ({
+          value: agent.id.toString(),
+          label: agent.user.username,
+        }));
+        setAgents(formattedAgents);
+      } catch (error) {
+        console.error("Error fetching agents:", error);
+      } finally {
+        setLoadingAgents(false);
+      }
+    };
+
+    fetchAgents();
+  }, [isAuthenticated, router]);
+
+  const handleSubmit = async () => {
+    try {
+      const payload: CustomerCreateRequest = {
+        name: formData.customerName,
+        address: formData.address,
+        contact: formData.contactNumber,
+        agent: parseInt(formData.agent),
+      };
+      await customerApi.create(payload);
+      console.log("Customer created successfully");
+      router.push("/admin/users/");
+    } catch (error) {
+      console.error("Error creating customer:", error);
+    }
   };
 
   return (
@@ -44,6 +87,8 @@ export default function NewCustomerPage() {
           <StockFlowSelect
             value={formData.agent}
             onChange={(val) => handleChange("agent", val)}
+            options={agents}
+            disabled={loadingAgents}
           />
         </Field>
 
@@ -89,7 +134,11 @@ export default function NewCustomerPage() {
       <div className="flex justify-between items-center mt-8">
         <StockFlowButton variant="outline" text="Cancel" />
 
-        <StockFlowButton variant="filled" text="Create new Customer" />
+        <StockFlowButton
+          variant="filled"
+          text="Create new Customer"
+          onClick={handleSubmit}
+        />
       </div>
     </div>
   );

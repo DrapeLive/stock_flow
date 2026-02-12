@@ -11,23 +11,31 @@ import {
 
 interface StockFlowSelectProps {
   value: string;
+  placeholder?: string;
   onChange: (value: string) => void;
+  options: { value: string; label: string }[];
+  disabled?: boolean;
 }
 
 export default function StockFlowSelect({
   value,
+  placeholder,
   onChange,
+  options,
+  disabled = false,
 }: StockFlowSelectProps) {
   return (
-    <Select value={value} onValueChange={onChange}>
+    <Select value={value} onValueChange={onChange} disabled={disabled}>
       <SelectTrigger className="w-full">
-        <SelectValue placeholder="Select Agent" />
+        <SelectValue placeholder={placeholder || "Select"} />
       </SelectTrigger>
       <SelectContent>
         <SelectGroup>
-          <SelectItem value="john_doe">John Doe</SelectItem>
-          <SelectItem value="agent_2">Agent 2</SelectItem>
-          <SelectItem value="agent_3">Agent 3</SelectItem>
+          {options.map((option) => (
+            <SelectItem key={option.value} value={option.value}>
+              {option.label}
+            </SelectItem>
+          ))}
         </SelectGroup>
       </SelectContent>
     </Select>
