@@ -21,11 +21,6 @@ export default function History() {
   useEffect(() => {
     setLoading(true);
 
-    if (!isAuthenticated) {
-      router.push("/login");
-      return;
-    }
-
     const fetchData = async () => {
       try {
         const response = await orderApi.getAll();

@@ -21,16 +21,6 @@ export default function Home() {
   useEffect(() => {
     setLoading(true);
 
-    if (!isAuthenticated) {
-      router.push("/login");
-      return;
-    }
-
-    if (isAuthenticated) {
-      if (user?.role === "ADMIN") router.push("/admin");
-      else router.push("/");
-    }
-
     const fetchData = async () => {
       try {
         const response = await orderApi.getAll();
