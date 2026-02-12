@@ -60,11 +60,7 @@ const ListItems: React.FC = () => {
           >
             <div className="min-w-12">
               <h6>{item.name}</h6>
-<<<<<<< Updated upstream
-              <p className="text-(--color-text) truncate">{item.description}</p>
-=======
               {/*<p className="text-(--color-text) truncate">{item.address}</p>*/}
->>>>>>> Stashed changes
             </div>
             <div className="flex flex-col items-center">
               {/*<h6>{item.agent_name}</h6>*/}
