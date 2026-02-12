@@ -17,11 +17,6 @@ const ListItems: React.FC = () => {
   useEffect(() => {
     setLoading(true);
 
-    if (!isAuthenticated) {
-      router.push("/login");
-      return;
-    }
-
     const fetchData = async () => {
       try {
         const response = await itemApi.getAll();
