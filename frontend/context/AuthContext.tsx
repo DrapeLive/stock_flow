@@ -2,11 +2,13 @@
 
 import { AuthUser, LoginResponse } from "@/types/auth";
 import { createContext, useContext, useState } from "react";
+import Cookies from "js-cookie";
 
 type AuthContextType = {
   user: AuthUser | null;
   accessToken: string | null;
   refreshToken: string | null;
+  role: string | null; // Add role to the context type
   isAuthenticated: boolean;
 
   login: (data: LoginResponse) => void;
@@ -15,30 +17,34 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-const STORAGE_KEYS = {
+const COOKIE_KEYS = {
   user: "auth_user",
-  access: "auth_access",
+  access: "token",
   refresh: "auth_refresh",
+  role: "role",
 };
 
 const getStoredUser = (): AuthUser | null => {
   if (typeof window === "undefined") return null;
-  const user = localStorage.getItem(STORAGE_KEYS.user);
+  const user = Cookies.get(COOKIE_KEYS.user);
   return user ? JSON.parse(user) : null;
 };
 
 const getStoredToken = (key: string): string | null => {
   if (typeof window === "undefined") return null;
-  return localStorage.getItem(key);
+  return Cookies.get(key) || null;
 };
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(() => getStoredUser());
   const [accessToken, setAccessToken] = useState<string | null>(() =>
-    getStoredToken(STORAGE_KEYS.access),
+    getStoredToken(COOKIE_KEYS.access),
   );
   const [refreshToken, setRefreshToken] = useState<string | null>(() =>
-    getStoredToken(STORAGE_KEYS.refresh),
+    getStoredToken(COOKIE_KEYS.refresh),
+  );
+  const [role, setRole] = useState<string | null>(() =>
+    getStoredToken(COOKIE_KEYS.role),
   );
 
   const login = (data: LoginResponse) => {
@@ -50,20 +56,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(authUser);
     setAccessToken(data.access);
     setRefreshToken(data.refresh);
+    setRole(data.role);
 
-    localStorage.setItem(STORAGE_KEYS.user, JSON.stringify(authUser));
-    localStorage.setItem(STORAGE_KEYS.access, data.access);
-    localStorage.setItem(STORAGE_KEYS.refresh, data.refresh);
+    Cookies.set(COOKIE_KEYS.user, JSON.stringify(authUser));
+    Cookies.set(COOKIE_KEYS.access, data.access);
+    Cookies.set(COOKIE_KEYS.refresh, data.refresh);
+    Cookies.set(COOKIE_KEYS.role, data.role);
   };
 
   const logout = () => {
     setUser(null);
     setAccessToken(null);
     setRefreshToken(null);
+    setRole(null);
 
-    localStorage.removeItem(STORAGE_KEYS.user);
-    localStorage.removeItem(STORAGE_KEYS.access);
-    localStorage.removeItem(STORAGE_KEYS.refresh);
+    Cookies.remove(COOKIE_KEYS.user);
+    Cookies.remove(COOKIE_KEYS.access);
+    Cookies.remove(COOKIE_KEYS.refresh);
+    Cookies.remove(COOKIE_KEYS.role);
   };
 
   return (
@@ -72,6 +82,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         accessToken,
         refreshToken,
+        role, // Include role in the context value
         isAuthenticated: !!accessToken,
         login,
         logout,
