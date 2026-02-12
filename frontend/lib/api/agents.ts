@@ -12,7 +12,7 @@ export const agentApi = {
     return res.data;
   },
 
-  async postOne(data: AgentRequest): Promise<AgentResponse> {
+  async create(data: AgentRequest): Promise<AgentResponse> {
     const res = await api.post<AgentResponse>("/api/agents/", data);
     return res.data;
   },

@@ -9,13 +9,18 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
+import { agentApi } from "@/lib/api/agents";
+import { useRouter } from "next/navigation";
 
 export default function NewAgentPage() {
   const [formData, setFormData] = useState({
     agentName: "",
     email: "",
     contactNumber: "",
+    password: "",
   });
+
+  const router = useRouter();
 
   const handleChange = (key: string, value: string) => {
     setFormData((prev) => ({
@@ -24,9 +29,20 @@ export default function NewAgentPage() {
     }));
   };
 
-  const handleSubmit = () => {
-    console.log("Submitting:", formData);
-    // 🔥 API integration later
+  const handleSubmit = async () => {
+    try {
+      const payload = {
+        username: formData.agentName,
+        email: formData.email,
+        contact: formData.contactNumber,
+        password: formData.password,
+      };
+      await agentApi.create(payload); // Assuming `agentApi.create` is the method to create an agent
+      console.log("Agent created successfully");
+      router.push("/admin/users/");
+    } catch (error) {
+      console.error("Error creating agent:", error);
+    }
   };
 
   return (
@@ -57,6 +73,18 @@ export default function NewAgentPage() {
           />
         </Field>
 
+        {/* Password */}
+        <Field>
+          <FieldContent>
+            <FieldLabel>Password</FieldLabel>
+          </FieldContent>
+          <Input
+            placeholder="*********"
+            value={formData.password}
+            onChange={(e) => handleChange("password", e.target.value)}
+          />
+        </Field>
+
         {/* Contact Number */}
         <Field>
           <FieldContent>
@@ -72,9 +100,17 @@ export default function NewAgentPage() {
 
       {/* Buttons */}
       <div className="flex justify-between items-center mt-8">
-        <StockFlowButton variant="outline" text="Cancel" />
+        <StockFlowButton
+          variant="outline"
+          text="Cancel"
+          onClick={() => router.back()}
+        />
 
-        <StockFlowButton variant="filled" text="Create new Customer" />
+        <StockFlowButton
+          variant="filled"
+          text="Create new Customer"
+          onClick={handleSubmit}
+        />
       </div>
     </div>
   );

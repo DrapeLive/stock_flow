@@ -132,7 +132,11 @@ export default function NewCustomerPage() {
 
       {/* Buttons */}
       <div className="flex justify-between items-center mt-8">
-        <StockFlowButton variant="outline" text="Cancel" />
+        <StockFlowButton
+          variant="outline"
+          text="Cancel"
+          onClick={() => router.back()}
+        />
 
         <StockFlowButton
           variant="filled"

@@ -47,14 +47,12 @@ const AgentsList: React.FC = () => {
             <p className="font-bold">{data.length}</p>
           </div>
         </div>
-        <button className="p-1 rounded-md bg-(--color-primary) text-white border border-(--color-border)">
-          <StockFlowButton
-            text="Add new Agent"
-            variant="filled"
-            icon={<Plus />}
-            onClick={() => router.push("/admin/users/agents/new")}
-          />
-        </button>
+        <StockFlowButton
+          text="Add new Agent"
+          variant="filled"
+          icon={<Plus />}
+          onClick={() => router.push("/admin/users/agents/new")}
+        />
       </div>
       <div>
         {data?.map((item, index) => (
