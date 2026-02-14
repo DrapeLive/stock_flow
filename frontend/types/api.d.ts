@@ -180,6 +180,22 @@ export interface paths {
         patch: operations["items_partial_update"];
         trace?: never;
     };
+    "/api/items/by-qr/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["items_by_qr_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/items/item-size/": {
         parameters: {
             query?: never;
@@ -1236,6 +1252,25 @@ export interface operations {
                 "multipart/form-data": components["schemas"]["PatchedItemRequest"];
             };
         };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Item"];
+                };
+            };
+        };
+    };
+    items_by_qr_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             200: {
                 headers: {
