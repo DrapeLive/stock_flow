@@ -1,0 +1,19 @@
+type: http_request
+model: http_request
+id: rq_iMStHSvttA
+createdAt: 2026-02-14T03:29:44.894797723
+updatedAt: 2026-02-14T03:31:58.532310605
+workspaceId: wk_Wx4mNs5A2J
+folderId: fl_R3n2mRa8qW
+authentication:
+  token: ${[ AGENT_TOKEN ]}
+authenticationType: bearer
+body: {}
+bodyType: null
+description: ''
+headers: []
+method: GET
+name: Fetch With QR
+sortPriority: 4999.9998
+url: ${[ BASE_URL ]}/items/by-qr/?qr_code=a553826e-b62b-4cd3-9873-1df80476ae92
+urlParameters: []
