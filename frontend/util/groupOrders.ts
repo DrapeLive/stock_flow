@@ -11,10 +11,10 @@ const groupOrders = (orders: OrderAllResponse) => {
       if (order.status === "DISPATCHED") {
         acc.dispatched.push(order);
       } else if (order.status == "PACKED") {
+        acc.pendingPacked.push(order);
         acc.packed.push(order);
       } else if (order.status == "PENDING") {
         acc.pending.push(order);
-      } else {
         acc.pendingPacked.push(order);
       }
 
