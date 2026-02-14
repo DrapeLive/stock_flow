@@ -16,4 +16,9 @@ export const itemApi = {
     const res = await api.post<ItemResponse>("/api/items/", data);
     return res.data;
   },
+
+  async byqr(id: string): Promise<ItemResponse> {
+    const res = await api.get<ItemResponse>(`/api/items/by-qr/?qr_code=${id}`);
+    return res.data;
+  },
 };
