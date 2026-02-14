@@ -8,3 +8,9 @@ export type ItemResponse =
 
 export type ItemRequest =
   operations["items_create"]["requestBody"]["content"]["application/json"];
+
+export type ItemVariant =
+  operations["items_variants_retrieve"]["responses"]["200"]["content"]["application/json"];
+
+export type ItemSize =
+  operations["items_item_size_retrieve"]["responses"]["200"]["content"]["application/json"];
