@@ -20,7 +20,7 @@ class Item(models.Model):
 class ItemVariant(models.Model):
     item = models.ForeignKey(Item, related_name="variants", on_delete=models.CASCADE)
     color = models.CharField(max_length=50)
-    image = models.URLField(max_length=200)
+    image = models.ImageField(upload_to='/items', null=True, blank=True)
 
 class ItemSize(models.Model):
     item = models.ForeignKey(Item, related_name="sizes", on_delete=models.CASCADE)

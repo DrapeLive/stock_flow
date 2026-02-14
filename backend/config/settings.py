@@ -175,3 +175,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "https://nonlosable-zaire-unbowdlerized.ngrok-free.dev"
 ]
+
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
+
