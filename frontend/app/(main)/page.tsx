@@ -33,14 +33,15 @@ export default function Home() {
     };
 
     fetchData();
-  }, [isAuthenticated, router, user]);
+  }, [isAuthenticated]);
 
   const { pendingPacked } = groupOrders(data ?? []);
-
+  console.log(pendingPacked);
   const order_len = pendingPacked.length;
 
   if (loading) return <p>Loading</p>;
-  if (order_len == 0) <h2 className="flex justify-center">No Orders</h2>;
+  if (order_len === 0)
+    return <h2 className="flex justify-center">No Orders</h2>;
 
   return (
     <div className="min-h-screen min-w-full">
