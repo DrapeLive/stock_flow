@@ -46,6 +46,7 @@ const ListCustomer: React.FC = () => {
       <div className="border border-(--color-border) rounded-md">
         {data.map((customer, index) => (
           <button
+            onClick={() => router.push(`/order/new/${customer.id}`)}
             key={index}
             className="flex w-full justify-between items-center p-2.5 border-b border-(--color-border)"
           >
