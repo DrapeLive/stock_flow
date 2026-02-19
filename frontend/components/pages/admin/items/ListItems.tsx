@@ -1,9 +1,10 @@
 "use client";
+import { Button } from "@/components/ui/button";
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 import { useAuth } from "@/context/AuthContext";
 import { itemApi } from "@/lib/api/item";
 import { ItemAllResponse } from "@/types/item";
-import { Info, Plus } from "lucide-react";
+import { Info, Plus, Printer } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -55,22 +56,40 @@ const ListItems: React.FC = () => {
       <div>
         {data?.map((item, index) => (
           <div
-            className="flex justify-between border-b border-(--color-border) py-2"
+            className="grid grid-cols-4 border-b border-(--color-border) py-2"
             key={index}
           >
-            <div className="min-w-12">
-              <h6>{item.name}</h6>
-              {/*<p className="text-(--color-text) truncate">{item.address}</p>*/}
+            <div className="flex flex-col justify-center">
+              <h6 className="truncate">{item.name}</h6>
+              <p className="text-(--color-text) truncate">{item.description}</p>
             </div>
-            <div className="flex flex-col items-center">
-              {/*<h6>{item.agent_name}</h6>*/}
-              <p className="text-(--color-text)">Agent</p>
+            <div className="flex flex-col gap-2 items-center">
+              <h6>
+                {item.sizes
+                  .map((sizeInfo) => sizeInfo.size.toUpperCase())
+                  .join(", ")}
+              </h6>
+              <h6>
+                {item.variants
+                  .map((sizeInfo) => sizeInfo.color.toUpperCase())
+                  .join(", ")}
+              </h6>
             </div>
-            <div className="flex flex-col items-center">
-              {/*<h3>{item.total_orders}</h3>*/}
-              <p className="text-(--color-text)">Order</p>
+            <div className="flex justify-center items-center">
+              {/*<h3>{item.sizes}</h3>*/}
+              <p>
+                {item.sizes.reduce(
+                  (total, sizeInfo) => total + sizeInfo.stock,
+                  0,
+                )}
+              </p>
             </div>
-            <Info />
+            <div className="flex justify-end items-center gap-2">
+              <Button onClick={() => router.push("/admin/items/qr/" + item.id)}>
+                <Printer />
+              </Button>
+              <Info />
+            </div>
           </div>
         ))}
       </div>
