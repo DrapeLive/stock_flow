@@ -5,18 +5,14 @@ import { Input } from "@/components/ui/input";
 import { useEffect, useState } from "react";
 import { orderApi } from "@/lib/api/order";
 import { OrderAllResponse } from "@/types/order";
-import { useAuth } from "@/context/AuthContext";
-import { useRouter } from "next/navigation";
 import Image from "next/image";
 import groupOrders from "@/util/groupOrders";
+import { AlertDestructive } from "@/components/ui/AlertDestructive";
+import { PageLoading } from "@/components/ui/Loading";
 
 export default function Home() {
-  const { isAuthenticated, user } = useAuth();
-
   const [data, setData] = useState<OrderAllResponse>([]);
   const [loading, setLoading] = useState(true);
-
-  const router = useRouter();
 
   useEffect(() => {
     setLoading(true);
@@ -25,21 +21,20 @@ export default function Home() {
       try {
         const response = await orderApi.getAll();
         setData(response);
-      } catch (error) {
-        console.error("Error fetching data:", error);
+      } catch (e) {
+        <AlertDestructive heading="Error" description={"Server Not Found"} />;
       } finally {
         setLoading(false);
       }
     };
 
     fetchData();
-  }, [isAuthenticated]);
+  }, []);
 
   const { pendingPacked } = groupOrders(data ?? []);
-  console.log(pendingPacked);
   const order_len = pendingPacked.length;
 
-  if (loading) return <p>Loading</p>;
+  if (loading) return <PageLoading />;
   if (order_len === 0)
     return <h2 className="flex justify-center">No Orders</h2>;
 
