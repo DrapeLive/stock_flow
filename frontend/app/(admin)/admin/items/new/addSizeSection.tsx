@@ -12,9 +12,11 @@ interface Size {
 export default function SizesSection({
   sizes,
   setSizes,
+  availableSizes,
 }: {
   sizes: Size[];
   setSizes: React.Dispatch<React.SetStateAction<Size[]>>;
+  availableSizes: string[];
 }) {
   const [open, setOpen] = useState(false);
 
@@ -58,6 +60,7 @@ export default function SizesSection({
         open={open}
         onClose={() => setOpen(false)}
         onAdd={addSize}
+        availableSizes={availableSizes}
       />
     </div>
   );

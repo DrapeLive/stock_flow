@@ -12,8 +12,13 @@ export const itemApi = {
     return res.data;
   },
 
-  async create(data: ItemRequest): Promise<ItemResponse> {
-    const res = await api.post<ItemResponse>("/api/items/", data);
+  async create(data: ItemRequest | FormData): Promise<ItemResponse> {
+    const res = await api.post<ItemResponse>("/api/items/", data, {
+      headers:
+        data instanceof FormData
+          ? { "Content-Type": "multipart/form-data" }
+          : undefined,
+    });
     return res.data;
   },
 
