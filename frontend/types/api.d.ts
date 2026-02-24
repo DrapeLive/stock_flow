@@ -476,13 +476,13 @@ export interface components {
             readonly id: number;
             color: string;
             /** Format: uri */
-            image: string;
+            image?: string | null;
             readonly item: number;
         };
         ItemVariantRequest: {
             color: string;
-            /** Format: uri */
-            image: string;
+            /** Format: binary */
+            image?: string | null;
         };
         LoginRequestRequest: {
             username?: string;
@@ -569,8 +569,8 @@ export interface components {
         };
         PatchedItemVariantRequest: {
             color?: string;
-            /** Format: uri */
-            image?: string;
+            /** Format: binary */
+            image?: string | null;
         };
         PatchedOrderRequest: {
             customer?: number;

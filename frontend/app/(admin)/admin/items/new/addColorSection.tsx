@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { X } from "lucide-react";
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 import AddColorDialog from "./addColorDialog";
@@ -6,7 +6,7 @@ import AddColorDialog from "./addColorDialog";
 interface Color {
   id: string;
   name: string;
-  image: string | null;
+  image: File | null;
 }
 
 export default function ColorsSection({
@@ -18,7 +18,7 @@ export default function ColorsSection({
 }) {
   const [open, setOpen] = useState(false);
 
-  const addColor = (color: { name: string; image: string | null }) => {
+  const addColor = (color: { name: string; image: File | null }) => {
     setColors((prev) => [...prev, { id: crypto.randomUUID(), ...color }]);
   };
 
@@ -43,10 +43,7 @@ export default function ColorsSection({
         colors.map((color) => (
           <div key={color.id} className="flex items-center gap-4 border-b py-2">
             {color.image && (
-              <img
-                src={color.image}
-                className="w-12 h-12 object-cover rounded"
-              />
+              <ColorPreview file={color.image} />
             )}
             <span>{color.name}</span>
             <button onClick={() => removeColor(color.id)} className="ml-auto">
@@ -62,5 +59,24 @@ export default function ColorsSection({
         onAdd={addColor}
       />
     </div>
+  );
+}
+
+function ColorPreview({ file }: { file: File }) {
+  const [url, setUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    const objectUrl = URL.createObjectURL(file);
+    setUrl(objectUrl);
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [file]);
+
+  if (!url) return null;
+
+  return (
+    <img
+      src={url}
+      className="w-12 h-12 aspect-square object-cover rounded"
+    />
   );
 }
