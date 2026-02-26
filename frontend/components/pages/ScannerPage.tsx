@@ -23,9 +23,9 @@ const ScannerPage: React.FC<ScannerPageProps> = ({ id }) => {
             height: { ideal: 720 }, // ← not exact, just preferred
           }}
           onScan={(data) => {
-            if (data?.[0]?.rawValue) {
-              setResult(data[0].rawValue);
-              router.push(`/order/new/${id}/${data}`);
+            if (data[0]?.rawValue) {
+              setResult(data[0]["rawValue"]);
+              router.push(`/order/new/${id}/${data[0]["rawValue"]}`);
             }
           }}
           onError={(err) => console.error(err)}

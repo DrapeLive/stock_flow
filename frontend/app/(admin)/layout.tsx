@@ -1,5 +1,5 @@
 import AdminNavBar from "@/components/ui/AdminNavBar";
-import AdminInputBar from "@/components/ui/custom/adminInputBar";
+import AdminProfileButton from "@/components/ui/custom/adminProfileButton";
 
 export default function AdminLayout({
   children,
@@ -8,7 +8,7 @@ export default function AdminLayout({
 }) {
   return (
     <div className="admin-order-layout">
-      <AdminInputBar />
+      <AdminProfileButton />
       {children}
       <AdminNavBar />
     </div>

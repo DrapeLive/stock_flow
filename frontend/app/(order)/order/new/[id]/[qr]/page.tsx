@@ -40,7 +40,8 @@ export default function ProductDetailPage() {
 
     const fetchData = async () => {
       try {
-        const response = await itemApi.byqr(id);
+        console.log(params.qr);
+        const response = await itemApi.byqr(params.qr);
         setData(response);
       } catch (error) {
         console.error("Error fetching data:", error);

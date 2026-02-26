@@ -6,10 +6,10 @@ export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   const publicRoutes = ["/login", "/reset-password"];
-
   const isPublic = publicRoutes.some((route) => pathname.startsWith(route));
 
   const token = request.cookies.get("token")?.value;
+  const role = request.cookies.get("role")?.value;
 
   // Not logged in -> redirect to login
   if (!token && !isPublic) {
@@ -21,8 +21,12 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL("/", request.url));
   }
 
-  const role = request.cookies.get("role")?.value;
+  // 🔹 NEW: If admin tries to access root -> redirect to /admin
+  if (token && role === "ADMIN" && pathname === "/") {
+    return NextResponse.redirect(new URL("/admin", request.url));
+  }
 
+  // Non-admin trying to access admin
   if (pathname.startsWith("/admin") && role !== "ADMIN") {
     return NextResponse.redirect(new URL("/", request.url));
   }

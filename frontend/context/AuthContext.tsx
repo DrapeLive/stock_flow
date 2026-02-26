@@ -3,6 +3,7 @@
 import { AuthUser, LoginResponse } from "@/types/auth";
 import { createContext, useContext, useState } from "react";
 import Cookies from "js-cookie";
+import { useRouter } from "next/navigation";
 
 type AuthContextType = {
   user: AuthUser | null;
@@ -36,6 +37,7 @@ const getStoredToken = (key: string): string | null => {
 };
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
   const [user, setUser] = useState<AuthUser | null>(() => getStoredUser());
   const [accessToken, setAccessToken] = useState<string | null>(() =>
     getStoredToken(COOKIE_KEYS.access),
@@ -74,6 +76,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     Cookies.remove(COOKIE_KEYS.access);
     Cookies.remove(COOKIE_KEYS.refresh);
     Cookies.remove(COOKIE_KEYS.role);
+
+    router.push("/");
   };
 
   return (
