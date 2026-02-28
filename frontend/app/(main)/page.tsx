@@ -1,7 +1,6 @@
 "use client";
 
-import { Filter, Info, Search } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { Filter, Info } from "lucide-react";
 import { useEffect, useState } from "react";
 import { orderApi } from "@/lib/api/order";
 import { OrderAllResponse } from "@/types/order";
@@ -40,7 +39,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen min-w-full">
-      <div className="relative">
+      {/*<div className="relative">
         <div className="text-muted-foreground pointer-events-none absolute inset-y-0 left-0 flex items-center justify-center pl-3 peer-disabled:opacity-50">
           <Search className="size-4" />
         </div>
@@ -49,7 +48,7 @@ export default function Home() {
           placeholder="search orders.."
           className="peer pl-9 py-6"
         />
-      </div>
+      </div>*/}
       <div className="pt-3 flex justify-between">
         <div className="flex gap-1 items-center">
           <p>Remaining Order</p>
@@ -71,7 +70,7 @@ export default function Home() {
                 {previewImages[0] && (
                   <div className="absolute left-0 z-30 rotate-0">
                     <Image
-                      src={previewImages[0].variant.image}
+                      src={previewImages[0].variant.image!}
                       alt={previewImages[0].item.name}
                       width={56}
                       height={56}
@@ -83,7 +82,7 @@ export default function Home() {
                 {previewImages[1] && (
                   <div className="absolute left-0 z-20 rotate-10">
                     <Image
-                      src={previewImages[1].variant.image}
+                      src={previewImages[1].variant.image!}
                       alt={previewImages[1].item.name}
                       width={56}
                       height={56}
@@ -95,7 +94,7 @@ export default function Home() {
                 {previewImages[2] && (
                   <div className="absolute left-0 z-10 rotate-20">
                     <Image
-                      src={previewImages[2].variant.image}
+                      src={previewImages[2].variant.image!}
                       alt={previewImages[2].item.name}
                       width={56}
                       height={56}
