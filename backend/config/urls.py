@@ -7,6 +7,8 @@ from drf_spectacular.views import (
     SpectacularRedocView,
 )
 
+from django.conf import settings
+from django.conf.urls.static import static
 
 urlpatterns = [
     # API schema
@@ -31,3 +33,6 @@ urlpatterns = [
     path('api/orders/', include('apps.orders.urls')),
     path('api/dashboard/', include('apps.dashboard.urls')),
 ]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
