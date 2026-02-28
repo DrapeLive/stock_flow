@@ -7,15 +7,12 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { agentApi } from "@/lib/api/agents";
-import { useAuth } from "@/context/AuthContext";
 import { orderApi } from "@/lib/api/order";
 import { OrderResponse } from "@/types/order";
 import { PageLoading } from "@/components/ui/Loading";
 import { AlertDestructive } from "@/components/ui/AlertDestructive";
 
 export default function Page() {
-  const { user } = useAuth();
   const params = useParams();
   const id = params.id as string;
 
@@ -32,16 +29,11 @@ export default function Page() {
       try {
         const response = await customerApi.getOne(id);
         setData(response);
-        const res = await agentApi.getOne(user?.id);
-        const agentIdValue = res.user.id;
-
-        const res1 = await orderApi.create({
-          agent: agentIdValue,
-          customer: Number(response.id),
-          status: "PENDING",
-        });
-        const res2 = await orderApi.getOne(res1.id);
-        setOrders(res2);
+        const key = localStorage.getItem("orderKey");
+        if (key) {
+          const res2 = await orderApi.getOne(Number(key));
+          setOrders(res2);
+        }
       } catch (e) {
         <AlertDestructive heading="Error" description={"Server Not Found"} />;
       } finally {
