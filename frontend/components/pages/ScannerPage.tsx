@@ -10,8 +10,6 @@ interface ScannerPageProps {
 }
 
 const ScannerPage: React.FC<ScannerPageProps> = ({ id }) => {
-  const [result, setResult] = useState<string | null>(null);
-
   const router = useRouter();
   return (
     <div className="h-full">
@@ -20,11 +18,10 @@ const ScannerPage: React.FC<ScannerPageProps> = ({ id }) => {
           constraints={{
             facingMode: "environment",
             width: { ideal: 1280 },
-            height: { ideal: 720 }, // ← not exact, just preferred
+            height: { ideal: 720 },
           }}
           onScan={(data) => {
             if (data[0]?.rawValue) {
-              setResult(data[0]["rawValue"]);
               router.push(`/order/new/${id}/${data[0]["rawValue"]}`);
             }
           }}
