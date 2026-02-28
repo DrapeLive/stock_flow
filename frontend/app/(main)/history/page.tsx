@@ -1,22 +1,17 @@
 "use client";
 
-import { Input } from "@/components/ui/input";
-import { useAuth } from "@/context/AuthContext";
+import { AlertDestructive } from "@/components/ui/AlertDestructive";
+import { PageLoading } from "@/components/ui/Loading";
 import { orderApi } from "@/lib/api/order";
 import { OrderAllResponse } from "@/types/order";
 import groupOrders from "@/util/groupOrders";
-import { Filter, Info, Search } from "lucide-react";
+import { Filter, Info } from "lucide-react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 export default function History() {
-  const { isAuthenticated } = useAuth();
-
   const [data, setData] = useState<OrderAllResponse>([]);
   const [loading, setLoading] = useState(true);
-
-  const router = useRouter();
 
   useEffect(() => {
     setLoading(true);
@@ -25,16 +20,15 @@ export default function History() {
       try {
         const response = await orderApi.getAll();
         setData(response);
-        console.log(response);
-      } catch (error) {
-        console.error("Error fetching data:", error);
+      } catch (e) {
+        <AlertDestructive heading="Error" description={"Server Not Found"} />;
       } finally {
         setLoading(false);
       }
     };
 
     fetchData();
-  }, [isAuthenticated, router]);
+  }, []);
 
   const { dispatched } = groupOrders(data ?? []);
 
@@ -44,10 +38,10 @@ export default function History() {
     return <h2 className="flex justify-center items-center">No Orders..</h2>;
   }
 
-  if (loading) return <p>Loading</p>;
+  if (loading) return <PageLoading />;
   return (
     <div className="min-h-screen min-w-full py-3 px-3">
-      <div className="relative">
+      {/*<div className="relative">
         <div className="text-muted-foreground pointer-events-none absolute inset-y-0 left-0 flex items-center justify-center pl-3 peer-disabled:opacity-50">
           <Search className="size-4" />
         </div>
@@ -56,7 +50,7 @@ export default function History() {
           placeholder="search orders.."
           className="peer pl-9 py-6"
         />
-      </div>
+      </div>*/}
       <div className="pt-3 flex justify-between">
         <div className="flex gap-1 items-center">
           <p>Remaining Order</p>
@@ -78,7 +72,7 @@ export default function History() {
                 {previewImages[0] && (
                   <div className="absolute left-0 z-30 rotate-0">
                     <Image
-                      src={previewImages[0].variant.image}
+                      src={previewImages[0].variant.image!}
                       alt={previewImages[0].item.name}
                       width={56}
                       height={56}
@@ -90,7 +84,7 @@ export default function History() {
                 {previewImages[1] && (
                   <div className="absolute left-0 z-20 rotate-10">
                     <Image
-                      src={previewImages[1].variant.image}
+                      src={previewImages[1].variant.image!}
                       alt={previewImages[1].item.name}
                       width={56}
                       height={56}
@@ -102,7 +96,7 @@ export default function History() {
                 {previewImages[2] && (
                   <div className="absolute left-0 z-10 rotate-20">
                     <Image
-                      src={previewImages[2].variant.image}
+                      src={previewImages[2].variant.image!}
                       alt={previewImages[2].item.name}
                       width={56}
                       height={56}
