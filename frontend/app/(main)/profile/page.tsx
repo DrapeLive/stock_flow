@@ -1,18 +1,17 @@
 "use client";
+import { AlertDestructive } from "@/components/ui/AlertDestructive";
+import { PageLoading } from "@/components/ui/Loading";
 import { useAuth } from "@/context/AuthContext";
 import { agentApi } from "@/lib/api/agents";
 import { AgentResponse } from "@/types/agent";
 import { ChevronRight, LogOut } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 export default function Profile() {
-  const { isAuthenticated, user, logout } = useAuth();
+  const { user, logout } = useAuth();
 
   const [data, setData] = useState<AgentResponse>();
   const [loading, setLoading] = useState(true);
-
-  const router = useRouter();
 
   useEffect(() => {
     setLoading(true);
@@ -21,17 +20,17 @@ export default function Profile() {
       try {
         const response = await agentApi.getOne(user?.id);
         setData(response);
-      } catch (error) {
-        console.error("Error fetching data:", error);
+      } catch (e) {
+        <AlertDestructive heading="Error" description={"Server Not Found"} />;
       } finally {
         setLoading(false);
       }
     };
 
     fetchData();
-  }, [isAuthenticated, router, user]);
+  }, [user]);
 
-  if (loading) <h2 className="flex justify-center">Loading</h2>;
+  if (loading) <PageLoading />;
 
   return (
     <div className="min-h-screen min-w-full py-3 px-3">
