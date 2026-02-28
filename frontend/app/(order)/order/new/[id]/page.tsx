@@ -11,6 +11,8 @@ import { agentApi } from "@/lib/api/agents";
 import { useAuth } from "@/context/AuthContext";
 import { orderApi } from "@/lib/api/order";
 import { OrderResponse } from "@/types/order";
+import { PageLoading } from "@/components/ui/Loading";
+import { AlertDestructive } from "@/components/ui/AlertDestructive";
 
 export default function Page() {
   const { user } = useAuth();
@@ -21,7 +23,6 @@ export default function Page() {
 
   const [data, setData] = useState<CustomerResponse>();
   const [loading, setLoading] = useState(true);
-  const [agentId, setAgentId] = useState(0);
   const [orders, setOrders] = useState<OrderResponse>();
 
   useEffect(() => {
@@ -32,19 +33,17 @@ export default function Page() {
         const response = await customerApi.getOne(id);
         setData(response);
         const res = await agentApi.getOne(user?.id);
-        setAgentId(res.user.id);
+        const agentIdValue = res.user.id;
+
         const res1 = await orderApi.create({
-          agent: agentId,
-          customer: Number(data?.id),
+          agent: agentIdValue,
+          customer: Number(response.id),
           status: "PENDING",
         });
-        if (res1) {
-          console.log("Create Order");
-        }
         const res2 = await orderApi.getOne(res1.id);
         setOrders(res2);
-      } catch (error) {
-        console.error("Error fetching data:", error);
+      } catch (e) {
+        <AlertDestructive heading="Error" description={"Server Not Found"} />;
       } finally {
         setLoading(false);
       }
@@ -53,7 +52,7 @@ export default function Page() {
     fetchData();
   }, []);
 
-  if (loading) return <h2>Loading</h2>;
+  if (loading) return <PageLoading />;
 
   return (
     <div className="min-h-screen min-w-full">
