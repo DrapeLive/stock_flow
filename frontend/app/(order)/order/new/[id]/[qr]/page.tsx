@@ -114,7 +114,7 @@ export default function ProductDetailPage() {
                   }`}
                 >
                   <Image
-                    src={v.image}
+                    src={v.image!}
                     alt={v.color}
                     className="w-full h-12 object-cover rounded"
                     height={12}
