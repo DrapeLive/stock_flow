@@ -1,15 +1,14 @@
 "use client";
 
-import { useAuth } from "@/context/AuthContext";
 import { customerApi } from "@/lib/api/customer";
 import { CustomerAllResponse } from "@/types/customer";
 import { ArrowRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { PageLoading } from "../ui/Loading";
+import { AlertDestructive } from "../ui/AlertDestructive";
 
 const ListCustomer: React.FC = () => {
-  const { isAuthenticated } = useAuth();
-
   const [data, setData] = useState<CustomerAllResponse>([]);
   const [loading, setLoading] = useState(true);
 
@@ -22,21 +21,21 @@ const ListCustomer: React.FC = () => {
       try {
         const response = await customerApi.getAll();
         setData(response);
-      } catch (error) {
-        console.error("Error fetching data:", error);
+      } catch (e) {
+        <AlertDestructive heading="Error" description={"Server Not Found"} />;
       } finally {
         setLoading(false);
       }
     };
 
     fetchData();
-  }, [isAuthenticated, router]);
+  }, []);
 
   if (data.length == 0) {
     return <h2 className="flex justify-center items-center">No Customer</h2>;
   }
 
-  if (loading) return <p>Loading</p>;
+  if (loading) return <PageLoading />;
 
   return (
     <div className="py-4 px-5 min-h-screen">
