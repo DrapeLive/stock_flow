@@ -19,6 +19,8 @@ import { itemApi } from "@/lib/api/item";
 import { ItemResponse, ItemSize, ItemVariant } from "@/types/item";
 import { orderApi } from "@/lib/api/order";
 import { useRouter } from "next/navigation";
+import { PageLoading } from "@/components/ui/Loading";
+import { AlertDestructive } from "@/components/ui/AlertDestructive";
 
 export default function ProductDetailPage() {
   const params = useParams<{
@@ -40,11 +42,13 @@ export default function ProductDetailPage() {
 
     const fetchData = async () => {
       try {
-        console.log(params.qr);
         const response = await itemApi.byqr(params.qr);
         setData(response);
-      } catch (error) {
-        console.error("Error fetching data:", error);
+        if (response.variants?.length > 0) {
+          setSelectedVariant(response.variants[0]);
+        }
+      } catch (e) {
+        <AlertDestructive heading="Error" description={"Server Not Found"} />;
       } finally {
         setLoading(false);
       }
@@ -56,17 +60,20 @@ export default function ProductDetailPage() {
   const handleSubmit = async () => {
     try {
       setLoading(true);
-      const res = await orderApi.addItem(
-        {
-          qr_code: params.qr,
-          quantity: quantity,
-          size: selectedSize?.id || 0,
-          variant: selectedVariant?.id || 0,
-        },
-        id,
-      );
-      if (res) {
-        router.push(`order/new/${id}`);
+      const key = localStorage.getItem("orderKey");
+      if (key != null) {
+        const res = await orderApi.addItem(
+          {
+            qr_code: params.qr,
+            quantity: quantity,
+            size: selectedSize?.id || 0,
+            variant: selectedVariant?.id || 0,
+          },
+          key,
+        );
+        if (res) {
+          router.push(`/order/new/${id}`);
+        }
       }
     } catch (e) {
       console.error("Error submitting data:", e);
@@ -75,7 +82,7 @@ export default function ProductDetailPage() {
     }
   };
 
-  if (loading) return <h2>Loading</h2>;
+  if (loading) return <PageLoading />;
 
   return (
     <div className="min-h-screen">
@@ -89,16 +96,19 @@ export default function ProductDetailPage() {
         </Link>
       </div>
       <h2 className="pt-5">{data?.name}</h2>
-      <Card className="w-full max-w-md border-none">
-        <CardContent className="p-4 space-y-5">
+      <Card className="w-full border-none">
+        <CardContent className="space-y-5">
           <div className="overflow-hidden">
-            <Image
-              src={selectedVariant?.image || ""}
-              alt="product"
-              className="w-full h-64 object-cover"
-              width={100}
-              height={64}
-            />
+            {selectedVariant && (
+              <Image
+                src={`${selectedVariant.image}`}
+                alt="product"
+                width={400}
+                height={400}
+                className="w-full h-64 object-cover"
+                unoptimized
+              />
+            )}
           </div>
 
           <div className="space-y-2">
@@ -119,6 +129,7 @@ export default function ProductDetailPage() {
                     className="w-full h-12 object-cover rounded"
                     height={12}
                     width={1}
+                    unoptimized
                   />
                   <h6 className="mt-1 bg-white border-b rounded-b-xl">
                     {v.color}
@@ -156,7 +167,7 @@ export default function ProductDetailPage() {
               <SelectContent>
                 {data?.sizes.map((s) => (
                   <SelectItem key={s.id} value={String(s.id)}>
-                    {s.size} — Stock: {s.stock}
+                    {s.size}
                   </SelectItem>
                 ))}
               </SelectContent>
