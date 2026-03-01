@@ -21,6 +21,8 @@ import { orderApi } from "@/lib/api/order";
 import { useRouter } from "next/navigation";
 import { PageLoading } from "@/components/ui/Loading";
 import { AlertDestructive } from "@/components/ui/AlertDestructive";
+import { SuccessAlert } from "@/components/ui/SuccessAlert";
+import { FailedBox } from "@/components/ui/FailBox";
 
 export default function ProductDetailPage() {
   const params = useParams<{
@@ -36,6 +38,8 @@ export default function ProductDetailPage() {
   const [selectedVariant, setSelectedVariant] = useState<ItemVariant>();
   const [selectedSize, setSelectedSize] = useState<ItemSize>();
   const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -47,8 +51,8 @@ export default function ProductDetailPage() {
         if (response.variants?.length > 0) {
           setSelectedVariant(response.variants[0]);
         }
-      } catch (e) {
-        <AlertDestructive heading="Error" description={"Server Not Found"} />;
+      } catch {
+        setError(true);
       } finally {
         setLoading(false);
       }
@@ -72,17 +76,35 @@ export default function ProductDetailPage() {
           key,
         );
         if (res) {
-          router.push(`/order/new/${id}`);
+          setSuccess(true);
         }
       }
     } catch (e) {
-      console.error("Error submitting data:", e);
+      setError(true);
     } finally {
       setLoading(false);
     }
   };
 
   if (loading) return <PageLoading />;
+
+  if (success)
+    return (
+      <SuccessAlert
+        title="Success"
+        description="Item Added Successfully"
+        onClose={() => router.push(`/order/new/${id}`)}
+      />
+    );
+
+  if (error)
+    return (
+      <FailedBox
+        title="Failed"
+        description="Server Error"
+        onClose={() => router.push(`/order/new/${id}`)}
+      />
+    );
 
   return (
     <div className="min-h-screen">

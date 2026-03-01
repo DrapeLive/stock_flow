@@ -10,7 +10,7 @@ import { useRouter } from "next/navigation";
 import { orderApi } from "@/lib/api/order";
 import { OrderResponse } from "@/types/order";
 import { PageLoading } from "@/components/ui/Loading";
-import { AlertDestructive } from "@/components/ui/AlertDestructive";
+import { FailedBox } from "@/components/ui/FailBox";
 
 export default function Page() {
   const params = useParams();
@@ -21,6 +21,7 @@ export default function Page() {
   const [data, setData] = useState<CustomerResponse>();
   const [loading, setLoading] = useState(true);
   const [orders, setOrders] = useState<OrderResponse>();
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -34,8 +35,8 @@ export default function Page() {
           const res2 = await orderApi.getOne(Number(key));
           setOrders(res2);
         }
-      } catch (e) {
-        <AlertDestructive heading="Error" description={"Server Not Found"} />;
+      } catch {
+        setError(true);
       } finally {
         setLoading(false);
       }
@@ -43,6 +44,15 @@ export default function Page() {
 
     fetchData();
   }, []);
+
+  if (error)
+    return (
+      <FailedBox
+        title="Failed"
+        description="Server Error"
+        onClose={() => router.push(`/order/new/`)}
+      />
+    );
 
   if (loading) return <PageLoading />;
 
@@ -75,7 +85,7 @@ export default function Page() {
       {orders?.items.length == 0 ? (
         <h2>Add Items</h2>
       ) : (
-        <OrderItem items={orders?.items} />
+        <OrderItem orderId={orders?.id} items={orders?.items} isDelete={true} />
       )}
     </div>
   );
