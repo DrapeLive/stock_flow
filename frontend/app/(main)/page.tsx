@@ -6,12 +6,16 @@ import { orderApi } from "@/lib/api/order";
 import { OrderAllResponse } from "@/types/order";
 import Image from "next/image";
 import groupOrders from "@/util/groupOrders";
-import { AlertDestructive } from "@/components/ui/AlertDestructive";
 import { PageLoading } from "@/components/ui/Loading";
+import { FailedBox } from "@/components/ui/FailBox";
+import { useRouter } from "next/navigation";
 
 export default function Home() {
   const [data, setData] = useState<OrderAllResponse>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  const router = useRouter();
 
   useEffect(() => {
     setLoading(true);
@@ -20,8 +24,8 @@ export default function Home() {
       try {
         const response = await orderApi.getAll();
         setData(response);
-      } catch (e) {
-        <AlertDestructive heading="Error" description={"Server Not Found"} />;
+      } catch {
+        setError(true);
       } finally {
         setLoading(false);
       }
@@ -33,6 +37,14 @@ export default function Home() {
   const { pendingPacked } = groupOrders(data ?? []);
   const order_len = pendingPacked.length;
 
+  if (error)
+    return (
+      <FailedBox
+        title="failed"
+        description="Failed to Fetch"
+        onClose={() => router.push("/")}
+      />
+    );
   if (loading) return <PageLoading />;
   if (order_len === 0)
     return <h2 className="flex justify-center">No Orders</h2>;
@@ -75,6 +87,7 @@ export default function Home() {
                       width={56}
                       height={56}
                       className="rounded-md object-cover border bg-white shadow"
+                      unoptimized
                     />
                   </div>
                 )}
@@ -86,6 +99,7 @@ export default function Home() {
                       alt={previewImages[1].item.name}
                       width={56}
                       height={56}
+                      unoptimized
                       className="rounded-md object-cover border bg-white shadow"
                     />
                   </div>
@@ -98,6 +112,7 @@ export default function Home() {
                       alt={previewImages[2].item.name}
                       width={56}
                       height={56}
+                      unoptimized
                       className="rounded-md object-cover border bg-white shadow"
                     />
                   </div>

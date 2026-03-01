@@ -1,10 +1,12 @@
 "use client";
 import { AlertDestructive } from "@/components/ui/AlertDestructive";
 import { PageLoading } from "@/components/ui/Loading";
+import { SuccessAlert } from "@/components/ui/SuccessAlert";
 import { useAuth } from "@/context/AuthContext";
 import { agentApi } from "@/lib/api/agents";
 import { AgentResponse } from "@/types/agent";
 import { ChevronRight, LogOut } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 export default function Profile() {
@@ -12,6 +14,9 @@ export default function Profile() {
 
   const [data, setData] = useState<AgentResponse>();
   const [loading, setLoading] = useState(true);
+  const [success, setSuccess] = useState(false);
+
+  const router = useRouter();
 
   useEffect(() => {
     setLoading(true);
@@ -31,6 +36,16 @@ export default function Profile() {
   }, [user]);
 
   if (loading) <PageLoading />;
+
+  if (success) {
+    return (
+      <SuccessAlert
+        title="Success"
+        description="Successfully Logout"
+        onClose={() => router.push("/profile")}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen min-w-full py-3 px-3">
@@ -58,7 +73,10 @@ export default function Profile() {
           <ChevronRight className="w-5 h-5" />
         </button>
         <button
-          onClick={() => logout()}
+          onClick={() => {
+            logout();
+            setSuccess(true);
+          }}
           className="flex text-(--color-pending) justify-between items-center w-full"
         >
           <h3 className="text-(--color-pending)">Logout</h3>
