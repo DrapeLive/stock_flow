@@ -36,7 +36,7 @@ const ScannerPage: React.FC<ScannerPageProps> = ({ id }) => {
       <div className="pt-3 w-full flex justify-center">
         <h1 className="font-medium text-(--color-primary)">Scan Item QR</h1>
       </div>
-      <div className="flex flex-col text-(--color-primary) pb-3 items-center justify-center w-full">
+      {/*<div className="flex flex-col text-(--color-primary) pb-3 items-center justify-center w-full">
         <h4>Not Working?</h4>
         <h4 className="font-medium">Enter Code Manually</h4>
       </div>
@@ -45,7 +45,7 @@ const ScannerPage: React.FC<ScannerPageProps> = ({ id }) => {
           <h4 className="font-light">Scan from Image</h4>
           <Image />
         </button>
-      </div>
+      </div>*/}
     </div>
   );
 };
