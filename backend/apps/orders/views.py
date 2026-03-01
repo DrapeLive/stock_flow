@@ -84,3 +84,26 @@ class AddOrderItemView(APIView):
             size.save()
 
             return Response({"message": "Item added"}, status=status.HTTP_201_CREATED)
+
+class DeleteOrderItemView(APIView):
+    permission_classes = [IsAgent]
+
+    def delete(self, request, order_id, item_id):
+        order = get_object_or_404(Order, id=order_id)
+        order_item = get_object_or_404(OrderItem, id=item_id, order=order)
+
+        with transaction.atomic():
+
+            size = ItemSize.objects.select_for_update().get(
+                id=order_item.size.id
+            )
+
+            size.stock += order_item.quantity
+            size.save()
+
+            order_item.delete()
+
+        return Response(
+            {"message": "Item Deleted Successfully"},
+            status=status.HTTP_200_OK
+        )
