@@ -20,3 +20,9 @@ export type OrderRegisterRequest =
 
 export type OrderRegisterResponse =
   operations["orders_create"]["responses"]["201"]["content"]["application/json"];
+
+export type OrderDeleteResponse =
+  operations["orders_destroy"]["responses"]["204"]["content"];
+
+export type OrderItemDeleteResponse =
+  operations["orders_delete_item_destroy"]["responses"]["204"]["content"];
