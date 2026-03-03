@@ -5,7 +5,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from .models import Order, OrderItem
-from .serializers import OrderSerializer, AddOrderItemSerializer
+from .serializers import OrderSerializer, AddOrderItemSerializer, OrderItemSerializer
 from apps.accounts.permissions import IsAdmin, IsAgent
 from rest_framework.permissions import IsAuthenticated
 from drf_spectacular.utils import extend_schema
@@ -107,3 +107,19 @@ class DeleteOrderItemView(APIView):
             {"message": "Item Deleted Successfully"},
             status=status.HTTP_200_OK
         )
+
+class OrderItemViewSet(ModelViewSet):
+    queryset = OrderItem.objects.all()
+    serializer_class = OrderItemSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.role == 'ADMIN':
+            return OrderItem.objects.all()
+        return OrderItem.objects.filter(order__agent__user=user)
+
+    def partial_update(self, request, *args, **kwargs):
+        # We only want to allow updating packed_quantity via this view if needed, 
+        # but let's keep it flexible for now since it's a ModelViewSet.
+        return super().partial_update(request, *args, **kwargs)
