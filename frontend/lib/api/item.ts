@@ -26,4 +26,21 @@ export const itemApi = {
     const res = await api.get<ItemResponse>(`/api/items/by-qr/?qr_code=${id}`);
     return res.data;
   },
+
+  async update(
+    id: number,
+    data: ItemRequest | FormData,
+  ): Promise<ItemResponse> {
+    const res = await api.put<ItemResponse>(`/api/items/${id}/`, data, {
+      headers:
+        data instanceof FormData
+          ? { "Content-Type": "multipart/form-data" }
+          : undefined,
+    });
+    return res.data;
+  },
+
+  async delete(id: number): Promise<void> {
+    await api.delete(`/api/items/${id}/`);
+  },
 };

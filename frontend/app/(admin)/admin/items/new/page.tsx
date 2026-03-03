@@ -24,6 +24,7 @@ import { ItemRequest } from "@/types/item";
 import { useRouter } from "next/navigation";
 import { KIDS_SIZES, GENTS_SIZES } from "@/constants/sizes";
 import { itemToFormData } from "@/lib/form-utils";
+import { ArrowLeft } from "lucide-react";
 
 interface Size {
   id: string;
@@ -107,46 +108,57 @@ export default function NewItemPage() {
   /* ------------------ UI ------------------ */
 
   return (
-    <div className="w-full px-6 py-8 pb-32 flex flex-col min-h-[80vh] space-y-10">
-      {/* ---------------- Item Details ---------------- */}
-      <div className="space-y-6">
-        <h2 className="text-xl font-semibold border-b pb-2">Add item details</h2>
-        <FieldGroup className="space-y-5">
+    <div className="w-full px-4 py-8 flex flex-col min-h-screen bg-white">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-8">
+        <button
+          onClick={() => router.back()}
+          className="p-2 -ml-2 rounded-full hover:bg-gray-50"
+        >
+          <ArrowLeft size={24} />
+        </button>
+
+        <div className="text-center flex-1">
+          <h1 className="text-xl font-black">Add New Item</h1>
+          <p className="text-[10px] text-gray-400 uppercase tracking-widest">
+            Create inventory item
+          </p>
+        </div>
+
+        <div className="w-6" />
+      </div>
+
+      {/* Main Card */}
+      <div className="bg-gray-50 border rounded-[2rem] p-6 space-y-10">
+        {/* Item Details */}
+        <FieldGroup className="space-y-6">
           <Field>
-            <FieldContent>
-              <FieldLabel>Item Name</FieldLabel>
-            </FieldContent>
+            <FieldLabel>Name</FieldLabel>
             <Input
-              placeholder="Jeans"
               value={formData.name}
               onChange={(e) => handleChange("name", e.target.value)}
             />
           </Field>
 
           <Field>
-            <FieldContent>
-              <FieldLabel>Description</FieldLabel>
-            </FieldContent>
+            <FieldLabel>Description</FieldLabel>
             <Textarea
-              placeholder="Item description"
               value={formData.description}
               onChange={(e) => handleChange("description", e.target.value)}
             />
           </Field>
 
           <Field>
-            <FieldContent>
-              <FieldLabel>Type</FieldLabel>
-            </FieldContent>
+            <FieldLabel>Type</FieldLabel>
             <Select
               value={formData.type}
               onValueChange={(value: "gents" | "kids") => {
                 handleChange("type", value);
-                setSizes([]); // Reset sizes when type changes
+                setSizes([]);
               }}
             >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select type" />
+              <SelectTrigger>
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="gents">Gents</SelectItem>
@@ -156,47 +168,34 @@ export default function NewItemPage() {
           </Field>
 
           <Field>
-            <FieldContent>
-              <FieldLabel>Price</FieldLabel>
-            </FieldContent>
+            <FieldLabel>Price</FieldLabel>
             <Input
-              placeholder="Rs. 100"
               type="number"
               value={formData.price}
               onChange={(e) => handleChange("price", e.target.value)}
             />
           </Field>
         </FieldGroup>
-      </div>
 
-      {/* ---------------- Inventory (Sizes) ---------------- */}
-      <div className="space-y-6">
-        <h2 className="text-xl font-semibold border-b pb-2">Inventory (Sizes)</h2>
+        {/* Sizes */}
         <SizesSection
           sizes={sizes}
           setSizes={setSizes}
           availableSizes={availableSizes}
         />
-      </div>
 
-      {/* ---------------- Variants (Colors) ---------------- */}
-      <div className="space-y-6">
-        <h2 className="text-xl font-semibold border-b pb-2">Variants (Colors)</h2>
+        {/* Colors */}
         <ColorsSection colors={colors} setColors={setColors} />
       </div>
 
-      {/* ---------------- Actions ---------------- */}
-      <div className="flex justify-between items-center pt-6">
-        <StockFlowButton
-          variant="outline"
-          text="Cancel"
-          onClick={() => router.back()}
-        />
+      {/* Save Button */}
+      <div className="mt-8 mb-20 px-4">
         <StockFlowButton
           variant="filled"
-          text={loading ? "Creating..." : "Create new Item"}
+          text={loading ? "Creating..." : "Create Item"}
           disabled={!isFormValid || loading}
           onClick={handleSubmit}
+          className="w-full h-14 rounded-2xl bg-primary text-white font-bold shadow-lg shadow-primary/20"
         />
       </div>
     </div>

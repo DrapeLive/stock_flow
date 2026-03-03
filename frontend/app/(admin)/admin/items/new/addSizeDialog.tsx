@@ -66,6 +66,7 @@ export default function AddSizeDialog({
           <Input
             placeholder="Quantity"
             type="number"
+            min={0}
             value={quantity}
             onChange={(e) => setQuantity(e.target.value)}
           />
