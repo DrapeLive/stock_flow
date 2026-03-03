@@ -173,7 +173,7 @@ SPECTACULAR_SETTINGS = {
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
-    "https://stockflow-sigma.vercel.app/"
+    "https://stockflow-sigma.vercel.app"
 ]
 
 MEDIA_URL = "/media/"
