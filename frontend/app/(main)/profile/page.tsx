@@ -23,7 +23,7 @@ export default function Profile() {
 
     const fetchData = async () => {
       try {
-        const response = await agentApi.getOne(user?.id);
+        const response = await agentApi.getOne(user!.id);
         setData(response);
       } catch (e) {
         <AlertDestructive heading="Error" description={"Server Not Found"} />;
