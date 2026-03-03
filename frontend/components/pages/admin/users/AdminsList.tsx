@@ -40,32 +40,48 @@ const AdminsList: React.FC = () => {
 
   return (
     <>
-      <div className="py-2 flex justify-between">
-        <div className="flex gap-1 items-center">
-          <p>Remaining Agents</p>
-          <div className="bg-(--color-border) rounded-full py-0.5 px-2">
-            <p className="font-bold">{data.length}</p>
+      <div className="pt-2 flex justify-between items-center px-4 mb-6">
+        <div className="flex flex-col">
+          <h2 className="text-xl font-extrabold text-gray-900 leading-tight">Admins</h2>
+          <div className="flex gap-2 items-center mt-1">
+            <span className="text-gray-400 text-[10px] font-bold uppercase tracking-wider">Total Admins</span>
+            <div className="bg-primary/10 text-primary rounded-full py-0.5 px-3 border border-primary/20">
+              <span className="font-bold text-xs">{data.length}</span>
+            </div>
           </div>
         </div>
         <StockFlowButton
-          text="Add new Agent"
+          text="Add Admin"
           variant="filled"
-          icon={<Plus />}
-          onClick={() => router.push("/admin/users/agents/new")}
+          icon={<Plus className="size-4" />}
+          onClick={() => router.push("/admin/users/admins/new")}
+          className="shadow-lg shadow-primary/20 ring-1 ring-primary/10"
         />
       </div>
-      <div>
-        {data?.map((item, index) => (
+      <div className="px-4 space-y-3 pb-20">
+        {data?.map((item) => (
           <div
-            className="flex border-b border-(--color-border) py-2 justify-between"
-            key={index}
+            key={item.id}
+            onClick={() => router.push(`/admin/users/admins/${item.id}/`)}
+            className="flex items-center gap-4 bg-white border border-gray-100 p-4 hover:border-primary/30 hover:shadow-md transition-all rounded-2xl group cursor-pointer active:scale-[0.98]"
           >
-            <div className="min-w-38">
-              <h6>{item.username}</h6>
-              <p className="text-(--color-text)">{item.email}</p>
+            <div className="w-12 h-12 rounded-xl bg-gray-50 flex items-center justify-center border border-gray-100 shadow-sm flex-shrink-0">
+              <span className="text-xl font-black text-gray-400 opacity-30">
+                {item.username.charAt(0).toUpperCase()}
+              </span>
             </div>
-            <div className="flex w-fit justify-end">
-              <Info />
+
+            <div className="flex-1 min-w-0 px-2">
+              <h6 className="font-bold text-gray-900 text-base truncate leading-tight">
+                {item.username}
+              </h6>
+              <p className="text-xs text-gray-400 truncate mt-1 leading-tight font-medium">
+                {item.email}
+              </p>
+            </div>
+
+            <div className="text-gray-200 group-hover:text-primary/30 transition-colors pl-2">
+              <Info size={18} />
             </div>
           </div>
         ))}

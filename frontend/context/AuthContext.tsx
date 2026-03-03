@@ -53,6 +53,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const authUser: AuthUser = {
       id: data.user_id,
       role: data.role,
+      username: (data as any).username,
+      email: (data as any).email,
     };
 
     setUser(authUser);

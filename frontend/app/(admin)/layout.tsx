@@ -7,7 +7,7 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="admin-order-layout">
+    <div className="admin-order-layout pb-32">
       <AdminProfileButton />
       {children}
       <AdminNavBar />

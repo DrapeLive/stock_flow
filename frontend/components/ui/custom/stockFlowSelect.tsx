@@ -15,6 +15,7 @@ interface StockFlowSelectProps {
   onChange: (value: string) => void;
   options: { value: string; label: string }[];
   disabled?: boolean;
+  className?: string;
 }
 
 export default function StockFlowSelect({
@@ -23,10 +24,11 @@ export default function StockFlowSelect({
   onChange,
   options,
   disabled = false,
+  className,
 }: StockFlowSelectProps) {
   return (
     <Select value={value} onValueChange={onChange} disabled={disabled}>
-      <SelectTrigger className="w-full">
+      <SelectTrigger className={`w-full ${className}`}>
         <SelectValue placeholder={placeholder || "Select"} />
       </SelectTrigger>
       <SelectContent>

@@ -3,20 +3,26 @@ import { AlertDestructive } from "@/components/ui/AlertDestructive";
 import { PageLoading } from "@/components/ui/Loading";
 import { orderApi } from "@/lib/api/order";
 import { OrderItems } from "@/types/order";
-import { Trash } from "lucide-react";
+import { Trash, CheckCircle2, Circle } from "lucide-react";
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 type Props = {
   items: OrderItems | undefined;
   isDelete?: boolean;
   orderId?: number;
+  isPacking?: boolean;
+  onPackedChange?: () => void;
 };
 
-const OrderItem: React.FC<Props> = ({ items, isDelete, orderId }) => {
+const OrderItem: React.FC<Props> = ({ items, isDelete, orderId, isPacking, onPackedChange }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [orderItems, setOrderItems] = useState(items);
+
+  useEffect(() => {
+    setOrderItems(items);
+  }, [items]);
 
   const onDelete = async (itemId: number, orderId?: number) => {
     try {
@@ -31,49 +37,93 @@ const OrderItem: React.FC<Props> = ({ items, isDelete, orderId }) => {
     }
   };
 
+  const togglePacked = async (itemId: number, currentPacked: number, totalQuantity: number) => {
+    try {
+      const newPacked = currentPacked >= totalQuantity ? 0 : totalQuantity;
+      await orderApi.updateItem(itemId, { packed_quantity: newPacked });
+      
+      setOrderItems((prev) => 
+        prev?.map((item) => 
+          item.id === itemId ? { ...item, packed_quantity: newPacked } : item
+        )
+      );
+      if (onPackedChange) onPackedChange();
+    } catch (err) {
+      console.error("Error updating packed status:", err);
+      setError("Failed to update packed status");
+    }
+  };
+
   if (loading) return <PageLoading />;
 
   return (
     <div className="pt-3 space-y-3">
       {error && <AlertDestructive heading="Error" description={error} />}
-      {orderItems?.map((item, index) => (
-        <div
-          className="flex w-full border-b border-(--color-border) py-2"
-          key={index}
-        >
-          {isDelete && (
-            <button
-              type="button"
-              onClick={() => onDelete(item.id, orderId)}
-              className="flex justify-center items-center p-2"
-            >
-              <Trash className="text-red-600 w-4 h-4" />
-            </button>
-          )}
-          <div className="flex justify-between">
-            <Image
-              src={item.variant.image!}
-              width={45}
-              height={45}
-              alt=""
-              unoptimized
-            />
-            <div className="pl-4 min-w-40">
-              <h6>{item.item.name}</h6>
-              <p>{item.variant.color}</p>
+      {orderItems?.map((item, index) => {
+        const isFullyPacked = item.packed_quantity! >= item.quantity;
+        
+        return (
+          <div
+            className={`flex w-full border-b border-gray-50 py-4 px-2 transition-all duration-300 ${isFullyPacked ? 'bg-green-50/40 opacity-80' : 'bg-white hover:bg-gray-50/50'}`}
+            key={index}
+          >
+            {isDelete && (
+              <button
+                type="button"
+                onClick={() => onDelete(item.id, orderId)}
+                className="flex justify-center items-center p-2"
+              >
+                <Trash className="text-red-600 w-4 h-4" />
+              </button>
+            )}
+            
+            {isPacking && (
+              <button
+                type="button"
+                onClick={() => togglePacked(item.id, item.packed_quantity!, item.quantity)}
+                className="flex justify-center items-center p-2 mr-1"
+                title={isFullyPacked ? "Mark as unpacked" : "Mark as packed"}
+              >
+                {isFullyPacked ? (
+                  <CheckCircle2 className="text-green-600 w-6 h-6" />
+                ) : (
+                  <Circle className="text-gray-300 w-6 h-6 hover:text-primary/50 transition-colors" />
+                )}
+              </button>
+            )}
+
+            <div className={`flex flex-1 justify-between ${isFullyPacked ? 'opacity-60' : ''}`}>
+              <div className="flex">
+                <div className="relative w-[50px] h-[50px] flex-shrink-0">
+                  <Image
+                    src={item.variant.image!}
+                    fill
+                    alt={item.item.name}
+                    className="rounded-md object-cover border border-gray-100"
+                    unoptimized
+                  />
+                </div>
+                <div className="pl-3 flex flex-col justify-center">
+                  <h6 className={`font-semibold text-sm ${isFullyPacked ? 'line-through text-gray-400' : 'text-gray-900'}`}>
+                    {item.item.name}
+                  </h6>
+                  <p className="text-xs text-gray-500">{item.variant.color}</p>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-6 pr-2">
+                <div className="bg-gray-50 px-2 py-1 rounded text-xs font-bold text-gray-600 border border-gray-100 min-w-[32px] text-center">
+                  {item.size.size}
+                </div>
+                <div className="flex flex-col items-end min-w-[60px]">
+                  <h3 className="text-lg font-bold leading-none">{item.quantity}</h3>
+                  <p className="text-[10px] text-gray-400 uppercase font-medium">Pieces</p>
+                </div>
+              </div>
             </div>
           </div>
-          <div className="ml-6 flex justify-around w-full">
-            <div className="flex items-center ">
-              <h6>{item.size.size}</h6>
-            </div>
-            <div className="flex flex-col justify-center items-center">
-              <h3>{item.quantity}</h3>
-              <p>Pieces</p>
-            </div>
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 };

@@ -1,0 +1,186 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { customerApi } from "@/lib/api/customer";
+import { agentApi } from "@/lib/api/agents";
+import { CustomerResponse, CustomerUpdateRequest } from "@/types/customer";
+import {
+  Field,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import StockFlowButton from "@/components/ui/custom/stockFlowButton";
+import StockFlowSelect from "@/components/ui/custom/stockFlowSelect";
+import { Trash2, ArrowLeft, Save, User } from "lucide-react";
+
+export default function CustomerDetailPage() {
+  const { id } = useParams();
+  const router = useRouter();
+  const [customer, setCustomer] = useState<CustomerResponse | null>(null);
+  const [agents, setAgents] = useState<{ value: string; label: string }[]>([]);
+  const [formData, setFormData] = useState({
+    name: "",
+    address: "",
+    contact: "",
+    agent: "",
+  });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [customerData, agentsData] = await Promise.all([
+          customerApi.getOne(id as string),
+          agentApi.getAll(),
+        ]);
+        setCustomer(customerData);
+        setFormData({
+          name: customerData.name,
+          address: customerData.address,
+          contact: customerData.contact,
+          agent: customerData.agent.toString(),
+        });
+        setAgents(agentsData.map(a => ({ value: a.id.toString(), label: a.user.username })));
+      } catch (error) {
+        console.error("Error fetching customer:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, [id]);
+
+  const handleChange = (key: string, value: string) => {
+    setFormData(prev => ({ ...prev, [key]: value }));
+    if (errors[key]) setErrors(prev => ({ ...prev, [key]: "" }));
+  };
+
+  const validate = () => {
+    const newErrors: Record<string, string> = {};
+    if (!formData.name.trim()) newErrors.name = "Name is required";
+    if (!formData.address.trim()) newErrors.address = "Address is required";
+    if (!formData.contact.trim()) newErrors.contact = "Contact is required";
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleUpdate = async () => {
+    if (!validate()) return;
+    setSaving(true);
+    try {
+      const payload: CustomerUpdateRequest = {
+        name: formData.name,
+        address: formData.address,
+        contact: formData.contact,
+        agent: parseInt(formData.agent),
+      };
+      await customerApi.update(id as string, payload);
+      router.refresh();
+      // Show success feedback if needed
+    } catch (error: any) {
+      console.error("Error updating customer:", error);
+      setErrors({ submit: "Failed to update customer." });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (confirm("Are you sure you want to delete this customer?")) {
+      try {
+        await customerApi.delete(id as string);
+        router.push("/admin/users/");
+      } catch (error) {
+        console.error("Error deleting customer:", error);
+      }
+    }
+  };
+
+  if (loading) return <div className="p-8 text-center text-gray-400">Loading details...</div>;
+  if (!customer) return <div className="p-8 text-center text-red-400">Customer not found.</div>;
+
+  return (
+    <div className="w-full px-4 py-8 flex flex-col min-h-screen bg-white">
+      <div className="flex items-center justify-between mb-8">
+        <button onClick={() => router.back()} className="p-2 -ml-2 rounded-full hover:bg-gray-50 transition-colors">
+          <ArrowLeft size={24} className="text-gray-900" />
+        </button>
+        <div className="text-center flex-1">
+          <h1 className="text-xl font-black text-gray-900 tracking-tight">Customer Profile</h1>
+          <p className="text-[10px] text-gray-400 font-black uppercase tracking-[0.2em]">Manage client records</p>
+        </div>
+        <button onClick={handleDelete} className="p-2 rounded-xl text-red-500 hover:bg-red-50 transition-colors">
+          <Trash2 size={20} />
+        </button>
+      </div>
+
+      <div className="flex flex-col items-center mb-8">
+        <div className="w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center mb-4 shadow-sm">
+          <User size={40} className="text-primary" />
+        </div>
+        <h2 className="text-2xl font-black text-gray-900">{customer.name}</h2>
+        <span className="text-xs font-bold text-gray-400 mt-1">ID: #{id}</span>
+      </div>
+
+      <div className="bg-gray-50/50 border border-gray-100 rounded-[2rem] p-6 space-y-6">
+        <FieldGroup className="space-y-6">
+          <Field>
+            <FieldLabel className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 block">Customer name</FieldLabel>
+            <Input
+              value={formData.name}
+              onChange={(e) => handleChange("name", e.target.value)}
+              className="bg-white border-gray-100 rounded-xl h-12 font-bold"
+            />
+            {errors.name && <p className="text-[10px] text-red-500 font-bold mt-1">{errors.name}</p>}
+          </Field>
+
+          <Field>
+            <FieldLabel className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 block">Assigned Agent</FieldLabel>
+            <StockFlowSelect
+              value={formData.agent}
+              onChange={(val) => handleChange("agent", val)}
+              options={agents}
+              className="bg-white"
+            />
+          </Field>
+
+          <Field>
+            <FieldLabel className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 block">Shipping Address</FieldLabel>
+            <Textarea
+              rows={3}
+              value={formData.address}
+              onChange={(e) => handleChange("address", e.target.value)}
+              className="bg-white border-gray-100 rounded-xl font-bold"
+            />
+            {errors.address && <p className="text-[10px] text-red-500 font-bold mt-1">{errors.address}</p>}
+          </Field>
+
+          <Field>
+            <FieldLabel className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 block">Contact detail</FieldLabel>
+            <Input
+              value={formData.contact}
+              onChange={(e) => handleChange("contact", e.target.value)}
+              className="bg-white border-gray-100 rounded-xl h-12 font-bold"
+            />
+            {errors.contact && <p className="text-[10px] text-red-500 font-bold mt-1">{errors.contact}</p>}
+          </Field>
+        </FieldGroup>
+      </div>
+
+      <div className="mt-8 mb-20 px-4">
+        <StockFlowButton
+          variant="filled"
+          text={saving ? "Saving Changes..." : "Save Transitions"}
+          onClick={handleUpdate}
+          disabled={saving}
+          className="w-full h-14 rounded-2xl bg-primary text-white font-bold shadow-lg shadow-primary/20 flex items-center justify-center gap-2 active:scale-95 transition-all"
+        />
+      </div>
+    </div>
+  );
+}

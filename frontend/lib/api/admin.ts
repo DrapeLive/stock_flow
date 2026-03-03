@@ -7,13 +7,22 @@ export const adminApi = {
     return res.data;
   },
 
-  async getOne(id: number | undefined): Promise<AdminResponse> {
-    const res = await api.get<AdminResponse>(`/api/admins/profile/${id}`);
+  async getOne(id: number | string): Promise<AdminResponse> {
+    const res = await api.get<AdminResponse>(`/api/admins/${id}/`);
     return res.data;
   },
 
   async create(data: AdminRequest): Promise<AdminResponse> {
     const res = await api.post<AdminResponse>("/api/admins/", data);
     return res.data;
+  },
+
+  async update(id: number | string, data: Partial<AdminRequest>): Promise<AdminResponse> {
+    const res = await api.put<AdminResponse>(`/api/admins/${id}/`, data);
+    return res.data;
+  },
+
+  async delete(id: number | string): Promise<void> {
+    await api.delete(`/api/admins/${id}/`);
   },
 };

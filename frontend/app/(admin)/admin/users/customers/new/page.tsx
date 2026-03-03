@@ -24,18 +24,25 @@ export default function NewCustomerPage() {
     address: "",
     contactNumber: "",
   });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleChange = (key: string, value: string) => {
     setFormData((prev) => ({
       ...prev,
       [key]: value,
     }));
+    if (errors[key]) {
+      setErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[key];
+        return newErrors;
+      });
+    }
   };
 
   const { isAuthenticated } = useAuth();
-
   const [agents, setAgents] = useState<{ value: string; label: string }[]>([]);
-
   const router = useRouter();
   const [loadingAgents, setLoadingAgents] = useState(true);
 
@@ -59,7 +66,24 @@ export default function NewCustomerPage() {
     fetchAgents();
   }, [isAuthenticated, router]);
 
+  const validate = () => {
+    const newErrors: Record<string, string> = {};
+    if (!formData.agent) newErrors.agent = "Please select an agent";
+    if (!formData.customerName.trim()) newErrors.customerName = "Customer name is required";
+    if (!formData.address.trim()) newErrors.address = "Address is required";
+    if (!formData.contactNumber.trim()) {
+      newErrors.contactNumber = "Contact number is required";
+    } else if (!/^\+?[\d\s-]{10,}$/.test(formData.contactNumber)) {
+      newErrors.contactNumber = "Invalid contact number format";
+    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSubmit = async () => {
+    if (!validate()) return;
+    
+    setIsSubmitting(true);
     try {
       const payload: CustomerCreateRequest = {
         name: formData.customerName,
@@ -68,80 +92,100 @@ export default function NewCustomerPage() {
         agent: parseInt(formData.agent),
       };
       await customerApi.create(payload);
-      console.log("Customer created successfully");
       router.push("/admin/users/");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating customer:", error);
+      setErrors({ submit: error.response?.data?.detail || "Failed to create customer. Please try again." });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="w-full px-6 py-8 flex flex-col min-h-[80vh]">
-      {/* Form */}
-      <FieldGroup className="space-y-5 flex-1">
-        {/* Agent */}
-        <Field>
-          <FieldContent>
-            <FieldLabel>Agent</FieldLabel>
-          </FieldContent>
-          <StockFlowSelect
-            value={formData.agent}
-            onChange={(val) => handleChange("agent", val)}
-            options={agents}
-            disabled={loadingAgents}
-          />
-        </Field>
+    <div className="w-full px-4 py-8 flex flex-col min-h-screen bg-white">
+      <div className="mb-8">
+        <h1 className="text-2xl font-black text-gray-900 tracking-tight">New Customer</h1>
+        <p className="text-sm text-gray-400 font-medium">Register a new client in the system</p>
+      </div>
 
-        {/* Customer Name */}
-        <Field>
-          <FieldContent>
-            <FieldLabel>Customer Name</FieldLabel>
-          </FieldContent>
-          <Input
-            placeholder="Fashion Hub"
-            value={formData.customerName}
-            onChange={(e) => handleChange("customerName", e.target.value)}
-          />
-        </Field>
+      <div className="bg-gray-50/50 border border-gray-100 rounded-3xl p-6 mb-8">
+        <FieldGroup className="space-y-6">
+          <Field>
+            <div className="flex justify-between items-center mb-1.5">
+              <FieldLabel className="text-xs font-bold uppercase tracking-widest text-gray-400">Assigned Agent</FieldLabel>
+              {errors.agent && <span className="text-[10px] text-red-500 font-bold">{errors.agent}</span>}
+            </div>
+            <StockFlowSelect
+              value={formData.agent}
+              onChange={(val) => handleChange("agent", val)}
+              options={agents}
+              disabled={loadingAgents}
+              className={errors.agent ? "border-red-200 ring-red-50" : ""}
+            />
+          </Field>
 
-        {/* Address */}
-        <Field>
-          <FieldContent>
-            <FieldLabel>Address</FieldLabel>
-          </FieldContent>
-          <Textarea
-            rows={3}
-            placeholder="Kollengode, Palakkad, Kerala"
-            value={formData.address}
-            onChange={(e) => handleChange("address", e.target.value)}
-          />
-        </Field>
+          <Field>
+            <div className="flex justify-between items-center mb-1.5">
+              <FieldLabel className="text-xs font-bold uppercase tracking-widest text-gray-400">Customer / Shop Name</FieldLabel>
+              {errors.customerName && <span className="text-[10px] text-red-500 font-bold">{errors.customerName}</span>}
+            </div>
+            <Input
+              placeholder="e.g. Fashion Hub"
+              value={formData.customerName}
+              onChange={(e) => handleChange("customerName", e.target.value)}
+              className={`bg-white border-gray-100 rounded-xl h-12 focus:ring-primary/10 ${errors.customerName ? "border-red-200 focus:border-red-300" : "focus:border-primary"}`}
+            />
+          </Field>
 
-        {/* Contact Number */}
-        <Field>
-          <FieldContent>
-            <FieldLabel>Contact Number</FieldLabel>
-          </FieldContent>
-          <Input
-            placeholder="+91 99xxxxxxx"
-            value={formData.contactNumber}
-            onChange={(e) => handleChange("contactNumber", e.target.value)}
-          />
-        </Field>
-      </FieldGroup>
+          <Field>
+            <div className="flex justify-between items-center mb-1.5">
+              <FieldLabel className="text-xs font-bold uppercase tracking-widest text-gray-400">Shipping Address</FieldLabel>
+              {errors.address && <span className="text-[10px] text-red-500 font-bold">{errors.address}</span>}
+            </div>
+            <Textarea
+              rows={3}
+              placeholder="Full mailing address..."
+              value={formData.address}
+              onChange={(e) => handleChange("address", e.target.value)}
+              className={`bg-white border-gray-100 rounded-xl focus:ring-primary/10 transition-all ${errors.address ? "border-red-200 focus:border-red-300" : "focus:border-primary"}`}
+            />
+          </Field>
 
-      {/* Buttons */}
-      <div className="flex justify-between items-center mt-8">
+          <Field>
+            <div className="flex justify-between items-center mb-1.5">
+              <FieldLabel className="text-xs font-bold uppercase tracking-widest text-gray-400">Contact detail</FieldLabel>
+              {errors.contactNumber && <span className="text-[10px] text-red-500 font-bold">{errors.contactNumber}</span>}
+            </div>
+            <Input
+              placeholder="+91 98765 43210"
+              value={formData.contactNumber}
+              onChange={(e) => handleChange("contactNumber", e.target.value)}
+              className={`bg-white border-gray-100 rounded-xl h-12 focus:ring-primary/10 ${errors.contactNumber ? "border-red-200 focus:border-red-300" : "focus:border-primary"}`}
+            />
+          </Field>
+
+          {errors.submit && (
+            <div className="p-3 bg-red-50 border border-red-100 rounded-xl text-red-600 text-xs font-bold text-center">
+              {errors.submit}
+            </div>
+          )}
+        </FieldGroup>
+      </div>
+
+      <div className="flex gap-4 items-center mt-auto pb-10">
         <StockFlowButton
           variant="outline"
           text="Cancel"
           onClick={() => router.back()}
+          className="flex-1 h-14 rounded-2xl border-gray-200 font-bold text-gray-500 active:scale-95 transition-all text-sm"
         />
 
         <StockFlowButton
           variant="filled"
-          text="Create new Customer"
+          text={isSubmitting ? "Creating..." : "Add Customer"}
           onClick={handleSubmit}
+          disabled={isSubmitting}
+          className="flex-[2] h-14 rounded-2xl bg-primary shadow-lg shadow-primary/20 font-bold text-white active:scale-95 transition-all text-sm"
         />
       </div>
     </div>

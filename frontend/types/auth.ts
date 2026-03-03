@@ -11,4 +11,6 @@ export type Role = components["schemas"]["RoleEnum"];
 export interface AuthUser {
   id: number;
   role: Role;
+  username?: string;
+  email?: string;
 }

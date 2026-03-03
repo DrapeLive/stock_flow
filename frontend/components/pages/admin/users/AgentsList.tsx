@@ -40,37 +40,60 @@ const AgentsList: React.FC = () => {
 
   return (
     <>
-      <div className="py-2 flex justify-between">
-        <div className="flex gap-1 items-center">
-          <p>Remaining Agents</p>
-          <div className="bg-(--color-border) rounded-full py-0.5 px-2">
-            <p className="font-bold">{data.length}</p>
+      <div className="pt-2 flex justify-between items-center px-4 mb-6">
+        <div className="flex flex-col">
+          <h2 className="text-xl font-extrabold text-gray-900 leading-tight">Agents</h2>
+          <div className="flex gap-2 items-center mt-1">
+            <span className="text-gray-400 text-[10px] font-bold uppercase tracking-wider">Total Agents</span>
+            <div className="bg-primary/10 text-primary rounded-full py-0.5 px-3 border border-primary/20">
+              <span className="font-bold text-xs">{data.length}</span>
+            </div>
           </div>
         </div>
         <StockFlowButton
-          text="Add new Agent"
+          text="Add Agent"
           variant="filled"
-          icon={<Plus />}
+          icon={<Plus className="size-4" />}
           onClick={() => router.push("/admin/users/agents/new")}
+          className="shadow-lg shadow-primary/20 ring-1 ring-primary/10"
         />
       </div>
-      <div>
-        {data?.map((item, index) => (
+      <div className="px-4 space-y-3 pb-20">
+        {data?.map((item) => (
           <div
-            className="flex border-b border-(--color-border) py-2"
-            key={index}
+            key={item.id}
+            onClick={() => router.push(`/admin/users/agents/${item.id}/`)}
+            className="flex items-center gap-4 bg-white border border-gray-100 p-4 hover:border-primary/30 hover:shadow-md transition-all rounded-2xl group cursor-pointer active:scale-[0.98]"
           >
-            <div className="min-w-38">
-              <h6>{item.user.username}</h6>
-              <p className="text-(--color-text)">{item.user.email}</p>
+            <div className="w-12 h-12 rounded-xl bg-gray-50 flex items-center justify-center border border-gray-100 shadow-sm flex-shrink-0">
+              <span className="text-xl font-black text-gray-400 opacity-30">
+                {item.user.username.charAt(0).toUpperCase()}
+              </span>
             </div>
-            <div className="flex w-full justify-between">
-              <h6 className="flex items-center">+91 {item.contact}</h6>
-              <div className="flex flex-col items-center">
-                <h3>{item.total_customers}</h3>
-                <p className="text-(--color-text)">Customers</p>
+
+            <div className="flex-1 min-w-0 px-2">
+              <h6 className="font-bold text-gray-900 text-base truncate leading-tight">
+                {item.user.username}
+              </h6>
+              <p className="text-xs text-gray-400 truncate mt-1 leading-tight font-medium">
+                {item.user.email}
+              </p>
+              <div className="flex items-center gap-1 mt-2 text-primary font-bold text-[10px]">
+                <span className="px-1.5 py-0.5 rounded bg-primary/5 border border-primary/10 tracking-widest">
+                  +91 {item.contact}
+                </span>
               </div>
-              <Info />
+            </div>
+
+            <div className="flex flex-col items-end justify-center px-4 border-l border-gray-50">
+              <span className="text-[10px] text-gray-300 font-bold uppercase tracking-widest mb-1">Clients</span>
+              <span className="text-lg font-black leading-none text-gray-900">
+                {item.total_customers}
+              </span>
+            </div>
+
+            <div className="text-gray-200 group-hover:text-primary/30 transition-colors pl-2">
+              <Info size={18} />
             </div>
           </div>
         ))}

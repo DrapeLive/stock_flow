@@ -1,4 +1,6 @@
-import type { operations } from "@/types/api";
+import type { components, operations } from "@/types/api";
+
+export type OrderStatus = components["schemas"]["StatusEnum"];
 
 export type OrderAllResponse =
   operations["orders_list"]["responses"][200]["content"]["application/json"];

@@ -46,4 +46,14 @@ export const orderApi = {
     );
     return res.data;
   },
+
+  async update(id: number, data: any): Promise<OrderResponse> {
+    const res = await api.patch<OrderResponse>(`/api/orders/${id}/`, data);
+    return res.data;
+  },
+
+  async updateItem(itemId: number, data: any): Promise<any> {
+    const res = await api.patch<any>(`/api/orders/order-items/${itemId}/`, data);
+    return res.data;
+  },
 };
