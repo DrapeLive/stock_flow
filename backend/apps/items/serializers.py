@@ -35,4 +35,20 @@ class ItemSerializer(serializers.ModelSerializer):
 
         return item
 
+    def update(self, instance, validated_data):
+        variants_data = validated_data.pop('variants', [])
+        sizes_data = validated_data.pop('sizes', [])
 
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+
+        instance.variants.all().delete()
+        for variant_data in variants_data:
+            ItemVariant.objects.create(item=instance, **variant_data)
+
+        instance.sizes.all().delete()
+        for size_data in sizes_data:
+            ItemSize.objects.create(item=instance, **size_data)
+
+        return instance
