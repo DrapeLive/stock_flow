@@ -173,9 +173,8 @@ SPECTACULAR_SETTINGS = {
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
-    "https://nonlosable-zaire-unbowdlerized.ngrok-free.dev"
+    "https://stockflow-sigma.vercel.app/"
 ]
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
-

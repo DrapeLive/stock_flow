@@ -3,12 +3,14 @@ model: environment
 id: ev_Frac6wFyYb
 workspaceId: wk_Wx4mNs5A2J
 createdAt: 2026-01-03T05:49:07.265241
-updatedAt: 2026-02-28T05:50:15.152933753
+updatedAt: 2026-03-03T17:50:43.556040
 name: Global Variables
 public: true
 base: true
+parentModel: workspace
+parentId: null
 variables:
-- enabled: true
+- enabled: false
   name: BASE_URL
   value: http://127.0.0.1:8000/api
   id: dh0XBtdyeF
@@ -21,3 +23,4 @@ variables:
   value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzc0ODQ5Nzk4LCJpYXQiOjE3NzIyNTc3OTgsImp0aSI6ImZiYjFhZGQ5ZWMwYjQ5MTg5N2FiZGFjODFjMDZkZmM1IiwidXNlcl9pZCI6IjgifQ.OWLof6K9NJ6E_byCdBk6syi-nMmcJGVvpUucfGt_3ZQ
   id: nfrZm6vCiQ
 color: null
+sortPriority: 0.0
