@@ -2,7 +2,7 @@ type: http_request
 model: http_request
 id: rq_toxBcuGQiL
 createdAt: 2025-12-24T14:10:27.617468972
-updatedAt: 2026-02-07T13:31:23.748390829
+updatedAt: 2026-03-03T18:07:44.050081
 workspaceId: wk_Wx4mNs5A2J
 folderId: fl_n9tGQA4kHp
 authentication:
@@ -11,10 +11,10 @@ authenticationType: bearer
 body:
   text: |
     {
-      "name": "Anjali",
-      "address": "Ernakulam",
+      "name": "Fashion",
+      "address": "Kottappadi",
       "contact": "9765432109",
-      "agent": 3
+      "agent": 1
     }
 bodyType: application/json
 description: ''

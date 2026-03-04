@@ -2,7 +2,7 @@ type: http_request
 model: http_request
 id: rq_TxpFZ2HeFF
 createdAt: 2025-12-24T13:38:47.709792771
-updatedAt: 2026-03-03T17:55:14.553531
+updatedAt: 2026-03-03T18:07:58.764252
 workspaceId: wk_Wx4mNs5A2J
 folderId: fl_iBwtyBUcic
 authentication: {}
@@ -10,8 +10,8 @@ authenticationType: null
 body:
   text: |-
     {
-      "email": "admin@gmail.com",
-      "password": "admin123"
+      "email": "miqdad@gmail.com",
+      "password": "miqdad123"
     }
 bodyType: application/json
 description: ''

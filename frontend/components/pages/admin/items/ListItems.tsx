@@ -37,7 +37,17 @@ const ListItems: React.FC = () => {
     return <h2 className="flex justify-center">Loading</h2>;
   }
   if (data.length == 0)
-    return <h2 className="flex justify-center">No Items</h2>;
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4">
+        <h2 className="text-xl font-bold text-gray-400">No Items</h2>
+        <StockFlowButton
+          text="Add Item"
+          icon={<Plus className="size-4" />}
+          onClick={() => router.push("/admin/items/new")}
+          className="shadow-lg shadow-primary/20"
+        />
+      </div>
+    );
   return (
     <>
       <div className="pt-6 pb-8 flex justify-between items-center px-6">

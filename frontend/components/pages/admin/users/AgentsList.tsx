@@ -36,7 +36,18 @@ const AgentsList: React.FC = () => {
     return <h2 className="flex justify-center">Loading</h2>;
   }
   if (data.length == 0)
-    return <h2 className="flex justify-center">No Agents</h2>;
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4">
+        <h2 className="text-xl font-bold text-gray-400">No Agents</h2>
+        <StockFlowButton
+          text="Add Agent"
+          variant="filled"
+          icon={<Plus className="size-4" />}
+          onClick={() => router.push("/admin/users/agents/new")}
+          className="shadow-lg shadow-primary/20 ring-1 ring-primary/10"
+        />
+      </div>
+    );
 
   return (
     <>

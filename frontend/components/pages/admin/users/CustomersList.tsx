@@ -37,7 +37,18 @@ const CustomerList: React.FC = () => {
     return <h2 className="flex justify-center">Loading</h2>;
   }
   if (data.length == 0)
-    return <h2 className="flex justify-center">No Customer</h2>;
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4">
+        <h2 className="text-xl font-bold text-gray-400">No Customers</h2>
+        <StockFlowButton
+          text="Add Customer"
+          variant="filled"
+          icon={<Plus className="size-4" />}
+          onClick={() => router.push("/admin/users/customers/new")}
+          className="shadow-lg shadow-primary/20 ring-1 ring-primary/10"
+        />
+      </div>
+    );
   return (
     <>
       <div className="pt-2 flex justify-between items-center px-4 mb-6">
