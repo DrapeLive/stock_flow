@@ -1,9 +1,10 @@
 "use client";
 
 import { AuthUser, LoginResponse } from "@/types/auth";
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import Cookies from "js-cookie";
 import { useRouter } from "next/navigation";
+import { api } from "@/lib/api/axios";
 
 type AuthContextType = {
   user: AuthUser | null;
@@ -68,7 +69,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     Cookies.set(COOKIE_KEYS.role, data.role);
   };
 
-  const logout = () => {
+  const logout = useCallback(() => {
     setUser(null);
     setAccessToken(null);
     setRefreshToken(null);
@@ -80,7 +81,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     Cookies.remove(COOKIE_KEYS.role);
 
     router.push("/");
-  };
+  }, [router]);
+
+  useEffect(() => {
+    const responseInterceptor = api.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        if (error.response?.status === 401) {
+          logout();
+        }
+        return Promise.reject(error);
+      }
+    );
+
+    return () => {
+      api.interceptors.response.eject(responseInterceptor);
+    };
+  }, [logout]);
 
   return (
     <AuthContext.Provider

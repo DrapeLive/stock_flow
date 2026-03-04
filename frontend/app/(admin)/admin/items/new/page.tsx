@@ -171,6 +171,7 @@ export default function NewItemPage() {
             <FieldLabel>Price</FieldLabel>
             <Input
               type="number"
+              min={0}
               value={formData.price}
               onChange={(e) => handleChange("price", e.target.value)}
             />

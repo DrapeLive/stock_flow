@@ -140,7 +140,7 @@ const ListItems: React.FC = () => {
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    router.push("/admin/items/qr/" + item.id);
+                    router.push("/admin/items/qr/" + item.qr_code);
                   }}
                   className="p-2 text-gray-300 hover:text-primary hover:bg-primary/5 rounded-xl transition-all border border-transparent hover:border-primary/10"
                   title="Print QR"

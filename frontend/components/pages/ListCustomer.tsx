@@ -39,7 +39,7 @@ const ListCustomer: React.FC = () => {
     try {
       setLoading(true);
       const res = await agentApi.getOne(user!.id);
-      const agentIdValue = res.user.id;
+      const agentIdValue = res.id;
       const res1 = await orderApi.create({
         agent: agentIdValue,
         customer: id,

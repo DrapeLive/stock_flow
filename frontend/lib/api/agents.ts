@@ -8,7 +8,7 @@ export const agentApi = {
   },
 
   async getOne(id: number | string): Promise<AgentResponse> {
-    const res = await api.get<AgentResponse>(`/api/agents/${id}/`);
+    const res = await api.get<AgentResponse>(`/api/agents/profile/${id}/`);
     return res.data;
   },
 
