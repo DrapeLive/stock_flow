@@ -5,7 +5,7 @@ import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/context/AuthContext";
 import { authApi } from "@/lib/api";
-import { LogIn } from "lucide-react";
+import { LogIn, Package } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -45,42 +45,57 @@ export default function Login() {
   };
 
   return (
-    <div className="flex min-h-screen min-w-full py-6 px-6 justify-center items-center">
-      <div className="flex flex-col w-full gap-16">
-        <h2 className="flex text-4xl w-full justify-center text-(--color-primary)">
-          Login
-        </h2>
-        <div className="flex flex-col gap-6">
+    <div className="flex min-h-screen min-w-full bg-gray-50 justify-center items-center px-6 py-10">
+      <div className="w-full max-w-sm bg-white shadow-xl rounded-3xl px-8 py-10 flex flex-col gap-8">
+
+        {/* Branding */}
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-14 h-14 rounded-2xl bg-[var(--color-primary)] flex items-center justify-center shadow-lg">
+            <Package size={28} className="text-white" />
+          </div>
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-[var(--color-heading)] mb-0">StockFlow</h1>
+            <p className="text-[11px] text-[var(--color-text)] uppercase tracking-widest font-medium">Order Management</p>
+          </div>
+        </div>
+
+        {/* Form */}
+        <div className="flex flex-col gap-5">
           <Field>
-            <FieldLabel htmlFor="email">Email</FieldLabel>
+            <FieldLabel htmlFor="email">Email Address</FieldLabel>
             <Input
+              id="email"
               type="text"
               placeholder="example@gmail.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-            ></Input>
+            />
           </Field>
           <Field>
             <FieldLabel htmlFor="password">Password</FieldLabel>
             <Input
+              id="password"
               type="password"
-              placeholder="*****"
+              placeholder="Enter your password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-            ></Input>
+            />
           </Field>
 
-          {error && <p className="text-sm text-red-500 text-center">{error}</p>}
+          {error && (
+            <p className="text-sm text-red-500 text-center bg-red-50 border border-red-200 rounded-lg py-2 px-3">
+              {error}
+            </p>
+          )}
 
-          <div className="flex justify-center gap-2.5">
-            <StockFlowButton
-              variant="filled"
-              text={loading ? "Logging in..." : "Login"}
-              icon={<LogIn />}
-              onClick={handleLogin}
-              disabled={loading}
-            />
-          </div>
+          <StockFlowButton
+            variant="filled"
+            text={loading ? "Signing in..." : "Sign In"}
+            icon={<LogIn size={18} />}
+            onClick={handleLogin}
+            disabled={loading}
+            className="w-full justify-center py-3.5 rounded-xl text-base mt-1"
+          />
         </div>
       </div>
     </div>

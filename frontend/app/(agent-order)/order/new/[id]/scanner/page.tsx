@@ -1,32 +1,43 @@
 "use client";
 
 import ScannerPage from "@/components/pages/ScannerPage";
-import { X } from "lucide-react";
-import Link from "next/link";
-import { useParams } from "next/navigation";
+import { ArrowLeft, X } from "lucide-react";
+import { useParams, useRouter } from "next/navigation";
 
-export default function Page() {
+export default function OrderScannerPage() {
   const params = useParams();
   const id = params.id as string;
+  const router = useRouter();
+
   return (
-    <>
-      <h1 className="text-(--color-primary) flex justify-center">
-        Create new Order
-      </h1>
-      <ScannerPage id={id} />
-      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full">
-        <div className="w-full flex justify-center pb-5">
-          <Link
-            href={`/order/new/${id}`}
-            className="flex gap-1 text-(--color-primary) border border-(--color-primary) p-1.5 rounded-md"
+    <div className="min-h-screen bg-gray-50/50 flex flex-col">
+       {/* Header */}
+       <div className="bg-white border-b border-gray-100 px-6 py-6 sticky top-0 z-10">
+        <div className="max-w-md mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={() => router.back()}
+              className="p-2 rounded-xl hover:bg-gray-50 text-gray-400 transition-colors"
+            >
+              <ArrowLeft size={20} />
+            </button>
+            <div className="flex flex-col">
+              <h1 className="text-xl font-black text-gray-900 leading-tight">Scan Item</h1>
+              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Step 3: QR Scanner</p>
+            </div>
+          </div>
+          <button 
+            onClick={() => router.push(`/order/new/${id}`)}
+            className="p-2 rounded-xl hover:bg-rose-50 text-rose-500 transition-colors border border-transparent hover:border-rose-100"
           >
-            Cancel{" "}
-            <span>
-              <X />
-            </span>
-          </Link>
+            <X size={20} />
+          </button>
         </div>
       </div>
-    </>
+
+      <div className="flex-1 max-w-md mx-auto w-full px-6 py-10 flex flex-col items-center justify-center">
+        <ScannerPage id={id} />
+      </div>
+    </div>
   );
 }

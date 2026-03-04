@@ -10,69 +10,104 @@ const NavBar: React.FC = () => {
 
   const isHome = pathname === "/";
 
+  const navItems = [
+    {
+      label: "History",
+      icon: History,
+      path: "/history",
+    },
+    {
+      label: "Profile",
+      icon: Settings,
+      path: "/profile",
+    },
+  ];
+
   return (
-    <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full">
-      <div className="bg-white px-8 py-4 flex items-center justify-between shadow-[0_-6px_20px_rgba(0,0,0,0.1)]">
-        
+    <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center pointer-events-none pb-[env(safe-area-inset-bottom,1.5rem)] mb-4">
+      <div className="bg-white/70 backdrop-blur-2xl border border-white/40 w-[calc(100%-2rem)] max-w-md pointer-events-auto py-2.5 px-6 flex items-center justify-between shadow-[0_20px_50px_-12px_rgba(0,0,0,0.2)] rounded-[2rem] mx-auto transition-all duration-500">
+
+        {/* History */}
         <button
           onClick={() => router.push("/history")}
-          className="flex flex-col items-center gap-1"
+          className={`flex flex-col items-center justify-center flex-1 h-14 relative group active:scale-90 ${
+            pathname === "/history"
+              ? "bg-primary text-white shadow-lg rounded-[2rem]"
+              : "text-gray-400 hover:text-gray-600"
+          }`}
         >
-          <History
-            size={22}
-            className={pathname === "/history" ? "text-(--color-primary)" : "text-black"}
-          />
+          <div className="p-2 rounded-xl transition-all duration-300">
+            <History
+              size={pathname === "/history" ? 20 : 18}
+              strokeWidth={pathname === "/history" ? 2.5 : 2}
+            />
+          </div>
           <span
-            className={`text-xs ${
-              pathname === "/history" ? "text-(--color-primary)" : "text-black"
+            className={`text-[8px] font-black uppercase tracking-[0.15em] transition-all duration-300 mt-1 ${
+              pathname === "/history" ? "opacity-100" : "opacity-60"
             }`}
           >
             History
           </span>
         </button>
 
+        {/* Center — New Order (on home) or Home (elsewhere) */}
         {isHome ? (
           <button
             onClick={() => router.push("/order/new")}
-            className="bg-(--color-primary) text-white px-10 py-3 rounded-xl flex items-center justify-center"
+            className="flex flex-col items-center justify-center flex-1 h-14 bg-[var(--color-primary)] text-white shadow-lg rounded-[2rem] active:scale-90 transition-all duration-300"
           >
-            <Plus size={26} />
+            <Plus size={20} strokeWidth={2.5} />
+            <span className="text-[8px] font-black uppercase tracking-[0.15em] mt-1">
+              New Order
+            </span>
           </button>
         ) : (
           <button
             onClick={() => router.push("/")}
-            className="flex flex-col items-center gap-1"
+            className={`flex flex-col items-center justify-center flex-1 h-14 relative group active:scale-90 ${
+              pathname === "/"
+                ? "bg-primary text-white shadow-lg rounded-[2rem]"
+                : "text-gray-400 hover:text-gray-600"
+            }`}
           >
-            <Home
-              size={22}
-              className={pathname === "/" ? "text-(--color-primary)" : "text-black"}
-            />
+            <div className="p-2 rounded-xl transition-all duration-300">
+              <Home
+                size={pathname === "/" ? 20 : 18}
+                strokeWidth={pathname === "/" ? 2.5 : 2}
+              />
+            </div>
             <span
-              className={`text-xs ${
-                pathname === "/" ? "text-(--color-primary)" : "text-black"
+              className={`text-[8px] font-black uppercase tracking-[0.15em] transition-all duration-300 mt-1 ${
+                pathname === "/" ? "opacity-100" : "opacity-60"
               }`}
             >
-              Home
+              Orders
             </span>
           </button>
         )}
 
+        {/* Profile / Settings */}
         <button
           onClick={() => router.push("/profile")}
-          className="flex flex-col items-center gap-1"
+          className={`flex flex-col items-center justify-center flex-1 h-14 relative group active:scale-90 ${
+            pathname === "/profile"
+              ? "bg-primary text-white shadow-lg rounded-[2rem]"
+              : "text-gray-400 hover:text-gray-600"
+          }`}
         >
-          <Settings
-            size={22}
-            className={
-              pathname === "/profile" ? "text-(--color-primary)" : "text-black"
-            }
-          />
+          <div className="p-2 rounded-xl transition-all duration-300">
+            <Settings
+              size={pathname === "/profile" ? 20 : 18}
+              strokeWidth={pathname === "/profile" ? 2.5 : 2}
+            />
+          </div>
           <span
-            className={`text-xs ${
-              pathname === "/profile" ? "text-(--color-primary)" : "text-black"
+            className={`text-[8px] font-black uppercase tracking-[0.15em] transition-all duration-300 mt-1 ${
+              pathname === "/profile" ? "opacity-100" : "opacity-60"
             }`}
           >
-            Settings
+            Profile
           </span>
         </button>
       </div>

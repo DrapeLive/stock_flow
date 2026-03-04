@@ -1,27 +1,42 @@
+"use client";
+
 import ListCustomer from "@/components/pages/ListCustomer";
-import { X } from "lucide-react";
-import Link from "next/link";
+
+import { ArrowLeft, X } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 export default function NewOrder() {
+  const router = useRouter();
+
   return (
-    <>
-      <h1 className="text-(--color-primary) flex justify-center">
-        Create new Order
-      </h1>
-      <ListCustomer />
-      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full">
-        <div className="w-full flex justify-center pb-5">
-          <Link
-            href="/"
-            className="flex gap-1 text-(--color-primary) border border-(--color-primary) p-1.5 rounded-md"
+    <div className="min-h-screen bg-gray-50/50 pb-32">
+       {/* Header */}
+       <div className="bg-white border-b border-gray-100 px-6 py-6 sticky top-0 z-10">
+        <div className="max-w-md mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={() => router.back()}
+              className="p-2 rounded-xl hover:bg-gray-50 text-gray-400 transition-colors"
+            >
+              <ArrowLeft size={20} />
+            </button>
+            <div className="flex flex-col">
+              <h1 className="text-xl font-black text-gray-900 leading-tight">Create Order</h1>
+              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Step 1: Select Customer</p>
+            </div>
+          </div>
+          <button 
+            onClick={() => router.push("/")}
+            className="p-2 rounded-xl hover:bg-rose-50 text-rose-500 transition-colors border border-transparent hover:border-rose-100"
           >
-            Cancel{" "}
-            <span>
-              <X />
-            </span>
-          </Link>
+            <X size={20} />
+          </button>
         </div>
       </div>
-    </>
+
+      <div className="max-w-md mx-auto">
+        <ListCustomer />
+      </div>
+    </div>
   );
 }

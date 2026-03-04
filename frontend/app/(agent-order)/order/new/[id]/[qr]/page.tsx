@@ -1,26 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { useParams } from "next/navigation";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
-import Link from "next/link";
-import { ChevronLeft, PackagePlus } from "lucide-react";
+import { ArrowLeft, PackagePlus, Minus, Plus, Check, Info } from "lucide-react";
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 import { itemApi } from "@/lib/api/item";
 import { ItemResponse, ItemSize, ItemVariant } from "@/types/item";
 import { orderApi } from "@/lib/api/order";
-import { useRouter } from "next/navigation";
 import { PageLoading } from "@/components/ui/Loading";
-import { AlertDestructive } from "@/components/ui/AlertDestructive";
 import { SuccessAlert } from "@/components/ui/SuccessAlert";
 import { FailedBox } from "@/components/ui/FailBox";
 
@@ -30,7 +18,6 @@ export default function ProductDetailPage() {
     qr: string;
   }>();
   const id = params.id as string;
-
   const router = useRouter();
 
   const [data, setData] = useState<ItemResponse | null>(null);
@@ -40,6 +27,7 @@ export default function ProductDetailPage() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -51,7 +39,11 @@ export default function ProductDetailPage() {
         if (response.variants?.length > 0) {
           setSelectedVariant(response.variants[0]);
         }
-      } catch {
+        if (response.sizes?.length > 0) {
+          setSelectedSize(response.sizes[0]);
+        }
+      } catch (e) {
+        console.error("Error fetching product details:", e);
         setError(true);
       } finally {
         setLoading(false);
@@ -59,9 +51,25 @@ export default function ProductDetailPage() {
     };
 
     fetchData();
-  }, []);
+  }, [params.qr]);
 
   const handleSubmit = async () => {
+    // Validation
+    if (!selectedVariant) {
+      setValidationError("Please select a color/variant");
+      return;
+    }
+    if (!selectedSize) {
+      setValidationError("Please select a size");
+      return;
+    }
+    if (quantity < 1) {
+      setValidationError("Quantity must be at least 1");
+      return;
+    }
+
+    setValidationError(null);
+
     try {
       setLoading(true);
       const key = localStorage.getItem("orderKey");
@@ -70,16 +78,19 @@ export default function ProductDetailPage() {
           {
             qr_code: params.qr,
             quantity: quantity,
-            size: selectedSize?.id || 0,
-            variant: selectedVariant?.id || 0,
+            size: selectedSize.id,
+            variant: selectedVariant.id,
           },
           key,
         );
         if (res) {
           setSuccess(true);
         }
+      } else {
+        setValidationError("Order session not found. Please restart the order.");
       }
     } catch (e) {
+      console.error("Error adding item to order:", e);
       setError(true);
     } finally {
       setLoading(false);
@@ -102,110 +113,158 @@ export default function ProductDetailPage() {
       <FailedBox
         title="Failed"
         description="Server Error"
-        onClose={() => router.push(`/order/new/${id}`)}
+        onClose={() => router.push(`/order/new/${id}/scanner`)}
       />
     );
 
   return (
-    <div className="min-h-screen">
-      <div className="w-full">
-        <Link
-          className="flex text-(--color-primary) items-center"
-          href={"/order/new"}
-        >
-          <ChevronLeft size={18} />
-          <h5>Back</h5>
-        </Link>
-      </div>
-      <h2 className="pt-5">{data?.name}</h2>
-      <Card className="w-full border-none">
-        <CardContent className="space-y-5">
-          <div className="overflow-hidden">
-            {selectedVariant && (
-              <Image
-                src={`${selectedVariant.image}`}
-                alt="product"
-                width={400}
-                height={400}
-                className="w-full h-64 object-cover"
-                unoptimized
-              />
-            )}
+    <div className="min-h-screen bg-gray-50/50 pb-32">
+       {/* Header */}
+       <div className="bg-white border-b border-gray-100 px-6 py-6 sticky top-0 z-10">
+        <div className="max-w-md mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={() => router.back()}
+              className="p-2 rounded-xl hover:bg-gray-50 text-gray-400 transition-colors"
+            >
+              <ArrowLeft size={20} />
+            </button>
+            <div className="flex flex-col">
+              <h1 className="text-xl font-black text-gray-900 leading-tight">Item Details</h1>
+              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Step 4: Configure Item</p>
+            </div>
           </div>
+        </div>
+      </div>
 
-          <div className="space-y-2">
-            <div className="flex gap-3 overflow-x-auto">
+      <div className="max-w-md mx-auto px-6 pt-6">
+        {/* Product Image Card */}
+        <div className="bg-white rounded-[40px] overflow-hidden shadow-xl shadow-primary/5 border border-gray-100 mb-8 aspect-square relative">
+          {selectedVariant?.image ? (
+            <Image
+              src={`${selectedVariant.image}`}
+              alt={data?.name || "Product"}
+              fill
+              className="object-cover"
+              unoptimized
+            />
+          ) : (
+            <div className="w-full h-full bg-gray-50 flex items-center justify-center">
+              <PackagePlus size={64} className="text-gray-200" />
+            </div>
+          )}
+          <div className="absolute top-6 right-6 bg-white/90 backdrop-blur-md px-4 py-2 rounded-2xl shadow-sm border border-white/20">
+             <span className="text-xs font-black uppercase tracking-widest text-primary">Live Preview</span>
+          </div>
+        </div>
+
+        {/* Product Info */}
+        <div className="mb-8">
+           <h2 className="text-2xl font-black text-gray-900 mb-1">{data?.name}</h2>
+           <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest leading-tight">{"Premium Collection"}</p>
+        </div>
+
+        {/* Color/Variant Selection */}
+        <div className="mb-8">
+           <div className="flex justify-between items-center mb-4">
+             <h3 className="font-bold text-gray-900">Select Color</h3>
+             <span className="text-[10px] text-primary font-black uppercase tracking-widest bg-primary/5 px-2 py-1 rounded-lg">
+                {selectedVariant?.color || "Required"}
+             </span>
+           </div>
+           <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-none">
               {data?.variants.map((v) => (
                 <button
                   key={v.id}
-                  onClick={() => setSelectedVariant(v)}
-                  className={`min-w-23 rounded-xl border pt-2 transition ${
+                  onClick={() => {
+                    setSelectedVariant(v);
+                    setValidationError(null);
+                  }}
+                  className={`relative flex-shrink-0 w-20 h-20 rounded-3xl border-2 transition-all overflow-hidden ${
                     selectedVariant?.id === v.id
-                      ? "border-(--color-primary)"
-                      : "border-gray-300"
+                      ? "border-primary scale-105 shadow-lg shadow-primary/20"
+                      : "border-transparent hover:border-gray-200"
                   }`}
                 >
                   <Image
                     src={v.image!}
                     alt={v.color}
-                    className="w-full h-12 object-cover rounded"
-                    height={12}
-                    width={1}
+                    fill
+                    className="object-cover"
                     unoptimized
                   />
-                  <h6 className="mt-1 bg-white border-b rounded-b-xl">
-                    {v.color}
-                  </h6>
+                  {selectedVariant?.id === v.id && (
+                    <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
+                       <Check className="text-white" size={24} strokeWidth={4} />
+                    </div>
+                  )}
                 </button>
               ))}
-            </div>
-          </div>
+           </div>
+        </div>
 
-          <div className="w-full flex items-center justify-between">
-            <h3>Quantity</h3>
-            <Input
-              type="number"
-              min={1}
-              value={quantity}
-              onChange={(e) => setQuantity(Number(e.target.value))}
-              className="w-20"
-            />
-          </div>
+        {/* Size Selection */}
+        <div className="mb-8">
+           <h3 className="font-bold text-gray-900 mb-4">Select Size</h3>
+           <div className="flex flex-wrap gap-3">
+              {data?.sizes.map((s) => (
+                <button
+                  key={s.id}
+                  onClick={() => {
+                    setSelectedSize(s);
+                    setValidationError(null);
+                  }}
+                  className={`px-6 py-3 rounded-2xl font-black text-sm transition-all border-2 ${
+                    selectedSize?.id === s.id
+                      ? "bg-primary border-primary text-white shadow-lg shadow-primary/20 scale-105"
+                      : "bg-white border-gray-100 text-gray-600 hover:border-gray-200"
+                  }`}
+                >
+                  {s.size}
+                </button>
+              ))}
+           </div>
+        </div>
 
-          <div className="w-full flex items-center justify-between">
-            <h3>Size</h3>
-            <Select
-              value={String(selectedSize?.id)}
-              onValueChange={(value) =>
-                setSelectedSize(
-                  data?.sizes.find((s) => s.id === Number(value)) ||
-                    data?.sizes[0],
-                )
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select size" />
-              </SelectTrigger>
-              <SelectContent>
-                {data?.sizes.map((s) => (
-                  <SelectItem key={s.id} value={String(s.id)}>
-                    {s.size}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+        {/* Quantity Selection */}
+        <div className="mb-10 bg-white p-6 rounded-[32px] border border-gray-100 flex items-center justify-between shadow-sm">
+           <h3 className="font-bold text-gray-900">Quantity</h3>
+           <div className="flex items-center gap-6">
+              <button 
+                onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                className="w-10 h-10 rounded-xl border border-gray-100 flex items-center justify-center text-gray-400 hover:bg-gray-50 active:scale-90 transition-all font-bold"
+              >
+                <Minus size={20} />
+              </button>
+              <span className="text-xl font-black text-gray-900 w-8 text-center">{quantity}</span>
+              <button 
+                onClick={() => setQuantity(quantity + 1)}
+                className="w-10 h-10 rounded-xl bg-gray-900 flex items-center justify-center text-white hover:bg-black active:scale-90 transition-all font-bold"
+              >
+                <Plus size={20} />
+              </button>
+           </div>
+        </div>
 
-          {/* Add Button */}
-          <div className="w-full flex justify-center p-9">
-            <StockFlowButton
-              text="Add Item"
-              icon={<PackagePlus />}
-              onClick={handleSubmit}
-            />
+        {/* Validation Error */}
+        {validationError && (
+          <div className="mb-6 p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-3 text-rose-500 animate-in fade-in slide-in-from-top-2">
+            <Info size={18} />
+            <p className="text-xs font-bold uppercase tracking-wider">{validationError}</p>
           </div>
-        </CardContent>
-      </Card>
+        )}
+
+        {/* Add Button */}
+        <div className="px-4">
+           <StockFlowButton
+             text="Add to Order"
+             variant="filled"
+             icon={<PackagePlus />}
+             onClick={handleSubmit}
+             className="w-full py-8 rounded-[32px] shadow-xl shadow-primary/30 text-lg active:scale-95 transition-all"
+           />
+        </div>
+      </div>
     </div>
   );
 }

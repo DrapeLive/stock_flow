@@ -1,8 +1,7 @@
 "use client";
 
 import { Scanner } from "@yudiel/react-qr-scanner";
-import { useState } from "react";
-import { Image } from "lucide-react";
+import { QrCode, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 interface ScannerPageProps {
@@ -11,41 +10,53 @@ interface ScannerPageProps {
 
 const ScannerPage: React.FC<ScannerPageProps> = ({ id }) => {
   const router = useRouter();
+  
   return (
-    <div className="h-full">
-      <div className="relative mx-auto w-58 h-58 rounded-3xl overflow-hidden bg-black">
-        <Scanner
-          constraints={{
-            facingMode: "environment",
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-          }}
-          onScan={(data) => {
-            if (data[0]?.rawValue) {
-              router.push(`/order/new/${id}/${data[0]["rawValue"]}`);
-            }
-          }}
-          onError={(err) => console.error(err)}
-          classNames={{
-            container: "w-full h-full",
-            video: "w-full h-full object-cover",
-          }}
-        />
+    <div className="w-full max-w-sm flex flex-col items-center">
+      <div className="relative w-full aspect-square max-w-[280px]">
+        {/* Corner Brackets */}
+        <div className="absolute -top-2 -left-2 w-8 h-8 border-t-4 border-l-4 border-primary rounded-tl-2xl z-20" />
+        <div className="absolute -top-2 -right-2 w-8 h-8 border-t-4 border-r-4 border-primary rounded-tr-2xl z-20" />
+        <div className="absolute -bottom-2 -left-2 w-8 h-8 border-b-4 border-l-4 border-primary rounded-bl-2xl z-20" />
+        <div className="absolute -bottom-2 -right-2 w-8 h-8 border-b-4 border-r-4 border-primary rounded-br-2xl z-20" />
+        
+        {/* Scanner Container */}
+        <div className="relative w-full h-full rounded-[32px] overflow-hidden bg-black shadow-2xl ring-8 ring-white/50">
+          <Scanner
+            constraints={{
+              facingMode: "environment",
+              width: { ideal: 1280 },
+              height: { ideal: 720 },
+            }}
+            onScan={(data) => {
+              if (data[0]?.rawValue) {
+                router.push(`/order/new/${id}/${data[0]["rawValue"]}`);
+              }
+            }}
+            onError={(err) => console.error(err)}
+            classNames={{
+              container: "w-full h-full",
+              video: "w-full h-full object-cover",
+            }}
+          />
+        </div>
       </div>
 
-      <div className="pt-3 w-full flex justify-center">
-        <h1 className="font-medium text-(--color-primary)">Scan Item QR</h1>
+      <div className="mt-12 text-center">
+        <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full border border-primary/20 mb-4">
+          <QrCode size={16} />
+          <span className="text-xs font-black uppercase tracking-widest">Awaiting Scan</span>
+        </div>
+        <h2 className="text-lg font-bold text-gray-800">Align QR Code</h2>
+        <p className="text-sm text-gray-400 mt-2 max-w-[200px] mx-auto leading-relaxed font-medium">
+          Position the item's QR code within the frame to add it to the order
+        </p>
       </div>
-      {/*<div className="flex flex-col text-(--color-primary) pb-3 items-center justify-center w-full">
-        <h4>Not Working?</h4>
-        <h4 className="font-medium">Enter Code Manually</h4>
+
+      <div className="mt-8 flex items-center justify-center gap-2 text-primary/40 animate-pulse">
+        <Sparkles size={16} />
+        <span className="text-[10px] font-bold uppercase tracking-widest">Auto-detecting</span>
       </div>
-      <div className="flex w-full justify-center">
-        <button className="flex gap-1 text-(--color-primary) border border-(--color-primary) p-2 rounded-md">
-          <h4 className="font-light">Scan from Image</h4>
-          <Image />
-        </button>
-      </div>*/}
     </div>
   );
 };

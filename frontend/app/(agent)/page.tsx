@@ -9,6 +9,7 @@ import groupOrders from "@/util/groupOrders";
 import { PageLoading } from "@/components/ui/Loading";
 import { FailedBox } from "@/components/ui/FailBox";
 import { useRouter } from "next/navigation";
+import StatusBadge from "@/components/ui/custom/StatusBadge";
 
 export default function Home() {
   const [data, setData] = useState<OrderAllResponse>([]);
@@ -47,107 +48,101 @@ export default function Home() {
     );
   if (loading) return <PageLoading />;
   if (order_len === 0)
-    return <h2 className="flex justify-center">No Orders</h2>;
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-gray-300">
+        <Info size={40} className="mb-4 opacity-20" />
+        <h2 className="text-xl font-bold">No Active Orders</h2>
+      </div>
+    );
 
   return (
-    <div className="min-h-screen min-w-full">
-      {/*<div className="relative">
-        <div className="text-muted-foreground pointer-events-none absolute inset-y-0 left-0 flex items-center justify-center pl-3 peer-disabled:opacity-50">
-          <Search className="size-4" />
-        </div>
-        <Input
-          type="text"
-          placeholder="search orders.."
-          className="peer pl-9 py-6"
-        />
-      </div>*/}
-      <div className="pt-3 flex justify-between">
-        <div className="flex gap-1 items-center">
-          <p>Remaining Order</p>
-          <div className="bg-(--color-border) rounded-full py-0.5 px-2">
-            <p className="font-bold">{order_len}</p>
+    <div className="min-h-screen min-w-full px-4 bg-gray-50/30">
+      <div className="pt-4 flex justify-between items-center mb-6">
+        <div className="flex gap-2 items-center">
+          <span className="text-gray-400 text-[10px] font-bold uppercase tracking-wider">Remaining Orders</span>
+          <div className="bg-amber-100 text-amber-600 rounded-full py-0.5 px-3 border border-amber-200">
+            <span className="font-bold text-xs">{order_len}</span>
           </div>
         </div>
-        <div className="p-0.5 rounded-[3px] border border-(--color-border)">
-          <Filter className="text-(--color-border) w-2.5 h-2.5" />
-        </div>
+        <button className="p-2 rounded-xl border border-gray-100 bg-white hover:bg-gray-50 transition-colors shadow-sm">
+          <Filter className="text-gray-400 size-4" />
+        </button>
       </div>
-      <div className="space-y-2 pt-2">
+
+      <div className="space-y-3 pb-32">
         {pendingPacked?.map((order) => {
           const previewImages = order.items.slice(0, 3);
 
           return (
-            <div key={order.id} className="flex p-1 border-b">
-              <div className="relative w-16 h-16">
-                {previewImages[0] && (
+            <div 
+              key={order.id} 
+              className="flex items-center p-4 bg-white border border-gray-100 hover:border-primary/30 hover:shadow-md transition-all cursor-pointer rounded-2xl group"
+              onClick={() => router.push(`/admin/order/status/${order.id}`)}
+            >
+              <div className="relative w-16 h-16 flex-shrink-0">
+                {previewImages[0]?.variant?.image && (
                   <div className="absolute left-0 z-30 rotate-0">
                     <Image
-                      src={previewImages[0].variant.image!}
+                      src={previewImages[0].variant.image}
                       alt={previewImages[0].item.name}
                       width={56}
                       height={56}
-                      className="rounded-md object-cover border bg-white shadow"
+                      className="rounded-xl object-cover border-2 border-white shadow-sm bg-white"
                       unoptimized
                     />
                   </div>
                 )}
-
-                {previewImages[1] && (
-                  <div className="absolute left-0 z-20 rotate-10">
+                {previewImages[1]?.variant?.image && (
+                  <div className="absolute left-0 z-20 rotate-10 scale-95 opacity-80">
                     <Image
-                      src={previewImages[1].variant.image!}
+                      src={previewImages[1].variant.image}
                       alt={previewImages[1].item.name}
                       width={56}
                       height={56}
+                      className="rounded-xl object-cover border-2 border-white shadow-sm bg-white"
                       unoptimized
-                      className="rounded-md object-cover border bg-white shadow"
                     />
                   </div>
                 )}
-
-                {previewImages[2] && (
-                  <div className="absolute left-0 z-10 rotate-20">
+                {previewImages[2]?.variant?.image && (
+                  <div className="absolute left-0 z-10 rotate-20 scale-90 opacity-60">
                     <Image
-                      src={previewImages[2].variant.image!}
+                      src={previewImages[2].variant.image}
                       alt={previewImages[2].item.name}
                       width={56}
                       height={56}
+                      className="rounded-xl object-cover border-2 border-white shadow-sm bg-white"
                       unoptimized
-                      className="rounded-md object-cover border bg-white shadow"
                     />
                   </div>
                 )}
               </div>
 
-              <div className="flex flex-col px-2 justify-center gap-2 max-h-full">
-                <h6 className="font-medium">{order.customer_details.name}</h6>
-                <p className="max-w-30 truncate whitespace-nowrap">
-                  {order.items.map((item) => (
-                    <span className="text-(--color-text) mr-1" key={item.id}>
-                      {item.item.name}
+              <div className="flex-1 flex flex-col px-4 justify-center min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <h6 className="font-bold text-gray-900 text-base truncate leading-tight">
+                    {order.customer_details.name}
+                  </h6>
+                </div>
+                <p className="text-xs text-gray-400 font-medium truncate">
+                  {order.items.map((item, i) => (
+                    <span key={item.id}>
+                      {item.item.name}{i < order.items.length - 1 ? ", " : ""}
                     </span>
                   ))}
                 </p>
               </div>
 
-              <div className="flex items-center pr-2">
-                <div
-                  className={
-                    order.status == "PENDING"
-                      ? "bg-(--color-pending)/20 border border-(--color-pending) text-(--color-pending) rounded-full px-1 py-0.5"
-                      : "bg-(--color-packed)/20 border border-(--color-packed) text-(--color-packed) rounded-full px-1 py-0.5"
-                  }
-                >
-                  <p>{order.status}</p>
+              <div className="flex flex-col items-end gap-2 pr-2">
+                <StatusBadge status={order.status} />
+                <div className="flex flex-col items-end">
+                  <h3 className="text-lg font-black leading-none text-gray-900">{order.total_quantity}</h3>
+                  <p className="text-[9px] text-gray-300 font-bold uppercase tracking-tighter">Pieces</p>
                 </div>
               </div>
 
-              <div className="px-4 flex text-center justify-center flex-col">
-                <h3>{order.total_quantity}</h3>
-                <p className="text-(--color-text)">Pieces</p>
-              </div>
-              <div className="flex justify-center items-center">
-                <Info />
+              <div className="flex items-center pl-4 border-l border-gray-50 text-gray-200 group-hover:text-primary/30 transition-colors">
+                <Info size={18} />
               </div>
             </div>
           );
