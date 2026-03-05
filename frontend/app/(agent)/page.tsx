@@ -59,7 +59,9 @@ export default function Home() {
     <div className="min-h-screen min-w-full px-4 bg-gray-50/30">
       <div className="pt-4 flex justify-between items-center mb-6">
         <div className="flex gap-2 items-center">
-          <span className="text-gray-400 text-[10px] font-bold uppercase tracking-wider">Remaining Orders</span>
+          <span className="text-gray-400 text-[10px] font-bold uppercase tracking-wider">
+            Remaining Orders
+          </span>
           <div className="bg-amber-100 text-amber-600 rounded-full py-0.5 px-3 border border-amber-200">
             <span className="font-bold text-xs">{order_len}</span>
           </div>
@@ -71,11 +73,12 @@ export default function Home() {
 
       <div className="space-y-3 pb-32">
         {pendingPacked?.map((order) => {
+          if (order.items.length === 0) return null;
           const previewImages = order.items.slice(0, 3);
 
           return (
-            <div 
-              key={order.id} 
+            <div
+              key={order.id}
               className="flex items-center p-4 bg-white border border-gray-100 hover:border-primary/30 hover:shadow-md transition-all cursor-pointer rounded-2xl group"
               onClick={() => router.push(`/admin/order/status/${order.id}`)}
             >
@@ -127,7 +130,8 @@ export default function Home() {
                 <p className="text-xs text-gray-400 font-medium truncate">
                   {order.items.map((item, i) => (
                     <span key={item.id}>
-                      {item.item.name}{i < order.items.length - 1 ? ", " : ""}
+                      {item.item.name}
+                      {i < order.items.length - 1 ? ", " : ""}
                     </span>
                   ))}
                 </p>
@@ -136,8 +140,12 @@ export default function Home() {
               <div className="flex flex-col items-end gap-2 pr-2">
                 <StatusBadge status={order.status} />
                 <div className="flex flex-col items-end">
-                  <h3 className="text-lg font-black leading-none text-gray-900">{order.total_quantity}</h3>
-                  <p className="text-[9px] text-gray-300 font-bold uppercase tracking-tighter">Pieces</p>
+                  <h3 className="text-lg font-black leading-none text-gray-900">
+                    {order.total_quantity}
+                  </h3>
+                  <p className="text-[9px] text-gray-300 font-bold uppercase tracking-tighter">
+                    Pieces
+                  </p>
                 </div>
               </div>
 
