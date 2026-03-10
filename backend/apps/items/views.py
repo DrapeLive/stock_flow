@@ -1,7 +1,7 @@
 
 from rest_framework.viewsets import ModelViewSet, ViewSet
-from .models import Item, ItemVariant, ItemSize
-from .serializers import ItemSerializer, ItemVariantSerializer,ItemSizeSerializer
+from .models import Item, ItemVariant
+from .serializers import ItemSerializer, ItemVariantSerializer
 from apps.accounts.permissions import IsAdmin
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -20,6 +20,7 @@ class ItemViewSet(ModelViewSet):
 
     @action(detail=False, methods=['get'], url_path='by-qr')
     def get_by_qr(self, request):
+
         qr_code = request.query_params.get('qr_code')
 
         if not qr_code:
@@ -28,7 +29,11 @@ class ItemViewSet(ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        item = get_object_or_404(Item, qr_code=qr_code)
+        item = get_object_or_404(
+            Item.objects.prefetch_related("variants", "sizes"),
+            qr_code=qr_code
+        )
+
         serializer = self.get_serializer(item)
 
         return Response(serializer.data)
@@ -42,12 +47,12 @@ class ItemVariantViewSet(ModelViewSet):
             return [IsAdmin()]
         return [IsAuthenticated()]
 
-class ItemSizeViewSet(ModelViewSet):
-    queryset = ItemSize.objects.all()
-    serializer_class = ItemSizeSerializer
-
-    def get_permissions(self):
-        if self.request.method in ['POST', 'PUT', 'PATCH', 'DELETE']:
-            return [IsAdmin()]
-        return [IsAuthenticated()]
+# class ItemSizeViewSet(ModelViewSet):
+#     queryset = ItemSize.objects.all()
+#     serializer_class = ItemSizeSerializer
+#
+#     def get_permissions(self):
+#         if self.request.method in ['POST', 'PUT', 'PATCH', 'DELETE']:
+#             return [IsAdmin()]
+#         return [IsAuthenticated()]
 
