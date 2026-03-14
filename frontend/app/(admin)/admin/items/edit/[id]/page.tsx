@@ -2,258 +2,265 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { itemApi } from "@/lib/api/item";
-import { ItemResponse } from "@/types/item";
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { ArrowLeft, Package, Trash2, AlertCircle } from "lucide-react";
+import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
-import SizesSection from "../../new/addSizeSection";
-import ColorsSection from "../../new/addColorSection";
-import { KIDS_SIZES, GENTS_SIZES } from "@/constants/sizes";
-import { itemToFormData } from "@/lib/form-utils";
-import { Trash2, ArrowLeft, Package } from "lucide-react";
+import { AlertDestructive } from "@/components/ui/AlertDestructive";
+import { itemApi } from "@/lib/api/item";
+import { updateItem, parseErrorMessage } from "@/lib/updateItem";
+import EditVariantRow from "./editVariantRow";
+import type { EditCommonDetails, EditableVariant } from "@/types/item";
+import type { ItemType } from "@/types/item";
 
-interface Size {
-  id: string;
-  label: string;
-  quantity: string;
-}
+const uid = () => Math.random().toString(36).slice(2, 9);
 
-interface Color {
-  id: string;
-  name: string;
-  image: File | null;
-}
-
-export default function ItemDetailPage() {
-  const { id } = useParams();
+export default function ItemEditPage() {
+  const { id } = useParams<{ id: string }>();
   const router = useRouter();
 
-  const [item, setItem] = useState<ItemResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const [formData, setFormData] = useState({
+  const [common, setCommon] = useState<EditCommonDetails>({
     name: "",
     description: "",
-    type: "gents" as "gents" | "kids",
     price: "",
+    type: "gents",
   });
 
-  const [sizes, setSizes] = useState<Size[]>([]);
-  const [colors, setColors] = useState<Color[]>([]);
+  const [variants, setVariants] = useState<EditableVariant[]>([]);
 
-  const availableSizes = formData.type === "kids" ? KIDS_SIZES : GENTS_SIZES;
-
-  /* ---------------- Fetch Item ---------------- */
+  // ── Fetch ─────────────────────────────────────────────────────────────────
 
   useEffect(() => {
-    const fetchItem = async () => {
-      try {
-        const data = await itemApi.getOne(Number(id));
-        setItem(data);
-
-        setFormData({
+    if (!id) return;
+    itemApi
+      .getOne(Number(id))
+      .then((data) => {
+        setCommon({
           name: data.name,
-          description: data.description || "",
-          type: (data.type as "gents" | "kids") || "gents",
+          description: data.description ?? "",
           price: data.price,
+          type: (data.type as ItemType) ?? "gents",
         });
-
-        // Prefill sizes
-        setSizes(
-          data.sizes.map((s, index) => ({
-            id: `${index}`,
-            label: s.size,
-            quantity: String(s.stock),
+        setVariants(
+          data.variants.map((v) => ({
+            backendId: v.id,
+            localId: uid(),
+            size: v.size,
+            stock: v.stock ?? 0,
+            imageUrl: v.image ?? null,
+            newImage: null,
+            imagePreview: null,
           })),
         );
-
-        // Prefill colors
-        setColors(
-          data.variants.map((v, index) => ({
-            id: `${index}`,
-            name: v.color,
-            image: null, // existing image stays unless replaced
-          })),
-        );
-      } catch (error) {
-        console.error("Error fetching item:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (id) fetchItem();
+      })
+      .catch((e) => setError(parseErrorMessage(e)))
+      .finally(() => setLoading(false));
   }, [id]);
 
-  /* ---------------- Handlers ---------------- */
+  // ── Variant helpers ───────────────────────────────────────────────────────
 
-  const handleChange = (key: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [key]: value }));
-  };
+  const updateVariant = (localId: string, updated: EditableVariant) =>
+    setVariants((prev) =>
+      prev.map((v) => (v.localId === localId ? updated : v)),
+    );
 
-  const isFormValid =
-    formData.name.trim() !== "" &&
-    formData.description.trim() !== "" &&
-    formData.price.trim() !== "" &&
-    sizes.length > 0 &&
-    colors.length > 0;
+  const deleteVariant = (localId: string) =>
+    setVariants((prev) => prev.filter((v) => v.localId !== localId));
 
-  const handleUpdate = async () => {
-    if (!isFormValid || !item) return;
+  // ── Save ──────────────────────────────────────────────────────────────────
 
+  const handleSave = async () => {
+    setError(null);
     setSaving(true);
-
     try {
-      const payload = {
-        name: formData.name,
-        description: formData.description,
-        type: formData.type,
-        price: formData.price,
-        sizes: sizes.map((s) => ({
-          size: s.label,
-          stock: parseInt(s.quantity, 10),
-        })),
-        variants: colors.map((c) => ({
-          color: c.name,
-          image: c.image, // only sent if replaced
-        })),
-      };
-
-      const formDataPayload = itemToFormData(payload);
-
-      await itemApi.update(Number(id), formDataPayload);
-
-      router.refresh();
-    } catch (error) {
-      console.error("Error updating item:", error);
+      await updateItem(Number(id), common, variants);
+      router.push("/admin/items");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : parseErrorMessage(e));
     } finally {
       setSaving(false);
     }
   };
 
-  const handleDelete = async () => {
-    if (!confirm("Are you sure you want to delete this item?")) return;
+  // ── Delete ────────────────────────────────────────────────────────────────
 
+  const handleDelete = async () => {
+    if (!confirm("Delete this item? This cannot be undone.")) return;
+    setDeleting(true);
     try {
       await itemApi.delete(Number(id));
       router.push("/admin/items");
-    } catch (error) {
-      console.error("Error deleting item:", error);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to delete item.");
+      setDeleting(false);
     }
   };
 
-  /* ---------------- UI ---------------- */
+  // ── Render ────────────────────────────────────────────────────────────────
 
-  if (loading)
+  const isValid =
+    common.name.trim() !== "" &&
+    common.price.trim() !== "" &&
+    variants.length > 0;
+
+  if (loading) {
     return (
-      <div className="p-8 text-center text-gray-400">Loading details...</div>
+      <div className="flex items-center justify-center min-h-screen">
+        <p className="text-gray-400 text-sm">Loading…</p>
+      </div>
     );
-
-  if (!item)
-    return <div className="p-8 text-center text-red-400">Item not found.</div>;
+  }
 
   return (
     <div className="w-full px-4 py-8 flex flex-col min-h-screen bg-white">
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <button
+          type="button"
           onClick={() => router.back()}
           className="p-2 -ml-2 rounded-full hover:bg-gray-50"
         >
           <ArrowLeft size={24} />
         </button>
-
         <div className="text-center flex-1">
-          <h1 className="text-xl font-black">Item Profile</h1>
+          <h1 className="text-xl font-black">Edit Item</h1>
           <p className="text-[10px] text-gray-400 uppercase tracking-widest">
-            Manage item details
+            ID #{id}
           </p>
         </div>
-
         <button
+          type="button"
           onClick={handleDelete}
-          className="p-2 rounded-xl text-red-500 hover:bg-red-50"
+          disabled={deleting}
+          className="p-2 rounded-xl text-red-400 hover:bg-red-50 transition-colors"
         >
           <Trash2 size={20} />
         </button>
       </div>
 
-      {/* Icon Section */}
+      {/* Avatar */}
       <div className="flex flex-col items-center mb-8">
-        <div className="w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center mb-4">
-          <Package size={40} className="text-primary" />
+        <div className="w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center mb-3">
+          <Package size={36} className="text-primary" />
         </div>
-        <h2 className="text-2xl font-black">{formData.name}</h2>
-        <span className="text-xs font-bold text-gray-400 mt-1">ID: #{id}</span>
+        <h2 className="text-xl font-black">{common.name || "—"}</h2>
       </div>
 
-      {/* Main Card */}
-      <div className="bg-gray-50 border rounded-[2rem] p-6 space-y-10">
-        {/* Basic Details */}
-        <FieldGroup className="space-y-6">
+      <div className="space-y-4">
+        {/* Error */}
+        {error && <AlertDestructive heading="Error" description={error} />}
+
+        {/* ── Common Details ── */}
+        <div className="bg-gray-50 border border-gray-100 rounded-2xl px-5 py-5 space-y-4">
+          <p className="text-[10px] text-gray-400 uppercase tracking-widest">
+            Common Details
+          </p>
+
           <Field>
-            <FieldLabel>Name</FieldLabel>
+            <FieldLabel>Name *</FieldLabel>
             <Input
-              value={formData.name}
-              onChange={(e) => handleChange("name", e.target.value)}
+              value={common.name}
+              onChange={(e) =>
+                setCommon((p) => ({ ...p, name: e.target.value }))
+              }
             />
           </Field>
 
           <Field>
             <FieldLabel>Description</FieldLabel>
             <Textarea
-              value={formData.description}
-              onChange={(e) => handleChange("description", e.target.value)}
+              value={common.description}
+              onChange={(e) =>
+                setCommon((p) => ({ ...p, description: e.target.value }))
+              }
             />
           </Field>
 
-          <Field>
-            <FieldLabel>Type</FieldLabel>
-            <select
-              value={formData.type}
-              onChange={(e) => {
-                handleChange("type", e.target.value);
-                setSizes([]);
-              }}
-              className="w-full border rounded-lg p-2"
-            >
-              <option value="gents">Gents</option>
-              <option value="kids">Kids</option>
-            </select>
-          </Field>
+          <div className="grid grid-cols-2 gap-4">
+            <Field>
+              <FieldLabel>Price (₹) *</FieldLabel>
+              <Input
+                type="number"
+                min={0}
+                value={common.price}
+                onChange={(e) =>
+                  setCommon((p) => ({ ...p, price: e.target.value }))
+                }
+              />
+            </Field>
 
-          <Field>
-            <FieldLabel>Price</FieldLabel>
-            <Input
-              type="number"
-              value={formData.price}
-              onChange={(e) => handleChange("price", e.target.value)}
-            />
-          </Field>
-        </FieldGroup>
+            <Field>
+              <FieldLabel>Type</FieldLabel>
+              <Select
+                value={common.type}
+                onValueChange={(v: ItemType) =>
+                  setCommon((p) => ({ ...p, type: v }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="gents">Gents</SelectItem>
+                  <SelectItem value="kids">Kids</SelectItem>
+                </SelectContent>
+              </Select>
+            </Field>
+          </div>
+        </div>
 
-        {/* Sizes */}
-        <SizesSection
-          sizes={sizes}
-          setSizes={setSizes}
-          availableSizes={availableSizes}
-        />
+        {/* ── Variants ── */}
+        <div>
+          <div className="flex items-center justify-between mb-3 px-1">
+            <h2 className="font-bold text-sm">Variants</h2>
+            <span className="text-[10px] text-gray-400 uppercase tracking-widest">
+              {variants.length} size{variants.length !== 1 ? "s" : ""}
+            </span>
+          </div>
 
-        {/* Colors */}
-        <ColorsSection colors={colors} setColors={setColors} />
+          {variants.length === 0 && (
+            <div className="flex items-center gap-2 text-amber-600 bg-amber-50 border border-amber-100 rounded-xl px-4 py-3 text-xs">
+              <AlertCircle size={14} className="flex-shrink-0" />
+              At least one variant is required.
+            </div>
+          )}
+
+          <div className="space-y-2">
+            {variants.map((v, i) => (
+              <EditVariantRow
+                key={v.localId}
+                variant={v}
+                index={i}
+                isOnly={variants.length === 1}
+                onChange={(updated) => updateVariant(v.localId, updated)}
+                onDelete={() => deleteVariant(v.localId)}
+              />
+            ))}
+          </div>
+        </div>
       </div>
 
-      {/* Save Button */}
-      <div className="mt-8 mb-20 px-4">
+      {/* Save */}
+      <div className="mt-8 mb-24">
         <StockFlowButton
           variant="filled"
-          text={saving ? "Saving..." : "Save Changes"}
-          disabled={!isFormValid || saving}
-          onClick={handleUpdate}
-          className="w-full h-14 rounded-2xl"
+          text={saving ? "Saving…" : "Save Changes"}
+          disabled={!isValid || saving}
+          onClick={handleSave}
+          className="w-full h-14 rounded-2xl bg-primary text-white font-bold shadow-lg shadow-primary/20 flex items-center justify-center"
         />
       </div>
     </div>

@@ -1,0 +1,69 @@
+"use client";
+
+import { ImagePlus, Pencil, Trash2 } from "lucide-react";
+import type { ColorVariant } from "@/types/itemCreation";
+import { RANGE_TO_BACKEND } from "@/types/itemCreation";
+
+interface Props {
+  variant: ColorVariant;
+  index: number; // 1-based
+  onEdit: () => void;
+  onDelete: () => void;
+  isOnly: boolean;
+}
+
+export default function ColorCard({
+  variant,
+  index,
+  onEdit,
+  onDelete,
+  isOnly,
+}: Props) {
+  const sizeList = RANGE_TO_BACKEND[variant.sizeRange].join(", ");
+
+  return (
+    <div className="flex items-center gap-3 bg-white border border-gray-100 rounded-2xl px-4 py-3 shadow-sm">
+      {/* Thumbnail */}
+      <div className="flex-shrink-0 w-14 h-14 rounded-xl overflow-hidden bg-gray-100 flex items-center justify-center">
+        {variant.imagePreview ? (
+          <img
+            src={variant.imagePreview}
+            className="w-full h-full object-cover"
+            alt={`Variant ${index}`}
+          />
+        ) : (
+          <ImagePlus size={18} className="text-gray-300" />
+        )}
+      </div>
+
+      {/* Details */}
+      <div className="flex-1 min-w-0">
+        <p className="font-semibold text-sm">Variant #{index}</p>
+        <p className="text-[11px] text-gray-400 mt-0.5 truncate">{sizeList}</p>
+        <p className="text-[11px] text-gray-400">{variant.stock} per size</p>
+      </div>
+
+      {/* Actions */}
+      <div className="flex items-center gap-1 flex-shrink-0">
+        <button
+          type="button"
+          onClick={onEdit}
+          className="p-2 rounded-full text-gray-400 active:bg-gray-100"
+          aria-label="Edit"
+        >
+          <Pencil size={16} />
+        </button>
+        {!isOnly && (
+          <button
+            type="button"
+            onClick={onDelete}
+            className="p-2 rounded-full text-red-400 active:bg-red-50"
+            aria-label="Delete"
+          >
+            <Trash2 size={16} />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}

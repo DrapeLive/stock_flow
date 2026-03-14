@@ -12,12 +12,14 @@ export const itemApi = {
     return res.data;
   },
 
-  async create(data: ItemRequest | FormData): Promise<ItemResponse> {
+  async create(
+    data: ItemRequest | FormData | Record<string, unknown>,
+  ): Promise<ItemResponse> {
     const res = await api.post<ItemResponse>("/api/items/", data, {
       headers:
         data instanceof FormData
           ? { "Content-Type": "multipart/form-data" }
-          : undefined,
+          : { "Content-Type": "application/json" },
     });
     return res.data;
   },

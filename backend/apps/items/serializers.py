@@ -6,23 +6,13 @@ GENTS_SIZES = ["S", "M", "L", "XL", "XXL"]
 
 
 class ItemVariantSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = ItemVariant
         fields = "__all__"
         read_only_fields = ["item"]
 
 
-# class ItemSizeSerializer(serializers.ModelSerializer):
-#
-#     class Meta:
-#         model = ItemSize
-#         fields = "__all__"
-#         read_only_fields = ["item"]
-
-
 class ItemSerializer(serializers.ModelSerializer):
-
     variants = ItemVariantSerializer(many=True)
 
     class Meta:
@@ -30,69 +20,58 @@ class ItemSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
     def validate(self, data):
-
-        sizes = self.initial_data.get("sizes", [])
+        variants = data.get("variants", [])
         item_type = data.get("type")
 
-        for size in sizes:
-
-            if item_type == "kids" and size["size"] not in KIDS_SIZES:
+        for variant in variants:
+            size = variant.get("size")
+            if item_type == "kids" and size not in KIDS_SIZES:
                 raise serializers.ValidationError(
-                    f"{size['size']} is not valid for kids item"
+                    f"'{size}' is not a valid size for a kids item."
                 )
-
-            if item_type == "gents" and size["size"] not in GENTS_SIZES:
+            if item_type == "gents" and size not in GENTS_SIZES:
                 raise serializers.ValidationError(
-                    f"{size['size']} is not valid for gents item"
+                    f"'{size}' is not a valid size for a gents item."
                 )
 
         return data
 
     def create(self, validated_data):
-
-        variants_data = validated_data.pop("variants")
-        sizes_data = validated_data.pop("sizes")
-
+        variants_data = validated_data.pop("variants", [])
         item = Item.objects.create(**validated_data)
 
         for variant_data in variants_data:
-            ItemVariant.objects.create(
-                item=item,
-                **variant_data
-            )
-
-        for size_data in sizes_data:
-            ItemVariant.objects.create(
-                item=item,
-                **size_data
-            )
+            ItemVariant.objects.create(item=item, **variant_data)
 
         return item
 
     def update(self, instance, validated_data):
-
         variants_data = validated_data.pop("variants", [])
-        sizes_data = validated_data.pop("sizes", [])
 
+        # Update scalar fields on the item
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
-
         instance.save()
 
-        instance.variants.all().delete()
+        # Upsert variants by size — preserves existing IDs and qr_codes.
+        # Sizes present in the payload are created-or-updated.
+        # Sizes no longer in the payload are deleted.
+        incoming_sizes = {v["size"] for v in variants_data}
+        existing       = {v.size: v for v in instance.variants.all()}
 
+        # Delete removed sizes
+        for size, variant in existing.items():
+            if size not in incoming_sizes:
+                variant.delete()
+
+        # Create or update
         for variant_data in variants_data:
-            ItemVariant.objects.create(
-                item=instance,
-                **variant_data
-            )
-
-        instance.sizes.all().delete()
-
-        for size_data in sizes_data:
-            ItemVariant.objects.create(
-                item=instance,
-                **size_data
-            )
+            size = variant_data["size"]
+            if size in existing:
+                # Update stock only — image is handled separately via PATCH
+                existing[size].stock = variant_data.get("stock", existing[size].stock)
+                existing[size].save()
+            else:
+                ItemVariant.objects.create(item=instance, **variant_data)
 
         return instance

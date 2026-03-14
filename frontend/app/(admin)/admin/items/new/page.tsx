@@ -1,204 +1,164 @@
 "use client";
 
 import { useState } from "react";
-import {
-  Field,
-  FieldContent,
-  FieldGroup,
-  FieldLabel,
-} from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import StockFlowButton from "@/components/ui/custom/stockFlowButton";
-import { itemApi } from "@/lib/api/item";
-import SizesSection from "./addSizeSection";
-import ColorsSection from "./addColorSection";
-import { ItemRequest } from "@/types/item";
 import { useRouter } from "next/navigation";
-import { KIDS_SIZES, GENTS_SIZES } from "@/constants/sizes";
-import { itemToFormData } from "@/lib/form-utils";
-import { ArrowLeft } from "lucide-react";
+import Step1CommonDetails from "./commonDetails";
+import Step2AddColor from "./addColor";
+import ColorListScreen from "./colorList";
+import { submitItem, parseErrorMessage } from "@/lib/submitItem";
+import type { ColorVariant, CommonDetails, WizardStep } from "@/types/item";
+import { SIZES_BY_TYPE } from "@/types/item";
+import { AlertDestructive } from "@/components/ui/AlertDestructive";
 
-interface Size {
-  id: string;
-  label: string;
-  quantity: string;
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+const uid = () => Math.random().toString(36).slice(2, 9);
+
+function blankVariant(common: CommonDetails): ColorVariant {
+  return {
+    id: uid(),
+    sizeRange: SIZES_BY_TYPE[common.type][0],
+    stock: 0,
+    image: null,
+    imagePreview: null,
+  };
 }
 
-interface Color {
-  id: string;
-  name: string;
-  image: File | null;
-}
-
-interface ItemFormData {
-  name: string;
-  description: string;
-  type: "gents" | "kids";
-  price: string;
-}
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function NewItemPage() {
   const router = useRouter();
 
-  const [formData, setFormData] = useState<ItemFormData>({
+  const [common, setCommon] = useState<CommonDetails>({
     name: "",
     description: "",
-    type: "gents",
     price: "",
+    type: "gents",
   });
 
-  const [sizes, setSizes] = useState<Size[]>([]);
-  const [colors, setColors] = useState<Color[]>([]);
+  const [variants, setVariants] = useState<ColorVariant[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [step, setStep] = useState<WizardStep>({ screen: "common" });
+  const [draft, setDraft] = useState<ColorVariant | null>(null);
 
-  const availableSizes = formData.type === "kids" ? KIDS_SIZES : GENTS_SIZES;
+  // ── Transitions ───────────────────────────────────────────────────────────
 
-  /* ------------------ Handlers ------------------ */
-
-  const handleChange = (key: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [key]: value }));
+  const goCommonNext = () => {
+    if (variants.length > 0) {
+      setStep({ screen: "list" });
+    } else {
+      setDraft(blankVariant(common));
+      setStep({ screen: "add-color" });
+    }
   };
 
-  const isFormValid =
-    formData.name.trim() !== "" &&
-    formData.description.trim() !== "" &&
-    formData.price.trim() !== "" &&
-    sizes.length > 0 &&
-    colors.length > 0;
+  const startAddColor = () => {
+    setDraft(blankVariant(common));
+    setStep({ screen: "add-color" });
+  };
+
+  const startEditColor = (id: string) => {
+    const existing = variants.find((v) => v.id === id);
+    if (!existing) return;
+    setDraft({ ...existing });
+    setStep({ screen: "add-color", editingId: id });
+  };
+
+  const backFromColorForm = () => {
+    setDraft(null);
+    setStep(variants.length > 0 ? { screen: "list" } : { screen: "common" });
+  };
+
+  // ── CRUD ──────────────────────────────────────────────────────────────────
+
+  const saveColor = (saved: ColorVariant) => {
+    const editingId = step.screen === "add-color" ? step.editingId : undefined;
+
+    setVariants((prev) =>
+      editingId
+        ? prev.map((v) =>
+            v.id === editingId ? { ...saved, id: editingId } : v,
+          )
+        : [...prev, saved],
+    );
+    setDraft(null);
+    setStep({ screen: "list" });
+  };
+
+  const deleteColor = (id: string) =>
+    setVariants((prev) => prev.filter((x) => x.id !== id));
+
+  // ── Submit ────────────────────────────────────────────────────────────────
 
   const handleSubmit = async () => {
-    if (!isFormValid) return;
-
+    setError(null);
     setLoading(true);
     try {
-      const payload = {
-        name: formData.name,
-        description: formData.description,
-        type: formData.type,
-        price: formData.price,
-        sizes: sizes.map((s) => ({
-          size: s.label,
-          stock: parseInt(s.quantity, 10),
-        })),
-        variants: colors.map((c) => ({
-          color: c.name,
-          image: c.image,
-        })),
-      };
-
-      const formDataPayload = itemToFormData(payload);
-      const response = await itemApi.create(formDataPayload);
-      console.log("Item created successfully:", response);
+      await submitItem(common, variants);
       router.push("/admin/items");
-    } catch (error) {
-      console.error("Error creating item:", error);
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : parseErrorMessage(err);
+      setError(message);
     } finally {
       setLoading(false);
     }
   };
 
-  /* ------------------ UI ------------------ */
+  // ── Render ────────────────────────────────────────────────────────────────
+
+  if (step.screen === "common") {
+    return (
+      <Step1CommonDetails
+        value={common}
+        onChange={setCommon}
+        onNext={goCommonNext}
+        onBack={() => router.back()}
+      />
+    );
+  }
+
+  if (step.screen === "add-color" && draft) {
+    const editingId = step.editingId;
+    const variantIndex = editingId
+      ? variants.findIndex((v) => v.id === editingId) + 1
+      : variants.length + 1;
+
+    return (
+      <Step2AddColor
+        initial={draft}
+        common={common}
+        isEdit={!!editingId}
+        variantIndex={variantIndex}
+        onSave={saveColor}
+        onBack={backFromColorForm}
+      />
+    );
+  }
 
   return (
-    <div className="w-full px-4 py-8 flex flex-col min-h-screen bg-white">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <button
-          onClick={() => router.back()}
-          className="p-2 -ml-2 rounded-full hover:bg-gray-50"
-        >
-          <ArrowLeft size={24} />
-        </button>
-
-        <div className="text-center flex-1">
-          <h1 className="text-xl font-black">Add New Item</h1>
-          <p className="text-[10px] text-gray-400 uppercase tracking-widest">
-            Create inventory item
-          </p>
+    <div className="flex flex-col">
+      {/* Error banner — shown above the list screen */}
+      {error && (
+        <div className="px-4 pt-6">
+          <AlertDestructive
+            heading="Failed to create item"
+            description={error}
+          />
         </div>
-
-        <div className="w-6" />
-      </div>
-
-      {/* Main Card */}
-      <div className="bg-gray-50 border rounded-[2rem] p-6 space-y-10">
-        {/* Item Details */}
-        <FieldGroup className="space-y-6">
-          <Field>
-            <FieldLabel>Name</FieldLabel>
-            <Input
-              value={formData.name}
-              onChange={(e) => handleChange("name", e.target.value)}
-            />
-          </Field>
-
-          <Field>
-            <FieldLabel>Description</FieldLabel>
-            <Textarea
-              value={formData.description}
-              onChange={(e) => handleChange("description", e.target.value)}
-            />
-          </Field>
-
-          <Field>
-            <FieldLabel>Type</FieldLabel>
-            <Select
-              value={formData.type}
-              onValueChange={(value: "gents" | "kids") => {
-                handleChange("type", value);
-                setSizes([]);
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="gents">Gents</SelectItem>
-                <SelectItem value="kids">Kids</SelectItem>
-              </SelectContent>
-            </Select>
-          </Field>
-
-          <Field>
-            <FieldLabel>Price</FieldLabel>
-            <Input
-              type="number"
-              min={0}
-              value={formData.price}
-              onChange={(e) => handleChange("price", e.target.value)}
-            />
-          </Field>
-        </FieldGroup>
-
-        {/* Sizes */}
-        <SizesSection
-          sizes={sizes}
-          setSizes={setSizes}
-          availableSizes={availableSizes}
-        />
-
-        {/* Colors */}
-        <ColorsSection colors={colors} setColors={setColors} />
-      </div>
-
-      {/* Save Button */}
-      <div className="mt-8 mb-20 px-4">
-        <StockFlowButton
-          variant="filled"
-          text={loading ? "Creating..." : "Create Item"}
-          disabled={!isFormValid || loading}
-          onClick={handleSubmit}
-          className="w-full h-14 rounded-2xl bg-primary text-white font-bold shadow-lg shadow-primary/20"
-        />
-      </div>
+      )}
+      <ColorListScreen
+        common={common}
+        variants={variants}
+        loading={loading}
+        onEditCommon={() => setStep({ screen: "common" })}
+        onAddColor={startAddColor}
+        onEditColor={startEditColor}
+        onDeleteColor={deleteColor}
+        onSubmit={handleSubmit}
+        onBack={() => setStep({ screen: "common" })}
+      />
     </div>
   );
 }
