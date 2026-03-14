@@ -196,38 +196,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/items/item-size/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["items_item_size_list"];
-        put?: never;
-        post: operations["items_item_size_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/items/item-size/{id}/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["items_item_size_retrieve"];
-        put: operations["items_item_size_update"];
-        post?: never;
-        delete: operations["items_item_size_destroy"];
-        options?: never;
-        head?: never;
-        patch: operations["items_item_size_partial_update"];
-        trace?: never;
-    };
     "/api/items/variants/": {
         parameters: {
             query?: never;
@@ -308,6 +276,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/orders/{order_id}/invoice/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["orders_invoice_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/orders/{id}/": {
         parameters: {
             query?: never;
@@ -322,6 +306,38 @@ export interface paths {
         options?: never;
         head?: never;
         patch: operations["orders_partial_update"];
+        trace?: never;
+    };
+    "/api/orders/order-items/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["orders_order_items_list"];
+        put?: never;
+        post: operations["orders_order_items_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/orders/order-items/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["orders_order_items_retrieve"];
+        put: operations["orders_order_items_update"];
+        post?: never;
+        delete: operations["orders_order_items_destroy"];
+        options?: never;
+        head?: never;
+        patch: operations["orders_order_items_partial_update"];
         trace?: never;
     };
     "/api/password/": {
@@ -383,13 +399,6 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        AddOrderItemRequest: {
-            /** Format: uuid */
-            qr_code: string;
-            quantity: number;
-            variant: number;
-            size: number;
-        };
         Admin: {
             readonly id: number;
             /** @description Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only. */
@@ -460,45 +469,35 @@ export interface components {
         Item: {
             readonly id: number;
             variants: components["schemas"]["ItemVariant"][];
-            sizes: components["schemas"]["ItemSize"][];
             name: string;
             description?: string;
             /** Format: decimal */
             price: string;
-            type?: (components["schemas"]["TypeEnum"] | components["schemas"]["NullEnum"]) | null;
             /** Format: uuid */
             readonly qr_code: string;
         };
         ItemRequest: {
             variants: components["schemas"]["ItemVariantRequest"][];
-            sizes: components["schemas"]["ItemSizeRequest"][];
             name: string;
             description?: string;
             /** Format: decimal */
             price: string;
-            type?: (components["schemas"]["TypeEnum"] | components["schemas"]["NullEnum"]) | null;
-        };
-        ItemSize: {
-            readonly id: number;
-            stock: number;
-            size: string;
-            readonly item: number;
-        };
-        ItemSizeRequest: {
-            stock: number;
-            size: string;
         };
         ItemVariant: {
             readonly id: number;
-            color: string;
+            type?: components["schemas"]["TypeEnum"];
             /** Format: uri */
             image?: string | null;
+            size: components["schemas"]["SizeEnum"];
+            stock?: number;
             readonly item: number;
         };
         ItemVariantRequest: {
-            color: string;
+            type?: components["schemas"]["TypeEnum"];
             /** Format: binary */
             image?: string | null;
+            size: components["schemas"]["SizeEnum"];
+            stock?: number;
         };
         LoginRequestRequest: {
             username?: string;
@@ -512,35 +511,36 @@ export interface components {
             role: components["schemas"]["RoleEnum"];
             user_id: number;
         };
-        /** @enum {unknown} */
-        NullEnum: null;
         Order: {
             readonly id: number;
             readonly items: components["schemas"]["OrderItem"][];
-            readonly total_quantity: string;
             readonly agent_details: components["schemas"]["SimpleAgent"];
             readonly customer_details: components["schemas"]["SimpleCustomer"];
+            readonly total_quantity: string;
             status?: components["schemas"]["StatusEnum"];
             /** Format: date-time */
             readonly created_at: string;
+            agent: number;
         };
         OrderItem: {
             readonly id: number;
-            readonly item: components["schemas"]["SimpleItem"];
-            readonly variant: components["schemas"]["ItemVariant"];
-            readonly size: components["schemas"]["ItemSize"];
+            readonly item: components["schemas"]["Item"];
+            size_group?: string;
             quantity: number;
             packed_quantity?: number;
             readonly order: number;
+            variant?: number | null;
         };
         OrderItemRequest: {
+            size_group?: string;
             quantity: number;
             packed_quantity?: number;
+            variant?: number | null;
         };
         OrderRequest: {
             customer: number;
-            agent: number;
             status?: components["schemas"]["StatusEnum"];
+            agent: number;
         };
         PasswordToken: {
             password: string;
@@ -572,26 +572,28 @@ export interface components {
         };
         PatchedItemRequest: {
             variants?: components["schemas"]["ItemVariantRequest"][];
-            sizes?: components["schemas"]["ItemSizeRequest"][];
             name?: string;
             description?: string;
             /** Format: decimal */
             price?: string;
-            type?: (components["schemas"]["TypeEnum"] | components["schemas"]["NullEnum"]) | null;
-        };
-        PatchedItemSizeRequest: {
-            stock?: number;
-            size?: string;
         };
         PatchedItemVariantRequest: {
-            color?: string;
+            type?: components["schemas"]["TypeEnum"];
             /** Format: binary */
             image?: string | null;
+            size?: components["schemas"]["SizeEnum"];
+            stock?: number;
+        };
+        PatchedOrderItemRequest: {
+            size_group?: string;
+            quantity?: number;
+            packed_quantity?: number;
+            variant?: number | null;
         };
         PatchedOrderRequest: {
             customer?: number;
-            agent?: number;
             status?: components["schemas"]["StatusEnum"];
+            agent?: number;
         };
         ResetToken: {
             token: string;
@@ -619,17 +621,19 @@ export interface components {
         SimpleCustomerRequest: {
             name: string;
         };
-        SimpleItem: {
-            readonly id: number;
-            name: string;
-            /** Format: decimal */
-            price: string;
-        };
-        SimpleItemRequest: {
-            name: string;
-            /** Format: decimal */
-            price: string;
-        };
+        /**
+         * @description * `20-24` - 20-24
+         *     * `26-30` - 26-30
+         *     * `32-36` - 32-36
+         *     * `38` - 38
+         *     * `S` - S
+         *     * `M` - M
+         *     * `L` - L
+         *     * `XL` - XL
+         *     * `XXL` - XXL
+         * @enum {string}
+         */
+        SizeEnum: "20-24" | "26-30" | "32-36" | "38" | "S" | "M" | "L" | "XL" | "XXL";
         /**
          * @description * `PENDING` - Pending
          *     * `PACKED` - Packed
@@ -1298,149 +1302,6 @@ export interface operations {
             };
         };
     };
-    items_item_size_list: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ItemSize"][];
-                };
-            };
-        };
-    };
-    items_item_size_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ItemSizeRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["ItemSizeRequest"];
-                "multipart/form-data": components["schemas"]["ItemSizeRequest"];
-            };
-        };
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ItemSize"];
-                };
-            };
-        };
-    };
-    items_item_size_retrieve: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this item size. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ItemSize"];
-                };
-            };
-        };
-    };
-    items_item_size_update: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this item size. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ItemSizeRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["ItemSizeRequest"];
-                "multipart/form-data": components["schemas"]["ItemSizeRequest"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ItemSize"];
-                };
-            };
-        };
-    };
-    items_item_size_destroy: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this item size. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description No response body */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    items_item_size_partial_update: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this item size. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["PatchedItemSizeRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["PatchedItemSizeRequest"];
-                "multipart/form-data": components["schemas"]["PatchedItemSizeRequest"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ItemSize"];
-                };
-            };
-        };
-    };
     items_variants_list: {
         parameters: {
             query?: never;
@@ -1637,29 +1498,14 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AddOrderItemRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["AddOrderItemRequest"];
-                "multipart/form-data": components["schemas"]["AddOrderItemRequest"];
-            };
-        };
+        requestBody?: never;
         responses: {
-            201: {
+            /** @description No response body */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
+                content?: never;
             };
         };
     };
@@ -1677,6 +1523,26 @@ export interface operations {
         responses: {
             /** @description No response body */
             204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    orders_invoice_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                order_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1775,6 +1641,149 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Order"];
+                };
+            };
+        };
+    };
+    orders_order_items_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderItem"][];
+                };
+            };
+        };
+    };
+    orders_order_items_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrderItemRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["OrderItemRequest"];
+                "multipart/form-data": components["schemas"]["OrderItemRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderItem"];
+                };
+            };
+        };
+    };
+    orders_order_items_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this order item. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderItem"];
+                };
+            };
+        };
+    };
+    orders_order_items_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this order item. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrderItemRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["OrderItemRequest"];
+                "multipart/form-data": components["schemas"]["OrderItemRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderItem"];
+                };
+            };
+        };
+    };
+    orders_order_items_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this order item. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    orders_order_items_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this order item. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedOrderItemRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedOrderItemRequest"];
+                "multipart/form-data": components["schemas"]["PatchedOrderItemRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderItem"];
                 };
             };
         };
