@@ -13,12 +13,6 @@ class Item(models.Model):
         decimal_places=2
     )
 
-    qr_code = models.UUIDField(
-        default=uuid.uuid4,
-        unique=True,
-        editable=False
-    )
-
     def __str__(self):
         return self.name
 
@@ -49,6 +43,12 @@ class ItemVariant(models.Model):
         Item,
         related_name="variants",
         on_delete=models.CASCADE
+    )
+
+    qr_code = models.UUIDField(
+        default=uuid.uuid4,
+        unique=True,
+        editable=False
     )
 
     type = models.CharField(
