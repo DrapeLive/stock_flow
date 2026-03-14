@@ -4,6 +4,11 @@ import uuid
 
 class Item(models.Model):
 
+    TYPE_CHOICES = [
+        ('kids', 'Kids'),
+        ('gents', 'Gents')
+    ]
+
     name = models.CharField(max_length=100)
 
     description = models.TextField(blank=True)
@@ -11,6 +16,12 @@ class Item(models.Model):
     price = models.DecimalField(
         max_digits=10,
         decimal_places=2
+    )
+
+    type = models.CharField(
+        max_length=10,
+        choices=TYPE_CHOICES,
+        default="NONE"
     )
 
     def __str__(self):
@@ -34,11 +45,6 @@ class ItemVariant(models.Model):
         ("XXL", "XXL")
     ]
 
-    TYPE_CHOICES = [
-        ('kids', 'Kids'),
-        ('gents', 'Gents')
-    ]
-
     item = models.ForeignKey(
         Item,
         related_name="variants",
@@ -51,11 +57,6 @@ class ItemVariant(models.Model):
         editable=False
     )
 
-    type = models.CharField(
-        max_length=10,
-        choices=TYPE_CHOICES,
-        default="NONE"
-    )
 
     image = models.ImageField(
         upload_to=item_variant_image_path,
