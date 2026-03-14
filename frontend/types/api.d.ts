@@ -473,6 +473,7 @@ export interface components {
             description?: string;
             /** Format: decimal */
             price: string;
+            type?: components["schemas"]["TypeEnum"];
         };
         ItemRequest: {
             variants: components["schemas"]["ItemVariantRequest"][];
@@ -480,12 +481,12 @@ export interface components {
             description?: string;
             /** Format: decimal */
             price: string;
+            type?: components["schemas"]["TypeEnum"];
         };
         ItemVariant: {
             readonly id: number;
             /** Format: uuid */
             readonly qr_code: string;
-            type?: components["schemas"]["TypeEnum"];
             /** Format: uri */
             image?: string | null;
             size: components["schemas"]["SizeEnum"];
@@ -493,7 +494,6 @@ export interface components {
             readonly item: number;
         };
         ItemVariantRequest: {
-            type?: components["schemas"]["TypeEnum"];
             /** Format: binary */
             image?: string | null;
             size: components["schemas"]["SizeEnum"];
@@ -576,9 +576,9 @@ export interface components {
             description?: string;
             /** Format: decimal */
             price?: string;
+            type?: components["schemas"]["TypeEnum"];
         };
         PatchedItemVariantRequest: {
-            type?: components["schemas"]["TypeEnum"];
             /** Format: binary */
             image?: string | null;
             size?: components["schemas"]["SizeEnum"];
