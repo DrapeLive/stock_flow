@@ -473,8 +473,6 @@ export interface components {
             description?: string;
             /** Format: decimal */
             price: string;
-            /** Format: uuid */
-            readonly qr_code: string;
         };
         ItemRequest: {
             variants: components["schemas"]["ItemVariantRequest"][];
@@ -485,6 +483,8 @@ export interface components {
         };
         ItemVariant: {
             readonly id: number;
+            /** Format: uuid */
+            readonly qr_code: string;
             type?: components["schemas"]["TypeEnum"];
             /** Format: uri */
             image?: string | null;
