@@ -28,7 +28,8 @@ class OrderViewSet(ModelViewSet):
 
     def get_queryset(self):
 
-        Order.objects.filter(items__isnull=True).delete()
+        if self.action == "list":
+            Order.objects.filter(items__isnull=True).delete()
 
         user = self.request.user
 

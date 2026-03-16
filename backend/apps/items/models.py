@@ -39,9 +39,7 @@ class ItemVariant(models.Model):
         ("32-36", "32-36"),
         ("38", "38"),
         ("S", "S"),
-        ("M", "M"),
-        ("L", "L"),
-        ("XL", "XL"),
+        ("M,L,XL", "M,L,XL"),
         ("XXL", "XXL")
     ]
 

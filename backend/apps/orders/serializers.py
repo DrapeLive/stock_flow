@@ -1,10 +1,11 @@
 from rest_framework import serializers
 from .models import Order, OrderItem
 from apps.items.models import Item
-from apps.items.serializers import ItemVariantSerializer
+from apps.items.models import ItemVariant
 from apps.customers.models import Customer
 from apps.agents.models import Agent
 from apps.items.serializers import ItemSerializer
+
 
 class SimpleCustomerSerializer(serializers.ModelSerializer):
 
@@ -79,9 +80,9 @@ class AddOrderItemSerializer(serializers.Serializer):
     def validate(self, attrs):
 
         try:
-            attrs["item"] = Item.objects.get(
-                qr_code=attrs["qr_code"]
-            )
+            variant = ItemVariant.objects.get(qr_code=attrs["qr_code"])
+            attrs["variant"] = variant
+            attrs["item"] = variant.item
         except Item.DoesNotExist:
             raise serializers.ValidationError(
                 "Invalid QR Code"

@@ -2,7 +2,7 @@ from rest_framework import serializers
 from .models import Item, ItemVariant
 
 KIDS_SIZES = ["20-24", "26-30", "32-36", "38"]
-GENTS_SIZES = ["S", "M", "L", "XL", "XXL"]
+GENTS_SIZES = ["S", "M,L,XL", "XXL"]
 
 
 class ItemVariantSerializer(serializers.ModelSerializer):
