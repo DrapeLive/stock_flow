@@ -1,11 +1,12 @@
 from rest_framework import serializers
 from .models import Item, ItemVariant
+from apps.orders.utils import SIZE_MAPPING
 
-KIDS_SIZES = ["20-24", "26-30", "32-36", "38"]
-GENTS_SIZES = ["S", "M,L,XL", "XXL"]
-
+KIDS_SIZES = list(SIZE_MAPPING.get("kids", {}).keys())
+GENTS_SIZES = list(SIZE_MAPPING.get("gents", {}).keys())
 
 class ItemVariantSerializer(serializers.ModelSerializer):
+    size = serializers.CharField()
     class Meta:
         model = ItemVariant
         fields = "__all__"
@@ -36,11 +37,33 @@ class ItemSerializer(serializers.ModelSerializer):
 
         return data
 
+    def _expand_variants(self, item_type, variants_data):
+        """
+        Expand each variant into multiple sub-variants using SIZE_MAPPING.
+        Each sub-size inherits the stock and image from the parent variant.
+        If no mapping exists for the size, the variant is kept as-is.
+        """
+        type_mapping = SIZE_MAPPING.get(item_type, {})
+        expanded = []
+
+        for variant_data in variants_data:
+            size = variant_data.get("size")
+            sub_sizes = type_mapping.get(size)
+
+            if sub_sizes:
+                for sub_size in sub_sizes:
+                    expanded.append({**variant_data, "size": sub_size})
+            else:
+                expanded.append(variant_data)
+
+        return expanded
+
     def create(self, validated_data):
         variants_data = validated_data.pop("variants", [])
         item = Item.objects.create(**validated_data)
 
-        for variant_data in variants_data:
+        expanded_variants = self._expand_variants(item.type, variants_data)
+        for variant_data in expanded_variants:
             ItemVariant.objects.create(item=item, **variant_data)
 
         return item
@@ -48,16 +71,13 @@ class ItemSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         variants_data = validated_data.pop("variants", [])
 
-        # Update scalar fields on the item
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
 
-        # Upsert variants by size — preserves existing IDs and qr_codes.
-        # Sizes present in the payload are created-or-updated.
-        # Sizes no longer in the payload are deleted.
-        incoming_sizes = {v["size"] for v in variants_data}
-        existing       = {v.size: v for v in instance.variants.all()}
+        expanded_variants = self._expand_variants(instance.type, variants_data)
+        incoming_sizes = {v["size"] for v in expanded_variants}
+        existing = {v.size: v for v in instance.variants.all()}
 
         # Delete removed sizes
         for size, variant in existing.items():
@@ -65,10 +85,9 @@ class ItemSerializer(serializers.ModelSerializer):
                 variant.delete()
 
         # Create or update
-        for variant_data in variants_data:
+        for variant_data in expanded_variants:
             size = variant_data["size"]
             if size in existing:
-                # Update stock only — image is handled separately via PATCH
                 existing[size].stock = variant_data.get("stock", existing[size].stock)
                 existing[size].save()
             else:

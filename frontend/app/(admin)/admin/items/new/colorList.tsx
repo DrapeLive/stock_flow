@@ -4,7 +4,7 @@ import { ArrowLeft, Plus } from "lucide-react";
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 import ColorCard from "./colorCard";
 import CommonDetailsBadge from "./commonDetailsBadge";
-import type { ColorVariant, CommonDetails } from "@/types/itemCreation";
+import type { ColorVariant, CommonDetails } from "@/types/item";
 
 interface Props {
   common: CommonDetails;

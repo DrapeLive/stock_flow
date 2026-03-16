@@ -18,8 +18,8 @@ import type {
   ColorVariant,
   CommonDetails,
   FrontendSizeRange,
-} from "@/types/itemCreation";
-import { SIZES_BY_TYPE, RANGE_TO_BACKEND } from "@/types/itemCreation";
+} from "@/types/item";
+import { SIZES_BY_TYPE } from "@/types/item";
 
 interface Props {
   initial: ColorVariant;
@@ -184,12 +184,6 @@ export default function Step2AddColor({
                 ))}
               </SelectContent>
             </Select>
-            <p className="text-[11px] text-gray-400 mt-1.5">
-              Sends as:{" "}
-              <span className="font-medium text-gray-500">
-                {RANGE_TO_BACKEND[variant.sizeRange].join(" · ")}
-              </span>
-            </p>
           </Field>
 
           {/* Stock */}

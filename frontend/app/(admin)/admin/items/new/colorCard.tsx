@@ -1,8 +1,7 @@
 "use client";
 
 import { ImagePlus, Pencil, Trash2 } from "lucide-react";
-import type { ColorVariant } from "@/types/itemCreation";
-import { RANGE_TO_BACKEND } from "@/types/itemCreation";
+import type { ColorVariant } from "@/types/item";
 
 interface Props {
   variant: ColorVariant;
@@ -19,7 +18,7 @@ export default function ColorCard({
   onDelete,
   isOnly,
 }: Props) {
-  const sizeList = RANGE_TO_BACKEND[variant.sizeRange].join(", ");
+  const sizeList = variant.sizeRange;
 
   return (
     <div className="flex items-center gap-3 bg-white border border-gray-100 rounded-2xl px-4 py-3 shadow-sm">

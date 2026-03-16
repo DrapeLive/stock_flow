@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/select";
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 import { ArrowLeft } from "lucide-react";
-import type { CommonDetails, ItemType } from "@/types/itemCreation";
+import type { CommonDetails, ItemType } from "@/types/item";
 
 interface Props {
   value: CommonDetails;

@@ -1,7 +1,7 @@
 "use client";
 
 import { Pencil } from "lucide-react";
-import type { CommonDetails } from "@/types/itemCreation";
+import type { CommonDetails } from "@/types/item";
 
 interface Props {
   common: CommonDetails;

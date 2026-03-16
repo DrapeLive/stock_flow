@@ -1,8 +1,6 @@
 import { itemApi } from "@/lib/api/item";
 import { objectToFormData } from "@/lib/form-utils";
 import type { CommonDetails, ColorVariant } from "@/types/item";
-import { RANGE_TO_BACKEND } from "@/types/item";
-
 /**
  * Builds FormData using objectToFormData which produces the key format
  * DRF's multipart parser expects: variants[0]size, variants[0]stock, etc.
@@ -15,13 +13,11 @@ export async function submitItem(
   const variantRows: Array<{ size: string; stock: number; image?: File }> = [];
 
   for (const variant of variants) {
-    for (const size of RANGE_TO_BACKEND[variant.sizeRange]) {
-      variantRows.push({
-        size,
-        stock: variant.stock,
-        ...(variant.image && { image: variant.image }),
-      });
-    }
+    variantRows.push({
+      size: variant.sizeRange,
+      stock: variant.stock,
+      ...(variant.image && { image: variant.image }),
+    });
   }
 
   const payload = {

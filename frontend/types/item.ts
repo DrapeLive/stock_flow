@@ -32,9 +32,9 @@ export type TypeEnum = components["schemas"]["TypeEnum"];
 export type FrontendSizeRange =
   | "20-36"
   | "20-38"
-  | "S, M, L, XL"
-  | "M, L, XL, XXL"
-  | "S, M, L, XL, XXL";
+  | "S,M,L,XL"
+  | "M,L,XL,XXL"
+  | "S,M,L,XL,XXL";
 
 export type BackendSize =
   | "20-24"
@@ -49,16 +49,8 @@ export type BackendSize =
 
 export type ItemType = "gents" | "kids";
 
-export const RANGE_TO_BACKEND: Record<FrontendSizeRange, BackendSize[]> = {
-  "20-36": ["20-24", "26-30", "32-36"],
-  "20-38": ["20-24", "26-30", "32-36", "38"],
-  "S, M, L, XL": ["S", "M", "L", "XL"],
-  "M, L, XL, XXL": ["M", "L", "XL", "XXL"],
-  "S, M, L, XL, XXL": ["S", "M", "L", "XL", "XXL"],
-};
-
 export const SIZES_BY_TYPE: Record<ItemType, FrontendSizeRange[]> = {
-  gents: ["S, M, L, XL", "M, L, XL, XXL", "S, M, L, XL, XXL"],
+  gents: ["S,M,L,XL", "M,L,XL,XXL", "S,M,L,XL,XXL"],
   kids: ["20-36", "20-38"],
 };
 
