@@ -3,7 +3,7 @@ model: environment
 id: ev_Frac6wFyYb
 workspaceId: wk_Wx4mNs5A2J
 createdAt: 2026-01-03T05:49:07.265241
-updatedAt: 2026-03-16T14:51:53.455148616
+updatedAt: 2026-03-17T05:48:15.234120401
 name: Global Variables
 public: true
 base: true
@@ -14,10 +14,10 @@ variables:
   id: dh0XBtdyeF
 - enabled: true
   name: TOKEN
-  value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzc2MjY0MTAzLCJpYXQiOjE3NzM2NzIxMDMsImp0aSI6ImUxMmEwZTEyZWM0YjQ0ZjQ4ZTMyNWUzODYyMmE0NGFiIiwidXNlcl9pZCI6IjEifQ.NjyVRXxUeccU4u2RwL8WOI4_0vCWahn_hvxBOHOJeUU
+  value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzc2MzE4NDc0LCJpYXQiOjE3NzM3MjY0NzQsImp0aSI6ImUzZGFjOTU4YTU3NjQ4M2VhYWE2ZGRlZTIyNjBkMTc3IiwidXNlcl9pZCI6IjEifQ.fogm2kDZa9EcbxxGUK70XV6cf-Yr2621H3H5OkUZmd8
   id: 2rqeHkH6xM
 - enabled: true
   name: AGENT_TOKEN
-  value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzc2MjY0NTc4LCJpYXQiOjE3NzM2NzI1NzgsImp0aSI6IjA5YzAzZGJhNmZlNjQ0ZTM5YTViNjNiODdhZGM2NDliIiwidXNlcl9pZCI6IjIifQ.TPpzk0S2Sqxd7_K_m4_F63mvO1XULgbzrlD3Di4zBBI
+  value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzc2MzE4NDQzLCJpYXQiOjE3NzM3MjY0NDMsImp0aSI6Ijg3OWUzOTc0ZDU0MDQyMjc4MGUyNTQ0OWZmZTVhZWVlIiwidXNlcl9pZCI6IjIifQ.tUQEs6WfpEMdc7B349kq2eeA2uY8oMpjq3j8O9Io_uY
   id: nfrZm6vCiQ
 color: null

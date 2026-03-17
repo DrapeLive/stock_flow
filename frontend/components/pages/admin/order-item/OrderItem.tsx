@@ -15,7 +15,13 @@ type Props = {
   onPackedChange?: () => void;
 };
 
-const OrderItem: React.FC<Props> = ({ items, isDelete, orderId, isPacking, onPackedChange }) => {
+const OrderItem: React.FC<Props> = ({
+  items,
+  isDelete,
+  orderId,
+  isPacking,
+  onPackedChange,
+}) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [orderItems, setOrderItems] = useState(items);
@@ -37,15 +43,19 @@ const OrderItem: React.FC<Props> = ({ items, isDelete, orderId, isPacking, onPac
     }
   };
 
-  const togglePacked = async (itemId: number, currentPacked: number, totalQuantity: number) => {
+  const togglePacked = async (
+    itemId: number,
+    currentPacked: number,
+    totalQuantity: number,
+  ) => {
     try {
       const newPacked = currentPacked >= totalQuantity ? 0 : totalQuantity;
       await orderApi.updateItem(itemId, { packed_quantity: newPacked });
-      
-      setOrderItems((prev) => 
-        prev?.map((item) => 
-          item.id === itemId ? { ...item, packed_quantity: newPacked } : item
-        )
+
+      setOrderItems((prev) =>
+        prev?.map((item) =>
+          item.id === itemId ? { ...item, packed_quantity: newPacked } : item,
+        ),
       );
       if (onPackedChange) onPackedChange();
     } catch (err) {
@@ -61,10 +71,10 @@ const OrderItem: React.FC<Props> = ({ items, isDelete, orderId, isPacking, onPac
       {error && <AlertDestructive heading="Error" description={error} />}
       {orderItems?.map((item, index) => {
         const isFullyPacked = item.packed_quantity! >= item.quantity;
-        
+
         return (
           <div
-            className={`flex w-full border-b border-gray-50 py-4 px-2 transition-all duration-300 ${isFullyPacked ? 'bg-green-50/40 opacity-80' : 'bg-white hover:bg-gray-50/50'}`}
+            className={`flex w-full border-b border-gray-50 py-4 px-2 transition-all duration-300 ${isFullyPacked ? "bg-green-50/40 opacity-80" : "bg-white hover:bg-gray-50/50"}`}
             key={index}
           >
             {isDelete && (
@@ -76,11 +86,13 @@ const OrderItem: React.FC<Props> = ({ items, isDelete, orderId, isPacking, onPac
                 <Trash className="text-red-600 w-4 h-4" />
               </button>
             )}
-            
+
             {isPacking && (
               <button
                 type="button"
-                onClick={() => togglePacked(item.id, item.packed_quantity!, item.quantity)}
+                onClick={() =>
+                  togglePacked(item.id, item.packed_quantity!, item.quantity)
+                }
                 className="flex justify-center items-center p-2 mr-1"
                 title={isFullyPacked ? "Mark as unpacked" : "Mark as packed"}
               >
@@ -92,11 +104,13 @@ const OrderItem: React.FC<Props> = ({ items, isDelete, orderId, isPacking, onPac
               </button>
             )}
 
-            <div className={`flex flex-1 justify-between ${isFullyPacked ? 'opacity-60' : ''}`}>
+            <div
+              className={`flex flex-1 justify-between ${isFullyPacked ? "opacity-60" : ""}`}
+            >
               <div className="flex">
                 <div className="relative w-[50px] h-[50px] flex-shrink-0">
                   <Image
-                    src={item.variant.image!}
+                    src={item.item.variants[0].image!}
                     fill
                     alt={item.item.name}
                     className="rounded-md object-cover border border-gray-100"
@@ -104,20 +118,25 @@ const OrderItem: React.FC<Props> = ({ items, isDelete, orderId, isPacking, onPac
                   />
                 </div>
                 <div className="pl-3 flex flex-col justify-center">
-                  <h6 className={`font-semibold text-sm ${isFullyPacked ? 'line-through text-gray-400' : 'text-gray-900'}`}>
+                  <h6
+                    className={`font-semibold text-sm ${isFullyPacked ? "line-through text-gray-400" : "text-gray-900"}`}
+                  >
                     {item.item.name}
                   </h6>
-                  <p className="text-xs text-gray-500">{item.variant.color}</p>
                 </div>
               </div>
-              
+
               <div className="flex items-center gap-6 pr-2">
                 <div className="bg-gray-50 px-2 py-1 rounded text-xs font-bold text-gray-600 border border-gray-100 min-w-[32px] text-center">
-                  {item.size.size}
+                  {item.size_group}
                 </div>
                 <div className="flex flex-col items-end min-w-[60px]">
-                  <h3 className="text-lg font-bold leading-none">{item.quantity}</h3>
-                  <p className="text-[10px] text-gray-400 uppercase font-medium">Pieces</p>
+                  <h3 className="text-lg font-bold leading-none">
+                    {item.quantity}
+                  </h3>
+                  <p className="text-[10px] text-gray-400 uppercase font-medium">
+                    Pieces
+                  </p>
                 </div>
               </div>
             </div>

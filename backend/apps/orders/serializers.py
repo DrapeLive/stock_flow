@@ -74,19 +74,17 @@ class AddOrderItemSerializer(serializers.Serializer):
 
     qr_code = serializers.UUIDField()
     quantity = serializers.IntegerField()
-    variant = serializers.IntegerField()
     size_group = serializers.CharField()
 
     def validate(self, attrs):
 
         try:
             variant = ItemVariant.objects.get(qr_code=attrs["qr_code"])
-            attrs["variant"] = variant
-            attrs["item"] = variant.item
-        except Item.DoesNotExist:
-            raise serializers.ValidationError(
-                "Invalid QR Code"
-            )
+        except ItemVariant.DoesNotExist:
+            raise serializers.ValidationError("Invalid QR Code")
+
+        attrs["variant"] = variant
+        attrs["item"] = variant.item
 
         return attrs
 

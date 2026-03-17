@@ -56,42 +56,44 @@ class AddOrderItemView(APIView):
 
     def post(self, request, order_id):
 
-        serializer = AddOrderItemSerializer(
-            data=request.data
-        )
-
+        serializer = AddOrderItemSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         order = get_object_or_404(Order, id=order_id)
 
         item = serializer.validated_data["item"]
+        variant = serializer.validated_data["variant"]  # already object
         qty = serializer.validated_data["quantity"]
         size_group = serializer.validated_data["size_group"]
-        variant_id = serializer.validated_data["variant"]
-
-        variant = get_object_or_404(
-            ItemVariant,
-            id=variant_id
-        )
 
         item_type = item.type
+
+        if size_group not in SIZE_MAPPING[item_type]:
+            return Response(
+                {"error": "Invalid size group"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         sizes = SIZE_MAPPING[item_type][size_group]
 
         with transaction.atomic():
 
             size_objects = ItemVariant.objects.select_for_update().filter(
-                name__in=sizes
+                item=item,
+                size__in=sizes
             )
 
-            for s in size_objects:
+            # if size_objects.count() != len(sizes):
+            #     return Response(
+            #         {"error": "Some sizes not found in DB"},
+            #         status=status.HTTP_400_BAD_REQUEST
+            #     )
 
+            for s in size_objects:
                 if s.stock < qty:
                     return Response(
-                        {
-                            "error": f"Insufficient stock in {s.name}"
-                        },
-                        status=400
+                        {"error": f"Insufficient stock in {s.size}"},
+                        status=status.HTTP_400_BAD_REQUEST
                     )
 
             for s in size_objects:
@@ -107,7 +109,7 @@ class AddOrderItemView(APIView):
             )
 
         return Response(
-            {"message": "Item added"},
+            {"message": "Item added successfully"},
             status=status.HTTP_201_CREATED
         )
 
@@ -132,7 +134,7 @@ class DeleteOrderItemView(APIView):
         with transaction.atomic():
 
             size_objects = ItemVariant.objects.select_for_update().filter(
-                name__in=sizes
+                size__in=sizes
             )
 
             for s in size_objects:

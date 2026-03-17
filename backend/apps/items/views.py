@@ -52,6 +52,7 @@ class ItemViewSet(ModelViewSet):
             "id": item.id,
             "name": item.name,
             "price": item.price,
+            "type": item.type,
             "description": item.description,
             "variants": response_variants
         })

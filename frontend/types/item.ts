@@ -21,13 +21,34 @@ export type ItemVariantRequest = components["schemas"]["ItemVariantRequest"];
 
 // ─── Enums (derived from schema, safe to use directly) ────────────────────────
 
-export type SizeEnum = components["schemas"]["SizeEnum"];
+export type SizeEnum = components["schemas"];
 export type TypeEnum = components["schemas"]["TypeEnum"];
 
 // Note: ItemSize (items_item_size_retrieve) no longer exists in the API schema.
 // Size information is now embedded directly in ItemVariant as SizeEnum.
 
 // ─── Size Enums ───────────────────────────────────────────────────────────────
+
+export type ItemQRResponse = {
+  id: number;
+  name: string;
+  price: number;
+  type: string;
+  description: string;
+  variants: Variant[];
+};
+
+export type Variant = {
+  image: string;
+  sizes: VariantSize[];
+};
+
+export type VariantSize = {
+  variant_id: number;
+  size: string; // can be "S" or "M,L,XL"
+  stock: number;
+  qr_code: string;
+};
 
 export type FrontendSizeRange =
   | "20-36"

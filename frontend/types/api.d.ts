@@ -485,18 +485,18 @@ export interface components {
         };
         ItemVariant: {
             readonly id: number;
+            size: string;
             /** Format: uuid */
             readonly qr_code: string;
             /** Format: uri */
             image?: string | null;
-            size: components["schemas"]["SizeEnum"];
             stock?: number;
             readonly item: number;
         };
         ItemVariantRequest: {
+            size: string;
             /** Format: binary */
             image?: string | null;
-            size: components["schemas"]["SizeEnum"];
             stock?: number;
         };
         LoginRequestRequest: {
@@ -579,9 +579,9 @@ export interface components {
             type?: components["schemas"]["TypeEnum"];
         };
         PatchedItemVariantRequest: {
+            size?: string;
             /** Format: binary */
             image?: string | null;
-            size?: components["schemas"]["SizeEnum"];
             stock?: number;
         };
         PatchedOrderItemRequest: {
@@ -621,19 +621,6 @@ export interface components {
         SimpleCustomerRequest: {
             name: string;
         };
-        /**
-         * @description * `20-24` - 20-24
-         *     * `26-30` - 26-30
-         *     * `32-36` - 32-36
-         *     * `38` - 38
-         *     * `S` - S
-         *     * `M` - M
-         *     * `L` - L
-         *     * `XL` - XL
-         *     * `XXL` - XXL
-         * @enum {string}
-         */
-        SizeEnum: "20-24" | "26-30" | "32-36" | "38" | "S" | "M" | "L" | "XL" | "XXL";
         /**
          * @description * `PENDING` - Pending
          *     * `PACKED` - Packed

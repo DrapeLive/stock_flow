@@ -1,4 +1,6 @@
 import {
+  AddOrderItemRequest,
+  InvoiceResponse,
   OrderAddItemResponse,
   OrderAllResponse,
   OrderDeleteResponse,
@@ -22,8 +24,14 @@ export const orderApi = {
     return res.data;
   },
 
-  async addItem(data: OrderRequest, id: string): Promise<OrderAddItemResponse> {
-    const res = await api.post<OrderItems>(`/api/orders/${id}/add-item/`, data);
+  async addItem(
+    data: AddOrderItemRequest,
+    id: string,
+  ): Promise<OrderAddItemResponse> {
+    const res = await api.post<OrderAddItemResponse>(
+      `/api/orders/${id}/add-item/`,
+      data,
+    );
     return res.data;
   },
 
@@ -53,7 +61,15 @@ export const orderApi = {
   },
 
   async updateItem(itemId: number, data: any): Promise<any> {
-    const res = await api.patch<any>(`/api/orders/order-items/${itemId}/`, data);
+    const res = await api.patch<any>(
+      `/api/orders/order-items/${itemId}/`,
+      data,
+    );
+    return res.data;
+  },
+
+  async invoiceOrder(id: number): Promise<InvoiceResponse> {
+    const res = await api.get<InvoiceResponse>(`/api/orders/${id}/invoice/`);
     return res.data;
   },
 };

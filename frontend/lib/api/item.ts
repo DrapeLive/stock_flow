@@ -1,5 +1,10 @@
 import { api } from "./axios";
-import { ItemAllResponse, ItemRequest, ItemResponse } from "@/types/item";
+import {
+  ItemAllResponse,
+  ItemQRResponse,
+  ItemRequest,
+  ItemResponse,
+} from "@/types/item";
 
 export const itemApi = {
   async getAll(): Promise<ItemAllResponse> {
@@ -24,8 +29,10 @@ export const itemApi = {
     return res.data;
   },
 
-  async byqr(id: string): Promise<ItemResponse> {
-    const res = await api.get<ItemResponse>(`/api/items/by-qr/?qr_code=${id}`);
+  async byqr(id: string): Promise<ItemQRResponse> {
+    const res = await api.get<ItemQRResponse>(
+      `/api/items/by-qr/?qr_code=${id}`,
+    );
     return res.data;
   },
 

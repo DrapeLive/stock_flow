@@ -6,23 +6,52 @@ import Image from "next/image";
 import { ArrowLeft, PackagePlus, Minus, Plus, Check, Info } from "lucide-react";
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 import { itemApi } from "@/lib/api/item";
-import { ItemResponse, ItemVariant } from "@/types/item";
 import { orderApi } from "@/lib/api/order";
 import { PageLoading } from "@/components/ui/Loading";
 import { SuccessAlert } from "@/components/ui/SuccessAlert";
 import { FailedBox } from "@/components/ui/FailBox";
 
+// --- Types matching the API response ---
+interface SizeOption {
+  variant_id: number;
+  size: string;
+  stock: number;
+  qr_code: string;
+}
+
+interface VariantOption {
+  image: string;
+  sizes: SizeOption[];
+}
+
+interface ItemQRResponse {
+  id: number;
+  name: string;
+  price: number;
+  type: string; // "gents" | "kids" | etc.
+  description: string;
+  variants: VariantOption[];
+}
+
+// Size groups by item type
+const SIZE_GROUPS: Record<string, string[]> = {
+  gents: ["S,M,L,XL", "M,L,XL,XXL", "M,L,XL"],
+  kids: ["20-36", "20-30", "26-36", "26-38", "20-38"],
+};
+
 export default function ProductDetailPage() {
-  const params = useParams<{
-    id: string;
-    qr: string;
-  }>();
+  const params = useParams<{ id: string; qr: string }>();
   const id = params.id as string;
   const router = useRouter();
 
-  const [data, setData] = useState<ItemResponse | null>(null);
+  const [data, setData] = useState<ItemQRResponse | null>(null);
   const [quantity, setQuantity] = useState<number>(1);
-  const [selectedVariant, setSelectedVariant] = useState<ItemVariant>();
+  const [selectedVariant, setSelectedVariant] = useState<VariantOption | null>(
+    null,
+  );
+  const [selectedSizeGroup, setSelectedSizeGroup] = useState<string | null>(
+    null,
+  );
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState(false);
@@ -30,7 +59,6 @@ export default function ProductDetailPage() {
 
   useEffect(() => {
     setLoading(true);
-
     const fetchData = async () => {
       try {
         const response = await itemApi.byqr(params.qr);
@@ -45,18 +73,21 @@ export default function ProductDetailPage() {
         setLoading(false);
       }
     };
-
     fetchData();
   }, [params.qr]);
 
+  // Size group list based on item type
+  const sizeGroups: string[] = data?.type
+    ? (SIZE_GROUPS[data.type.toLowerCase()] ?? [])
+    : [];
+
   const handleSubmit = async () => {
-    // Validation
     if (!selectedVariant) {
       setValidationError("Please select a color/variant");
       return;
     }
-    if (!selectedSize) {
-      setValidationError("Please select a size");
+    if (!selectedSizeGroup) {
+      setValidationError("Please select a size group");
       return;
     }
     if (quantity < 1) {
@@ -74,8 +105,7 @@ export default function ProductDetailPage() {
           {
             qr_code: params.qr,
             quantity: quantity,
-            size: selectedSize.id,
-            variant: selectedVariant.id,
+            size_group: selectedSizeGroup,
           },
           key,
         );
@@ -140,11 +170,11 @@ export default function ProductDetailPage() {
       </div>
 
       <div className="max-w-md mx-auto px-6 pt-6">
-        {/* Product Image Card */}
+        {/* Product Image Card — shows selected variant's image */}
         <div className="bg-white rounded-[40px] overflow-hidden shadow-xl shadow-primary/5 border border-gray-100 mb-8 aspect-square relative">
           {selectedVariant?.image ? (
             <Image
-              src={`${selectedVariant.image}`}
+              src={selectedVariant.image}
               alt={data?.name || "Product"}
               fill
               className="object-cover"
@@ -172,36 +202,30 @@ export default function ProductDetailPage() {
           </p>
         </div>
 
-        {/* Color/Variant Selection */}
+        {/* Variant (Color) Selection — thumbnail strip */}
         <div className="mb-8">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="font-bold text-gray-900">Select Color</h3>
-            <span className="text-[10px] text-primary font-black uppercase tracking-widest bg-primary/5 px-2 py-1 rounded-lg">
-              {selectedVariant?.color || "Required"}
-            </span>
-          </div>
           <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-none">
-            {data?.variants.map((v) => (
+            {data?.variants.map((v, index) => (
               <button
-                key={v.id}
+                key={index}
                 onClick={() => {
                   setSelectedVariant(v);
                   setValidationError(null);
                 }}
                 className={`relative flex-shrink-0 w-20 h-20 rounded-3xl border-2 transition-all overflow-hidden ${
-                  selectedVariant?.id === v.id
+                  selectedVariant?.image === v.image
                     ? "border-primary scale-105 shadow-lg shadow-primary/20"
                     : "border-transparent hover:border-gray-200"
                 }`}
               >
                 <Image
-                  src={v.image!}
-                  alt={v.color}
+                  src={v.image}
+                  alt={`Variant ${index + 1}`}
                   fill
                   className="object-cover"
                   unoptimized
                 />
-                {selectedVariant?.id === v.id && (
+                {selectedVariant?.image === v.image && (
                   <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
                     <Check className="text-white" size={24} strokeWidth={4} />
                   </div>
@@ -211,28 +235,30 @@ export default function ProductDetailPage() {
           </div>
         </div>
 
-        {/* Size Selection */}
-        <div className="mb-8">
-          <h3 className="font-bold text-gray-900 mb-4">Select Size</h3>
-          <div className="flex flex-wrap gap-3">
-            {data?.sizes.map((s) => (
-              <button
-                key={s.id}
-                onClick={() => {
-                  setSelectedSize(s);
-                  setValidationError(null);
-                }}
-                className={`px-6 py-3 rounded-2xl font-black text-sm transition-all border-2 ${
-                  selectedSize?.id === s.id
-                    ? "bg-primary border-primary text-white shadow-lg shadow-primary/20 scale-105"
-                    : "bg-white border-gray-100 text-gray-600 hover:border-gray-200"
-                }`}
-              >
-                {s.size}
-              </button>
-            ))}
+        {/* Size Group Selection — based on item type */}
+        {sizeGroups.length > 0 && (
+          <div className="mb-8">
+            <h3 className="font-bold text-gray-900 mb-4">Select Size Group</h3>
+            <div className="flex flex-wrap gap-3">
+              {sizeGroups.map((group) => (
+                <button
+                  key={group}
+                  onClick={() => {
+                    setSelectedSizeGroup(group);
+                    setValidationError(null);
+                  }}
+                  className={`px-6 py-3 rounded-2xl font-black text-sm transition-all border-2 ${
+                    selectedSizeGroup === group
+                      ? "bg-primary border-primary text-white shadow-lg shadow-primary/20 scale-105"
+                      : "bg-white border-gray-100 text-gray-600 hover:border-gray-200"
+                  }`}
+                >
+                  {group}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Quantity Selection */}
         <div className="mb-10 bg-white p-6 rounded-[32px] border border-gray-100 flex items-center justify-between shadow-sm">
