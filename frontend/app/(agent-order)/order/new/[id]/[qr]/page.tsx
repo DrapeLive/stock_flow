@@ -23,7 +23,6 @@ export default function ProductDetailPage() {
   const [data, setData] = useState<ItemResponse | null>(null);
   const [quantity, setQuantity] = useState<number>(1);
   const [selectedVariant, setSelectedVariant] = useState<ItemVariant>();
-  const [selectedSize, setSelectedSize] = useState<ItemSize>();
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState(false);
