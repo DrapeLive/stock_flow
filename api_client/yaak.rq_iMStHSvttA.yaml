@@ -2,7 +2,7 @@ type: http_request
 model: http_request
 id: rq_iMStHSvttA
 createdAt: 2026-02-14T03:29:44.894797723
-updatedAt: 2026-02-28T05:58:26.923494804
+updatedAt: 2026-03-16T15:23:18.345110161
 workspaceId: wk_Wx4mNs5A2J
 folderId: fl_R3n2mRa8qW
 authentication:
@@ -15,5 +15,5 @@ headers: []
 method: GET
 name: Fetch With QR
 sortPriority: 4999.9998
-url: ${[ BASE_URL ]}/items/by-qr/?qr_code=
+url: ${[ BASE_URL ]}/items/by-qr/?qr_code=7357d485-1075-4905-b613-6579b3dd95cd
 urlParameters: []

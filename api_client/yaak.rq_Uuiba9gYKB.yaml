@@ -2,7 +2,7 @@ type: http_request
 model: http_request
 id: rq_Uuiba9gYKB
 createdAt: 2025-12-24T13:51:08.242807919
-updatedAt: 2026-02-07T13:27:57.699802356
+updatedAt: 2026-03-16T14:45:53.283294694
 workspaceId: wk_Wx4mNs5A2J
 folderId: fl_MBp5nCvrPQ
 authentication:
@@ -11,9 +11,9 @@ authenticationType: bearer
 body:
   text: |-
     {
-      "username": "miqdad",
-      "email": "miqdad@gmail.com",
-      "password": "miqdad123",
+      "username": "agent",
+      "email": "agent@gmail.com",
+      "password": "agent",
       "contact": "9605134567"
     }
 bodyType: application/json

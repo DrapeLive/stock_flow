@@ -41,16 +41,16 @@ const ListCustomer: React.FC = () => {
       const res = await agentApi.getOne(user!.id);
       const agentIdValue = res.id;
       const res1 = await orderApi.create({
-        agent: agentIdValue,
         customer: id,
         status: "PENDING",
+        agent: agentIdValue,
       });
       if (res1.id) {
         localStorage.setItem("orderKey", String(res1.id));
       }
       router.push(`/order/new/${id}`);
     } catch {
-       alert("Error creating order. Please try again.");
+      alert("Error creating order. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -58,9 +58,10 @@ const ListCustomer: React.FC = () => {
 
   if (loading) return <PageLoading />;
 
-  const filteredData = data.filter(c => 
-    c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.address?.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredData = data.filter(
+    (c) =>
+      c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      c.address?.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   if (data.length === 0) {
