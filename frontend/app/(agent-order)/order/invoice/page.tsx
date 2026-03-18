@@ -4,7 +4,8 @@ import { orderApi } from "@/lib/api/order";
 import { InvoiceResponse } from "@/types/order";
 import { useRouter } from "next/navigation";
 import { useRef, useEffect, useState } from "react";
-
+import { PDFDownloadLink } from "@react-pdf/renderer";
+import { InvoicePDF } from "@/components/pages/InvoicePdf";
 // ── Helpers ────────────────────────────────────────────────────────────────────
 const formatDate = (iso: string) =>
   new Date(iso).toLocaleDateString("en-IN", {
@@ -118,12 +119,6 @@ export default function InvoicePage() {
   // ── Main render ──
   return (
     <main className="min-h-screen bg-slate-50 font-sans flex flex-col items-center py-10 px-4">
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;500;600&display=swap');
-        body { font-family: 'DM Sans', sans-serif; }
-        .font-display { font-family: 'DM Serif Display', serif; }
-      `}</style>
-
       {/* ── Header ── */}
       <header className="w-full max-w-2xl flex items-center justify-between mb-6">
         <button
@@ -282,7 +277,7 @@ export default function InvoicePage() {
       </div>
 
       {/* ── Share Button ── */}
-      <div className="w-full max-w-2xl mt-6">
+      {/*<div className="w-full max-w-2xl mt-6">
         <button
           onClick={handleShareWhatsApp}
           className="group w-full flex items-center justify-center gap-3 bg-[#25D366] hover:bg-[#1ebe5d] active:scale-[0.98] text-white font-semibold text-base py-4 rounded-2xl shadow-lg shadow-[#25D366]/30 transition-all duration-200"
@@ -313,6 +308,20 @@ export default function InvoicePage() {
         <p className="text-center text-xs text-slate-400 mt-3">
           Sharing will open WhatsApp and redirect you to the home page.
         </p>
+      </div>*/}
+      {/* ── Download PDF Button ── */}
+      <div className="w-full max-w-2xl mt-6">
+        <PDFDownloadLink
+          document={<InvoicePDF invoice={invoice} />}
+          fileName={`invoice-${invoice.id}.pdf`}
+          className="w-full"
+        >
+          {({ loading }) => (
+            <button className="w-full flex items-center justify-center gap-3 bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] text-white font-semibold text-base py-4 rounded-2xl shadow-lg transition-all duration-200">
+              {loading ? "Generating PDF..." : "Download Invoice PDF"}
+            </button>
+          )}
+        </PDFDownloadLink>
       </div>
     </main>
   );
