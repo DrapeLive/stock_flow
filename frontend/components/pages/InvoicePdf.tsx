@@ -34,10 +34,9 @@ const styles = StyleSheet.create({
   },
   col1: { width: "25%" },
   col2: { width: "15%", textAlign: "center" },
-  col3: { width: "10%", textAlign: "center" },
-  col4: { width: "10%", textAlign: "center" },
+  col3: { width: "20%", textAlign: "center" },
+  col4: { width: "20%", textAlign: "center" },
   col5: { width: "20%", textAlign: "right" },
-  col6: { width: "20%", textAlign: "right" },
   bold: { fontWeight: "bold" },
   total: {
     marginTop: 15,
@@ -64,14 +63,20 @@ export const InvoicePDF = ({ invoice }: { invoice: InvoiceResponse }) => (
       <View style={styles.section}>
         <Text>Date: {formatDate(invoice.created_at)}</Text>
         <Text>Time: {formatTime(invoice.created_at)}</Text>
-        <Text>Status: {invoice.status}</Text>
       </View>
 
       {/* Customer */}
       <View style={styles.section}>
         <Text style={styles.bold}>Customer:</Text>
         <Text>{invoice.customer.name}</Text>
-        <Text style={styles.subText}>ID: {invoice.customer.id}</Text>
+        <Text>{invoice.customer.contact}</Text>
+      </View>
+
+      {/* Agent */}
+      <View style={styles.section}>
+        <Text style={styles.bold}>Agent:</Text>
+        <Text>{invoice.agent.username}</Text>
+        <Text>{invoice.agent.contact}</Text>
       </View>
 
       {/* Items Table */}
@@ -82,8 +87,7 @@ export const InvoicePDF = ({ invoice }: { invoice: InvoiceResponse }) => (
           <Text style={styles.col2}>Size</Text>
           <Text style={styles.col3}>Price</Text>
           <Text style={styles.col4}>Qty</Text>
-          <Text style={styles.col5}>Packed</Text>
-          <Text style={styles.col6}>Amount</Text>
+          <Text style={styles.col5}>Amount</Text>
         </View>
 
         {/* Data Rows */}
@@ -94,9 +98,6 @@ export const InvoicePDF = ({ invoice }: { invoice: InvoiceResponse }) => (
             <Text style={styles.col3}>{item.item.price}</Text>
             <Text style={styles.col4}>{item.quantity}</Text>
             <Text style={styles.col5}>
-              {item.packed_quantity}/{item.quantity}
-            </Text>
-            <Text style={styles.col6}>
               <IndianRupee /> {item.item.price * item.quantity}
             </Text>
           </View>

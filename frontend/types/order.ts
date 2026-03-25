@@ -38,12 +38,14 @@ export type AddOrderItemRequest = {
 export interface Customer {
   id: number;
   name: string;
+  contact: string;
 }
 
 // Agent
 export interface Agent {
   id: number;
   username: string;
+  contact: string;
 }
 
 // Item (from ItemSerializer)
