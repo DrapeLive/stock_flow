@@ -11,7 +11,7 @@ class SimpleCustomerSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Customer
-        fields = ["id", "name"]
+        fields = ["id", "name","contact"]
 
 
 # class SimpleItemSerializer(serializers.ModelSerializer):
@@ -27,7 +27,7 @@ class SimpleAgentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Agent
-        fields = ["id", "username"]
+        fields = ["id", "username","contact"]
 
 
 class OrderItemSerializer(serializers.ModelSerializer):
