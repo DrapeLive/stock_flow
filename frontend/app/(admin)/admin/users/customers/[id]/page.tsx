@@ -34,8 +34,9 @@ export default function CustomerDetailPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        const numericId = parseInt(id as string, 10);
         const [customerData, agentsData] = await Promise.all([
-          customerApi.getOne(id as string),
+          customerApi.getOne(numericId),
           agentApi.getAll(),
         ]);
         setCustomer(customerData);
@@ -73,15 +74,15 @@ export default function CustomerDetailPage() {
     if (!validate()) return;
     setSaving(true);
     try {
+      const numericId = parseInt(id as string, 10);
       const payload: CustomerUpdateRequest = {
         name: formData.name,
         address: formData.address,
         contact: formData.contact,
         agent: parseInt(formData.agent),
       };
-      await customerApi.update(id as string, payload);
+      await customerApi.update(numericId, payload);
       router.refresh();
-      // Show success feedback if needed
     } catch (error: any) {
       console.error("Error updating customer:", error);
       setErrors({ submit: "Failed to update customer." });
@@ -93,7 +94,8 @@ export default function CustomerDetailPage() {
   const handleDelete = async () => {
     if (confirm("Are you sure you want to delete this customer?")) {
       try {
-        await customerApi.delete(id as string);
+        const numericId = parseInt(id as string, 10);
+        await customerApi.delete(numericId);
         router.push("/admin/users/");
       } catch (error) {
         console.error("Error deleting customer:", error);

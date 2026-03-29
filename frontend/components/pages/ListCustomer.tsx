@@ -38,7 +38,7 @@ const ListCustomer: React.FC = () => {
   const handleSubmit = async (id: number) => {
     try {
       setLoading(true);
-      const res = await agentApi.getOne(user!.id);
+      const res = await agentApi.getProfile(user!.id);
       const agentIdValue = res.id;
       const res1 = await orderApi.create({
         customer: id,

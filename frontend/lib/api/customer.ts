@@ -1,36 +1,33 @@
-import { api } from "./axios";
-import {
+import type {
   CustomerAllResponse,
   CustomerResponse,
   CustomerCreateRequest,
   CustomerUpdateRequest,
 } from "@/types/customer";
+import { api } from "./axios";
 
 export const customerApi = {
-  async getAll(): Promise<CustomerAllResponse> {
-    const res = await api.get<CustomerAllResponse>("/api/customers/");
-    return res.data;
+  getAll(): Promise<CustomerAllResponse> {
+    return api.get<CustomerAllResponse>("/api/customers/").then((r) => r.data);
   },
 
-  async getOne(id: string): Promise<CustomerResponse> {
-    const res = await api.get<CustomerResponse>(`/api/customers/${id}/`);
-    return res.data;
+  getOne(id: number): Promise<CustomerResponse> {
+    return api.get<CustomerResponse>(`/api/customers/${id}/`).then((r) => r.data);
   },
 
-  async create(data: CustomerCreateRequest): Promise<CustomerResponse> {
-    const res = await api.post<CustomerResponse>("/api/customers/", data);
-    return res.data;
+  create(data: CustomerCreateRequest): Promise<CustomerResponse> {
+    return api
+      .post<CustomerResponse>("/api/customers/", data)
+      .then((r) => r.data);
   },
 
-  async update(
-    id: string,
-    data: CustomerUpdateRequest,
-  ): Promise<CustomerResponse> {
-    const res = await api.put<CustomerResponse>(`/api/customers/${id}/`, data);
-    return res.data;
+  update(id: number, data: CustomerUpdateRequest): Promise<CustomerResponse> {
+    return api
+      .patch<CustomerResponse>(`/api/customers/${id}/`, data)
+      .then((r) => r.data);
   },
 
-  async delete(id: string): Promise<void> {
-    await api.delete(`/api/customers/${id}/`);
+  delete(id: number): Promise<void> {
+    return api.delete(`/api/customers/${id}/`).then((r) => r.data);
   },
 };

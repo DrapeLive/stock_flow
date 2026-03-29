@@ -1,55 +1,47 @@
-import { api } from "./axios";
-import {
+import type {
   ItemAllResponse,
-  ItemQRResponse,
-  ItemRequest,
   ItemResponse,
+  ItemRequest,
+  ItemQRResponse,
 } from "@/types/item";
+import { api } from "./axios";
 
 export const itemApi = {
-  async getAll(): Promise<ItemAllResponse> {
-    const res = await api.get<ItemAllResponse>("/api/items/");
-    return res.data;
+  getAll(): Promise<ItemAllResponse> {
+    return api.get<ItemAllResponse>("/api/items/").then((r) => r.data);
   },
 
-  async getOne(id: number | undefined): Promise<ItemResponse> {
-    const res = await api.get<ItemResponse>(`/api/items/${id}`);
-    return res.data;
+  getOne(id: number): Promise<ItemResponse> {
+    return api.get<ItemResponse>(`/api/items/${id}/`).then((r) => r.data);
   },
 
-  async create(
-    data: ItemRequest | FormData | Record<string, unknown>,
-  ): Promise<ItemResponse> {
-    const res = await api.post<ItemResponse>("/api/items/", data, {
-      headers:
-        data instanceof FormData
-          ? { "Content-Type": "multipart/form-data" }
-          : { "Content-Type": "application/json" },
-    });
-    return res.data;
+  create(data: ItemRequest | FormData): Promise<ItemResponse> {
+    const headers =
+      data instanceof FormData
+        ? { "Content-Type": "multipart/form-data" }
+        : { "Content-Type": "application/json" };
+    return api
+      .post<ItemResponse>("/api/items/", data, { headers })
+      .then((r) => r.data);
   },
 
-  async byqr(id: string): Promise<ItemQRResponse> {
-    const res = await api.get<ItemQRResponse>(
-      `/api/items/by-qr/?qr_code=${id}`,
-    );
-    return res.data;
+  byqr(qrCode: string): Promise<ItemQRResponse> {
+    return api
+      .get<ItemQRResponse>(`/api/items/by-qr/?qr_code=${qrCode}`)
+      .then((r) => r.data);
   },
 
-  async update(
-    id: number,
-    data: ItemRequest | FormData,
-  ): Promise<ItemResponse> {
-    const res = await api.put<ItemResponse>(`/api/items/${id}/`, data, {
-      headers:
-        data instanceof FormData
-          ? { "Content-Type": "multipart/form-data" }
-          : undefined,
-    });
-    return res.data;
+  update(id: number, data: ItemRequest | FormData): Promise<ItemResponse> {
+    const headers =
+      data instanceof FormData
+        ? { "Content-Type": "multipart/form-data" }
+        : undefined;
+    return api
+      .put<ItemResponse>(`/api/items/${id}/`, data, { headers })
+      .then((r) => r.data);
   },
 
-  async delete(id: number): Promise<void> {
-    await api.delete(`/api/items/${id}/`);
+  delete(id: number): Promise<void> {
+    return api.delete(`/api/items/${id}/`).then((r) => r.data);
   },
 };

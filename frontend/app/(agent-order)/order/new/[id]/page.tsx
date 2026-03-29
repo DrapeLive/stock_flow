@@ -26,7 +26,8 @@ export default function OrderDetailsPage() {
 
     const fetchData = async () => {
       try {
-        const response = await customerApi.getOne(id);
+        const numericId = parseInt(id, 10);
+        const response = await customerApi.getOne(numericId);
         setData(response);
         const key = localStorage.getItem("orderKey");
         if (key) {

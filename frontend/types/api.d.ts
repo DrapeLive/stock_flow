@@ -610,16 +610,20 @@ export interface components {
         SimpleAgent: {
             readonly id: number;
             username: string;
+            contact: string;
         };
         SimpleAgentRequest: {
             username: string;
+            contact: string;
         };
         SimpleCustomer: {
             readonly id: number;
             name: string;
+            contact: string;
         };
         SimpleCustomerRequest: {
             name: string;
+            contact: string;
         };
         /**
          * @description * `PENDING` - Pending

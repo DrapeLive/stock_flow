@@ -1,81 +1,41 @@
-import type { components, operations } from "@/types/api";
+export type ItemType = "kids" | "gents";
+export type ItemStatus = "PENDING" | "PACKED" | "DISPATCHED";
 
-// ─── Item ─────────────────────────────────────────────────────────────────────
-
-export type ItemAllResponse =
-  operations["items_list"]["responses"][200]["content"]["application/json"];
-
-export type ItemResponse =
-  operations["items_retrieve"]["responses"][200]["content"]["application/json"];
-
-export type ItemRequest =
-  operations["items_create"]["requestBody"]["content"]["application/json"];
-
-// ─── Variant ──────────────────────────────────────────────────────────────────
-
-// ItemVariant — from the variants list endpoint (items_variants_retrieve exists)
-export type ItemVariant =
-  operations["items_variants_retrieve"]["responses"][200]["content"]["application/json"];
-
-export type ItemVariantRequest = components["schemas"]["ItemVariantRequest"];
-
-// ─── Enums (derived from schema, safe to use directly) ────────────────────────
-
-export type SizeEnum = components["schemas"];
-export type TypeEnum = components["schemas"]["TypeEnum"];
-
-// Note: ItemSize (items_item_size_retrieve) no longer exists in the API schema.
-// Size information is now embedded directly in ItemVariant as SizeEnum.
-
-// ─── Size Enums ───────────────────────────────────────────────────────────────
-
-export type ItemQRResponse = {
+export interface ItemVariant {
   id: number;
-  name: string;
-  price: number;
-  type: string;
-  description: string;
-  variants: Variant[];
-};
-
-export type Variant = {
-  image: string;
-  sizes: VariantSize[];
-};
-
-export type VariantSize = {
-  variant_id: number;
-  size: string; // can be "S" or "M,L,XL"
-  stock: number;
+  size: string;
   qr_code: string;
-};
+  image: string | null;
+  stock: number | null;
+  item: number;
+}
 
-export type FrontendSizeRange =
-  | "20-36"
-  | "20-38"
-  | "S,M,L,XL"
-  | "M,L,XL,XXL"
-  | "S,M,L,XL,XXL";
+export interface ItemVariantRequest {
+  size: string;
+  image?: File | string | null;
+  stock?: number;
+}
 
-export type BackendSize =
-  | "20-24"
-  | "26-30"
-  | "32-36"
-  | "38"
-  | "S"
-  | "M"
-  | "L"
-  | "XL"
-  | "XXL";
+export interface Item {
+  id: number;
+  variants: ItemVariant[];
+  name: string;
+  description?: string;
+  price: string;
+  type?: ItemType;
+}
 
-export type ItemType = "gents" | "kids";
+export interface ItemRequest {
+  variants: ItemVariantRequest[];
+  name: string;
+  description?: string;
+  price: string;
+  type?: ItemType;
+}
 
-export const SIZES_BY_TYPE: Record<ItemType, FrontendSizeRange[]> = {
-  gents: ["S,M,L,XL", "M,L,XL,XXL", "S,M,L,XL,XXL"],
-  kids: ["20-36", "20-38"],
-};
-
-// ─── Item Types ───────────────────────────────────────────────────────────────
+export type ItemAllResponse = Item[];
+export type ItemResponse = Item;
+export type ItemQRResponse = Item;
 
 export interface CommonDetails {
   name: string;
@@ -84,36 +44,46 @@ export interface CommonDetails {
   type: ItemType;
 }
 
-export interface ColorVariant {
-  id: string;
-  // No color name — displayed as "Variant #N" in the list
-  sizeRange: FrontendSizeRange;
-  stock: number;
-  image: File | null;
-  imagePreview: string | null;
-}
-
-// ─── Wizard Steps ─────────────────────────────────────────────────────────────
-
-export type WizardStep =
-  | { screen: "common" }
-  | { screen: "list" }
-  | { screen: "add-color"; editingId?: string };
-
-// A variant as it comes from the API — each row is one size
-export interface EditableVariant {
-  backendId: number; // real DB id, needed for PATCH image
-  localId: string; // stable React key
-  size: BackendSize;
-  stock: number;
-  imageUrl: string | null; // existing URL from server
-  newImage: File | null; // replacement chosen by user
-  imagePreview: string | null; // preview of newImage
-}
-
 export interface EditCommonDetails {
   name: string;
   description: string;
   price: string;
   type: ItemType;
 }
+
+export interface ColorVariant {
+  id: string;
+  sizeRange: FrontendSizeRange;
+  stock: number;
+  image: File | null;
+  imagePreview: string | null;
+}
+
+export type FrontendSizeRange =
+  | "20-36"
+  | "20-38"
+  | "S,M,L,XL"
+  | "M,L,XL,XXL"
+  | "S,M,L,XL,XXL";
+
+export interface EditableVariant {
+  backendId: number;
+  localId: string;
+  size: string;
+  stock: number;
+  imageUrl: string | null;
+  newImage: File | null;
+  imagePreview: string | null;
+}
+
+export const SIZES_BY_TYPE: Record<ItemType, FrontendSizeRange[]> = {
+  gents: ["S,M,L,XL", "M,L,XL,XXL", "S,M,L,XL,XXL"],
+  kids: ["20-36", "20-38"],
+};
+
+export type SizeEnum = "S" | "M" | "L" | "XL" | "XXL";
+
+export type WizardStep =
+  | { screen: "common" }
+  | { screen: "list" }
+  | { screen: "add-color"; editingId?: string };

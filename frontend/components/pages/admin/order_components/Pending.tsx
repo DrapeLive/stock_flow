@@ -66,10 +66,10 @@ const Pending: React.FC = () => {
               onClick={() => router.push(`/admin/order/status/${order.id}`)}
             >
               <div className="relative w-16 h-16 flex-shrink-0">
-                {previewImages[0]?.variant?.image && (
+                {previewImages[0]?.item.variants[0]?.image && (
                   <div className="absolute left-0 z-30 rotate-0">
                     <Image
-                      src={previewImages[0].variant.image}
+                      src={previewImages[0].item.variants[0].image}
                       alt={previewImages[0].item.name}
                       width={56}
                       height={56}
@@ -78,10 +78,10 @@ const Pending: React.FC = () => {
                     />
                   </div>
                 )}
-                {previewImages[1]?.variant?.image && (
+                {previewImages[1]?.item.variants[0]?.image && (
                   <div className="absolute left-0 z-20 rotate-10 scale-95 opacity-80">
                     <Image
-                      src={previewImages[1].variant.image}
+                      src={previewImages[1].item.variants[0].image}
                       alt={previewImages[1].item.name}
                       width={56}
                       height={56}
@@ -90,10 +90,10 @@ const Pending: React.FC = () => {
                     />
                   </div>
                 )}
-                {previewImages[2]?.variant?.image && (
+                {previewImages[2]?.item.variants[0]?.image && (
                   <div className="absolute left-0 z-10 rotate-20 scale-90 opacity-60">
                     <Image
-                      src={previewImages[2].variant.image}
+                      src={previewImages[2].item.variants[0].image}
                       alt={previewImages[2].item.name}
                       width={56}
                       height={56}

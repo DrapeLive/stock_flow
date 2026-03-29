@@ -1,13 +1,32 @@
-import type { operations } from "@/types/api";
+import type { Role } from "./auth";
 
-export type AgentAllResponse =
-  operations["agents_list"]["responses"][200]["content"]["application/json"];
+export interface AgentUser {
+  id: number;
+  username: string;
+  email: string;
+  role?: Role;
+}
 
-export type AgentResponse =
-  operations["agents_retrieve"]["responses"][200]["content"]["application/json"];
+export interface Agent {
+  id: number;
+  user: AgentUser;
+  contact: string;
+  total_customers: string;
+}
 
-export type AgentRequest =
-  operations["agents_create"]["requestBody"]["content"]["application/json"];
+export interface AgentRequest {
+  username: string;
+  email: string;
+  password: string;
+  contact: string;
+}
 
-export type ProfileResponse =
-  operations["agents_profile_retrieve"]["responses"][200];
+export interface AgentUpdateRequest {
+  username?: string;
+  email?: string;
+  password?: string;
+  contact?: string;
+}
+
+export type AgentAllResponse = Agent[];
+export type AgentResponse = Agent;

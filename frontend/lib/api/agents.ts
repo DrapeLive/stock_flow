@@ -1,28 +1,37 @@
-import { AgentAllResponse, AgentRequest, AgentResponse } from "@/types/agent";
+import type {
+  AgentAllResponse,
+  AgentResponse,
+  AgentRequest,
+  AgentUpdateRequest,
+} from "@/types/agent";
 import { api } from "./axios";
 
 export const agentApi = {
-  async getAll(): Promise<AgentAllResponse> {
-    const res = await api.get<AgentAllResponse>("/api/agents/");
-    return res.data;
+  getAll(): Promise<AgentAllResponse> {
+    return api.get<AgentAllResponse>("/api/agents/").then((r) => r.data);
   },
 
-  async getOne(id: number | string): Promise<AgentResponse> {
-    const res = await api.get<AgentResponse>(`/api/agents/profile/${id}/`);
-    return res.data;
+  getProfile(userId: number): Promise<AgentResponse> {
+    return api
+      .get<AgentResponse>(`/api/agents/profile/${userId}/`)
+      .then((r) => r.data);
   },
 
-  async create(data: AgentRequest): Promise<AgentResponse> {
-    const res = await api.post<AgentResponse>("/api/agents/", data);
-    return res.data;
+  getOne(id: number): Promise<AgentResponse> {
+    return api.get<AgentResponse>(`/api/agents/${id}/`).then((r) => r.data);
   },
 
-  async update(id: number | string, data: Partial<AgentRequest>): Promise<AgentResponse> {
-    const res = await api.put<AgentResponse>(`/api/agents/${id}/`, data);
-    return res.data;
+  create(data: AgentRequest): Promise<AgentResponse> {
+    return api.post<AgentResponse>("/api/agents/", data).then((r) => r.data);
   },
 
-  async delete(id: number | string): Promise<void> {
-    await api.delete(`/api/agents/${id}/`);
+  update(id: number, data: AgentUpdateRequest): Promise<AgentResponse> {
+    return api
+      .patch<AgentResponse>(`/api/agents/${id}/`, data)
+      .then((r) => r.data);
+  },
+
+  delete(id: number): Promise<void> {
+    return api.delete(`/api/agents/${id}/`).then((r) => r.data);
   },
 };

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { agentApi } from "@/lib/api/agents";
-import { AgentResponse, AgentRequest } from "@/types/agent";
+import { AgentResponse, AgentUpdateRequest } from "@/types/agent";
 import {
   Field,
   FieldGroup,
@@ -29,7 +29,8 @@ export default function AgentDetailPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const data = await agentApi.getOne(id as string);
+        const numericId = parseInt(id as string, 10);
+        const data = await agentApi.getOne(numericId);
         setAgent(data);
         setFormData({
           username: data.user.username,
@@ -53,11 +54,13 @@ export default function AgentDetailPage() {
   const handleUpdate = async () => {
     setSaving(true);
     try {
-      await agentApi.update(id as string, {
+      const numericId = parseInt(id as string, 10);
+      const payload: AgentUpdateRequest = {
         username: formData.username,
         email: formData.email,
         contact: formData.contact,
-      });
+      };
+      await agentApi.update(numericId, payload);
       router.refresh();
     } catch (error: any) {
       console.error("Error updating agent:", error);
@@ -70,7 +73,8 @@ export default function AgentDetailPage() {
   const handleDelete = async () => {
     if (confirm("Are you sure you want to delete this agent? This will also delete their user account.")) {
       try {
-        await agentApi.delete(id as string);
+        const numericId = parseInt(id as string, 10);
+        await agentApi.delete(numericId);
         router.push("/admin/users/");
       } catch (error) {
         console.error("Error deleting agent:", error);

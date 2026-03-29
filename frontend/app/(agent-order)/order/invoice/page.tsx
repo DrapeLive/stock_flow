@@ -70,7 +70,7 @@ export default function InvoicePage() {
       ...inv.items.map(
         (oi) =>
           `  • ${oi.item.name} (${oi.size_group}) × ${oi.quantity} = ₹${(
-            oi.item.price * oi.quantity
+            parseFloat(oi.item.price) * oi.quantity
           ).toLocaleString("en-IN")}`,
       ),
       ``,
@@ -219,7 +219,7 @@ export default function InvoicePage() {
                 <div className="col-span-4">
                   <p className="font-medium text-slate-800">{oi.item.name}</p>
                   <p className="text-xs text-slate-400 mt-0.5">
-                    ₹{oi.item.price.toLocaleString("en-IN")} / pc
+                    ₹{parseFloat(oi.item.price).toLocaleString("en-IN")} / pc
                   </p>
                 </div>
                 <span className="col-span-2 text-center text-slate-500 text-xs font-mono bg-slate-100 rounded px-1.5 py-0.5 mx-auto">
@@ -231,16 +231,16 @@ export default function InvoicePage() {
                 <div className="col-span-2 flex justify-center">
                   <span
                     className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                      oi.packed_quantity >= oi.quantity
+                      (oi.packed_quantity ?? 0) >= oi.quantity
                         ? "bg-emerald-100 text-emerald-700"
                         : "bg-orange-100 text-orange-600"
                     }`}
                   >
-                    {oi.packed_quantity}/{oi.quantity}
+                    {(oi.packed_quantity ?? 0)}/{oi.quantity}
                   </span>
                 </div>
                 <span className="col-span-2 text-right font-semibold text-slate-800">
-                  ₹{(oi.item.price * oi.quantity).toLocaleString("en-IN")}
+                  ₹{(parseFloat(oi.item.price) * oi.quantity).toLocaleString("en-IN")}
                 </span>
               </div>
             ))}

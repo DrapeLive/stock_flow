@@ -1,79 +1,89 @@
-import type { components, operations } from "@/types/api";
+import type { Item } from "./item";
 
-export type OrderStatus = components["schemas"]["StatusEnum"];
+export type OrderStatus = "PENDING" | "PACKED" | "DISPATCHED";
 
-export type OrderAllResponse =
-  operations["orders_list"]["responses"][200]["content"]["application/json"];
-
-export type OrderResponse =
-  operations["orders_retrieve"]["responses"][200]["content"]["application/json"];
-
-export type OrderItems =
-  operations["orders_retrieve"]["responses"][200]["content"]["application/json"]["items"];
-
-export type OrderRequest = operations["orders_add_item_create"]["requestBody"];
-
-export type OrderAddItemResponse =
-  operations["orders_add_item_create"]["responses"]["200"]["content"];
-
-export type OrderRegisterRequest =
-  operations["orders_create"]["requestBody"]["content"]["application/json"];
-
-export type OrderRegisterResponse =
-  operations["orders_create"]["responses"]["201"]["content"]["application/json"];
-
-export type OrderDeleteResponse =
-  operations["orders_destroy"]["responses"]["204"]["content"];
-
-export type OrderItemDeleteResponse =
-  operations["orders_delete_item_destroy"]["responses"]["204"]["content"];
-
-export type AddOrderItemRequest = {
-  qr_code: string;
-  quantity: number;
-  size_group: string;
-};
-
-// Customer
-export interface Customer {
-  id: number;
-  name: string;
-  contact: string;
-}
-
-// Agent
-export interface Agent {
+export interface SimpleAgent {
   id: number;
   username: string;
   contact: string;
 }
 
-// Item (from ItemSerializer)
-export interface Item {
+export interface SimpleCustomer {
   id: number;
   name: string;
-  price: number;
-  // add more fields if your ItemSerializer includes them
+  contact: string;
 }
 
-// Order Item
 export interface OrderItem {
   id: number;
-  order: number;
   item: Item;
-  variant: number;
-  size_group: string;
+  size_group?: string;
   quantity: number;
-  packed_quantity: number;
+  packed_quantity?: number;
+  order: number;
+  variant: number | null;
 }
 
-// Invoice Response
+export interface Order {
+  id: number;
+  items: OrderItem[];
+  agent_details: SimpleAgent;
+  customer_details: SimpleCustomer;
+  total_quantity: string;
+  status?: OrderStatus;
+  created_at: string;
+  agent: number;
+}
+
+export interface OrderRegisterRequest {
+  customer: number;
+  status?: OrderStatus;
+  agent: number;
+}
+
+export interface OrderRegisterResponse extends Order {}
+
+export interface AddOrderItemRequest {
+  qr_code: string;
+  quantity: number;
+  size_group: string;
+}
+
+export interface UpdateOrderItemRequest {
+  size_group?: string;
+  quantity?: number;
+  packed_quantity?: number;
+  variant?: number | null;
+}
+
+export interface UpdateOrderRequest {
+  customer?: number;
+  status?: OrderStatus;
+  agent?: number;
+}
+
+export type OrderAllResponse = Order[];
+export type OrderResponse = Order;
+export type OrderItems = Order["items"];
+
+export interface InvoiceCustomer {
+  id: number;
+  name: string;
+  contact: string;
+}
+
+export interface InvoiceAgent {
+  id: number;
+  username: string;
+  contact: string;
+}
+
 export interface InvoiceResponse {
   id: number;
-  customer: Customer;
-  agent: Agent;
-  created_at: string; // ISO date string
-  status: "PENDING" | "PACKED" | "DISPATCHED";
+  customer: InvoiceCustomer;
+  agent: InvoiceAgent;
+  created_at: string;
+  status: OrderStatus;
   items: OrderItem[];
   total_price: number;
 }

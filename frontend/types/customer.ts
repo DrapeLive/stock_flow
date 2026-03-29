@@ -1,13 +1,26 @@
-import type { operations } from "@/types/api";
+export interface Customer {
+  id: number;
+  total_orders: string;
+  agent_name: string;
+  name: string;
+  address: string;
+  contact: string;
+  agent: number;
+}
 
-export type CustomerAllResponse =
-  operations["customers_list"]["responses"][200]["content"]["application/json"];
+export interface CustomerCreateRequest {
+  name: string;
+  address: string;
+  contact: string;
+  agent: number;
+}
 
-export type CustomerResponse =
-  operations["customers_retrieve"]["responses"][200]["content"]["application/json"];
+export interface CustomerUpdateRequest {
+  name?: string;
+  address?: string;
+  contact?: string;
+  agent?: number;
+}
 
-export type CustomerCreateRequest =
-  operations["customers_create"]["requestBody"]["content"]["application/json"];
-
-export type CustomerUpdateRequest =
-  operations["customers_update"]["requestBody"]["content"]["application/json"];
+export type CustomerAllResponse = Customer[];
+export type CustomerResponse = Customer;

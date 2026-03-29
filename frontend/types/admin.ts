@@ -1,10 +1,20 @@
-import type { operations } from "@/types/api";
+export interface Admin {
+  id: number;
+  username: string;
+  email: string;
+}
 
-export type AdminAllResponse =
-  operations["admins_list"]["responses"][200]["content"]["application/json"];
+export interface AdminRequest {
+  username: string;
+  email: string;
+  password: string;
+}
 
-export type AdminResponse =
-  operations["admins_retrieve"]["responses"][200]["content"]["application/json"];
+export interface AdminUpdateRequest {
+  username?: string;
+  email?: string;
+  password?: string;
+}
 
-export type AdminRequest =
-  operations["admins_create"]["requestBody"]["content"]["application/json"];
+export type AdminAllResponse = Admin[];
+export type AdminResponse = Admin;

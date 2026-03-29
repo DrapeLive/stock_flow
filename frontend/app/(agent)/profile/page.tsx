@@ -24,7 +24,7 @@ export default function Profile() {
     const fetchData = async () => {
       if (!user?.id) return;
       try {
-        const response = await agentApi.getOne(user.id);
+        const response = await agentApi.getProfile(user.id);
         setData(response);
       } catch (e) {
         console.error("Error fetching agent data:", e);

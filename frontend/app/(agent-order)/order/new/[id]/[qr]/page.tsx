@@ -10,30 +10,16 @@ import { orderApi } from "@/lib/api/order";
 import { PageLoading } from "@/components/ui/Loading";
 import { SuccessAlert } from "@/components/ui/SuccessAlert";
 import { FailedBox } from "@/components/ui/FailBox";
+import type { ItemQRResponse, ItemVariant } from "@/types/item";
 
-// --- Types matching the API response ---
-interface SizeOption {
-  variant_id: number;
+interface VariantOption {
+  image: string;
   size: string;
+  variant_id: number;
   stock: number;
   qr_code: string;
 }
 
-interface VariantOption {
-  image: string;
-  sizes: SizeOption[];
-}
-
-interface ItemQRResponse {
-  id: number;
-  name: string;
-  price: number;
-  type: string; // "gents" | "kids" | etc.
-  description: string;
-  variants: VariantOption[];
-}
-
-// Size groups by item type
 const SIZE_GROUPS: Record<string, string[]> = {
   gents: ["S,M,L,XL", "M,L,XL,XXL", "M,L,XL"],
   kids: ["20-36", "20-30", "26-36", "26-38", "20-38"],
@@ -46,12 +32,8 @@ export default function ProductDetailPage() {
 
   const [data, setData] = useState<ItemQRResponse | null>(null);
   const [quantity, setQuantity] = useState<number>(1);
-  const [selectedVariant, setSelectedVariant] = useState<VariantOption | null>(
-    null,
-  );
-  const [selectedSizeGroup, setSelectedSizeGroup] = useState<string | null>(
-    null,
-  );
+  const [selectedVariant, setSelectedVariant] = useState<ItemVariant | null>(null);
+  const [selectedSizeGroup, setSelectedSizeGroup] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState(false);
@@ -76,7 +58,6 @@ export default function ProductDetailPage() {
     fetchData();
   }, [params.qr]);
 
-  // Size group list based on item type
   const sizeGroups: string[] = data?.type
     ? (SIZE_GROUPS[data.type.toLowerCase()] ?? [])
     : [];
@@ -99,23 +80,17 @@ export default function ProductDetailPage() {
 
     try {
       setLoading(true);
-      const key = localStorage.getItem("orderKey");
-      if (key != null) {
-        const res = await orderApi.addItem(
-          {
-            qr_code: params.qr,
-            quantity: quantity,
-            size_group: selectedSizeGroup,
-          },
-          key,
-        );
-        if (res) {
-          setSuccess(true);
-        }
+      const orderKey = localStorage.getItem("orderKey");
+      if (orderKey) {
+        const orderId = parseInt(orderKey, 10);
+        await orderApi.addItem(orderId, {
+          qr_code: params.qr,
+          quantity: quantity,
+          size_group: selectedSizeGroup,
+        });
+        setSuccess(true);
       } else {
-        setValidationError(
-          "Order session not found. Please restart the order.",
-        );
+        setValidationError("Order session not found. Please restart the order.");
       }
     } catch (e) {
       console.error("Error adding item to order:", e);
@@ -147,7 +122,6 @@ export default function ProductDetailPage() {
 
   return (
     <div className="min-h-screen bg-gray-50/50 pb-32">
-      {/* Header */}
       <div className="bg-white border-b border-gray-100 px-6 py-6 sticky top-0 z-10">
         <div className="max-w-md mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -170,7 +144,6 @@ export default function ProductDetailPage() {
       </div>
 
       <div className="max-w-md mx-auto px-6 pt-6">
-        {/* Product Image Card — shows selected variant's image */}
         <div className="bg-white rounded-[40px] overflow-hidden shadow-xl shadow-primary/5 border border-gray-100 mb-8 aspect-square relative">
           {selectedVariant?.image ? (
             <Image
@@ -192,7 +165,6 @@ export default function ProductDetailPage() {
           </div>
         </div>
 
-        {/* Product Info */}
         <div className="mb-8">
           <h2 className="text-2xl font-black text-gray-900 mb-1">
             {data?.name}
@@ -202,7 +174,6 @@ export default function ProductDetailPage() {
           </p>
         </div>
 
-        {/* Variant (Color) Selection — thumbnail strip */}
         <div className="mb-8">
           <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-none">
             {data?.variants.map((v, index) => (
@@ -213,19 +184,19 @@ export default function ProductDetailPage() {
                   setValidationError(null);
                 }}
                 className={`relative flex-shrink-0 w-20 h-20 rounded-3xl border-2 transition-all overflow-hidden ${
-                  selectedVariant?.image === v.image
+                  selectedVariant?.id === v.id
                     ? "border-primary scale-105 shadow-lg shadow-primary/20"
                     : "border-transparent hover:border-gray-200"
                 }`}
               >
                 <Image
-                  src={v.image}
+                  src={v.image || ""}
                   alt={`Variant ${index + 1}`}
                   fill
                   className="object-cover"
                   unoptimized
                 />
-                {selectedVariant?.image === v.image && (
+                {selectedVariant?.id === v.id && (
                   <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
                     <Check className="text-white" size={24} strokeWidth={4} />
                   </div>
@@ -235,7 +206,6 @@ export default function ProductDetailPage() {
           </div>
         </div>
 
-        {/* Size Group Selection — based on item type */}
         {sizeGroups.length > 0 && (
           <div className="mb-8">
             <h3 className="font-bold text-gray-900 mb-4">Select Size Group</h3>
@@ -260,7 +230,6 @@ export default function ProductDetailPage() {
           </div>
         )}
 
-        {/* Quantity Selection */}
         <div className="mb-10 bg-white p-6 rounded-[32px] border border-gray-100 flex items-center justify-between shadow-sm">
           <h3 className="font-bold text-gray-900">Quantity</h3>
           <div className="flex items-center gap-6">
@@ -282,7 +251,6 @@ export default function ProductDetailPage() {
           </div>
         </div>
 
-        {/* Validation Error */}
         {validationError && (
           <div className="mb-6 p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-3 text-rose-500 animate-in fade-in slide-in-from-top-2">
             <Info size={18} />
@@ -292,7 +260,6 @@ export default function ProductDetailPage() {
           </div>
         )}
 
-        {/* Add Button */}
         <div className="px-4">
           <StockFlowButton
             text="Add to Order"

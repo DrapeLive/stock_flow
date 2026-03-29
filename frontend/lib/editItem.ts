@@ -1,18 +1,16 @@
+"use client";
+
 import { api } from "@/lib/api/axios";
 import { itemApi } from "@/lib/api/item";
-import type { EditCommonDetails, EditableVariant } from "";
+import type { EditCommonDetails, EditableVariant, ItemRequest } from "@/types/item";
 import { parseErrorMessage } from "@/lib/submitItem";
 
-/**
- * PUT /api/items/{id}/ with JSON — same DRF nested approach as create.
- * Then PATCH /api/items/variants/{id}/ for any variant that has a new image.
- */
 export async function updateItem(
   itemId: number,
   common: EditCommonDetails,
   variants: EditableVariant[],
 ): Promise<void> {
-  const payload = {
+  const payload: ItemRequest = {
     name: common.name,
     price: common.price,
     type: common.type,
@@ -20,12 +18,12 @@ export async function updateItem(
     variants: variants.map((v) => ({
       size: v.size,
       stock: v.stock,
+      ...(v.newImage && { image: v.newImage }),
     })),
   };
 
-  await itemApi.update(itemId, payload as never);
+  await itemApi.update(itemId, payload);
 
-  // Upload new images for variants that were changed
   const imageUpdates = variants.filter((v) => v.newImage);
   if (imageUpdates.length === 0) return;
 

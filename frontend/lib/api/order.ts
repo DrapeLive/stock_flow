@@ -1,75 +1,61 @@
-import {
-  AddOrderItemRequest,
-  InvoiceResponse,
-  OrderAddItemResponse,
+import type {
   OrderAllResponse,
-  OrderDeleteResponse,
-  OrderItemDeleteResponse,
-  OrderItems,
+  OrderResponse,
   OrderRegisterRequest,
   OrderRegisterResponse,
-  OrderRequest,
-  OrderResponse,
+  AddOrderItemRequest,
+  UpdateOrderRequest,
+  UpdateOrderItemRequest,
+  InvoiceResponse,
 } from "@/types/order";
 import { api } from "./axios";
 
 export const orderApi = {
-  async getAll(): Promise<OrderAllResponse> {
-    const res = await api.get<OrderAllResponse>("/api/orders/");
-    return res.data;
+  getAll(): Promise<OrderAllResponse> {
+    return api.get<OrderAllResponse>("/api/orders/").then((r) => r.data);
   },
 
-  async getOne(id: number): Promise<OrderResponse> {
-    const res = await api.get<OrderResponse>(`/api/orders/${id}`);
-    return res.data;
+  getOne(id: number): Promise<OrderResponse> {
+    return api.get<OrderResponse>(`/api/orders/${id}/`).then((r) => r.data);
   },
 
-  async addItem(
-    data: AddOrderItemRequest,
-    id: string,
-  ): Promise<OrderAddItemResponse> {
-    const res = await api.post<OrderAddItemResponse>(
-      `/api/orders/${id}/add-item/`,
-      data,
-    );
-    return res.data;
+  create(data: OrderRegisterRequest): Promise<OrderRegisterResponse> {
+    return api
+      .post<OrderRegisterResponse>("/api/orders/", data)
+      .then((r) => r.data);
   },
 
-  async create(data: OrderRegisterRequest): Promise<OrderRegisterResponse> {
-    const res = await api.post<OrderRegisterResponse>(`/api/orders/`, data);
-    return res.data;
+  addItem(orderId: number, itemData: AddOrderItemRequest): Promise<void> {
+    return api
+      .post(`/api/orders/${orderId}/add-item/`, itemData)
+      .then((r) => r.data);
   },
 
-  async delete(id: string): Promise<OrderDeleteResponse> {
-    const res = await api.delete<OrderDeleteResponse>(`/api/orders/${id}/`);
-    return res.data;
+  update(id: number, data: UpdateOrderRequest): Promise<OrderResponse> {
+    return api
+      .patch<OrderResponse>(`/api/orders/${id}/`, data)
+      .then((r) => r.data);
   },
 
-  async deleteItem(
-    orderId: string,
-    itemId: string,
-  ): Promise<OrderItemDeleteResponse> {
-    const res = await api.delete<OrderItemDeleteResponse>(
-      `/api/orders/${orderId}/delete-item/${itemId}/`,
-    );
-    return res.data;
+  updateItem(itemId: number, data: UpdateOrderItemRequest) {
+    return api
+      .patch(`/api/orders/order-items/${itemId}/`, data)
+      .then((r) => r.data);
   },
 
-  async update(id: number, data: any): Promise<OrderResponse> {
-    const res = await api.patch<OrderResponse>(`/api/orders/${id}/`, data);
-    return res.data;
+  delete(id: number): Promise<void> {
+    return api.delete(`/api/orders/${id}/`).then((r) => r.data);
   },
 
-  async updateItem(itemId: number, data: any): Promise<any> {
-    const res = await api.patch<any>(
-      `/api/orders/order-items/${itemId}/`,
-      data,
-    );
-    return res.data;
+  deleteItem(orderId: number, itemId: number): Promise<void> {
+    return api
+      .delete(`/api/orders/${orderId}/delete-item/${itemId}/`)
+      .then((r) => r.data);
   },
 
-  async invoiceOrder(id: number): Promise<InvoiceResponse> {
-    const res = await api.get<InvoiceResponse>(`/api/orders/${id}/invoice/`);
-    return res.data;
+  invoiceOrder(id: number): Promise<InvoiceResponse> {
+    return api
+      .get<InvoiceResponse>(`/api/orders/${id}/invoice/`)
+      .then((r) => r.data);
   },
 };

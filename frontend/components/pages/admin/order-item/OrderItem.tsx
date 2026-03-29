@@ -31,10 +31,10 @@ const OrderItem: React.FC<Props> = ({
   }, [items]);
 
   const onDelete = async (itemId: number, orderId?: number) => {
+    if (!orderId) return;
     try {
       setLoading(true);
-      await orderApi.deleteItem(String(orderId), String(itemId));
-
+      await orderApi.deleteItem(orderId, itemId);
       setOrderItems((prev) => prev?.filter((item) => item.id !== itemId));
     } catch {
       setError("Server Not Found");
@@ -70,7 +70,8 @@ const OrderItem: React.FC<Props> = ({
     <div className="pt-3 space-y-3">
       {error && <AlertDestructive heading="Error" description={error} />}
       {orderItems?.map((item, index) => {
-        const isFullyPacked = item.packed_quantity! >= item.quantity;
+        const isFullyPacked = (item.packed_quantity ?? 0) >= item.quantity;
+        const itemImage = item.item.variants[0]?.image;
 
         return (
           <div
@@ -91,7 +92,7 @@ const OrderItem: React.FC<Props> = ({
               <button
                 type="button"
                 onClick={() =>
-                  togglePacked(item.id, item.packed_quantity!, item.quantity)
+                  togglePacked(item.id, item.packed_quantity ?? 0, item.quantity)
                 }
                 className="flex justify-center items-center p-2 mr-1"
                 title={isFullyPacked ? "Mark as unpacked" : "Mark as packed"}
@@ -109,13 +110,17 @@ const OrderItem: React.FC<Props> = ({
             >
               <div className="flex">
                 <div className="relative w-[50px] h-[50px] flex-shrink-0">
-                  <Image
-                    src={item.item.variants[0].image!}
-                    fill
-                    alt={item.item.name}
-                    className="rounded-md object-cover border border-gray-100"
-                    unoptimized
-                  />
+                  {itemImage ? (
+                    <Image
+                      src={itemImage}
+                      fill
+                      alt={item.item.name}
+                      className="rounded-md object-cover border border-gray-100"
+                      unoptimized
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gray-100 rounded-md border border-gray-100" />
+                  )}
                 </div>
                 <div className="pl-3 flex flex-col justify-center">
                   <h6

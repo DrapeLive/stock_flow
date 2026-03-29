@@ -28,7 +28,8 @@ export default function AdminDetailPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const data = await adminApi.getOne(id as string);
+        const numericId = parseInt(id as string, 10);
+        const data = await adminApi.getOne(numericId);
         setAdmin(data);
         setFormData({
           username: data.username,
@@ -51,7 +52,8 @@ export default function AdminDetailPage() {
   const handleUpdate = async () => {
     setSaving(true);
     try {
-      await adminApi.update(id as string, {
+      const numericId = parseInt(id as string, 10);
+      await adminApi.update(numericId, {
         username: formData.username,
         email: formData.email,
       });
@@ -67,7 +69,8 @@ export default function AdminDetailPage() {
   const handleDelete = async () => {
     if (confirm("Are you sure you want to delete this administrator? This action is irreversible.")) {
       try {
-        await adminApi.delete(id as string);
+        const numericId = parseInt(id as string, 10);
+        await adminApi.delete(numericId);
         router.push("/admin/users/");
       } catch (error) {
         console.error("Error deleting admin:", error);

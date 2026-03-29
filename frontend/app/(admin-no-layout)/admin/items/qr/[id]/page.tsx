@@ -4,11 +4,11 @@ import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import QRCode from "react-qr-code";
 import { itemApi } from "@/lib/api/item";
-import type { ItemResponse } from "@/types/item";
+import type { ItemQRResponse } from "@/types/item";
 
 const QRPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const [item, setItem] = useState<ItemResponse | null>(null);
+  const [item, setItem] = useState<ItemQRResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const hasPrinted = useRef(false);
 

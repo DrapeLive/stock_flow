@@ -1,12 +1,17 @@
-import type { components, operations } from "@/types/api";
+export type Role = "ADMIN" | "AGENT";
 
-export type LoginRequest =
-  operations["auth_login_create"]["requestBody"]["content"]["application/json"];
+export interface LoginRequest {
+  username?: string;
+  email?: string;
+  password: string;
+}
 
-export type LoginResponse =
-  operations["auth_login_create"]["responses"][200]["content"]["application/json"];
-
-export type Role = components["schemas"]["RoleEnum"];
+export interface LoginResponse {
+  access: string;
+  refresh: string;
+  role: Role;
+  user_id: number;
+}
 
 export interface AuthUser {
   id: number;

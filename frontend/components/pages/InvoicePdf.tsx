@@ -98,7 +98,7 @@ export const InvoicePDF = ({ invoice }: { invoice: InvoiceResponse }) => (
             <Text style={styles.col3}>{item.item.price}</Text>
             <Text style={styles.col4}>{item.quantity}</Text>
             <Text style={styles.col5}>
-              <IndianRupee /> {item.item.price * item.quantity}
+              <IndianRupee /> {parseFloat(item.item.price) * item.quantity}
             </Text>
           </View>
         ))}
