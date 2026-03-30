@@ -7,11 +7,19 @@ export interface AgentUser {
   role?: Role;
 }
 
+export interface AssignedItem {
+  id: number;
+  name: string;
+  type: string;
+  price: string;
+}
+
 export interface Agent {
   id: number;
   user: AgentUser;
   contact: string;
   total_customers: string;
+  assigned_items?: AssignedItem[];
 }
 
 export interface AgentRequest {

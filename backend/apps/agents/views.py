@@ -1,10 +1,13 @@
+from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
-from .models import Agent
-from .serializers import AgentSerializer
+from rest_framework.permissions import IsAuthenticated
+from .models import Agent, AgentItem
+from .serializers import AgentSerializer, AgentItemSerializer, ItemSimpleSerializer
 from apps.accounts.permissions import IsAdminOrSelfAgent
 from django.shortcuts import get_object_or_404
+from apps.items.models import Item
 
 
 class AgentViewSet(ModelViewSet):
@@ -19,8 +22,52 @@ class AgentViewSet(ModelViewSet):
 
         return Agent.objects.filter(user=user)
 
+
 class AgentDetail(APIView):
     def get(self, request, user_id):
         agent = get_object_or_404(Agent, user_id=user_id)
         serializer = AgentSerializer(agent)
         return Response(serializer.data)
+
+
+class AgentItemsView(APIView):
+    permission_classes = [IsAdminOrSelfAgent]
+
+    def get(self, request, agent_id):
+        agent = get_object_or_404(Agent, id=agent_id)
+        items = [ai.item for ai in agent.assigned_items.all()]
+        serializer = ItemSimpleSerializer(items, many=True)
+        return Response(serializer.data)
+
+    def post(self, request, agent_id):
+        agent = get_object_or_404(Agent, id=agent_id)
+        item_ids = request.data.get('item_ids', [])
+
+        if not isinstance(item_ids, list):
+            return Response(
+                {'error': 'item_ids must be a list'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        agent.assigned_items.all().delete()
+
+        for item_id in item_ids:
+            try:
+                item = Item.objects.get(id=item_id)
+                AgentItem.objects.create(agent=agent, item=item)
+            except Item.DoesNotExist:
+                pass
+
+        items = [ai.item for ai in agent.assigned_items.all()]
+        serializer = ItemSimpleSerializer(items, many=True)
+        return Response(serializer.data)
+
+
+class AgentItemDetailView(APIView):
+    permission_classes = [IsAdminOrSelfAgent]
+
+    def delete(self, request, agent_id, item_id):
+        agent = get_object_or_404(Agent, id=agent_id)
+        agent_item = get_object_or_404(AgentItem, agent=agent, item_id=item_id)
+        agent_item.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
