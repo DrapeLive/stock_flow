@@ -34,10 +34,10 @@ class ItemViewSet(ModelViewSet):
         grouped = defaultdict(lambda: {"image": None, "sizes": []})
 
         for v in variants:
-            filename = os.path.basename(v.image.name)
-            base = filename.split("_")[0]
-
-            grouped[base]["image"] = request.build_absolute_uri(v.image.url)
+            if v.image:
+                filename = os.path.basename(v.image.name)
+                base = filename.split("_")[0]
+                grouped[base]["image"] = request.build_absolute_uri(v.image.url)
 
             grouped[base]["sizes"].append({
                 "variant_id": v.id,

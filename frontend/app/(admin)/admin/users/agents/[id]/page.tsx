@@ -3,7 +3,9 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { agentApi } from "@/lib/api/agents";
-import { AgentResponse, AgentUpdateRequest } from "@/types/agent";
+import { itemApi } from "@/lib/api/item";
+import { AgentResponse, AgentUpdateRequest, AssignedItem } from "@/types/agent";
+import { Item } from "@/types/item";
 import {
   Field,
   FieldGroup,
@@ -11,7 +13,7 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
-import { Trash2, ArrowLeft, ShieldCheck } from "lucide-react";
+import { Trash2, ArrowLeft, ShieldCheck, Search, Check, X, Package } from "lucide-react";
 
 export default function AgentDetailPage() {
   const { id } = useParams();
@@ -25,17 +27,27 @@ export default function AgentDetailPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  
+  const [items, setItems] = useState<Item[]>([]);
+  const [selectedItemIds, setSelectedItemIds] = useState<number[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [savingItems, setSavingItems] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         const numericId = parseInt(id as string, 10);
-        const data = await agentApi.getOne(numericId);
-        setAgent(data);
+        const [agentData, itemsData] = await Promise.all([
+          agentApi.getOne(numericId),
+          itemApi.getAll()
+        ]);
+        setAgent(agentData);
+        setItems(itemsData);
+        setSelectedItemIds((agentData.assigned_items || []).map((item: AssignedItem) => item.id));
         setFormData({
-          username: data.user.username,
-          email: data.user.email,
-          contact: data.contact,
+          username: agentData.user.username,
+          email: agentData.user.email,
+          contact: agentData.contact,
         });
       } catch (error) {
         console.error("Error fetching agent:", error);
@@ -69,6 +81,36 @@ export default function AgentDetailPage() {
       setSaving(false);
     }
   };
+
+  const handleSaveItems = async () => {
+    setSavingItems(true);
+    try {
+      const numericId = parseInt(id as string, 10);
+      await agentApi.updateItems(numericId, selectedItemIds);
+      const updatedAgent = await agentApi.getOne(numericId);
+      setAgent(updatedAgent);
+      alert("Items assigned successfully!");
+    } catch (error) {
+      console.error("Error saving items:", error);
+      alert("Failed to save item assignments.");
+    } finally {
+      setSavingItems(false);
+    }
+  };
+
+  const toggleItem = (itemId: number) => {
+    setSelectedItemIds(prev => 
+      prev.includes(itemId) 
+        ? prev.filter(id => id !== itemId)
+        : [...prev, itemId]
+    );
+  };
+
+  const filteredItems = items.filter(item => 
+    item.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const assignedItems = items.filter(item => selectedItemIds.includes(item.id));
 
   const handleDelete = async () => {
     if (confirm("Are you sure you want to delete this agent? This will also delete their user account.")) {
@@ -108,7 +150,7 @@ export default function AgentDetailPage() {
         <span className="text-xs font-bold text-gray-400 mt-1">FIELD AGENT</span>
       </div>
 
-      <div className="bg-gray-50/50 border border-gray-100 rounded-[2rem] p-6 space-y-6">
+      <div className="bg-gray-50/50 border border-gray-100 rounded-[2rem] p-6 space-y-6 mb-8">
         <FieldGroup className="space-y-6">
           <Field>
             <FieldLabel className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 block">Full username</FieldLabel>
@@ -139,7 +181,7 @@ export default function AgentDetailPage() {
         </FieldGroup>
       </div>
 
-      <div className="mt-8 mb-20 px-4">
+      <div className="mb-4">
         <StockFlowButton
           variant="filled"
           text={saving ? "Updating..." : "Update Details"}
@@ -148,6 +190,86 @@ export default function AgentDetailPage() {
           className="w-full h-14 rounded-2xl bg-primary text-white font-bold shadow-lg shadow-primary/20 flex items-center justify-center gap-2 active:scale-95 transition-all"
         />
       </div>
+
+      <div className="border-t border-gray-100 pt-8 mt-4">
+        <h3 className="text-lg font-black text-gray-900 mb-2">Assigned Items</h3>
+        <p className="text-xs text-gray-400 font-medium mb-6">Select items this agent can order</p>
+
+        {assignedItems.length > 0 && (
+          <div className="mb-6">
+            <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-3">Currently Assigned ({assignedItems.length})</p>
+            <div className="flex flex-wrap gap-2">
+              {assignedItems.map(item => (
+                <div
+                  key={item.id}
+                  className="flex items-center gap-2 px-3 py-2 bg-primary/10 rounded-xl border border-primary/20"
+                >
+                  <Package size={14} className="text-primary" />
+                  <span className="text-xs font-bold text-primary">{item.name}</span>
+                  <button
+                    onClick={() => toggleItem(item.id)}
+                    className="p-0.5 hover:bg-primary/20 rounded"
+                  >
+                    <X size={12} className="text-primary" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="relative mb-4">
+          <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+          <Input
+            placeholder="Search items to assign..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-11 bg-white border-gray-100 rounded-xl h-12 font-bold"
+          />
+        </div>
+
+        <div className="space-y-2 max-h-64 overflow-y-auto mb-6">
+          {filteredItems.map(item => {
+            const isSelected = selectedItemIds.includes(item.id);
+            return (
+              <button
+                key={item.id}
+                onClick={() => toggleItem(item.id)}
+                className={`w-full flex items-center justify-between p-4 rounded-xl border-2 transition-all ${
+                  isSelected
+                    ? "border-primary bg-primary/5"
+                    : "border-gray-100 hover:border-gray-200"
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center ${
+                    isSelected ? "border-primary bg-primary" : "border-gray-300"
+                  }`}>
+                    {isSelected && <Check size={12} className="text-white" />}
+                  </div>
+                  <div className="text-left">
+                    <p className="font-bold text-gray-900">{item.name}</p>
+                    <p className="text-[10px] text-gray-400 uppercase">{item.type} • ₹{item.price}</p>
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+          {filteredItems.length === 0 && (
+            <p className="text-center text-gray-400 py-4 text-sm">No items found</p>
+          )}
+        </div>
+
+        <StockFlowButton
+          variant="filled"
+          text={savingItems ? "Saving..." : `Save Item Assignments (${selectedItemIds.length})`}
+          onClick={handleSaveItems}
+          disabled={savingItems}
+          className="w-full h-12 rounded-2xl bg-green-600 text-white font-bold shadow-lg shadow-green-600/20 flex items-center justify-center gap-2 active:scale-95 transition-all"
+        />
+      </div>
+
+      <div className="h-20"></div>
     </div>
   );
 }

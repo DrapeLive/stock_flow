@@ -18,6 +18,7 @@ from apps.accounts.permissions import IsAgent
 from rest_framework.permissions import IsAuthenticated
 
 from apps.items.models import ItemVariant
+from apps.agents.models import AgentItem
 from .utils import SIZE_MAPPING
 
 
@@ -61,10 +62,18 @@ class AddOrderItemView(APIView):
 
         order = get_object_or_404(Order, id=order_id)
 
+        agent = request.user.agent
+
         item = serializer.validated_data["item"]
         variant = serializer.validated_data["variant"]  # already object
         qty = serializer.validated_data["quantity"]
         size_group = serializer.validated_data["size_group"]
+
+        if not AgentItem.objects.filter(agent=agent, item=item).exists():
+            return Response(
+                {"error": "This item is not assigned to you. Please contact admin for assignment."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         item_type = item.type
 

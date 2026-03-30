@@ -69,8 +69,8 @@ export default function NewAgentPage() {
         contact: formData.contactNumber,
         password: formData.password,
       };
-      await agentApi.create(payload);
-      router.push("/admin/users/");
+      const newAgent = await agentApi.create(payload);
+      router.push(`/admin/users/agents/${newAgent.id}`);
     } catch (error: any) {
       console.error("Error creating agent:", error);
       setErrors({ submit: error.response?.data?.detail || "Failed to create agent. Username or Email might be taken." });

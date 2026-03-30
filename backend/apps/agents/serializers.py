@@ -1,12 +1,33 @@
 from rest_framework import serializers
 from django.contrib.auth.hashers import make_password
-from .models import Agent
+from .models import Agent, AgentItem
 from apps.accounts.models import User
+from apps.items.models import Item
+
+class ItemSimpleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Item
+        fields = ('id', 'name', 'type', 'price')
+
+
+class AgentItemSerializer(serializers.ModelSerializer):
+    item = ItemSimpleSerializer(read_only=True)
+    item_id = serializers.PrimaryKeyRelatedField(
+        queryset=Item.objects.all(),
+        source='item',
+        write_only=True
+    )
+
+    class Meta:
+        model = AgentItem
+        fields = ('id', 'item', 'item_id', 'created_at')
+
 
 class AgentUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields=('id', 'username','email', 'role')
+
 
 class AgentSerializer(serializers.ModelSerializer):
     user = AgentUserSerializer(read_only=True)
@@ -15,13 +36,20 @@ class AgentSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(write_only=True)
 
     total_customers = serializers.SerializerMethodField()
+    assigned_items = serializers.SerializerMethodField()
 
     class Meta:
         model = Agent
-        fields = ('id', 'username', 'user', 'email', 'password', 'contact','total_customers')
+        fields = ('id', 'username', 'user', 'email', 'password', 'contact', 'total_customers', 'assigned_items')
 
     def get_total_customers(self, obj):
         return obj.customers.count()
+
+    def get_assigned_items(self, obj):
+        return ItemSimpleSerializer(
+            [ai.item for ai in obj.assigned_items.all()],
+            many=True
+        ).data
 
     def create(self, validated_data):
         user = User.objects.create(
