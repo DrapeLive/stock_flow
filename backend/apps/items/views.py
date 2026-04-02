@@ -44,6 +44,7 @@ class ItemViewSet(ModelViewSet):
         for v in variants:
             variant_data = {
                 "id": v.id,
+                "qr_code": v.qr_code,
                 "image": request.build_absolute_uri(v.image.url) if v.image else None,
                 "sizes": [
                     {
@@ -79,12 +80,12 @@ class ItemVariantViewSet(ModelViewSet):
     @action(detail=False, methods=["get"], url_path="all")
     def get_all_variants(self, request):
         variants = ItemVariant.objects.select_related('item').prefetch_related('sizes').all()
-        
+
         result = []
         for variant in variants:
             total_stock = sum(s.stock for s in variant.sizes.all())
             unique_sizes = list(set(s.size for s in variant.sizes.all()))
-            
+
             result.append({
                 "id": variant.id,
                 "item_id": variant.item.id,
@@ -97,5 +98,5 @@ class ItemVariantViewSet(ModelViewSet):
                 "total_stock": total_stock,
                 "unique_sizes": unique_sizes,
             })
-        
+
         return Response(result)

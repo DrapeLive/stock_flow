@@ -71,7 +71,9 @@ const OrderItem: React.FC<Props> = ({
       {error && <AlertDestructive heading="Error" description={error} />}
       {orderItems?.map((item, index) => {
         const isFullyPacked = (item.packed_quantity ?? 0) >= item.quantity;
-        const itemImage = item.item.variants[0]?.image;
+        const itemImage = item.item.variants.find(
+          (v) => v.id === item.variant,
+        )?.image;
 
         return (
           <div
@@ -92,7 +94,11 @@ const OrderItem: React.FC<Props> = ({
               <button
                 type="button"
                 onClick={() =>
-                  togglePacked(item.id, item.packed_quantity ?? 0, item.quantity)
+                  togglePacked(
+                    item.id,
+                    item.packed_quantity ?? 0,
+                    item.quantity,
+                  )
                 }
                 className="flex justify-center items-center p-2 mr-1"
                 title={isFullyPacked ? "Mark as unpacked" : "Mark as packed"}

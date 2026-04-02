@@ -10,21 +10,29 @@ import { orderApi } from "@/lib/api/order";
 import { PageLoading } from "@/components/ui/Loading";
 import { SuccessAlert } from "@/components/ui/SuccessAlert";
 import { FailedBox } from "@/components/ui/FailBox";
-import type { ItemQRResponse, ItemVariant } from "@/types/item";
+import type {
+  ItemQRResponse,
+  ItemVariant,
+  FrontendSizeRange,
+  ItemType,
+} from "@/types/item";
 
-interface VariantOption {
-  image: string;
-  size: string;
-  variant_id: number;
-  stock: number;
-  qr_code: string;
+import { SIZES_BY_TYPE, SIZE_RANGE_TO_SIZES } from "@/types/item";
+
+function getAvailableSizeRanges(
+  variant: ItemVariant | null,
+  type: ItemType | undefined,
+): FrontendSizeRange[] {
+  if (!variant || !type) return [];
+
+  const variantSizeStrings = new Set(variant.sizes.map((s) => s.size));
+
+  return SIZES_BY_TYPE[type].filter((range) => {
+    const requiredSizes = SIZE_RANGE_TO_SIZES[range];
+    // A range is available if ALL its required sizes exist in this variant
+    return requiredSizes.every((s) => variantSizeStrings.has(s));
+  });
 }
-
-const SIZE_GROUPS: Record<string, string[]> = {
-  gents: ["S,M,L,XL", "M,L,XL,XXL", "M,L,XL"],
-  kids: ["20-36", "20-30", "26-36", "26-38", "20-38"],
-};
-
 export default function ProductDetailPage() {
   const params = useParams<{ id: string; qr: string }>();
   const id = params.id as string;
@@ -32,8 +40,12 @@ export default function ProductDetailPage() {
 
   const [data, setData] = useState<ItemQRResponse | null>(null);
   const [quantity, setQuantity] = useState<number>(1);
-  const [selectedVariant, setSelectedVariant] = useState<ItemVariant | null>(null);
-  const [selectedSizeGroup, setSelectedSizeGroup] = useState<string | null>(null);
+  const [selectedVariant, setSelectedVariant] = useState<ItemVariant | null>(
+    null,
+  );
+  const [selectedSizeGroup, setSelectedSizeGroup] = useState<string | null>(
+    null,
+  );
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState(false);
@@ -58,9 +70,7 @@ export default function ProductDetailPage() {
     fetchData();
   }, [params.qr]);
 
-  const sizeGroups: string[] = data?.type
-    ? (SIZE_GROUPS[data.type.toLowerCase()] ?? [])
-    : [];
+  const sizeGroups = getAvailableSizeRanges(selectedVariant, data?.type);
 
   const handleSubmit = async () => {
     if (!selectedVariant) {
@@ -83,14 +93,17 @@ export default function ProductDetailPage() {
       const orderKey = localStorage.getItem("orderKey");
       if (orderKey) {
         const orderId = parseInt(orderKey, 10);
+        console.log(selectedVariant, selectedVariant.qr_code);
         await orderApi.addItem(orderId, {
-          qr_code: params.qr,
+          qr_code: selectedVariant.qr_code,
           quantity: quantity,
           size_group: selectedSizeGroup,
         });
         setSuccess(true);
       } else {
-        setValidationError("Order session not found. Please restart the order.");
+        setValidationError(
+          "Order session not found. Please restart the order.",
+        );
       }
     } catch (e) {
       console.error("Error adding item to order:", e);
@@ -144,7 +157,7 @@ export default function ProductDetailPage() {
       </div>
 
       <div className="max-w-md mx-auto px-6 pt-6">
-        <div className="bg-white rounded-[40px] overflow-hidden shadow-xl shadow-primary/5 border border-gray-100 mb-8 aspect-square relative">
+        <div className="bg-white rounded-[40px] overflow-hidden border-2 border-black mb-8 aspect-square relative">
           {selectedVariant?.image ? (
             <Image
               src={selectedVariant.image}
@@ -175,7 +188,7 @@ export default function ProductDetailPage() {
         </div>
 
         <div className="mb-8">
-          <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-none">
+          <div className="flex p-2 gap-4 overflow-x-auto pb-2 scrollbar-none">
             {data?.variants.map((v, index) => (
               <button
                 key={index}
@@ -185,8 +198,8 @@ export default function ProductDetailPage() {
                 }}
                 className={`relative flex-shrink-0 w-20 h-20 rounded-3xl border-2 transition-all overflow-hidden ${
                   selectedVariant?.id === v.id
-                    ? "border-primary scale-105 shadow-lg shadow-primary/20"
-                    : "border-transparent hover:border-gray-200"
+                    ? "border border-primary scale-105"
+                    : "border hover:border-gray-200"
                 }`}
               >
                 <Image
@@ -239,9 +252,18 @@ export default function ProductDetailPage() {
             >
               <Minus size={20} />
             </button>
-            <span className="text-xl font-black text-gray-900 w-8 text-center">
-              {quantity}
-            </span>
+
+            <input
+              type="number"
+              min={1}
+              value={quantity}
+              onChange={(e) =>
+                setQuantity(Math.max(1, parseInt(e.target.value, 10) || 1))
+              }
+              onFocus={(e) => e.target.select()}
+              className="w-16 h-10 rounded-xl border border-gray-100 text-center text-xl font-black text-gray-900 focus:outline-none focus:border-gray-400 transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            />
+
             <button
               onClick={() => setQuantity(quantity + 1)}
               className="w-10 h-10 rounded-xl bg-gray-900 flex items-center justify-center text-white hover:bg-black active:scale-90 transition-all font-bold"
@@ -266,7 +288,7 @@ export default function ProductDetailPage() {
             variant="filled"
             icon={<PackagePlus />}
             onClick={handleSubmit}
-            className="w-full py-8 rounded-[32px] shadow-xl shadow-primary/30 text-lg active:scale-95 transition-all"
+            className="w-full py-4 active:scale-95 transition-all"
           />
         </div>
       </div>

@@ -18,30 +18,33 @@ const StockFlowButton: React.FC<StockFlowButtonProps> = ({
   disabled = false,
 }) => {
   const baseStyles =
-    "flex items-center gap-1 px-3 py-3 font-medium text-sm rounded-[var(--radius)] transition-all";
+    "flex items-center justify-center gap-2 px-4 py-3 font-semibold text-sm rounded-[var(--radius)] transition-all";
 
   const variants = {
     filled: `
       ${baseStyles}
-      bg-[var(--color-primary)]
-      ${disabled ? "text-gray" : "text-white"}
+      bg-[var(--color-primary)] text-white
       hover:brightness-110
+      disabled:opacity-50 disabled:cursor-not-allowed
     `,
     outline: `
       ${baseStyles}
       border border-[var(--color-primary)]
-      text-[var(--color-primary)]
-      bg-white
+      text-[var(--color-primary)] bg-white
       hover:bg-[var(--color-primary)] hover:text-white
+      disabled:opacity-50 disabled:cursor-not-allowed
     `,
   };
 
   return (
-    <button className={`${variants[variant]} ${className}`} onClick={onClick}>
+    <button
+      className={`${variants[variant]} ${className}`}
+      onClick={onClick}
+      disabled={disabled}
+    >
+      {icon && <span className="flex items-center">{icon}</span>}
       {text}
-      {icon && <span className="text-current">{icon}</span>}
     </button>
   );
 };
-
 export default StockFlowButton;
