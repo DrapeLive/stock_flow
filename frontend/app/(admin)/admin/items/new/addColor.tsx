@@ -14,7 +14,7 @@ import {
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 import CropModal from "./cropModal";
 import CommonDetailsBadge from "./commonDetailsBadge";
-import type {
+import {
   ColorVariant,
   CommonDetails,
   FrontendSizeRange,
@@ -71,7 +71,6 @@ export default function Step2AddColor({
   };
 
   const handleStockBlur = () => {
-    // Normalise display on blur — never show NaN or leading zeros
     setStockInput(String(variant.stock));
   };
 

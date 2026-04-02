@@ -4,8 +4,15 @@ from rest_framework import serializers
 from .models import Item, ItemVariant, ItemVariantSize
 from apps.orders.utils import SIZE_MAPPING
 
-KIDS_SIZES = list(SIZE_MAPPING.get("kids", {}).keys())
-GENTS_SIZES = list(SIZE_MAPPING.get("gents", {}).keys())
+KIDS_SIZES = set()
+for sizes in SIZE_MAPPING.get("kids", {}).values():
+    KIDS_SIZES.update(sizes)
+KIDS_SIZES = list(KIDS_SIZES)
+
+GENTS_SIZES = set()
+for sizes in SIZE_MAPPING.get("gents", {}).values():
+    GENTS_SIZES.update(sizes)
+GENTS_SIZES = list(GENTS_SIZES)
 
 
 class ItemVariantSizeSerializer(serializers.ModelSerializer):
@@ -141,7 +148,7 @@ class CreateItemSerializer(serializers.Serializer):
                 self._update_sizes(variant, variant_data.get('sizes', []))
                 del existing_variants[variant_id]
             else:
-                self._create_variant(instance, variant_data, idx)
+                self._create_variant(instance, variant_data)
         
         for variant in existing_variants.values():
             variant.delete()

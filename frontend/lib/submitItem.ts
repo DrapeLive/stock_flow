@@ -1,34 +1,37 @@
 import { itemApi } from "@/lib/api/item";
-import { objectToFormData } from "@/lib/form-utils";
+import { itemToFormData } from "@/lib/form-utils";
 import type { CommonDetails, ColorVariant } from "@/types/item";
-/**
- * Builds FormData using objectToFormData which produces the key format
- * DRF's multipart parser expects: variants[0]size, variants[0]stock, etc.
- * (no bracket around the nested key — e.g. variants[0]size NOT variants[0][size])
- */
+import { SIZE_RANGE_TO_SIZES } from "@/types/item";
+
 export async function submitItem(
   common: CommonDetails,
   variants: ColorVariant[],
 ): Promise<void> {
-  const variantRows: Array<{ size: string; stock: number; image?: File }> = [];
+  const variantPayload = [];
 
   for (const variant of variants) {
-    variantRows.push({
-      size: variant.sizeRange,
+    const sizes = SIZE_RANGE_TO_SIZES[variant.sizeRange] || [];
+    
+    const sizesData = sizes.map((size) => ({
+      size,
       stock: variant.stock,
-      ...(variant.image && { image: variant.image }),
+    }));
+
+    variantPayload.push({
+      image: variant.image,
+      sizes: sizesData,
     });
   }
 
   const payload = {
     name: common.name,
     price: common.price,
-    ...(common.type && { type: common.type }),
-    ...(common.description && { description: common.description }),
-    variants: variantRows,
+    description: common.description || "",
+    type: common.type,
+    variants: variantPayload,
   };
 
-  const fd = objectToFormData(payload);
+  const fd = itemToFormData(payload);
   await itemApi.create(fd);
 }
 

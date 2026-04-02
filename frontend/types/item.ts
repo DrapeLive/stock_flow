@@ -88,6 +88,14 @@ export const SIZES_BY_TYPE: Record<ItemType, FrontendSizeRange[]> = {
   kids: ["20-36", "20-38"],
 };
 
+export const SIZE_RANGE_TO_SIZES: Record<FrontendSizeRange, string[]> = {
+  "20-36": ["20-24", "26-30", "32-36"],
+  "20-38": ["20-24", "26-30", "32-36", "38"],
+  "S,M,L,XL": ["S", "M,L,XL"],
+  "M,L,XL,XXL": ["M,L,XL", "XXL"],
+  "S,M,L,XL,XXL": ["S", "M,L,XL", "XXL"],
+};
+
 export type SizeEnum = "S" | "M" | "L" | "XL" | "XXL";
 
 export type WizardStep =

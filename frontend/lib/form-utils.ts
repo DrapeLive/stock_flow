@@ -23,11 +23,8 @@ export function objectToFormData(
         } else if (typeof data === "object" && data !== null) {
             for (const key in data) {
                 if (Object.prototype.hasOwnProperty.call(data, key)) {
-                    if (root === "") {
-                        appendFormData(data[key], key);
-                    } else {
-                        appendFormData(data[key], `${root}${key}`);
-                    }
+                    const newRoot = root ? `${root}[${key}]` : key;
+                    appendFormData(data[key], newRoot);
                 }
             }
         } else {
@@ -52,16 +49,14 @@ export function itemToFormData(data: any): FormData {
     formData.append("price", data.price);
     formData.append("type", data.type);
 
-    data.sizes.forEach((size: any, index: number) => {
-        formData.append(`sizes[${index}]size`, size.size);
-        formData.append(`sizes[${index}]stock`, size.stock.toString());
-    });
-
     data.variants.forEach((variant: any, index: number) => {
-        formData.append(`variants[${index}]color`, variant.color);
         if (variant.image) {
             formData.append(`variants[${index}]image`, variant.image);
         }
+        variant.sizes.forEach((size: any, sizeIndex: number) => {
+            formData.append(`variants[${index}]sizes[${sizeIndex}]size`, size.size);
+            formData.append(`variants[${index}]sizes[${sizeIndex}]stock`, size.stock.toString());
+        });
     });
 
     return formData;
