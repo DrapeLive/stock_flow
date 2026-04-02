@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'drf_spectacular',
     'django_rest_passwordreset',
+    'django_extensions',
     "corsheaders",
 
     'apps.accounts',
