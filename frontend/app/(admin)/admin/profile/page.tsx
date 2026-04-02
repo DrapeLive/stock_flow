@@ -2,15 +2,42 @@
 import { useAuth } from "@/context/AuthContext";
 import { LogOut, User, Mail, ShieldCheck, UserCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { authApi } from "@/lib/api/auth";
+import { UserProfile } from "@/types/auth";
 
 export default function Profile() {
-  const { user, logout } = useAuth();
+  const { logout } = useAuth();
   const router = useRouter();
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const data = await authApi.getProfile();
+        setProfile(data);
+      } catch (error) {
+        console.error("Failed to fetch profile:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProfile();
+  }, []);
 
   const handleLogout = () => {
     logout();
     router.push("/login");
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50/50 py-10 px-6 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50/50 py-10 px-6">
@@ -19,8 +46,12 @@ export default function Profile() {
           <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-primary/10 text-primary mb-4 shadow-sm border border-primary/5">
             <UserCircle size={48} />
           </div>
-          <h1 className="text-2xl font-black text-gray-900 leading-tight">Your Profile</h1>
-          <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">Account Management</p>
+          <h1 className="text-2xl font-black text-gray-900 leading-tight">
+            Your Profile
+          </h1>
+          <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">
+            Account Management
+          </p>
         </div>
 
         <div className="space-y-4">
@@ -29,8 +60,12 @@ export default function Profile() {
               <User size={20} />
             </div>
             <div>
-              <p className="text-[10px] text-gray-400 uppercase font-black tracking-wider leading-none mb-1">Username</p>
-              <h3 className="text-base font-bold text-gray-800">{user?.username || "N/A"}</h3>
+              <p className="text-[10px] text-gray-400 uppercase font-black tracking-wider leading-none mb-1">
+                Username
+              </p>
+              <h3 className="text-base font-bold text-gray-800">
+                {profile?.username || "N/A"}
+              </h3>
             </div>
           </div>
 
@@ -39,8 +74,12 @@ export default function Profile() {
               <Mail size={20} />
             </div>
             <div>
-              <p className="text-[10px] text-gray-400 uppercase font-black tracking-wider leading-none mb-1">Email Address</p>
-              <h3 className="text-base font-bold text-gray-800">{user?.email || "N/A"}</h3>
+              <p className="text-[10px] text-gray-400 uppercase font-black tracking-wider leading-none mb-1">
+                Email Address
+              </p>
+              <h3 className="text-base font-bold text-gray-800">
+                {profile?.email || "N/A"}
+              </h3>
             </div>
           </div>
 
@@ -49,8 +88,12 @@ export default function Profile() {
               <ShieldCheck size={20} />
             </div>
             <div>
-              <p className="text-[10px] text-gray-400 uppercase font-black tracking-wider leading-none mb-1">Access Level</p>
-              <h3 className="text-base font-bold text-gray-800">{user?.role || "AGENT"}</h3>
+              <p className="text-[10px] text-gray-400 uppercase font-black tracking-wider leading-none mb-1">
+                Access Level
+              </p>
+              <h3 className="text-base font-bold text-gray-800">
+                {profile?.role || "N/A"}
+              </h3>
             </div>
           </div>
         </div>

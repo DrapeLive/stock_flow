@@ -19,3 +19,10 @@ export interface AuthUser {
   username?: string;
   email?: string;
 }
+
+export interface UserProfile {
+  id: number;
+  username: string;
+  email: string;
+  role: Role;
+}

@@ -3,23 +3,23 @@
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 import { useAuth } from "@/context/AuthContext";
 import { itemApi } from "@/lib/api/item";
-import { ItemAllResponse } from "@/types/item";
+import { VariantAllItem } from "@/types/item";
 import { Info, Plus, Printer } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 const ListItems: React.FC = () => {
   const { isAuthenticated } = useAuth();
-  const [data, setData] = useState<ItemAllResponse>([]);
+  const [data, setData] = useState<VariantAllItem[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
     setLoading(true);
     itemApi
-      .getAll()
+      .getAllVariants()
       .then(setData)
-      .catch((e) => console.error("Error fetching items:", e))
+      .catch((e) => console.error("Error fetching variants:", e))
       .finally(() => setLoading(false));
   }, [isAuthenticated, router]);
 
@@ -30,7 +30,7 @@ const ListItems: React.FC = () => {
   if (data.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4">
-        <h2 className="text-xl font-bold text-gray-400">No Items</h2>
+        <h2 className="text-xl font-bold text-gray-400">No Variants</h2>
         <StockFlowButton
           text="Add Item"
           icon={<Plus className="size-4" />}
@@ -49,7 +49,7 @@ const ListItems: React.FC = () => {
           <h1 className="text-2xl font-extrabold text-gray-900">Inventory</h1>
           <div className="flex gap-2 items-center mt-1">
             <span className="text-gray-400 text-xs font-bold uppercase tracking-wider">
-              Total Items
+              Total Variants
             </span>
             <div className="bg-primary/10 text-primary rounded-full py-0.5 px-3 border border-primary/20">
               <span className="font-bold text-xs">{data.length}</span>
@@ -66,30 +66,19 @@ const ListItems: React.FC = () => {
 
       {/* List */}
       <div className="px-4 space-y-2">
-        {data.map((item, index) => {
-          const variants = item.variants ?? [];
-          const firstImage = variants.find((v) => v.image)?.image;
-          const totalStock = variants.reduce(
-            (sum, v) => sum + v.sizes.reduce((s, size) => s + size.stock, 0),
-            0,
-          );
-          // Show up to 3 unique sizes
-          const uniqueSizes = [...new Set(variants.flatMap((v) => v.sizes.map((s) => s.size)))];
-          // qr_code lives on variants; use the first one for the print action
-          const firstQr = variants[0]?.qr_code;
-
+        {data.map((variant) => {
           return (
             <div
-              key={index}
+              key={variant.id}
               className="flex items-center gap-4 bg-white border border-gray-100 p-3 hover:border-primary/30 hover:shadow-md transition-all rounded-2xl group cursor-pointer"
-              onClick={() => router.push(`/admin/items/edit/${item.id}`)}
+              onClick={() => router.push(`/admin/items/edit/${variant.item_id}`)}
             >
               {/* Thumbnail */}
               <div className="w-16 h-16 rounded-xl bg-gray-50 overflow-hidden flex-shrink-0 border border-gray-100 shadow-sm">
-                {firstImage ? (
+                {variant.image ? (
                   <img
-                    src={firstImage}
-                    alt={item.name}
+                    src={variant.image}
+                    alt={variant.item_name}
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                   />
                 ) : (
@@ -103,22 +92,22 @@ const ListItems: React.FC = () => {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <h6 className="font-bold text-gray-900 text-base truncate leading-tight">
-                    {item.name}
+                    {variant.item_name}
                   </h6>
-                  {item.type && (
+                  {variant.item_type && (
                     <span className="text-[9px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-md uppercase font-bold tracking-tighter border border-gray-200 flex-shrink-0">
-                      {item.type}
+                      {variant.item_type}
                     </span>
                   )}
                 </div>
 
                 <p className="text-xs text-gray-400 truncate mt-1 leading-tight font-medium">
-                  {item.description || "No description"}
+                  QR: {variant.qr_code || "N/A"}
                 </p>
 
                 {/* Size chips */}
                 <div className="flex -space-x-1.5 overflow-hidden mt-2">
-                  {uniqueSizes.slice(0, 3).map((size, i) => (
+                  {variant.unique_sizes.slice(0, 3).map((size, i) => (
                     <div
                       key={i}
                       className="inline-flex items-center justify-center h-5 px-1.5 rounded-md bg-gray-50 border border-white text-[9px] font-bold text-gray-400 shadow-sm"
@@ -126,9 +115,9 @@ const ListItems: React.FC = () => {
                       {size}
                     </div>
                   ))}
-                  {uniqueSizes.length > 3 && (
+                  {variant.unique_sizes.length > 3 && (
                     <div className="inline-flex items-center justify-center h-5 px-1.5 rounded-md bg-gray-50 border border-white text-[9px] font-bold text-gray-300">
-                      +{uniqueSizes.length - 3}
+                      +{variant.unique_sizes.length - 3}
                     </div>
                   )}
                 </div>
@@ -141,21 +130,21 @@ const ListItems: React.FC = () => {
                 </span>
                 <span
                   className={`text-lg font-black leading-none ${
-                    totalStock < 10 ? "text-amber-500" : "text-gray-900"
+                    variant.total_stock < 10 ? "text-amber-500" : "text-gray-900"
                   }`}
                 >
-                  {totalStock}
+                  {variant.total_stock}
                 </span>
               </div>
 
               {/* Print QR */}
-              {firstQr && (
+              {variant.qr_code && (
                 <div className="flex items-center gap-1 pl-2">
                   <button
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      window.open("/admin/items/qr/" + firstQr, "_blank");
+                      window.open("/admin/items/qr/" + variant.qr_code, "_blank");
                     }}
                     className="p-2 text-gray-300 hover:text-primary hover:bg-primary/5 rounded-xl transition-all border border-transparent hover:border-primary/10"
                     title="Print QR"

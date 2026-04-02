@@ -3,12 +3,17 @@ import type {
   ItemResponse,
   ItemRequest,
   ItemQRResponse,
+  VariantAllResponse,
 } from "@/types/item";
 import { api } from "./axios";
 
 export const itemApi = {
   getAll(): Promise<ItemAllResponse> {
     return api.get<ItemAllResponse>("/api/items/").then((r) => r.data);
+  },
+
+  getAllVariants(): Promise<VariantAllResponse> {
+    return api.get<VariantAllResponse>("/api/items/variants/all/").then((r) => r.data);
   },
 
   getOne(id: number): Promise<ItemResponse> {

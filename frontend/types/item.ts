@@ -44,6 +44,26 @@ export type ItemAllResponse = Item[];
 export type ItemResponse = Item;
 export type ItemQRResponse = Item & { matched_variant_id?: number };
 
+export interface VariantSize {
+  size: string;
+  stock: number;
+}
+
+export interface VariantAllItem {
+  id: number;
+  item_id: number;
+  item_name: string;
+  item_type: ItemType;
+  item_price: string;
+  qr_code: string | null;
+  image: string | null;
+  sizes: VariantSize[];
+  total_stock: number;
+  unique_sizes: string[];
+}
+
+export type VariantAllResponse = VariantAllItem[];
+
 export interface CommonDetails {
   name: string;
   description: string;

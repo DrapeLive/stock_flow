@@ -1,13 +1,16 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
 from drf_spectacular.utils import extend_schema
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .serializers import (
     LoginRequestSerializer,
     LoginResponseSerializer,
+    UserSerializer,
 )
+
 
 class LoginView(APIView):
     authentication_classes = []
@@ -33,3 +36,15 @@ class LoginView(APIView):
         }
 
         return Response(response_data, status=status.HTTP_200_OK)
+
+
+class ProfileView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        responses={200: UserSerializer},
+        tags=['Authentication'],
+    )
+    def get(self, request):
+        serializer = UserSerializer(request.user)
+        return Response(serializer.data)

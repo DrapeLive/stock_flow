@@ -4,7 +4,9 @@ import { PageLoading } from "@/components/ui/Loading";
 import { SuccessAlert } from "@/components/ui/SuccessAlert";
 import { useAuth } from "@/context/AuthContext";
 import { agentApi } from "@/lib/api/agents";
+import { authApi } from "@/lib/api/auth";
 import { AgentResponse } from "@/types/agent";
+import { UserProfile } from "@/types/auth";
 import { ChevronRight, LogOut, User, Mail, ShieldCheck, UserCircle, Phone } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -13,6 +15,7 @@ export default function Profile() {
   const { user, logout } = useAuth();
 
   const [data, setData] = useState<AgentResponse>();
+  const [profile, setProfile] = useState<UserProfile>();
   const [loading, setLoading] = useState(true);
   const [success, setSuccess] = useState(false);
 
@@ -24,8 +27,12 @@ export default function Profile() {
     const fetchData = async () => {
       if (!user?.id) return;
       try {
-        const response = await agentApi.getProfile(user.id);
-        setData(response);
+        const [agentData, profileData] = await Promise.all([
+          agentApi.getProfile(user.id),
+          authApi.getProfile(),
+        ]);
+        setData(agentData);
+        setProfile(profileData);
       } catch (e) {
         console.error("Error fetching agent data:", e);
       } finally {
@@ -66,7 +73,7 @@ export default function Profile() {
             </div>
             <div>
               <p className="text-[10px] text-gray-400 uppercase font-black tracking-wider leading-none mb-1">Username</p>
-              <h3 className="text-base font-bold text-gray-800">{data?.user.username || user?.username || "N/A"}</h3>
+              <h3 className="text-base font-bold text-gray-800">{profile?.username || "N/A"}</h3>
             </div>
           </div>
 
@@ -76,7 +83,7 @@ export default function Profile() {
             </div>
             <div>
               <p className="text-[10px] text-gray-400 uppercase font-black tracking-wider leading-none mb-1">Email Address</p>
-              <h3 className="text-base font-bold text-gray-800">{data?.user.email || user?.email || "N/A"}</h3>
+              <h3 className="text-base font-bold text-gray-800">{profile?.email || "N/A"}</h3>
             </div>
           </div>
 
@@ -96,7 +103,7 @@ export default function Profile() {
             </div>
             <div>
               <p className="text-[10px] text-gray-400 uppercase font-black tracking-wider leading-none mb-1">Account Role</p>
-              <h3 className="text-base font-bold text-gray-800">{user?.role || "AGENT"}</h3>
+              <h3 className="text-base font-bold text-gray-800">{profile?.role || "N/A"}</h3>
             </div>
           </div>
 

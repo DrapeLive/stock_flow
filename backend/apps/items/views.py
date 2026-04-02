@@ -75,3 +75,27 @@ class ItemVariantViewSet(ModelViewSet):
         if self.request.method in ["POST", "PUT", "PATCH", "DELETE"]:
             return [IsAdmin()]
         return [IsAuthenticated()]
+
+    @action(detail=False, methods=["get"], url_path="all")
+    def get_all_variants(self, request):
+        variants = ItemVariant.objects.select_related('item').prefetch_related('sizes').all()
+        
+        result = []
+        for variant in variants:
+            total_stock = sum(s.stock for s in variant.sizes.all())
+            unique_sizes = list(set(s.size for s in variant.sizes.all()))
+            
+            result.append({
+                "id": variant.id,
+                "item_id": variant.item.id,
+                "item_name": variant.item.name,
+                "item_type": variant.item.type,
+                "item_price": str(variant.item.price),
+                "qr_code": str(variant.qr_code) if variant.qr_code else None,
+                "image": request.build_absolute_uri(variant.image.url) if variant.image else None,
+                "sizes": [{"size": s.size, "stock": s.stock} for s in variant.sizes.all()],
+                "total_stock": total_stock,
+                "unique_sizes": unique_sizes,
+            })
+        
+        return Response(result)
