@@ -1,5 +1,6 @@
 from django.db import transaction
 from django.shortcuts import get_object_or_404
+from django.db.models import F
 
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.views import APIView
@@ -17,7 +18,7 @@ from .serializers import (
 from apps.accounts.permissions import IsAgent
 from rest_framework.permissions import IsAuthenticated
 
-from apps.items.models import ItemVariant
+from apps.items.models import ItemVariant, ItemVariantSize
 from apps.agents.models import AgentItem
 from .utils import SIZE_MAPPING
 
@@ -65,7 +66,7 @@ class AddOrderItemView(APIView):
         agent = request.user.agent
 
         item = serializer.validated_data["item"]
-        variant = serializer.validated_data["variant"]  # already object
+        variant = serializer.validated_data["variant"]
         qty = serializer.validated_data["quantity"]
         size_group = serializer.validated_data["size_group"]
 
@@ -83,31 +84,35 @@ class AddOrderItemView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        sizes = SIZE_MAPPING[item_type][size_group]
+        required_sizes = SIZE_MAPPING[item_type][size_group]
 
         with transaction.atomic():
 
-            size_objects = ItemVariant.objects.select_for_update().filter(
-                item=item,
-                size__in=sizes
-            )
-
-            # if size_objects.count() != len(sizes):
-            #     return Response(
-            #         {"error": "Some sizes not found in DB"},
-            #         status=status.HTTP_400_BAD_REQUEST
-            #     )
-
-            for s in size_objects:
-                if s.stock < qty:
+            for size in required_sizes:
+                try:
+                    size_obj = ItemVariantSize.objects.select_for_update().get(
+                        item_variant__item=item,
+                        item_variant=variant,
+                        size=size
+                    )
+                except ItemVariantSize.DoesNotExist:
                     return Response(
-                        {"error": f"Insufficient stock in {s.size}"},
+                        {"error": f"Size {size} not found for this variant"},
                         status=status.HTTP_400_BAD_REQUEST
                     )
 
-            for s in size_objects:
-                s.stock -= qty
-                s.save()
+                if size_obj.stock < qty:
+                    return Response(
+                        {"error": f"Insufficient stock in {size}"},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+
+            for size in required_sizes:
+                ItemVariantSize.objects.filter(
+                    item_variant__item=item,
+                    item_variant=variant,
+                    size=size
+                ).update(stock=F('stock') - qty)
 
             OrderItem.objects.create(
                 order=order,
@@ -138,17 +143,15 @@ class DeleteOrderItemView(APIView):
         )
 
         item_type = order_item.item.type
-        sizes = SIZE_MAPPING[item_type][order_item.size_group]
+        required_sizes = SIZE_MAPPING[item_type][order_item.size_group]
 
         with transaction.atomic():
 
-            size_objects = ItemVariant.objects.select_for_update().filter(
-                size__in=sizes
-            )
-
-            for s in size_objects:
-                s.stock += order_item.quantity
-                s.save()
+            for size in required_sizes:
+                ItemVariantSize.objects.filter(
+                    item_variant=order_item.variant,
+                    size=size
+                ).update(stock=F('stock') + order_item.quantity)
 
             order_item.delete()
 

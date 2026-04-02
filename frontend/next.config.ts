@@ -1,15 +1,17 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
   images: {
     remotePatterns: [
-      {
-        protocol: "http",
-        hostname: "localhost",
-        port: "8000",
-        pathname: "/media/**",
-      },
+      ...(process.env.NEXT_PUBLIC_MEDIA_DOMAIN
+        ? [
+            {
+              protocol: "https" as const,
+              hostname: process.env.NEXT_PUBLIC_MEDIA_DOMAIN,
+              pathname: "/media/**",
+            },
+          ]
+        : []),
     ],
   },
 };

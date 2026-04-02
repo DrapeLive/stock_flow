@@ -7,11 +7,23 @@ export interface AgentUser {
   role?: Role;
 }
 
+export interface SizeRange {
+  size_range: string;
+  stock: number;
+}
+
+export interface AgentItemVariant {
+  id: number;
+  image: string | null;
+  size_ranges: SizeRange[];
+}
+
 export interface AssignedItem {
   id: number;
   name: string;
   type: string;
   price: string;
+  variants: AgentItemVariant[];
 }
 
 export interface Agent {

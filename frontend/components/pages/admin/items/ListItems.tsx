@@ -70,11 +70,11 @@ const ListItems: React.FC = () => {
           const variants = item.variants ?? [];
           const firstImage = variants.find((v) => v.image)?.image;
           const totalStock = variants.reduce(
-            (sum, v) => sum + (v.stock ?? 0),
+            (sum, v) => sum + v.sizes.reduce((s, size) => s + size.stock, 0),
             0,
           );
           // Show up to 3 unique sizes
-          const uniqueSizes = [...new Set(variants.map((v) => v.size))];
+          const uniqueSizes = [...new Set(variants.flatMap((v) => v.sizes.map((s) => s.size)))];
           // qr_code lives on variants; use the first one for the print action
           const firstQr = variants[0]?.qr_code;
 

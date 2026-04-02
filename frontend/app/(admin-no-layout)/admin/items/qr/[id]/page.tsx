@@ -36,7 +36,8 @@ const QRPage: React.FC = () => {
 
   // Find the specific variant this QR belongs to
   const variant = item.variants.find((v) => v.qr_code === id);
-  const variantLabel = `${item.name} - ${variant?.size ?? ""}`;
+  const sizes = variant?.sizes.map((s) => s.size).join(", ") ?? "";
+  const variantLabel = `${item.name} - ${sizes}`;
 
   return (
     <>

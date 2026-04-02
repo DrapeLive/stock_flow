@@ -207,20 +207,22 @@ export default function PriceCheckScannerPage() {
                 Available Sizes
               </p>
               <div className="flex flex-wrap gap-2">
-                {scanResult.variants.map((variant, idx) => (
-                  <div
-                    key={idx}
-                    className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-100 rounded-xl"
-                  >
-                    <span className="font-bold text-sm text-gray-700">
-                      {variant.size}
-                    </span>
-                    <span className="text-gray-300">•</span>
-                    <span className="text-xs font-bold text-gray-400">
-                      {variant.stock || 0} stock
-                    </span>
-                  </div>
-                ))}
+                {scanResult.variants.flatMap((variant, vIdx) =>
+                  variant.sizes.map((size, sIdx) => (
+                    <div
+                      key={`${vIdx}-${sIdx}`}
+                      className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-100 rounded-xl"
+                    >
+                      <span className="font-bold text-sm text-gray-700">
+                        {size.size}
+                      </span>
+                      <span className="text-gray-300">•</span>
+                      <span className="text-xs font-bold text-gray-400">
+                        {size.stock} stock
+                      </span>
+                    </div>
+                  )),
+                )}
               </div>
             </div>
           )}

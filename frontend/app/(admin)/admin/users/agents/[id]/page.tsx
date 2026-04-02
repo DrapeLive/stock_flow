@@ -204,7 +204,11 @@ export default function AgentDetailPage() {
                   key={item.id}
                   className="flex items-center gap-2 px-3 py-2 bg-primary/10 rounded-xl border border-primary/20"
                 >
-                  <Package size={14} className="text-primary" />
+                  {item.variants?.[0]?.image ? (
+                    <img src={item.variants[0].image} alt={item.name} className="w-5 h-5 rounded object-cover" />
+                  ) : (
+                    <Package size={14} className="text-primary" />
+                  )}
                   <span className="text-xs font-bold text-primary">{item.name}</span>
                   <button
                     onClick={() => toggleItem(item.id)}

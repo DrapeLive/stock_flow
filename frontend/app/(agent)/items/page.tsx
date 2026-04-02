@@ -4,16 +4,43 @@ import { useAuth } from "@/context/AuthContext";
 import { agentApi } from "@/lib/api/agents";
 import { AssignedItem } from "@/types/agent";
 import { PageLoading } from "@/components/ui/Loading";
-import { Search, QrCode, ShoppingCart, Package, Info } from "lucide-react";
+import { Search, QrCode, ShoppingCart, Package, ChevronDown } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import Image from "next/image";
 
 export default function MyItemsPage() {
   const { user } = useAuth();
   const [items, setItems] = useState<AssignedItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set());
+  const [expandedVariants, setExpandedVariants] = useState<Set<number>>(new Set());
   const router = useRouter();
+
+  const toggleItemExpanded = (itemId: number) => {
+    setExpandedItems((prev) => {
+      const next = new Set(prev);
+      if (next.has(itemId)) {
+        next.delete(itemId);
+      } else {
+        next.add(itemId);
+      }
+      return next;
+    });
+  };
+
+  const toggleVariantExpanded = (variantId: number) => {
+    setExpandedVariants((prev) => {
+      const next = new Set(prev);
+      if (next.has(variantId)) {
+        next.delete(variantId);
+      } else {
+        next.add(variantId);
+      }
+      return next;
+    });
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -108,39 +135,139 @@ export default function MyItemsPage() {
           </div>
         ) : (
           <div className="space-y-3 pb-10">
-            {filteredItems.map((item) => (
-              <div
-                key={item.id}
-                className="flex items-center gap-4 bg-white border border-gray-100 p-4 hover:border-primary/30 hover:shadow-md transition-all rounded-2xl group active:scale-[0.98]"
-              >
-                <div className="w-12 h-12 rounded-xl bg-primary/5 flex items-center justify-center border border-primary/10 flex-shrink-0">
-                  <Package size={20} className="text-primary" />
-                </div>
+            {filteredItems.map((item) => {
+              const isItemExpanded = expandedItems.has(item.id);
+              const firstImage = item.variants[0]?.image;
 
-                <div className="flex-1 min-w-0">
-                  <h6 className="font-bold text-gray-900 text-base truncate leading-tight">
-                    {item.name}
-                  </h6>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
-                      {item.type}
-                    </span>
-                    <span className="text-gray-200">•</span>
-                    <span className="text-xs font-black text-primary">
-                      ₹{item.price}
-                    </span>
+              return (
+                <div key={item.id} className="bg-white border border-gray-100 rounded-2xl overflow-hidden hover:border-primary/30 hover:shadow-md transition-all">
+                  <div
+                    className="flex items-center gap-4 p-4 active:scale-[0.98] transition-all cursor-pointer"
+                    onClick={() => toggleItemExpanded(item.id)}
+                  >
+                    <div className="w-12 h-12 rounded-xl bg-primary/5 flex items-center justify-center border border-primary/10 flex-shrink-0 overflow-hidden">
+                      {firstImage ? (
+                        <Image
+                          src={firstImage}
+                          alt={item.name}
+                          width={48}
+                          height={48}
+                          className="rounded-xl object-cover"
+                          unoptimized
+                        />
+                      ) : (
+                        <Package size={20} className="text-primary" />
+                      )}
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <h6 className="font-bold text-gray-900 text-base truncate leading-tight">
+                        {item.name}
+                      </h6>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
+                          {item.type}
+                        </span>
+                        <span className="text-gray-200">•</span>
+                        <span className="text-xs font-bold text-gray-500">
+                          {item.variants.length} colors
+                        </span>
+                        <span className="text-gray-200">•</span>
+                        <span className="text-xs font-black text-primary">
+                          ₹{item.price}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="p-2 text-gray-400 transition-transform">
+                      <ChevronDown
+                        size={18}
+                        className={`transition-transform ${isItemExpanded ? "rotate-180" : ""}`}
+                      />
+                    </div>
                   </div>
-                </div>
 
-                <button
-                  onClick={handleQuickOrder}
-                  className="flex items-center gap-1.5 px-3 py-2 bg-primary text-white rounded-xl font-bold text-xs active:scale-95 transition-all"
-                >
-                  <ShoppingCart size={14} />
-                  Order
-                </button>
-              </div>
-            ))}
+                  {isItemExpanded && item.variants.length > 0 && (
+                    <div className="px-4 pb-4 border-t border-gray-50">
+                      <div className="pt-4 space-y-2">
+                        {item.variants.map((variant, idx) => {
+                          const isVariantExpanded = expandedVariants.has(variant.id);
+
+                          return (
+                            <div key={variant.id}>
+                              <div className="flex items-center gap-3 py-3">
+                                {variant.image ? (
+                                  <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-50 border border-gray-100 flex-shrink-0">
+                                    <Image
+                                      src={variant.image}
+                                      alt={`Variant ${idx + 1}`}
+                                      width={40}
+                                      height={40}
+                                      className="object-cover"
+                                      unoptimized
+                                    />
+                                  </div>
+                                ) : (
+                                  <div className="w-10 h-10 rounded-lg bg-gray-50 border border-gray-100 flex-shrink-0" />
+                                )}
+
+                                <div className="flex-1">
+                                  <span className="text-sm font-bold text-gray-900">
+                                    Variant #{idx + 1}
+                                  </span>
+                                  <span className="text-[10px] text-gray-400 ml-2">
+                                    {variant.size_ranges.length} size{variant.size_ranges.length !== 1 ? 's' : ''}
+                                  </span>
+                                </div>
+
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleQuickOrder();
+                                  }}
+                                  className="flex items-center gap-1.5 px-3 py-2 bg-primary text-white rounded-xl font-bold text-xs active:scale-95 transition-all"
+                                >
+                                  <ShoppingCart size={14} />
+                                  Order
+                                </button>
+
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleVariantExpanded(variant.id);
+                                  }}
+                                  className="p-2 text-gray-400 transition-transform active:scale-95"
+                                >
+                                  <ChevronDown
+                                    size={16}
+                                    className={`transition-transform ${isVariantExpanded ? "rotate-180" : ""}`}
+                                  />
+                                </button>
+                              </div>
+
+                              {isVariantExpanded && variant.size_ranges.length > 0 && (
+                                <div className="pb-2 space-y-1">
+                                  {variant.size_ranges.map((sr) => (
+                                    <div key={sr.size_range} className="bg-gray-50 rounded-xl px-3 py-2 flex items-center justify-between">
+                                      <span className="text-xs font-bold text-gray-600">
+                                        {sr.size_range}
+                                      </span>
+                                      <span className={`text-xs font-black ${sr.stock > 0 ? "text-green-600" : "text-red-500"}`}>
+                                        {sr.stock} units
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

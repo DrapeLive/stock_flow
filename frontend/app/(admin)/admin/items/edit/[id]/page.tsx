@@ -55,15 +55,17 @@ export default function ItemEditPage() {
           type: (data.type as ItemType) ?? "gents",
         });
         setVariants(
-          data.variants.map((v) => ({
-            backendId: v.id,
-            localId: uid(),
-            size: v.size,
-            stock: v.stock ?? 0,
-            imageUrl: v.image ?? null,
-            newImage: null,
-            imagePreview: null,
-          })),
+          data.variants.flatMap((v) =>
+            v.sizes.map((s) => ({
+              backendId: v.id,
+              localId: uid(),
+              size: s.size,
+              stock: s.stock,
+              imageUrl: v.image ?? null,
+              newImage: null,
+              imagePreview: null,
+            })),
+          ),
         );
       })
       .catch((e) => setError(parseErrorMessage(e)))
@@ -153,8 +155,12 @@ export default function ItemEditPage() {
 
       {/* Avatar */}
       <div className="flex flex-col items-center mb-8">
-        <div className="w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center mb-3">
-          <Package size={36} className="text-primary" />
+        <div className="w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center mb-3 overflow-hidden">
+          {variants[0]?.imageUrl ? (
+            <img src={variants[0].imageUrl} alt={common.name} className="w-full h-full object-cover" />
+          ) : (
+            <Package size={36} className="text-primary" />
+          )}
         </div>
         <h2 className="text-xl font-black">{common.name || "—"}</h2>
       </div>

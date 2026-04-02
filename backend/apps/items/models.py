@@ -33,16 +33,6 @@ def item_variant_image_path(instance, filename):
 
 
 class ItemVariant(models.Model):
-    SIZE_CHOICES = [
-        ("20-24", "20-24"),
-        ("26-30", "26-30"),
-        ("32-36", "32-36"),
-        ("38", "38"),
-        ("S", "S"),
-        ("M,L,XL", "M,L,XL"),
-        ("XXL", "XXL")
-    ]
-
     item = models.ForeignKey(
         Item,
         related_name="variants",
@@ -55,12 +45,34 @@ class ItemVariant(models.Model):
         editable=False
     )
 
-
     image = models.ImageField(
         upload_to=item_variant_image_path,
         null=True,
         blank=True
     )
+
+    def __str__(self):
+        img_name = self.image.name.split('/')[-1] if self.image else 'no image'
+        return f"{self.item.name} - {img_name}"
+
+
+class ItemVariantSize(models.Model):
+    SIZE_CHOICES = [
+        ("20-24", "20-24"),
+        ("26-30", "26-30"),
+        ("32-36", "32-36"),
+        ("38", "38"),
+        ("S", "S"),
+        ("M,L,XL", "M,L,XL"),
+        ("XXL", "XXL"),
+    ]
+
+    item_variant = models.ForeignKey(
+        ItemVariant,
+        related_name="sizes",
+        on_delete=models.CASCADE
+    )
+
     size = models.CharField(
         max_length=10,
         choices=SIZE_CHOICES
@@ -68,6 +80,8 @@ class ItemVariant(models.Model):
 
     stock = models.PositiveIntegerField(default=0)
 
-    def __str__(self):
-        return f"{self.item.name}"
+    class Meta:
+        unique_together = ['item_variant', 'size']
 
+    def __str__(self):
+        return f"{self.item_variant} - {self.size}"

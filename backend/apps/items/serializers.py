@@ -1,96 +1,174 @@
+import os
+import uuid
 from rest_framework import serializers
-from .models import Item, ItemVariant
+from .models import Item, ItemVariant, ItemVariantSize
 from apps.orders.utils import SIZE_MAPPING
 
 KIDS_SIZES = list(SIZE_MAPPING.get("kids", {}).keys())
 GENTS_SIZES = list(SIZE_MAPPING.get("gents", {}).keys())
 
+
+class ItemVariantSizeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ItemVariantSize
+        fields = ['id', 'size', 'stock']
+
+
 class ItemVariantSerializer(serializers.ModelSerializer):
-    size = serializers.CharField()
+    sizes = ItemVariantSizeSerializer(many=True, read_only=True)
+
     class Meta:
         model = ItemVariant
-        fields = "__all__"
-        read_only_fields = ["item"]
+        fields = ['id', 'qr_code', 'image', 'sizes']
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        request = self.context.get('request')
+        if data.get('image') and request:
+            data['image'] = request.build_absolute_uri(data['image'])
+        return data
 
 
 class ItemSerializer(serializers.ModelSerializer):
-    variants = ItemVariantSerializer(many=True)
+    variants = ItemVariantSerializer(many=True, read_only=True)
 
     class Meta:
         model = Item
-        fields = "__all__"
+        fields = ['id', 'name', 'type', 'price', 'description', 'variants']
 
-    def validate(self, data):
-        variants = data.get("variants", [])
-        item_type = data.get("type")
 
+class ItemVariantSizeRequestSerializer(serializers.Serializer):
+    size = serializers.CharField()
+    stock = serializers.IntegerField(required=False, default=0)
+
+
+class ItemVariantRequestSerializer(serializers.Serializer):
+    id = serializers.IntegerField(required=False)
+    image = serializers.FileField(required=False)
+    sizes = ItemVariantSizeRequestSerializer(many=True)
+
+
+class CreateItemSerializer(serializers.Serializer):
+    name = serializers.CharField(max_length=100)
+    description = serializers.CharField(required=False, default='')
+    price = serializers.DecimalField(max_digits=10, decimal_places=2)
+    type = serializers.ChoiceField(choices=Item.TYPE_CHOICES)
+    variants = ItemVariantRequestSerializer(many=True)
+
+    def validate_variants(self, variants):
+        item_type = self.initial_data.get('type')
+        
         for variant in variants:
-            size = variant.get("size")
-            if item_type == "kids" and size not in KIDS_SIZES:
-                raise serializers.ValidationError(
-                    f"'{size}' is not a valid size for a kids item."
-                )
-            if item_type == "gents" and size not in GENTS_SIZES:
-                raise serializers.ValidationError(
-                    f"'{size}' is not a valid size for a gents item."
-                )
-
-        return data
-
-    def _expand_variants(self, item_type, variants_data):
-        """
-        Expand each variant into multiple sub-variants using SIZE_MAPPING.
-        Each sub-size inherits the stock and image from the parent variant.
-        If no mapping exists for the size, the variant is kept as-is.
-        """
-        type_mapping = SIZE_MAPPING.get(item_type, {})
-        expanded = []
-
-        for variant_data in variants_data:
-            size = variant_data.get("size")
-            sub_sizes = type_mapping.get(size)
-
-            if sub_sizes:
-                for sub_size in sub_sizes:
-                    expanded.append({**variant_data, "size": sub_size})
-            else:
-                expanded.append(variant_data)
-
-        return expanded
+            for size_data in variant.get('sizes', []):
+                size = size_data.get('size')
+                if not size:
+                    raise serializers.ValidationError("Size is required for each variant size")
+                    
+                if item_type == 'kids' and size not in KIDS_SIZES:
+                    raise serializers.ValidationError(f"'{size}' is not a valid size for kids items")
+                if item_type == 'gents' and size not in GENTS_SIZES:
+                    raise serializers.ValidationError(f"'{size}' is not a valid size for gents items")
+        
+        return variants
 
     def create(self, validated_data):
-        variants_data = validated_data.pop("variants", [])
-        item = Item.objects.create(**validated_data)
-
-        expanded_variants = self._expand_variants(item.type, variants_data)
-        for variant_data in expanded_variants:
-            ItemVariant.objects.create(item=item, **variant_data)
-
+        variants_data = validated_data.pop('variants', [])
+        
+        item = Item.objects.create(
+            name=validated_data['name'],
+            description=validated_data.get('description', ''),
+            price=validated_data['price'],
+            type=validated_data['type']
+        )
+        
+        for variant_data in variants_data:
+            self._create_variant(item, variant_data)
+        
         return item
 
+    def _create_variant(self, item, variant_data):
+        image_file = variant_data.pop('image', None)
+        
+        variant = ItemVariant.objects.create(
+            item=item,
+            qr_code=uuid.uuid4()
+        )
+        
+        if image_file:
+            self._save_variant_image(variant, image_file)
+        
+        for size_data in variant_data.get('sizes', []):
+            ItemVariantSize.objects.create(
+                item_variant=variant,
+                size=size_data['size'],
+                stock=size_data.get('stock', 0)
+            )
+        
+        return variant
+
+    def _save_variant_image(self, variant, image_file):
+        if image_file and hasattr(image_file, 'name') and hasattr(image_file, 'content_type'):
+            ext = os.path.splitext(image_file.name)[1] or '.jpg'
+            unique_name = f"{uuid.uuid4().hex}{ext}"
+            if variant.image:
+                variant.image.delete(save=False)
+            variant.image.save(unique_name, image_file, save=True)
+
     def update(self, instance, validated_data):
-        variants_data = validated_data.pop("variants", [])
-
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
+        variants_data = validated_data.pop('variants', [])
+        
+        instance.name = validated_data.get('name', instance.name)
+        instance.description = validated_data.get('description', instance.description)
+        instance.price = validated_data.get('price', instance.price)
+        instance.type = validated_data.get('type', instance.type)
         instance.save()
-
-        expanded_variants = self._expand_variants(instance.type, variants_data)
-        incoming_sizes = {v["size"] for v in expanded_variants}
-        existing = {v.size: v for v in instance.variants.all()}
-
-        # Delete removed sizes
-        for size, variant in existing.items():
-            if size not in incoming_sizes:
-                variant.delete()
-
-        # Create or update
-        for variant_data in expanded_variants:
-            size = variant_data["size"]
-            if size in existing:
-                existing[size].stock = variant_data.get("stock", existing[size].stock)
-                existing[size].save()
+        
+        existing_variants = {v.id: v for v in instance.variants.all()}
+        incoming_ids = set()
+        
+        for variant_data in variants_data:
+            variant_id = variant_data.get('id')
+            incoming_ids.add(variant_id)
+            
+            if variant_id and variant_id in existing_variants:
+                variant = existing_variants[variant_id]
+                
+                image_file = variant_data.get('image')
+                if image_file:
+                    self._save_variant_image(variant, image_file)
+                
+                variant.save()
+                self._update_sizes(variant, variant_data.get('sizes', []))
+                del existing_variants[variant_id]
             else:
-                ItemVariant.objects.create(item=instance, **variant_data)
-
+                self._create_variant(instance, variant_data, idx)
+        
+        for variant in existing_variants.values():
+            variant.delete()
+        
         return instance
+
+    def _update_sizes(self, variant, sizes_data):
+        existing_sizes = {s.size: s for s in variant.sizes.all()}
+        incoming_sizes = set()
+        
+        for size_data in sizes_data:
+            size_name = size_data['size']
+            incoming_sizes.add(size_name)
+            
+            if size_name in existing_sizes:
+                existing_sizes[size_name].stock = size_data.get('stock', existing_sizes[size_name].stock)
+                existing_sizes[size_name].save()
+                del existing_sizes[size_name]
+            else:
+                ItemVariantSize.objects.create(
+                    item_variant=variant,
+                    size=size_name,
+                    stock=size_data.get('stock', 0)
+                )
+        
+        for size in existing_sizes.values():
+            size.delete()
+
+
+UpdateItemSerializer = CreateItemSerializer

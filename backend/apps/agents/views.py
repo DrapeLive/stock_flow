@@ -4,7 +4,7 @@ from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.permissions import IsAuthenticated
 from .models import Agent, AgentItem
-from .serializers import AgentSerializer, AgentItemSerializer, ItemSimpleSerializer
+from .serializers import AgentSerializer, AgentItemListSerializer
 from apps.accounts.permissions import IsAdminOrSelfAgent
 from django.shortcuts import get_object_or_404
 from apps.items.models import Item
@@ -26,7 +26,7 @@ class AgentViewSet(ModelViewSet):
 class AgentDetail(APIView):
     def get(self, request, user_id):
         agent = get_object_or_404(Agent, user_id=user_id)
-        serializer = AgentSerializer(agent)
+        serializer = AgentSerializer(agent, context={'request': request})
         return Response(serializer.data)
 
 
@@ -35,9 +35,12 @@ class AgentItemsView(APIView):
 
     def get(self, request, agent_id):
         agent = get_object_or_404(Agent, id=agent_id)
-        items = [ai.item for ai in agent.assigned_items.all()]
-        serializer = ItemSimpleSerializer(items, many=True)
-        return Response(serializer.data)
+        items = [ai.item for ai in agent.assigned_items.select_related('item').prefetch_related('item__variants__sizes').all()]
+        result = [
+            AgentItemListSerializer.from_item(item, request)
+            for item in items
+        ]
+        return Response(result)
 
     def post(self, request, agent_id):
         agent = get_object_or_404(Agent, id=agent_id)
@@ -58,9 +61,12 @@ class AgentItemsView(APIView):
             except Item.DoesNotExist:
                 pass
 
-        items = [ai.item for ai in agent.assigned_items.all()]
-        serializer = ItemSimpleSerializer(items, many=True)
-        return Response(serializer.data)
+        items = [ai.item for ai in agent.assigned_items.select_related('item').prefetch_related('item__variants__sizes').all()]
+        result = [
+            AgentItemListSerializer.from_item(item, request)
+            for item in items
+        ]
+        return Response(result)
 
 
 class AgentItemDetailView(APIView):

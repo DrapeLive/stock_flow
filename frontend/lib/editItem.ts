@@ -16,8 +16,11 @@ export async function updateItem(
     type: common.type,
     ...(common.description && { description: common.description }),
     variants: variants.map((v) => ({
-      size: v.size,
-      stock: v.stock,
+      id: v.backendId || undefined,
+      sizes: [{
+        size: v.size,
+        stock: v.stock,
+      }],
       ...(v.newImage && { image: v.newImage }),
     })),
   };

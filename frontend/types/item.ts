@@ -1,41 +1,48 @@
 export type ItemType = "kids" | "gents";
 export type ItemStatus = "PENDING" | "PACKED" | "DISPATCHED";
 
-export interface ItemVariant {
+export interface ItemVariantSize {
   id: number;
   size: string;
-  qr_code: string;
-  image: string | null;
-  stock: number | null;
-  item: number;
+  stock: number;
 }
 
-export interface ItemVariantRequest {
-  size: string;
-  image?: File | string | null;
-  stock?: number;
+export interface ItemVariant {
+  id: number;
+  qr_code: string;
+  image: string | null;
+  sizes: ItemVariantSize[];
 }
 
 export interface Item {
   id: number;
-  variants: ItemVariant[];
   name: string;
-  description?: string;
-  price: string;
   type?: ItemType;
+  price: string;
+  description?: string;
+  variants: ItemVariant[];
+}
+
+export interface ItemVariantRequest {
+  id?: number;
+  image?: File | string | null;
+  sizes: {
+    size: string;
+    stock?: number;
+  }[];
 }
 
 export interface ItemRequest {
-  variants: ItemVariantRequest[];
   name: string;
   description?: string;
   price: string;
   type?: ItemType;
+  variants: ItemVariantRequest[];
 }
 
 export type ItemAllResponse = Item[];
 export type ItemResponse = Item;
-export type ItemQRResponse = Item;
+export type ItemQRResponse = Item & { matched_variant_id?: number };
 
 export interface CommonDetails {
   name: string;
