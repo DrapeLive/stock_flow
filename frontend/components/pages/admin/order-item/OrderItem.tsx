@@ -1,11 +1,12 @@
 "use client";
-import { AlertDestructive } from "@/components/ui/AlertDestructive";
 import { PageLoading } from "@/components/ui/Loading";
 import { orderApi } from "@/lib/api/order";
+import { toastError } from "@/lib/toast";
 import { OrderItems } from "@/types/order";
 import { Trash, CheckCircle2, Circle } from "lucide-react";
 import Image from "next/image";
 import { useState, useEffect } from "react";
+import { ImagePreview } from "@/components/pages/ImagePreview";
 
 type Props = {
   items: OrderItems | undefined;
@@ -23,7 +24,6 @@ const OrderItem: React.FC<Props> = ({
   onPackedChange,
 }) => {
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [orderItems, setOrderItems] = useState(items);
 
   useEffect(() => {
@@ -36,8 +36,8 @@ const OrderItem: React.FC<Props> = ({
       setLoading(true);
       await orderApi.deleteItem(orderId, itemId);
       setOrderItems((prev) => prev?.filter((item) => item.id !== itemId));
-    } catch {
-      setError("Server Not Found");
+    } catch (err) {
+      toastError("Failed to delete item", err);
     } finally {
       setLoading(false);
     }
@@ -60,7 +60,7 @@ const OrderItem: React.FC<Props> = ({
       if (onPackedChange) onPackedChange();
     } catch (err) {
       console.error("Error updating packed status:", err);
-      setError("Failed to update packed status");
+      toastError("Failed to update packed status", err);
     }
   };
 
@@ -68,7 +68,6 @@ const OrderItem: React.FC<Props> = ({
 
   return (
     <div className="pt-3 space-y-3">
-      {error && <AlertDestructive heading="Error" description={error} />}
       {orderItems?.map((item, index) => {
         const isFullyPacked = (item.packed_quantity ?? 0) >= item.quantity;
         const itemImage = item.item.variants.find(
@@ -117,13 +116,17 @@ const OrderItem: React.FC<Props> = ({
               <div className="flex">
                 <div className="relative w-[50px] h-[50px] flex-shrink-0">
                   {itemImage ? (
-                    <Image
-                      src={itemImage}
-                      fill
-                      alt={item.item.name}
-                      className="rounded-md object-cover border border-gray-100"
-                      unoptimized
-                    />
+                    isDelete || isPacking ? (
+                      <Image
+                        src={itemImage}
+                        fill
+                        alt={item.item.name}
+                        className="rounded-md object-cover border border-gray-100"
+                        unoptimized
+                      />
+                    ) : (
+                      <ImagePreview src={itemImage} alt={item.item.name} />
+                    )
                   ) : (
                     <div className="w-full h-full bg-gray-100 rounded-md border border-gray-100" />
                   )}

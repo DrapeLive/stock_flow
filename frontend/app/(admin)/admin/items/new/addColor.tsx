@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { ArrowLeft, ImagePlus, X } from "lucide-react";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import Image from "next/image";
 import {
   Select,
   SelectContent,
@@ -118,10 +119,12 @@ export default function Step2AddColor({
               style={{ height: variant.imagePreview ? 220 : 120 }}
             >
               {variant.imagePreview ? (
-                <img
+                <Image
                   src={variant.imagePreview}
-                  className="w-full h-full object-cover"
+                  fill
+                  className="object-cover"
                   alt="preview"
+                  unoptimized
                 />
               ) : (
                 <div className="flex flex-col items-center gap-2 py-8">

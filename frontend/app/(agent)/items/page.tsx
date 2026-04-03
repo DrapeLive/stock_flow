@@ -4,7 +4,14 @@ import { useAuth } from "@/context/AuthContext";
 import { agentApi } from "@/lib/api/agents";
 import { AssignedItem } from "@/types/agent";
 import { PageLoading } from "@/components/ui/Loading";
-import { Search, QrCode, ShoppingCart, Package, ChevronDown } from "lucide-react";
+import { ImagePreview } from "@/components/pages/ImagePreview";
+import {
+  Search,
+  QrCode,
+  ShoppingCart,
+  Package,
+  ChevronDown,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Image from "next/image";
@@ -15,7 +22,9 @@ export default function MyItemsPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set());
-  const [expandedVariants, setExpandedVariants] = useState<Set<number>>(new Set());
+  const [expandedVariants, setExpandedVariants] = useState<Set<number>>(
+    new Set(),
+  );
   const router = useRouter();
 
   const toggleItemExpanded = (itemId: number) => {
@@ -140,21 +149,17 @@ export default function MyItemsPage() {
               const firstImage = item.variants[0]?.image;
 
               return (
-                <div key={item.id} className="bg-white border border-gray-100 rounded-2xl overflow-hidden hover:border-primary/30 hover:shadow-md transition-all">
+                <div
+                  key={item.id}
+                  className="bg-white border border-gray-100 rounded-2xl overflow-hidden hover:border-primary/30 hover:shadow-md transition-all"
+                >
                   <div
                     className="flex items-center gap-4 p-4 active:scale-[0.98] transition-all cursor-pointer"
                     onClick={() => toggleItemExpanded(item.id)}
                   >
                     <div className="w-12 h-12 rounded-xl bg-primary/5 flex items-center justify-center border border-primary/10 flex-shrink-0 overflow-hidden">
                       {firstImage ? (
-                        <Image
-                          src={firstImage}
-                          alt={item.name}
-                          width={48}
-                          height={48}
-                          className="rounded-xl object-cover"
-                          unoptimized
-                        />
+                        <ImagePreview src={firstImage} alt={item.name} />
                       ) : (
                         <Package size={20} className="text-primary" />
                       )}
@@ -189,34 +194,35 @@ export default function MyItemsPage() {
 
                   {isItemExpanded && item.variants.length > 0 && (
                     <div className="px-4 pb-4 border-t border-gray-50">
-                      <div className="pt-4 space-y-2">
+                      <div className="pt-4 space-y-8">
                         {item.variants.map((variant, idx) => {
-                          const isVariantExpanded = expandedVariants.has(variant.id);
+                          const isVariantExpanded = expandedVariants.has(
+                            variant.id,
+                          );
 
                           return (
                             <div key={variant.id}>
-                              <div className="flex items-center gap-3 py-3">
-                                {variant.image ? (
-                                  <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-50 border border-gray-100 flex-shrink-0">
-                                    <Image
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-50 border border-gray-100 flex-shrink-0">
+                                  {variant.image ? (
+                                    <ImagePreview
                                       src={variant.image}
                                       alt={`Variant ${idx + 1}`}
-                                      width={40}
-                                      height={40}
-                                      className="object-cover"
-                                      unoptimized
                                     />
-                                  </div>
-                                ) : (
-                                  <div className="w-10 h-10 rounded-lg bg-gray-50 border border-gray-100 flex-shrink-0" />
-                                )}
+                                  ) : (
+                                    <div className="w-full h-full" />
+                                  )}
+                                </div>
 
                                 <div className="flex-1">
                                   <span className="text-sm font-bold text-gray-900">
                                     Variant #{idx + 1}
                                   </span>
                                   <span className="text-[10px] text-gray-400 ml-2">
-                                    {variant.size_ranges.length} size{variant.size_ranges.length !== 1 ? 's' : ''}
+                                    {variant.size_ranges.length} size
+                                    {variant.size_ranges.length !== 1
+                                      ? "s"
+                                      : ""}
                                   </span>
                                 </div>
 
@@ -245,20 +251,26 @@ export default function MyItemsPage() {
                                 </button>
                               </div>
 
-                              {isVariantExpanded && variant.size_ranges.length > 0 && (
-                                <div className="pb-2 space-y-1">
-                                  {variant.size_ranges.map((sr) => (
-                                    <div key={sr.size_range} className="bg-gray-50 rounded-xl px-3 py-2 flex items-center justify-between">
-                                      <span className="text-xs font-bold text-gray-600">
-                                        {sr.size_range}
-                                      </span>
-                                      <span className={`text-xs font-black ${sr.stock > 0 ? "text-green-600" : "text-red-500"}`}>
-                                        {sr.stock} units
-                                      </span>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
+                              {isVariantExpanded &&
+                                variant.size_ranges.length > 0 && (
+                                  <div className="pb-2 space-y-1 mt-1">
+                                    {variant.size_ranges.map((sr) => (
+                                      <div
+                                        key={sr.size_range}
+                                        className="bg-gray-50 rounded-xl px-3 py-2 flex items-center justify-between"
+                                      >
+                                        <span className="text-xs font-bold text-gray-600">
+                                          {sr.size_range}
+                                        </span>
+                                        <span
+                                          className={`text-xs font-black ${sr.stock > 0 ? "text-green-600" : "text-red-500"}`}
+                                        >
+                                          {sr.stock} units
+                                        </span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
                             </div>
                           );
                         })}

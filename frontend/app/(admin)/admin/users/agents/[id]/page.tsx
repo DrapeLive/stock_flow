@@ -7,6 +7,7 @@ import { itemApi } from "@/lib/api/item";
 import { toastSuccess, toastError } from "@/lib/toast";
 import { AgentResponse, AgentUpdateRequest, AssignedItem } from "@/types/agent";
 import { Item } from "@/types/item";
+import Image from "next/image";
 import {
   Field,
   FieldGroup,
@@ -207,7 +208,7 @@ export default function AgentDetailPage() {
                   className="flex items-center gap-2 px-3 py-2 bg-primary/10 rounded-xl border border-primary/20"
                 >
                   {item.variants?.[0]?.image ? (
-                    <img src={item.variants[0].image} alt={item.name} className="w-5 h-5 rounded object-cover" />
+                    <Image src={item.variants[0].image} alt={item.name} width={20} height={20} className="rounded object-cover" unoptimized />
                   ) : (
                     <Package size={14} className="text-primary" />
                   )}

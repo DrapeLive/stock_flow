@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { ImagePlus, Trash2, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import Image from "next/image";
 import CropModal from "../../new/cropModal";
 import type { EditableVariant } from "@/types/item";
 
@@ -64,10 +65,12 @@ export default function EditVariantRow({
         >
           {currentImage ? (
             <>
-              <img
+              <Image
                 src={currentImage}
-                className="w-full h-full object-cover"
+                fill
+                className="object-cover"
                 alt=""
+                unoptimized
               />
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
                 <ImagePlus

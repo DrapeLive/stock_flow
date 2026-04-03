@@ -2,6 +2,7 @@
 
 import { ImagePlus, Pencil, Trash2 } from "lucide-react";
 import type { ColorVariant } from "@/types/item";
+import { ImagePreview } from "@/components/pages/ImagePreview";
 
 interface Props {
   variant: ColorVariant;
@@ -25,9 +26,8 @@ export default function ColorCard({
       {/* Thumbnail */}
       <div className="flex-shrink-0 w-14 h-14 rounded-xl overflow-hidden bg-gray-100 flex items-center justify-center">
         {variant.imagePreview ? (
-          <img
+          <ImagePreview
             src={variant.imagePreview}
-            className="w-full h-full object-cover"
             alt={`Variant ${index}`}
           />
         ) : (

@@ -7,6 +7,7 @@ import { VariantAllItem } from "@/types/item";
 import { Info, Plus, Printer } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import Image from "next/image";
 
 const ListItems: React.FC = () => {
   const { isAuthenticated } = useAuth();
@@ -76,10 +77,12 @@ const ListItems: React.FC = () => {
               {/* Thumbnail */}
               <div className="w-16 h-16 rounded-xl bg-gray-50 overflow-hidden flex-shrink-0 border border-gray-100 shadow-sm">
                 {variant.image ? (
-                  <img
+                  <Image
                     src={variant.image}
                     alt={variant.item_name}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                    fill
+                    className="object-cover group-hover:scale-110 transition-transform duration-300"
+                    unoptimized
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">

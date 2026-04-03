@@ -8,6 +8,12 @@ interface ToastOptions {
 }
 
 interface ApiErrorResponse {
+  response?: {
+    data?: {
+      error?: string;
+      detail?: string;
+    };
+  };
   data?: {
     detail?: string;
     message?: string;
