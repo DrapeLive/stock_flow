@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { adminApi } from "@/lib/api/admin";
+import { toastSuccess, toastError } from "@/lib/toast";
 import { AdminResponse, AdminRequest } from "@/types/admin";
 import {
   Field,
@@ -57,10 +58,11 @@ export default function AdminDetailPage() {
         username: formData.username,
         email: formData.email,
       });
+      toastSuccess("Admin updated successfully");
       router.refresh();
     } catch (error: any) {
       console.error("Error updating admin:", error);
-      setErrors({ submit: "Failed to update admin." });
+      toastError("Failed to update admin", error);
     } finally {
       setSaving(false);
     }
@@ -71,9 +73,11 @@ export default function AdminDetailPage() {
       try {
         const numericId = parseInt(id as string, 10);
         await adminApi.delete(numericId);
+        toastSuccess("Admin deleted successfully");
         router.push("/admin/users/");
       } catch (error) {
         console.error("Error deleting admin:", error);
+        toastError("Failed to delete admin", error);
       }
     }
   };

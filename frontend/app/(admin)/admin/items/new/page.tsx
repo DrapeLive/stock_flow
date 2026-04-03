@@ -8,7 +8,7 @@ import ColorListScreen from "./colorList";
 import { submitItem, parseErrorMessage } from "@/lib/submitItem";
 import type { ColorVariant, CommonDetails, WizardStep } from "@/types/item";
 import { SIZES_BY_TYPE } from "@/types/item";
-import { AlertDestructive } from "@/components/ui/AlertDestructive";
+import { toastError } from "@/lib/toast";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -38,7 +38,6 @@ export default function NewItemPage() {
 
   const [variants, setVariants] = useState<ColorVariant[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [step, setStep] = useState<WizardStep>({ screen: "common" });
   const [draft, setDraft] = useState<ColorVariant | null>(null);
 
@@ -92,15 +91,12 @@ export default function NewItemPage() {
   // ── Submit ────────────────────────────────────────────────────────────────
 
   const handleSubmit = async () => {
-    setError(null);
     setLoading(true);
     try {
       await submitItem(common, variants);
       router.push("/admin/items");
-    } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : parseErrorMessage(err);
-      setError(message);
+    } catch (err) {
+      toastError("Failed to create item", err);
     } finally {
       setLoading(false);
     }
@@ -139,15 +135,6 @@ export default function NewItemPage() {
 
   return (
     <div className="flex flex-col">
-      {/* Error banner — shown above the list screen */}
-      {error && (
-        <div className="px-4 pt-6">
-          <AlertDestructive
-            heading="Failed to create item"
-            description={error}
-          />
-        </div>
-      )}
       <ColorListScreen
         common={common}
         variants={variants}

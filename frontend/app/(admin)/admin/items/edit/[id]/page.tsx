@@ -14,9 +14,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
-import { AlertDestructive } from "@/components/ui/AlertDestructive";
 import { itemApi } from "@/lib/api/item";
 import { updateItem, parseErrorMessage } from "@/lib/updateItem";
+import { toastError } from "@/lib/toast";
 import EditVariantRow from "./editVariantRow";
 import type { EditCommonDetails, EditableVariant } from "@/types/item";
 import type { ItemType } from "@/types/item";
@@ -30,7 +30,6 @@ export default function ItemEditPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const [common, setCommon] = useState<EditCommonDetails>({
     name: "",
@@ -68,7 +67,7 @@ export default function ItemEditPage() {
           ),
         );
       })
-      .catch((e) => setError(parseErrorMessage(e)))
+      .catch((e) => toastError("Failed to load item", e))
       .finally(() => setLoading(false));
   }, [id]);
 
@@ -85,13 +84,12 @@ export default function ItemEditPage() {
   // ── Save ──────────────────────────────────────────────────────────────────
 
   const handleSave = async () => {
-    setError(null);
     setSaving(true);
     try {
       await updateItem(Number(id), common, variants);
       router.push("/admin/items");
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : parseErrorMessage(e));
+      toastError(e instanceof Error ? e.message : parseErrorMessage(e));
     } finally {
       setSaving(false);
     }
@@ -106,7 +104,7 @@ export default function ItemEditPage() {
       await itemApi.delete(Number(id));
       router.push("/admin/items");
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Failed to delete item.");
+      toastError("Failed to delete item", e);
       setDeleting(false);
     }
   };
@@ -166,9 +164,6 @@ export default function ItemEditPage() {
       </div>
 
       <div className="space-y-4">
-        {/* Error */}
-        {error && <AlertDestructive heading="Error" description={error} />}
-
         {/* ── Common Details ── */}
         <div className="bg-gray-50 border border-gray-100 rounded-2xl px-5 py-5 space-y-4">
           <p className="text-[10px] text-gray-400 uppercase tracking-widest">

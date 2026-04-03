@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { customerApi } from "@/lib/api/customer";
 import { agentApi } from "@/lib/api/agents";
+import { toastSuccess, toastError } from "@/lib/toast";
 import { CustomerResponse, CustomerUpdateRequest } from "@/types/customer";
 import {
   Field,
@@ -82,10 +83,11 @@ export default function CustomerDetailPage() {
         agent: parseInt(formData.agent),
       };
       await customerApi.update(numericId, payload);
+      toastSuccess("Customer updated successfully");
       router.refresh();
     } catch (error: any) {
       console.error("Error updating customer:", error);
-      setErrors({ submit: "Failed to update customer." });
+      toastError("Failed to update customer", error);
     } finally {
       setSaving(false);
     }
@@ -96,6 +98,7 @@ export default function CustomerDetailPage() {
       try {
         const numericId = parseInt(id as string, 10);
         await customerApi.delete(numericId);
+        toastSuccess("Customer deleted successfully");
         router.push("/admin/users/");
       } catch (error) {
         console.error("Error deleting customer:", error);

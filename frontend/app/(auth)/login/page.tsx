@@ -5,6 +5,7 @@ import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/context/AuthContext";
 import { authApi } from "@/lib/api";
+import { toastError } from "@/lib/toast";
 import { LogIn, Package } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -15,7 +16,6 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const router = useRouter();
 
@@ -28,7 +28,6 @@ export default function Login() {
 
   const handleLogin = async () => {
     setLoading(true);
-    setError(null);
 
     try {
       const res = await authApi.login({
@@ -38,7 +37,7 @@ export default function Login() {
 
       login(res);
     } catch (err) {
-      setError("Invalid email or password");
+      toastError("Invalid email or password", err);
     } finally {
       setLoading(false);
     }
@@ -81,12 +80,6 @@ export default function Login() {
               onChange={(e) => setPassword(e.target.value)}
             />
           </Field>
-
-          {error && (
-            <p className="text-sm text-red-500 text-center bg-red-50 border border-red-200 rounded-lg py-2 px-3">
-              {error}
-            </p>
-          )}
 
           <StockFlowButton
             variant="filled"

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { adminApi } from "@/lib/api/admin";
+import { toastSuccess, toastError } from "@/lib/toast";
 import {
   Field,
   FieldContent,
@@ -63,10 +64,11 @@ export default function NewAdminPage() {
         email: formData.email,
         password: formData.password,
       });
+      toastSuccess("Admin created successfully");
       router.push("/admin/users/");
     } catch (error: any) {
       console.error("Error creating admin:", error);
-      setErrors({ submit: error.response?.data?.detail || "Failed to create admin. Username or Email might be taken." });
+      toastError("Failed to create admin", error);
     } finally {
       setIsSubmitting(false);
     }
@@ -121,12 +123,6 @@ export default function NewAdminPage() {
               className={`bg-white border-gray-100 rounded-xl h-12 focus:ring-primary/10 ${errors.password ? "border-red-200 focus:border-red-300" : "focus:border-primary"}`}
             />
           </Field>
-
-          {errors.submit && (
-            <div className="p-3 bg-red-50 border border-red-100 rounded-xl text-red-600 text-xs font-bold text-center">
-              {errors.submit}
-            </div>
-          )}
         </FieldGroup>
       </div>
 

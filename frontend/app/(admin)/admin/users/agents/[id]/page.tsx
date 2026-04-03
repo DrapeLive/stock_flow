@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { agentApi } from "@/lib/api/agents";
 import { itemApi } from "@/lib/api/item";
+import { toastSuccess, toastError } from "@/lib/toast";
 import { AgentResponse, AgentUpdateRequest, AssignedItem } from "@/types/agent";
 import { Item } from "@/types/item";
 import {
@@ -73,10 +74,11 @@ export default function AgentDetailPage() {
         contact: formData.contact,
       };
       await agentApi.update(numericId, payload);
+      toastSuccess("Agent details updated");
       router.refresh();
     } catch (error: any) {
       console.error("Error updating agent:", error);
-      setErrors({ submit: "Failed to update agent details." });
+      toastError("Failed to update agent details", error);
     } finally {
       setSaving(false);
     }
@@ -89,10 +91,10 @@ export default function AgentDetailPage() {
       await agentApi.updateItems(numericId, selectedItemIds);
       const updatedAgent = await agentApi.getOne(numericId);
       setAgent(updatedAgent);
-      alert("Items assigned successfully!");
+      toastSuccess("Items assigned successfully");
     } catch (error) {
       console.error("Error saving items:", error);
-      alert("Failed to save item assignments.");
+      toastError("Failed to save item assignments", error);
     } finally {
       setSavingItems(false);
     }

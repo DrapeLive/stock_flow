@@ -1,6 +1,7 @@
 "use client";
 
 import { orderApi } from "@/lib/api/order";
+import { toastError } from "@/lib/toast";
 import { InvoiceResponse } from "@/types/order";
 import { useRouter } from "next/navigation";
 import { useRef, useEffect, useState } from "react";
@@ -35,7 +36,7 @@ export default function InvoicePage() {
 
   const [invoice, setInvoice] = useState<InvoiceResponse | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+  const [fetchError, setFetchError] = useState(false);
 
   // ── Fetch invoice on mount ──
   useEffect(() => {
@@ -47,11 +48,12 @@ export default function InvoicePage() {
           const res = await orderApi.invoiceOrder(Number(key));
           setInvoice(res);
         } else {
-          setError(true);
+          setFetchError(true);
         }
       } catch (e) {
         console.error("Error fetching order details:", e);
-        setError(true);
+        toastError("Failed to load invoice", e);
+        setFetchError(true);
       } finally {
         setLoading(false);
       }
@@ -59,33 +61,6 @@ export default function InvoicePage() {
 
     fetchData();
   }, []);
-
-  // ── WhatsApp share ──
-  const buildWhatsAppMessage = (inv: InvoiceResponse) => {
-    const lines = [
-      `🧾 *Invoice #${inv.id.toString().padStart(4, "0")}*`,
-      `📅 ${formatDate(inv.created_at)}`,
-      `👤 Customer: ${inv.customer.name}`,
-      `🛒 Items:`,
-      ...inv.items.map(
-        (oi) =>
-          `  • ${oi.item.name} (${oi.size_group}) × ${oi.quantity} = ₹${(
-            parseFloat(oi.item.price) * oi.quantity
-          ).toLocaleString("en-IN")}`,
-      ),
-      ``,
-      `💰 *Total: ₹${inv.total_price.toLocaleString("en-IN")}*`,
-      `📦 Status: ${inv.status}`,
-    ];
-    return encodeURIComponent(lines.join("\n"));
-  };
-
-  const handleShareWhatsApp = () => {
-    if (!invoice) return;
-    const text = buildWhatsAppMessage(invoice);
-    window.open(`https://wa.me/?text=${text}`, "_blank");
-    router.push("/");
-  };
 
   // ── Loading state ──
   if (loading) {
@@ -100,7 +75,7 @@ export default function InvoicePage() {
   }
 
   // ── Error / not found state ──
-  if (error || !invoice) {
+  if (!invoice) {
     return (
       <main className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
         <div className="text-center">
@@ -236,11 +211,14 @@ export default function InvoicePage() {
                         : "bg-orange-100 text-orange-600"
                     }`}
                   >
-                    {(oi.packed_quantity ?? 0)}/{oi.quantity}
+                    {oi.packed_quantity ?? 0}/{oi.quantity}
                   </span>
                 </div>
                 <span className="col-span-2 text-right font-semibold text-slate-800">
-                  ₹{(parseFloat(oi.item.price) * oi.quantity).toLocaleString("en-IN")}
+                  ₹
+                  {(parseFloat(oi.item.price) * oi.quantity).toLocaleString(
+                    "en-IN",
+                  )}
                 </span>
               </div>
             ))}

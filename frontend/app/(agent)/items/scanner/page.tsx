@@ -7,6 +7,7 @@ import { Scanner } from "@yudiel/react-qr-scanner";
 import { itemApi } from "@/lib/api/item";
 import { customerApi } from "@/lib/api/customer";
 import { PageLoading } from "@/components/ui/Loading";
+import { toastError } from "@/lib/toast";
 import {
   ArrowLeft,
   QrCode,
@@ -22,7 +23,6 @@ export default function PriceCheckScannerPage() {
   const router = useRouter();
   const [scanResult, setScanResult] = useState<ItemQRResponse | null>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [showCustomerSelect, setShowCustomerSelect] = useState(false);
   const [customers, setCustomers] = useState<CustomerAllResponse>([]);
   const [scanned, setScanned] = useState(false);
@@ -44,14 +44,13 @@ export default function PriceCheckScannerPage() {
 
     setScanned(true);
     setLoading(true);
-    setError(null);
 
     try {
       const result = await itemApi.byqr(data[0].rawValue);
       setScanResult(result);
     } catch (err: any) {
       console.error("Error fetching item:", err);
-      setError(err.response?.data?.error || "Item not found");
+      toastError(err.response?.data?.error || "Item not found", err);
       setScanned(false);
     } finally {
       setLoading(false);
@@ -78,7 +77,6 @@ export default function PriceCheckScannerPage() {
   const handleScanAnother = () => {
     setScanResult(null);
     setScanned(false);
-    setError(null);
   };
 
   if (loading) return <PageLoading />;
@@ -267,25 +265,6 @@ export default function PriceCheckScannerPage() {
           </div>
         </div>
       </div>
-
-      {error && (
-        <div className="max-w-md mx-auto px-6 pt-6">
-          <div className="bg-red-50 border border-red-100 rounded-2xl p-4 mb-4">
-            <p className="text-red-600 text-sm font-bold text-center">
-              {error}
-            </p>
-            <button
-              onClick={() => {
-                setError(null);
-                setScanned(false);
-              }}
-              className="w-full mt-3 text-red-500 text-xs font-bold uppercase tracking-wider"
-            >
-              Try Again
-            </button>
-          </div>
-        </div>
-      )}
 
       <div className="max-w-md mx-auto px-6 pt-4 flex flex-col items-center">
         <div className="relative w-full aspect-square max-w-[280px]">

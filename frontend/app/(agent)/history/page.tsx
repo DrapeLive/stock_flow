@@ -1,8 +1,8 @@
 "use client";
 
-import { AlertDestructive } from "@/components/ui/AlertDestructive";
 import { PageLoading } from "@/components/ui/Loading";
 import { orderApi } from "@/lib/api/order";
+import { toastError } from "@/lib/toast";
 import { OrderAllResponse } from "@/types/order";
 import groupOrders from "@/util/groupOrders";
 import { Filter, Info } from "lucide-react";
@@ -24,7 +24,8 @@ export default function History() {
         const response = await orderApi.getAll();
         setData(response);
       } catch (e) {
-        <AlertDestructive heading="Error" description={"Server Not Found"} />;
+        console.error("Error fetching orders:", e);
+        toastError("Server Not Found", e);
       } finally {
         setLoading(false);
       }

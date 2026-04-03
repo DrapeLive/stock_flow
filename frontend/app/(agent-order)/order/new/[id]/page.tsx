@@ -1,6 +1,7 @@
 "use client";
 import OrderItem from "@/components/pages/admin/order-item/OrderItem";
 import { customerApi } from "@/lib/api/customer";
+import { toastError } from "@/lib/toast";
 import { CustomerResponse } from "@/types/customer";
 import { ChevronLeft, Plus, User, ShoppingBag, Package } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
@@ -8,7 +9,6 @@ import { useEffect, useState } from "react";
 import { orderApi } from "@/lib/api/order";
 import { OrderResponse } from "@/types/order";
 import { PageLoading } from "@/components/ui/Loading";
-import { FailedBox } from "@/components/ui/FailBox";
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 
 export default function OrderDetailsPage() {
@@ -19,7 +19,7 @@ export default function OrderDetailsPage() {
   const [data, setData] = useState<CustomerResponse>();
   const [loading, setLoading] = useState(true);
   const [orders, setOrders] = useState<OrderResponse>();
-  const [error, setError] = useState(false);
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -36,7 +36,7 @@ export default function OrderDetailsPage() {
         }
       } catch (e) {
         console.error("Error fetching order details:", e);
-        setError(true);
+        setLoadError(true);
       } finally {
         setLoading(false);
       }
@@ -45,14 +45,12 @@ export default function OrderDetailsPage() {
     fetchData();
   }, [id]);
 
-  if (error)
-    return (
-      <FailedBox
-        title="Failed"
-        description="Server Error"
-        onClose={() => router.push(`/order/new/`)}
-      />
-    );
+  useEffect(() => {
+    if (loadError) {
+      toastError("Server Error");
+      router.push(`/order/new/`);
+    }
+  }, [loadError, router]);
 
   if (loading) return <PageLoading />;
 

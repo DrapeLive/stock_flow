@@ -1,10 +1,9 @@
 "use client";
-import { AlertDestructive } from "@/components/ui/AlertDestructive";
 import { PageLoading } from "@/components/ui/Loading";
-import { SuccessAlert } from "@/components/ui/SuccessAlert";
 import { useAuth } from "@/context/AuthContext";
 import { agentApi } from "@/lib/api/agents";
 import { authApi } from "@/lib/api/auth";
+import { toastSuccess } from "@/lib/toast";
 import { AgentResponse } from "@/types/agent";
 import { UserProfile } from "@/types/auth";
 import { ChevronRight, LogOut, User, Mail, ShieldCheck, UserCircle, Phone } from "lucide-react";
@@ -17,7 +16,6 @@ export default function Profile() {
   const [data, setData] = useState<AgentResponse>();
   const [profile, setProfile] = useState<UserProfile>();
   const [loading, setLoading] = useState(true);
-  const [success, setSuccess] = useState(false);
 
   const router = useRouter();
 
@@ -44,16 +42,6 @@ export default function Profile() {
   }, [user]);
 
   if (loading) return <PageLoading />;
-
-  if (success) {
-    return (
-      <SuccessAlert
-        title="Success"
-        description="Successfully Logout"
-        onClose={() => router.push("/login")}
-      />
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gray-50/50 py-10 px-6">
@@ -130,7 +118,8 @@ export default function Profile() {
           <button
             onClick={() => {
               logout();
-              setSuccess(true);
+              toastSuccess("Successfully logged out");
+              router.push("/login");
             }}
             className="flex items-center justify-center gap-3 w-full bg-white text-rose-500 font-black py-4 rounded-3xl border border-rose-100 shadow-md hover:bg-rose-50 transition-all transform active:scale-95"
           >

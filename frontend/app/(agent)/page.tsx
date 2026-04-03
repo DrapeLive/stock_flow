@@ -3,18 +3,18 @@
 import { Filter, Info } from "lucide-react";
 import { useEffect, useState } from "react";
 import { orderApi } from "@/lib/api/order";
+import { toastError } from "@/lib/toast";
 import { OrderAllResponse } from "@/types/order";
 import Image from "next/image";
 import groupOrders from "@/util/groupOrders";
 import { PageLoading } from "@/components/ui/Loading";
-import { FailedBox } from "@/components/ui/FailBox";
 import { useRouter } from "next/navigation";
 import StatusBadge from "@/components/ui/custom/StatusBadge";
 
 export default function Home() {
   const [data, setData] = useState<OrderAllResponse>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+  const [loadError, setLoadError] = useState(false);
 
   const router = useRouter();
 
@@ -25,8 +25,10 @@ export default function Home() {
       try {
         const response = await orderApi.getAll();
         setData(response);
-      } catch {
-        setError(true);
+      } catch (e) {
+        console.error("Error fetching orders:", e);
+        toastError("Failed to fetch orders", e);
+        setLoadError(true);
       } finally {
         setLoading(false);
       }
@@ -38,15 +40,8 @@ export default function Home() {
   const { pendingPacked } = groupOrders(data ?? []);
   const order_len = pendingPacked.length;
 
-  if (error)
-    return (
-      <FailedBox
-        title="failed"
-        description="Failed to Fetch"
-        onClose={() => router.push("/")}
-      />
-    );
   if (loading) return <PageLoading />;
+  if (loadError) router.push("/");
   if (order_len === 0)
     return (
       <div className="flex flex-col items-center justify-center py-20 text-gray-300">

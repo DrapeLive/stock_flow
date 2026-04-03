@@ -10,6 +10,7 @@ import {
 import { Input } from "@/components/ui/input";
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 import { agentApi } from "@/lib/api/agents";
+import { toastSuccess, toastError } from "@/lib/toast";
 import { useRouter } from "next/navigation";
 
 export default function NewAgentPage() {
@@ -70,10 +71,11 @@ export default function NewAgentPage() {
         password: formData.password,
       };
       const newAgent = await agentApi.create(payload);
+      toastSuccess("Agent created successfully");
       router.push(`/admin/users/agents/${newAgent.id}`);
     } catch (error: any) {
       console.error("Error creating agent:", error);
-      setErrors({ submit: error.response?.data?.detail || "Failed to create agent. Username or Email might be taken." });
+      toastError("Failed to create agent", error);
     } finally {
       setIsSubmitting(false);
     }
@@ -141,12 +143,6 @@ export default function NewAgentPage() {
               className={`bg-white border-gray-100 rounded-xl h-12 focus:ring-primary/10 ${errors.contactNumber ? "border-red-200 focus:border-red-300" : "focus:border-primary"}`}
             />
           </Field>
-
-          {errors.submit && (
-            <div className="p-3 bg-red-50 border border-red-100 rounded-xl text-red-600 text-xs font-bold text-center">
-              {errors.submit}
-            </div>
-          )}
         </FieldGroup>
       </div>
 

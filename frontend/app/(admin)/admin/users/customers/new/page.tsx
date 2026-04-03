@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import StockFlowSelect from "@/components/ui/custom/stockFlowSelect";
 import { agentApi } from "@/lib/api/agents";
 import { customerApi } from "@/lib/api/customer";
+import { toastSuccess, toastError } from "@/lib/toast";
 import { CustomerCreateRequest } from "@/types/customer";
 import {
   Field,
@@ -92,10 +93,11 @@ export default function NewCustomerPage() {
         agent: parseInt(formData.agent),
       };
       await customerApi.create(payload);
+      toastSuccess("Customer created successfully");
       router.push("/admin/users/");
     } catch (error: any) {
       console.error("Error creating customer:", error);
-      setErrors({ submit: error.response?.data?.detail || "Failed to create customer. Please try again." });
+      toastError("Failed to create customer", error);
     } finally {
       setIsSubmitting(false);
     }
@@ -163,12 +165,6 @@ export default function NewCustomerPage() {
               className={`bg-white border-gray-100 rounded-xl h-12 focus:ring-primary/10 ${errors.contactNumber ? "border-red-200 focus:border-red-300" : "focus:border-primary"}`}
             />
           </Field>
-
-          {errors.submit && (
-            <div className="p-3 bg-red-50 border border-red-100 rounded-xl text-red-600 text-xs font-bold text-center">
-              {errors.submit}
-            </div>
-          )}
         </FieldGroup>
       </div>
 

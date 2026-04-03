@@ -8,8 +8,7 @@ import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 import { itemApi } from "@/lib/api/item";
 import { orderApi } from "@/lib/api/order";
 import { PageLoading } from "@/components/ui/Loading";
-import { SuccessAlert } from "@/components/ui/SuccessAlert";
-import { FailedBox } from "@/components/ui/FailBox";
+import { toastSuccess, toastError } from "@/lib/toast";
 import type {
   ItemQRResponse,
   ItemVariant,
@@ -47,8 +46,7 @@ export default function ProductDetailPage() {
     null,
   );
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [error, setError] = useState(false);
+  const [loadingError, setLoadingError] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -58,11 +56,15 @@ export default function ProductDetailPage() {
         const response = await itemApi.byqr(params.qr);
         setData(response);
         if (response.variants?.length > 0) {
-          setSelectedVariant(response.variants[0]);
+          setSelectedVariant(
+            response.variants.find(
+              (v) => v.id === (response.matched_variant_id || 0),
+            ) || response.variants[0],
+          );
         }
       } catch (e) {
         console.error("Error fetching product details:", e);
-        setError(true);
+        setLoadingError(true);
       } finally {
         setLoading(false);
       }
@@ -99,7 +101,8 @@ export default function ProductDetailPage() {
           quantity: quantity,
           size_group: selectedSizeGroup,
         });
-        setSuccess(true);
+        toastSuccess("Item Added Successfully");
+        router.push(`/order/new/${id}`);
       } else {
         setValidationError(
           "Order session not found. Please restart the order.",
@@ -107,31 +110,13 @@ export default function ProductDetailPage() {
       }
     } catch (e) {
       console.error("Error adding item to order:", e);
-      setError(true);
+      toastError("Failed to add item", e);
     } finally {
       setLoading(false);
     }
   };
 
   if (loading) return <PageLoading />;
-
-  if (success)
-    return (
-      <SuccessAlert
-        title="Success"
-        description="Item Added Successfully"
-        onClose={() => router.push(`/order/new/${id}`)}
-      />
-    );
-
-  if (error)
-    return (
-      <FailedBox
-        title="Failed"
-        description="Server Error"
-        onClose={() => router.push(`/order/new/${id}/scanner`)}
-      />
-    );
 
   return (
     <div className="min-h-screen bg-gray-50/50 pb-32">
