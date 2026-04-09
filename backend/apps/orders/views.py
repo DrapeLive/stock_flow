@@ -119,6 +119,10 @@ class AddOrderItemView(APIView):
                 item=item,
                 variant=variant,
                 size_group=size_group,
+                item_name=serializer.validated_data["item_name"],
+                item_price=serializer.validated_data["item_price"],
+                variant_image=serializer.validated_data.get("variant_image"),
+                size=serializer.validated_data.get("size", ""),
                 quantity=qty
             )
 
@@ -142,18 +146,19 @@ class DeleteOrderItemView(APIView):
             order=order
         )
 
-        item_type = order_item.item.type
-        required_sizes = SIZE_MAPPING[item_type][order_item.size_group]
+        if order_item.item is not None and not order_item.item.is_deleted:
+            item_type = order_item.item.type
+            required_sizes = SIZE_MAPPING[item_type][order_item.size_group]
 
-        with transaction.atomic():
+            with transaction.atomic():
 
-            for size in required_sizes:
-                ItemVariantSize.objects.filter(
-                    item_variant=order_item.variant,
-                    size=size
-                ).update(stock=F('stock') + order_item.quantity)
+                for size in required_sizes:
+                    ItemVariantSize.objects.filter(
+                        item_variant=order_item.variant,
+                        size=size
+                    ).update(stock=F('stock') + order_item.quantity)
 
-            order_item.delete()
+        order_item.delete()
 
         return Response(
             {"message": "Item Deleted Successfully"}

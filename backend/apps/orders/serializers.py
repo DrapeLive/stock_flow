@@ -32,13 +32,30 @@ class SimpleAgentSerializer(serializers.ModelSerializer):
 
 class OrderItemSerializer(serializers.ModelSerializer):
 
-    item = ItemSerializer(read_only=True)
-    # variant = ItemVariantSerializer(read_only=True)
+    item_name_display = serializers.CharField(source="item_name", read_only=True)
+    item_price_display = serializers.DecimalField(source="item_price", max_digits=10, decimal_places=2, read_only=True)
+    variant_image_display = serializers.URLField(source="variant_image", read_only=True)
+    size_display = serializers.CharField(source="size", read_only=True)
 
     class Meta:
         model = OrderItem
-        fields = "__all__"
-        read_only_fields = ("order",)
+        fields = [
+            "id",
+            "item",
+            "variant",
+            "size_group",
+            "item_name",
+            "item_name_display",
+            "item_price",
+            "item_price_display",
+            "variant_image",
+            "variant_image_display",
+            "size",
+            "size_display",
+            "quantity",
+            "packed_quantity",
+        ]
+        read_only_fields = ("order", "item_name", "item_price", "variant_image", "size")
 
 
 class OrderSerializer(serializers.ModelSerializer):
@@ -75,6 +92,7 @@ class AddOrderItemSerializer(serializers.Serializer):
     qr_code = serializers.UUIDField()
     quantity = serializers.IntegerField()
     size_group = serializers.CharField()
+    size = serializers.CharField(required=False, default="")
 
     def validate(self, attrs):
 
@@ -83,8 +101,20 @@ class AddOrderItemSerializer(serializers.Serializer):
         except ItemVariant.DoesNotExist:
             raise serializers.ValidationError("Invalid QR Code")
 
+        if variant.item.is_deleted:
+            raise serializers.ValidationError("This item has been deleted")
+
         attrs["variant"] = variant
         attrs["item"] = variant.item
+
+        request = self.context.get("request")
+        if request and hasattr(variant.image, "url"):
+            attrs["variant_image"] = request.build_absolute_uri(variant.image.url)
+        else:
+            attrs["variant_image"] = None
+
+        attrs["item_name"] = variant.item.name
+        attrs["item_price"] = variant.item.price
 
         return attrs
 
@@ -115,6 +145,6 @@ class InvoiceSerializer(serializers.ModelSerializer):
         total = 0
 
         for item in obj.items.all():
-            total += item.item.price * item.quantity
+            total += float(item.item_price) * item.quantity
 
         return total
