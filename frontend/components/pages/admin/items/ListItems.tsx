@@ -3,26 +3,30 @@
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 import { useAuth } from "@/context/AuthContext";
 import { itemApi } from "@/lib/api/item";
-import { VariantAllItem } from "@/types/item";
-import { Info, Plus, Printer } from "lucide-react";
+import { ItemStockEntry } from "@/types/item";
+import { ChevronDown, ChevronRight, Eye, Info, Plus, Printer } from "lucide-react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import Image from "next/image";
 
 const ListItems: React.FC = () => {
   const { isAuthenticated } = useAuth();
-  const [data, setData] = useState<VariantAllItem[]>([]);
+  const [data, setData] = useState<ItemStockEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [expandedId, setExpandedId] = useState<number | null>(null);
   const router = useRouter();
 
   useEffect(() => {
-    setLoading(true);
     itemApi
-      .getAllVariants()
+      .getStockList()
       .then(setData)
-      .catch((e) => console.error("Error fetching variants:", e))
+      .catch((e) => console.error("Error fetching items:", e))
       .finally(() => setLoading(false));
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated]);
+
+  const toggleExpand = (id: number) => {
+    setExpandedId(expandedId === id ? null : id);
+  };
 
   if (loading) {
     return <h2 className="flex justify-center">Loading</h2>;
@@ -31,7 +35,7 @@ const ListItems: React.FC = () => {
   if (data.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4">
-        <h2 className="text-xl font-bold text-gray-400">No Variants</h2>
+        <h2 className="text-xl font-bold text-gray-400">No Items</h2>
         <StockFlowButton
           text="Add Item"
           icon={<Plus className="size-4" />}
@@ -50,7 +54,7 @@ const ListItems: React.FC = () => {
           <h1 className="text-2xl font-extrabold text-gray-900">Inventory</h1>
           <div className="flex gap-2 items-center mt-1">
             <span className="text-gray-400 text-xs font-bold uppercase tracking-wider">
-              Total Variants
+              Total Items
             </span>
             <div className="bg-primary/10 text-primary rounded-full py-0.5 px-3 border border-primary/20">
               <span className="font-bold text-xs">{data.length}</span>
@@ -67,100 +71,152 @@ const ListItems: React.FC = () => {
 
       {/* List */}
       <div className="px-4 space-y-2">
-        {data.map((variant) => {
+        {data.map((item) => {
+          const isExpanded = expandedId === item.id;
+          const variantCount = item.variants.length;
+
           return (
-            <div
-              key={variant.id}
-              className="flex items-center gap-4 bg-white border border-gray-100 p-3 hover:border-primary/30 hover:shadow-md transition-all rounded-2xl group cursor-pointer"
-              onClick={() =>
-                router.push(`/admin/items/edit/${variant.item_id}`)
-              }
-            >
-              {/* Thumbnail */}
-              <div className="relative w-16 h-16 rounded-xl bg-gray-50 overflow-hidden flex-shrink-0 border border-gray-100 shadow-sm">
-                {variant.image ? (
-                  <Image
-                    src={variant.image}
-                    alt={variant.item_name}
-                    fill
-                    className="object-cover group-hover:scale-110 transition-transform duration-300"
-                    unoptimized
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <Info className="size-6 text-gray-300 opacity-40" />
+            <div key={item.id} className="space-y-1">
+              {/* Main row */}
+              <div
+                className="flex items-center gap-3 bg-white border border-gray-100 p-3 hover:border-primary/30 hover:shadow-md transition-all rounded-2xl cursor-pointer"
+                onClick={() => toggleExpand(item.id)}
+              >
+                {/* Thumbnail */}
+                <div className="relative w-14 h-14 rounded-xl bg-gray-50 overflow-hidden flex-shrink-0 border border-gray-100 shadow-sm">
+                  {item.image ? (
+                    <Image
+                      src={item.image}
+                      alt={item.name}
+                      fill
+                      className="object-cover"
+                      unoptimized
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <Info className="size-5 text-gray-300 opacity-40" />
+                    </div>
+                  )}
+                </div>
+
+                {/* Details */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h6 className="font-bold text-gray-900 text-base truncate leading-tight">
+                      {item.name}
+                    </h6>
+                    {item.type && (
+                      <span className="text-[9px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-md uppercase font-bold tracking-tighter border border-gray-200 flex-shrink-0">
+                        {item.type}
+                      </span>
+                    )}
                   </div>
-                )}
-              </div>
 
-              {/* Details */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <h6 className="font-bold text-gray-900 text-base truncate leading-tight">
-                    {variant.item_name}
-                  </h6>
-                  {variant.item_type && (
-                    <span className="text-[9px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-md uppercase font-bold tracking-tighter border border-gray-200 flex-shrink-0">
-                      {variant.item_type}
-                    </span>
-                  )}
+                  <p className="text-xs text-gray-400 mt-1 leading-tight font-medium">
+                    {variantCount} variant{variantCount !== 1 ? "s" : ""}
+                  </p>
                 </div>
 
-                <p className="text-xs text-gray-400 truncate mt-1 leading-tight font-medium">
-                  QR: {variant.qr_code || "N/A"}
-                </p>
-
-                {/* Size chips */}
-                <div className="flex -space-x-1.5 overflow-hidden mt-2">
-                  {variant.unique_sizes.slice(0, 3).map((size, i) => (
-                    <div
-                      key={i}
-                      className="inline-flex items-center justify-center h-5 px-1.5 rounded-md bg-gray-50 border border-white text-[9px] font-bold text-gray-400 shadow-sm"
-                    >
-                      {size}
-                    </div>
-                  ))}
-                  {variant.unique_sizes.length > 3 && (
-                    <div className="inline-flex items-center justify-center h-5 px-1.5 rounded-md bg-gray-50 border border-white text-[9px] font-bold text-gray-300">
-                      +{variant.unique_sizes.length - 3}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Stock */}
-              <div className="flex flex-col items-end justify-center px-4 border-l border-gray-50">
-                <span className="text-[10px] text-gray-300 font-bold uppercase tracking-widest leading-none mb-1">
-                  Stock
-                </span>
-                <span
-                  className={`text-lg font-black leading-none ${
-                    variant.total_stock < 10
-                      ? "text-amber-500"
-                      : "text-gray-900"
-                  }`}
-                >
-                  {variant.total_stock}
-                </span>
-              </div>
-
-              {/* Print QR */}
-              {variant.qr_code && (
-                <div className="flex items-center gap-1 pl-2">
+                {/* Actions */}
+                <div className="flex items-center gap-1">
+                  {/* Eye - Edit button */}
                   <button
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      window.open(
-                        "/admin/items/qr/" + variant.qr_code,
-                        "_blank",
-                      );
+                      router.push(`/admin/items/edit/${item.id}`);
                     }}
-                    className="p-2 text-gray-300 hover:text-primary hover:bg-primary/5 rounded-xl transition-all border border-transparent hover:border-primary/10"
-                    title="Print QR"
+                    className="p-2.5 bg-gray-100 text-gray-500 hover:bg-primary hover:text-white rounded-xl transition-all"
+                    title="Edit Item"
+                  >
+                    <Eye className="size-5" />
+                  </button>
+
+                  {/* Print button */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      window.open(`/admin/items/qr-print/${item.id}`, "_blank");
+                    }}
+                    className="p-2.5 bg-gray-100 text-gray-500 hover:bg-primary hover:text-white rounded-xl transition-all"
+                    title="Print All QR Codes"
                   >
                     <Printer className="size-5" />
                   </button>
+
+                  {/* Expand/Collapse */}
+                  {isExpanded ? (
+                    <div className="p-2.5 bg-gray-100 rounded-xl">
+                      <ChevronDown className="size-5 text-gray-500" />
+                    </div>
+                  ) : (
+                    <div className="p-2.5 bg-gray-100 rounded-xl">
+                      <ChevronRight className="size-5 text-gray-500" />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Expanded variants */}
+              {isExpanded && (
+                <div className="pl-4 space-y-1">
+                  {item.variants.map((variant, index) => (
+                    <div
+                      key={variant.id}
+                      className="flex items-center gap-3 bg-gray-50/70 border border-gray-100 p-3 rounded-xl"
+                    >
+                      {/* Variant image */}
+                      <div className="relative w-12 h-12 rounded-lg bg-white overflow-hidden flex-shrink-0 border border-gray-200 shadow-sm">
+                        {variant.image ? (
+                          <Image
+                            src={variant.image}
+                            alt={`Variant ${index + 1}`}
+                            fill
+                            className="object-cover"
+                            unoptimized
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <Printer className="size-4 text-gray-300" />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Variant details */}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-gray-700 truncate">
+                          Variant #{index + 1}
+                        </p>
+                        <p className="text-xs text-gray-400">
+                          {variant.sizes.map((s) => s.size).join(", ")} • QR: {variant.qr_code?.slice(0, 8) || "N/A"}...
+                        </p>
+                      </div>
+
+                      {/* Stock */}
+                      <div className="text-right pr-2">
+                        <span className="text-sm font-bold text-gray-700">
+                          {variant.total_stock}
+                        </span>
+                        <span className="text-xs text-gray-400 block">in stock</span>
+                      </div>
+
+                      {/* Print button */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (variant.qr_code) {
+                            window.open(`/admin/items/qr/${variant.qr_code}`, "_blank");
+                          }
+                        }}
+                        disabled={!variant.qr_code}
+                        className="p-2.5 bg-primary text-white hover:bg-primary/90 rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                        title="Print QR"
+                      >
+                        <Printer className="size-4" />
+                      </button>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>

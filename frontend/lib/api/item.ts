@@ -4,6 +4,7 @@ import type {
   ItemRequest,
   ItemQRResponse,
   VariantAllResponse,
+  ItemStockEntry,
 } from "@/types/item";
 import { api } from "./axios";
 
@@ -14,6 +15,10 @@ export const itemApi = {
 
   getAllVariants(): Promise<VariantAllResponse> {
     return api.get<VariantAllResponse>("/api/items/variants/all/").then((r) => r.data);
+  },
+
+  getStockList(): Promise<ItemStockEntry[]> {
+    return api.get<ItemStockEntry[]>("/api/items/stock-list/").then((r) => r.data);
   },
 
   getOne(id: number): Promise<ItemResponse> {

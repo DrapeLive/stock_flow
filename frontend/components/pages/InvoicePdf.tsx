@@ -93,12 +93,12 @@ export const InvoicePDF = ({ invoice }: { invoice: InvoiceResponse }) => (
         {/* Data Rows */}
         {invoice.items.map((item) => (
           <View key={item.id} style={styles.row}>
-            <Text style={styles.col1}>{item.item.name}</Text>
+            <Text style={styles.col1}>{item.item_name}</Text>
             <Text style={styles.col2}>{item.size_group}</Text>
-            <Text style={styles.col3}>{item.item.price}</Text>
+            <Text style={styles.col3}>{item.item_price}</Text>
             <Text style={styles.col4}>{item.quantity}</Text>
             <Text style={styles.col5}>
-              <IndianRupee /> {parseFloat(item.item.price) * item.quantity}
+              <IndianRupee /> {parseFloat(String(item.item_price)) * item.quantity}
             </Text>
           </View>
         ))}

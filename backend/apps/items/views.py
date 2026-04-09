@@ -1,3 +1,4 @@
+import os
 from rest_framework.viewsets import ModelViewSet
 from .models import Item, ItemVariant, ItemVariantSize
 from .serializers import ItemSerializer, ItemVariantSerializer, CreateItemSerializer, UpdateItemSerializer
@@ -7,6 +8,7 @@ from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from rest_framework.decorators import action
 from rest_framework import status
+from apps.orders.models import OrderItem
 
 
 class ItemViewSet(ModelViewSet):
@@ -30,9 +32,45 @@ class ItemViewSet(ModelViewSet):
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
+
+        for variant in instance.variants.all():
+            if variant.image:
+                is_referenced = OrderItem.objects.filter(variant=variant).exists()
+                if not is_referenced:
+                    if variant.image.path and os.path.exists(variant.image.path):
+                        os.remove(variant.image.path)
+
         instance.is_deleted = True
         instance.save()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=False, methods=["get"], url_path="stock-list")
+    def get_stock_list(self, request):
+        items = Item.objects.prefetch_related("variants__sizes").filter(is_deleted=False)
+
+        result = []
+        for item in items:
+            variants = []
+            for variant in item.variants.all():
+                sizes = [{"size": s.size, "stock": s.stock} for s in variant.sizes.all()]
+                variants.append({
+                    "id": variant.id,
+                    "qr_code": str(variant.qr_code) if variant.qr_code else None,
+                    "image": request.build_absolute_uri(variant.image.url) if variant.image else None,
+                    "sizes": sizes,
+                    "total_stock": sum(s.stock for s in variant.sizes.all()),
+                })
+
+            result.append({
+                "id": item.id,
+                "name": item.name,
+                "type": item.type,
+                "price": str(item.price),
+                "image": request.build_absolute_uri(item.variants.first().image.url) if item.variants.exists() and item.variants.first().image else None,
+                "variants": variants,
+            })
+
+        return Response(result)
 
     @action(detail=False, methods=["get"], url_path="by-qr")
     def get_by_qr(self, request):

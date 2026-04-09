@@ -64,6 +64,23 @@ export interface VariantAllItem {
 
 export type VariantAllResponse = VariantAllItem[];
 
+export interface ItemVariantQR {
+  id: number;
+  qr_code: string | null;
+  image: string | null;
+  sizes: VariantSize[];
+  total_stock: number;
+}
+
+export interface ItemStockEntry {
+  id: number;
+  name: string;
+  type: ItemType;
+  price: string;
+  image: string | null;
+  variants: ItemVariantQR[];
+}
+
 export interface CommonDetails {
   name: string;
   description: string;

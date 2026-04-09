@@ -74,11 +74,11 @@ export default function History() {
               onClick={() => router.push(`/admin/order/status/${order.id}`)}
             >
               <div className="relative w-16 h-16 flex-shrink-0">
-                {previewImages[0]?.item.variants[0]?.image && (
+                {previewImages[0]?.variant_image && (
                   <div className="absolute left-0 z-30 rotate-0">
                     <Image
-                      src={previewImages[0].item.variants[0].image}
-                      alt={previewImages[0].item.name}
+                      src={previewImages[0].variant_image}
+                      alt={previewImages[0].item_name}
                       width={56}
                       height={56}
                       className="rounded-xl object-cover border-2 border-white shadow-sm bg-white"
@@ -86,11 +86,11 @@ export default function History() {
                     />
                   </div>
                 )}
-                {previewImages[1]?.item.variants[0]?.image && (
+                {previewImages[1]?.variant_image && (
                   <div className="absolute left-0 z-20 rotate-10 scale-95 opacity-80">
                     <Image
-                      src={previewImages[1].item.variants[0].image}
-                      alt={previewImages[1].item.name}
+                      src={previewImages[1].variant_image}
+                      alt={previewImages[1].item_name}
                       width={56}
                       height={56}
                       className="rounded-xl object-cover border-2 border-white shadow-sm bg-white"
@@ -98,11 +98,11 @@ export default function History() {
                     />
                   </div>
                 )}
-                {previewImages[2]?.item.variants[0]?.image && (
+                {previewImages[2]?.variant_image && (
                   <div className="absolute left-0 z-10 rotate-20 scale-90 opacity-60">
                     <Image
-                      src={previewImages[2].item.variants[0].image}
-                      alt={previewImages[2].item.name}
+                      src={previewImages[2].variant_image}
+                      alt={previewImages[2].item_name}
                       width={56}
                       height={56}
                       className="rounded-xl object-cover border-2 border-white shadow-sm bg-white"
@@ -121,7 +121,7 @@ export default function History() {
                 <p className="text-xs text-gray-400 font-medium truncate">
                   {order.items.map((item, i) => (
                     <span key={item.id}>
-                      {item.item.name}{i < order.items.length - 1 ? ", " : ""}
+                      {item.item_name}{i < order.items.length - 1 ? ", " : ""}
                     </span>
                   ))}
                 </p>

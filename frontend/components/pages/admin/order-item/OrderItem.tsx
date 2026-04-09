@@ -70,9 +70,6 @@ const OrderItem: React.FC<Props> = ({
     <div className="pt-3 space-y-3">
       {orderItems?.map((item, index) => {
         const isFullyPacked = (item.packed_quantity ?? 0) >= item.quantity;
-        const itemImage = item.item.variants.find(
-          (v) => v.id === item.variant,
-        )?.image;
 
         return (
           <div
@@ -115,17 +112,17 @@ const OrderItem: React.FC<Props> = ({
             >
               <div className="flex">
                 <div className="relative w-[50px] h-[50px] flex-shrink-0">
-                  {itemImage ? (
+                  {item.variant_image ? (
                     isDelete || isPacking ? (
                       <Image
-                        src={itemImage}
+                        src={item.variant_image}
                         fill
-                        alt={item.item.name}
+                        alt={item.item_name}
                         className="rounded-md object-cover border border-gray-100"
                         unoptimized
                       />
                     ) : (
-                      <ImagePreview src={itemImage} alt={item.item.name} />
+                      <ImagePreview src={item.variant_image} alt={item.item_name} />
                     )
                   ) : (
                     <div className="w-full h-full bg-gray-100 rounded-md border border-gray-100" />
@@ -135,7 +132,7 @@ const OrderItem: React.FC<Props> = ({
                   <h6
                     className={`font-semibold text-sm ${isFullyPacked ? "line-through text-gray-400" : "text-gray-900"}`}
                   >
-                    {item.item.name}
+                    {item.item_name}
                   </h6>
                 </div>
               </div>
