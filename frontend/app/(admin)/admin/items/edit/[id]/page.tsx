@@ -154,7 +154,7 @@ export default function ItemEditPage() {
 
       {/* Avatar */}
       <div className="flex flex-col items-center mb-8">
-        <div className="w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center mb-3 overflow-hidden">
+        <div className="relative w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center mb-3 overflow-hidden">
           {variants[0]?.imageUrl ? (
             <Image src={variants[0].imageUrl} alt={common.name} fill className="object-cover" unoptimized />
           ) : (

@@ -80,7 +80,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     Cookies.remove(COOKIE_KEYS.refresh);
     Cookies.remove(COOKIE_KEYS.role);
 
-    router.push("/");
+    router.push("/login");
   }, [router]);
 
   useEffect(() => {

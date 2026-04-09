@@ -72,10 +72,12 @@ const ListItems: React.FC = () => {
             <div
               key={variant.id}
               className="flex items-center gap-4 bg-white border border-gray-100 p-3 hover:border-primary/30 hover:shadow-md transition-all rounded-2xl group cursor-pointer"
-              onClick={() => router.push(`/admin/items/edit/${variant.item_id}`)}
+              onClick={() =>
+                router.push(`/admin/items/edit/${variant.item_id}`)
+              }
             >
               {/* Thumbnail */}
-              <div className="w-16 h-16 rounded-xl bg-gray-50 overflow-hidden flex-shrink-0 border border-gray-100 shadow-sm">
+              <div className="relative w-16 h-16 rounded-xl bg-gray-50 overflow-hidden flex-shrink-0 border border-gray-100 shadow-sm">
                 {variant.image ? (
                   <Image
                     src={variant.image}
@@ -133,7 +135,9 @@ const ListItems: React.FC = () => {
                 </span>
                 <span
                   className={`text-lg font-black leading-none ${
-                    variant.total_stock < 10 ? "text-amber-500" : "text-gray-900"
+                    variant.total_stock < 10
+                      ? "text-amber-500"
+                      : "text-gray-900"
                   }`}
                 >
                   {variant.total_stock}
@@ -147,7 +151,10 @@ const ListItems: React.FC = () => {
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      window.open("/admin/items/qr/" + variant.qr_code, "_blank");
+                      window.open(
+                        "/admin/items/qr/" + variant.qr_code,
+                        "_blank",
+                      );
                     }}
                     className="p-2 text-gray-300 hover:text-primary hover:bg-primary/5 rounded-xl transition-all border border-transparent hover:border-primary/10"
                     title="Print QR"

@@ -115,7 +115,7 @@ export default function Step2AddColor({
             <button
               type="button"
               onClick={() => fileRef.current?.click()}
-              className="w-full rounded-2xl border-2 border-dashed border-gray-200 overflow-hidden flex items-center justify-center transition-colors hover:border-primary hover:bg-primary/5"
+              className="relative w-full rounded-2xl border-2 border-dashed border-gray-200 overflow-hidden flex items-center justify-center transition-colors hover:border-primary hover:bg-primary/5"
               style={{ height: variant.imagePreview ? 220 : 120 }}
             >
               {variant.imagePreview ? (

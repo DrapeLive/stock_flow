@@ -41,7 +41,7 @@ export default function Home() {
   const order_len = pendingPacked.length;
 
   if (loading) return <PageLoading />;
-  if (loadError) router.push("/");
+  if (loadError) router.push("/login");
   if (order_len === 0)
     return (
       <div className="flex flex-col items-center justify-center py-20 text-gray-300">
