@@ -18,12 +18,21 @@ class ItemViewSet(ModelViewSet):
             return [IsAdmin()]
         return [IsAuthenticated()]
 
+    def get_queryset(self):
+        return Item.objects.prefetch_related("variants__sizes").filter(is_deleted=False)
+
     def get_serializer_class(self):
         if self.action == 'create':
             return CreateItemSerializer
         if self.action in ['update', 'partial_update']:
             return UpdateItemSerializer
         return ItemSerializer
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.is_deleted = True
+        instance.save()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=False, methods=["get"], url_path="by-qr")
     def get_by_qr(self, request):
@@ -33,7 +42,7 @@ class ItemViewSet(ModelViewSet):
             return Response({"error": "qr_code query parameter is required"}, status=400)
 
         try:
-            variant = ItemVariant.objects.select_related('item').prefetch_related('sizes').get(qr_code=qr_code)
+            variant = ItemVariant.objects.select_related('item').prefetch_related('sizes').get(qr_code=qr_code, item__is_deleted=False)
         except ItemVariant.DoesNotExist:
             return Response({"error": "Variant not found"}, status=404)
 
@@ -69,7 +78,7 @@ class ItemViewSet(ModelViewSet):
 
 
 class ItemVariantViewSet(ModelViewSet):
-    queryset = ItemVariant.objects.prefetch_related('sizes').all()
+    queryset = ItemVariant.objects.prefetch_related('sizes').filter(item__is_deleted=False).all()
     serializer_class = ItemVariantSerializer
 
     def get_permissions(self):
@@ -79,7 +88,7 @@ class ItemVariantViewSet(ModelViewSet):
 
     @action(detail=False, methods=["get"], url_path="all")
     def get_all_variants(self, request):
-        variants = ItemVariant.objects.select_related('item').prefetch_related('sizes').all()
+        variants = ItemVariant.objects.select_related('item').prefetch_related('sizes').filter(item__is_deleted=False).all()
 
         result = []
         for variant in variants:

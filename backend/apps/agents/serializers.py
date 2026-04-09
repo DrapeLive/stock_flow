@@ -92,7 +92,7 @@ class AgentItemListSerializer(serializers.Serializer):
 class AgentItemSerializer(serializers.ModelSerializer):
     item = AgentItemListSerializer(read_only=True)
     item_id = serializers.PrimaryKeyRelatedField(
-        queryset=Item.objects.all(),
+        queryset=Item.objects.filter(is_deleted=False),
         source='item',
         write_only=True
     )
@@ -128,7 +128,7 @@ class AgentSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         return [
             AgentItemListSerializer.from_item(ai.item, request)
-            for ai in obj.assigned_items.select_related('item').prefetch_related('item__variants__sizes').all()
+            for ai in obj.assigned_items.select_related('item').prefetch_related('item__variants__sizes').filter(item__is_deleted=False).all()
         ]
 
     def create(self, validated_data):

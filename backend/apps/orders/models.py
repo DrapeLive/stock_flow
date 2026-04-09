@@ -37,21 +37,28 @@ class OrderItem(models.Model):
 
     item = models.ForeignKey(
         Item,
-        on_delete=models.PROTECT
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True
     )
 
     variant = models.ForeignKey(
         ItemVariant,
-        on_delete=models.PROTECT,
+        on_delete=models.SET_NULL,
         null=True,
         blank=True
     )
 
     size_group = models.CharField(max_length=50, default="NONE")
 
+    item_name = models.CharField(max_length=100, default="Unknown Item")
+    item_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    variant_image = models.URLField(null=True, blank=True)
+    size = models.CharField(max_length=10, default="")
+
     quantity = models.PositiveIntegerField()
 
     packed_quantity = models.PositiveIntegerField(default=0)
 
     def __str__(self):
-        return f"{self.item.name} x {self.quantity}"
+        return f"{self.item_name} x {self.quantity}"
