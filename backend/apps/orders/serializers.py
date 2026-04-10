@@ -7,6 +7,29 @@ from apps.agents.models import Agent
 from apps.items.serializers import ItemSerializer
 
 
+def get_piece_count(size_group, item_type='gents'):
+    PIECE_COUNT = {
+        'gents': {
+            'M,L,XL': 3,
+            'M,L,XL,XXL': 4,
+            'S,M,L,XL': 4,
+            'S,M,L,XL,XXL': 5,
+        },
+        'kids': {
+            '20-24': 3,
+            '26-30': 3,
+            '32-36': 3,
+            '38': 1,
+            '20-36': 9,
+            '20-38': 10,
+            '26-36': 6,
+            '26-38': 7,
+            '20-30': 6,
+        }
+    }
+    return PIECE_COUNT.get(item_type, {}).get(size_group, 1)
+
+
 class SimpleCustomerSerializer(serializers.ModelSerializer):
 
     class Meta:
@@ -36,6 +59,7 @@ class OrderItemSerializer(serializers.ModelSerializer):
     item_price_display = serializers.DecimalField(source="item_price", max_digits=10, decimal_places=2, read_only=True)
     variant_image_display = serializers.URLField(source="variant_image", read_only=True)
     size_display = serializers.CharField(source="size", read_only=True)
+    piece_count = serializers.SerializerMethodField()
 
     class Meta:
         model = OrderItem
@@ -44,6 +68,7 @@ class OrderItemSerializer(serializers.ModelSerializer):
             "item",
             "variant",
             "size_group",
+            "item_type",
             "item_name",
             "item_name_display",
             "item_price",
@@ -54,8 +79,12 @@ class OrderItemSerializer(serializers.ModelSerializer):
             "size_display",
             "quantity",
             "packed_quantity",
+            "piece_count",
         ]
         read_only_fields = ("order", "item_name", "item_price", "variant_image", "size")
+
+    def get_piece_count(self, obj):
+        return get_piece_count(obj.size_group, obj.item_type or 'gents')
 
 
 class OrderSerializer(serializers.ModelSerializer):
@@ -145,6 +174,10 @@ class InvoiceSerializer(serializers.ModelSerializer):
         total = 0
 
         for item in obj.items.all():
-            total += float(item.item_price) * item.quantity
+            if item.item is None:
+                continue
+            item_type = item.item_type if item.item_type else 'gents'
+            piece_count = get_piece_count(item.size_group, item_type)
+            total += float(item.item_price) * item.quantity * piece_count
 
         return total

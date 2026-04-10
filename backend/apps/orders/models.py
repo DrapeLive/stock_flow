@@ -50,6 +50,7 @@ class OrderItem(models.Model):
     )
 
     size_group = models.CharField(max_length=50, default="NONE")
+    item_type = models.CharField(max_length=10, default="gents")
 
     item_name = models.CharField(max_length=100, default="Unknown Item")
     item_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)

@@ -17,11 +17,17 @@ export interface SimpleCustomer {
 export interface OrderItem {
   id: number;
   item: Item;
+  variant: number | null;
   size_group?: string;
+  item_type?: string;
+  item_name?: string;
+  item_price?: number;
+  variant_image?: string | null;
+  size?: string;
   quantity: number;
   packed_quantity?: number;
+  piece_count?: number;
   order: number;
-  variant: number | null;
 }
 
 export interface Order {

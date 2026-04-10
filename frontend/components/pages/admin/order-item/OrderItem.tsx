@@ -69,7 +69,8 @@ const OrderItem: React.FC<Props> = ({
   return (
     <div className="pt-3 space-y-3">
       {orderItems?.map((item, index) => {
-        const isFullyPacked = (item.packed_quantity ?? 0) >= item.quantity;
+        const totalPieces = (item.piece_count || 1) * item.quantity;
+        const isFullyPacked = (item.packed_quantity ?? 0) >= totalPieces;
 
         return (
           <div
@@ -89,13 +90,14 @@ const OrderItem: React.FC<Props> = ({
             {isPacking && (
               <button
                 type="button"
-                onClick={() =>
+                onClick={() => {
+                  const totalPcs = (item.piece_count || 1) * item.quantity;
                   togglePacked(
                     item.id,
                     item.packed_quantity ?? 0,
-                    item.quantity,
-                  )
-                }
+                    totalPcs,
+                  );
+                }}
                 className="flex justify-center items-center p-2 mr-1"
                 title={isFullyPacked ? "Mark as unpacked" : "Mark as packed"}
               >
@@ -143,7 +145,7 @@ const OrderItem: React.FC<Props> = ({
                 </div>
                 <div className="flex flex-col items-end min-w-[60px]">
                   <h3 className="text-lg font-bold leading-none">
-                    {item.quantity}
+                    {(item.piece_count || 1) * item.quantity}
                   </h3>
                   <p className="text-[10px] text-gray-400 uppercase font-medium">
                     Pieces
