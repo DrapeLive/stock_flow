@@ -184,44 +184,51 @@ export default function InvoicePage() {
             </div>
 
             {/* Table rows */}
-            {invoice.items.map((oi, idx) => (
-              <div
-                key={oi.id}
-                className={`grid grid-cols-12 px-4 py-3.5 text-sm items-center border-t border-slate-100 ${
-                  idx % 2 === 0 ? "bg-white" : "bg-slate-50"
-                }`}
-              >
-                <div className="col-span-4">
-                  <p className="font-medium text-slate-800">{oi.item.name}</p>
-                  <p className="text-xs text-slate-400 mt-0.5">
-                    ₹{parseFloat(oi.item.price).toLocaleString("en-IN")} / pc
-                  </p>
-                </div>
-                <span className="col-span-2 text-center text-slate-500 text-xs font-mono bg-slate-100 rounded px-1.5 py-0.5 mx-auto">
-                  {oi.size_group}
-                </span>
-                <span className="col-span-2 text-center font-semibold text-slate-700">
-                  {oi.quantity}
-                </span>
-                <div className="col-span-2 flex justify-center">
-                  <span
-                    className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                      (oi.packed_quantity ?? 0) >= oi.quantity
-                        ? "bg-emerald-100 text-emerald-700"
-                        : "bg-orange-100 text-orange-600"
-                    }`}
-                  >
-                    {oi.packed_quantity ?? 0}/{oi.quantity}
+            {invoice.items.map((oi, idx) => {
+              const pieceCount = oi.piece_count || 1;
+              const totalPieces = oi.quantity * pieceCount;
+              const itemPrice = oi.item_price || 0;
+              const amount = itemPrice * oi.quantity * pieceCount;
+
+              return (
+                <div
+                  key={oi.id}
+                  className={`grid grid-cols-12 px-4 py-3.5 text-sm items-center border-t border-slate-100 ${
+                    idx % 2 === 0 ? "bg-white" : "bg-slate-50"
+                  }`}
+                >
+                  <div className="col-span-4">
+                    <p className="font-medium text-slate-800">{oi.item_name}</p>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      ₹{itemPrice.toLocaleString("en-IN")} / pc
+                    </p>
+                  </div>
+                  <span className="col-span-2 text-center text-slate-500 text-xs font-mono bg-slate-100 rounded px-1.5 py-0.5 mx-auto">
+                    {oi.size_group}
+                  </span>
+                  <div className="col-span-2 text-center font-semibold text-slate-700">
+                    <div>{oi.quantity}</div>
+                    <div className="text-[10px] text-slate-400 font-normal">
+                      ({totalPieces} pcs)
+                    </div>
+                  </div>
+                  <div className="col-span-2 flex justify-center">
+                    <span
+                      className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                        (oi.packed_quantity ?? 0) >= totalPieces
+                          ? "bg-emerald-100 text-emerald-700"
+                          : "bg-orange-100 text-orange-600"
+                      }`}
+                    >
+                      {oi.packed_quantity ?? 0}/{totalPieces}
+                    </span>
+                  </div>
+                  <span className="col-span-2 text-right font-semibold text-slate-800">
+                    ₹{amount.toLocaleString("en-IN")}
                   </span>
                 </div>
-                <span className="col-span-2 text-right font-semibold text-slate-800">
-                  ₹
-                  {(parseFloat(oi.item.price) * oi.quantity).toLocaleString(
-                    "en-IN",
-                  )}
-                </span>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 

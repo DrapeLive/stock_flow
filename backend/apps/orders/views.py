@@ -119,6 +119,7 @@ class AddOrderItemView(APIView):
                 item=item,
                 variant=variant,
                 size_group=size_group,
+                item_type=item_type,
                 item_name=serializer.validated_data["item_name"],
                 item_price=serializer.validated_data["item_price"],
                 variant_image=serializer.validated_data.get("variant_image"),
