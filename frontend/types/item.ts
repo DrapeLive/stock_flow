@@ -108,7 +108,8 @@ export type FrontendSizeRange =
   | "20-38"
   | "S,M,L,XL"
   | "M,L,XL,XXL"
-  | "S,M,L,XL,XXL";
+  | "S,M,L,XL,XXL"
+  | "M,L,XL";
 
 export interface EditableVariant {
   backendId: number;
@@ -121,7 +122,7 @@ export interface EditableVariant {
 }
 
 export const SIZES_BY_TYPE: Record<ItemType, FrontendSizeRange[]> = {
-  gents: ["S,M,L,XL", "M,L,XL,XXL", "S,M,L,XL,XXL"],
+  gents: ["S,M,L,XL", "M,L,XL,XXL", "S,M,L,XL,XXL", "M,L,XL"],
   kids: ["20-36", "20-38"],
 };
 
@@ -131,6 +132,7 @@ export const SIZE_RANGE_TO_SIZES: Record<FrontendSizeRange, string[]> = {
   "S,M,L,XL": ["S", "M,L,XL"],
   "M,L,XL,XXL": ["M,L,XL", "XXL"],
   "S,M,L,XL,XXL": ["S", "M,L,XL", "XXL"],
+  "M,L,XL": ["M,L,XL"],
 };
 
 export type SizeEnum = "S" | "M" | "L" | "XL" | "XXL";

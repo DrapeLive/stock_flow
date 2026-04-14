@@ -12,7 +12,6 @@ import { toastSuccess, toastError } from "@/lib/toast";
 import type {
   ItemQRResponse,
   ItemVariant,
-  FrontendSizeRange,
   ItemType,
 } from "@/types/item";
 
@@ -21,15 +20,29 @@ import { SIZES_BY_TYPE, SIZE_RANGE_TO_SIZES } from "@/types/item";
 function getAvailableSizeRanges(
   variant: ItemVariant | null,
   type: ItemType | undefined,
-): FrontendSizeRange[] {
+): string[] {
   if (!variant || !type) return [];
 
-  const variantSizeStrings = new Set(variant.sizes.map((s) => s.size));
+  const variantSizes = Array.from(new Set(variant.sizes.map((s) => s.size)));
+  const variantSizeSet = new Set(variantSizes);
+
+  if (type === "gents") {
+    for (const range of SIZES_BY_TYPE[type]) {
+      const rangeSizes = SIZE_RANGE_TO_SIZES[range];
+      const rangeSizeSet = new Set(rangeSizes);
+
+      if (rangeSizeSet.size === variantSizeSet.size &&
+          [...rangeSizeSet].every((s) => variantSizeSet.has(s))) {
+        return [range];
+      }
+    }
+
+    return variantSizes;
+  }
 
   return SIZES_BY_TYPE[type].filter((range) => {
     const requiredSizes = SIZE_RANGE_TO_SIZES[range];
-    // A range is available if ALL its required sizes exist in this variant
-    return requiredSizes.every((s) => variantSizeStrings.has(s));
+    return requiredSizes.every((s) => variantSizeSet.has(s));
   });
 }
 export default function ProductDetailPage() {
@@ -73,6 +86,12 @@ export default function ProductDetailPage() {
   }, [params.qr]);
 
   const sizeGroups = getAvailableSizeRanges(selectedVariant, data?.type);
+
+  useEffect(() => {
+    if (sizeGroups.length > 0 && !selectedSizeGroup) {
+      setSelectedSizeGroup(sizeGroups[0]);
+    }
+  }, [sizeGroups, selectedSizeGroup]);
 
   const handleSubmit = async () => {
     if (!selectedVariant) {
