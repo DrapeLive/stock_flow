@@ -25,52 +25,11 @@ from apps.agents.models import AgentItem
 from .utils import SIZE_MAPPING
 
 
-def return_stock_for_item(order_item):
-    """Return stock to warehouse for an order item."""
-    if order_item.item is None or order_item.item.is_deleted:
-        return
-    
-    item_type = order_item.item.type
-    required_sizes = SIZE_MAPPING[item_type][order_item.size_group]
-    
-    for size in required_sizes:
-        ItemVariantSize.objects.filter(
-            item_variant=order_item.variant,
-            size=size
-        ).update(stock=F('stock') + order_item.quantity)
-
-
-class OrderViewSet(ModelViewSet):
-
-    serializer_class = OrderSerializer
+class PlaceOrderView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def get_queryset(self):
-
-        if self.action == "list":
-            Order.objects.filter(status='DRAFT').delete()
-
-        user = self.request.user
-
-        qs = Order.objects.prefetch_related(
-            "items__variant",
-            "items__item"
-        )
-
-        if user.role == "ADMIN":
-            return qs
-
-        return qs.filter(agent__user=user)
-
-    def perform_create(self, serializer):
-
-        serializer.save(
-            agent=self.request.user.agent
-        )
-
-    @action(detail=True, methods=["post"], url_path="place-order")
-    def place_order(self, request, pk=None):
-        order = self.get_object()
+    def post(self, request, order_id):
+        order = get_object_or_404(Order, id=order_id)
 
         if order.status != 'DRAFT':
             return Response(
@@ -150,6 +109,50 @@ class OrderViewSet(ModelViewSet):
             "message": "Order placed successfully",
             "order_id": order.id
         })
+
+
+def return_stock_for_item(order_item):
+    """Return stock to warehouse for an order item."""
+    if order_item.item is None or order_item.item.is_deleted:
+        return
+    
+    item_type = order_item.item.type
+    required_sizes = SIZE_MAPPING[item_type][order_item.size_group]
+    
+    for size in required_sizes:
+        ItemVariantSize.objects.filter(
+            item_variant=order_item.variant,
+            size=size
+        ).update(stock=F('stock') + order_item.quantity)
+
+
+class OrderViewSet(ModelViewSet):
+
+    serializer_class = OrderSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+
+        if self.action == "list":
+            Order.objects.filter(status='DRAFT').delete()
+
+        user = self.request.user
+
+        qs = Order.objects.prefetch_related(
+            "items__variant",
+            "items__item"
+        )
+
+        if user.role == "ADMIN":
+            return qs
+
+        return qs.filter(agent__user=user)
+
+    def perform_create(self, serializer):
+
+        serializer.save(
+            agent=self.request.user.agent
+        )
 
     def destroy(self, request, pk=None):
         order = self.get_object()
