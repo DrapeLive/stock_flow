@@ -15,7 +15,18 @@ import type {
   ItemType,
 } from "@/types/item";
 
-import { SIZES_BY_TYPE, SIZE_RANGE_TO_SIZES } from "@/types/item";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  SIZES_BY_TYPE,
+  SIZE_RANGE_TO_SIZES,
+  FrontendSizeRange,
+} from "@/types/item";
 
 function getAvailableSizeRanges(
   variant: ItemVariant | null,
@@ -45,6 +56,20 @@ function getAvailableSizeRanges(
     return requiredSizes.every((s) => variantSizeSet.has(s));
   });
 }
+
+function getMaxSizeGroup(sizeGroups: string[]): string | null {
+  if (sizeGroups.length === 0) return null;
+  if (sizeGroups.length === 1) return sizeGroups[0];
+
+  return sizeGroups.reduce((max, current) => {
+    const maxSizes =
+      SIZE_RANGE_TO_SIZES[max as FrontendSizeRange]?.length || 0;
+    const currentSizes =
+      SIZE_RANGE_TO_SIZES[current as FrontendSizeRange]?.length || 0;
+    return currentSizes > maxSizes ? current : max;
+  });
+}
+
 export default function ProductDetailPage() {
   const params = useParams<{ id: string; qr: string }>();
   const id = params.id as string;
@@ -89,7 +114,7 @@ export default function ProductDetailPage() {
 
   useEffect(() => {
     if (sizeGroups.length > 0 && !selectedSizeGroup) {
-      setSelectedSizeGroup(sizeGroups[0]);
+      setSelectedSizeGroup(getMaxSizeGroup(sizeGroups));
     }
   }, [sizeGroups, selectedSizeGroup]);
 
@@ -223,29 +248,33 @@ export default function ProductDetailPage() {
           </div>
         </div>
 
-        {sizeGroups.length > 0 && (
-          <div className="mb-8">
-            <h3 className="font-bold text-gray-900 mb-4">Select Size Group</h3>
-            <div className="flex flex-wrap gap-3">
-              {sizeGroups.map((group) => (
-                <button
-                  key={group}
-                  onClick={() => {
-                    setSelectedSizeGroup(group);
-                    setValidationError(null);
-                  }}
-                  className={`px-6 py-3 rounded-2xl font-black text-sm transition-all border-2 ${
-                    selectedSizeGroup === group
-                      ? "bg-primary border-primary text-white shadow-lg shadow-primary/20 scale-105"
-                      : "bg-white border-gray-100 text-gray-600 hover:border-gray-200"
-                  }`}
-                >
-                  {group}
-                </button>
-              ))}
+        <div className="mb-8">
+          <h3 className="font-bold text-gray-900 mb-4">Size Group</h3>
+          {sizeGroups.length > 0 ? (
+            <Select
+              value={selectedSizeGroup || undefined}
+              onValueChange={(value) => {
+                setSelectedSizeGroup(value);
+                setValidationError(null);
+              }}
+            >
+              <SelectTrigger className="w-full h-12 rounded-2xl border-2 border-gray-100 bg-white px-4">
+                <SelectValue placeholder="Select size group" />
+              </SelectTrigger>
+              <SelectContent>
+                {sizeGroups.map((group) => (
+                  <SelectItem key={group} value={group}>
+                    {group}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <div className="w-full h-12 rounded-2xl border-2 border-gray-100 bg-gray-50 px-4 flex items-center text-gray-400 font-medium">
+              No sizes available
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
         <div className="mb-10 bg-white p-6 rounded-[32px] border border-gray-100 flex items-center justify-between shadow-sm">
           <h3 className="font-bold text-gray-900">Quantity</h3>
