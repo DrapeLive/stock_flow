@@ -135,6 +135,15 @@ export const SIZE_RANGE_TO_SIZES: Record<FrontendSizeRange, string[]> = {
   "M,L,XL": ["M,L,XL"],
 };
 
+export const SIZE_RANGE_PIECE_COUNT: Record<string, number> = {
+  "20-36": 3,
+  "20-38": 4,
+  "S,M,L,XL": 2,
+  "M,L,XL,XXL": 2,
+  "S,M,L,XL,XXL": 3,
+  "M,L,XL": 1,
+};
+
 export type SizeEnum = "S" | "M" | "L" | "XL" | "XXL";
 
 export type WizardStep =

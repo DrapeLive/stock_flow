@@ -14,6 +14,12 @@ export default function OrderCard({ order, onClick }: OrderCardProps) {
 
   const previewImages = order.items.slice(0, 3);
 
+  const totalSets = order.total_sets || order.items.reduce((sum, item) => sum + item.quantity, 0);
+  const totalPieces = order.total_pieces || order.items.reduce(
+    (sum, item) => sum + item.quantity * (item.piece_count || 1),
+    0,
+  );
+
   return (
     <div
       className="flex items-center p-4 bg-white border border-gray-100 hover:border-primary/30 hover:shadow-md transition-all cursor-pointer rounded-2xl group"
@@ -24,7 +30,7 @@ export default function OrderCard({ order, onClick }: OrderCardProps) {
           <div className="absolute left-0 z-30 rotate-0">
             <Image
               src={previewImages[0].variant_image}
-              alt={previewImages[0].item_name}
+              alt={previewImages[0].item_name || ""}
               width={56}
               height={56}
               className="rounded-xl object-cover border-2 border-white shadow-sm bg-white"
@@ -36,7 +42,7 @@ export default function OrderCard({ order, onClick }: OrderCardProps) {
           <div className="absolute left-0 z-20 rotate-10 scale-95 opacity-80">
             <Image
               src={previewImages[1].variant_image}
-              alt={previewImages[1].item_name}
+              alt={previewImages[1].item_name || ""}
               width={56}
               height={56}
               className="rounded-xl object-cover border-2 border-white shadow-sm bg-white"
@@ -48,7 +54,7 @@ export default function OrderCard({ order, onClick }: OrderCardProps) {
           <div className="absolute left-0 z-10 rotate-20 scale-90 opacity-60">
             <Image
               src={previewImages[2].variant_image}
-              alt={previewImages[2].item_name}
+              alt={previewImages[2].item_name || ""}
               width={56}
               height={56}
               className="rounded-xl object-cover border-2 border-white shadow-sm bg-white"
@@ -61,7 +67,7 @@ export default function OrderCard({ order, onClick }: OrderCardProps) {
       <div className="flex-1 flex flex-col px-4 justify-center min-w-0">
         <div className="flex items-center gap-2 mb-1">
           <h6 className="font-bold text-gray-900 text-base truncate leading-tight">
-            {order.customer_details.name}
+            {order.customer_details?.name || "Unknown"}
           </h6>
         </div>
         <p className="text-xs text-gray-400 font-medium truncate">
@@ -77,12 +83,18 @@ export default function OrderCard({ order, onClick }: OrderCardProps) {
       <div className="flex flex-col items-end gap-2 pr-2">
         <StatusBadge status={order.status} />
         <div className="flex flex-col items-end">
-          <h3 className="text-lg font-black leading-none text-gray-900">
-            {order.total_quantity}
-          </h3>
-          <p className="text-[9px] text-gray-300 font-bold uppercase tracking-tighter">
-            Pieces
-          </p>
+          <div className="flex items-center gap-1">
+            <span className="text-base font-black text-gray-900">
+              {totalSets}
+            </span>
+            <span className="text-xs text-gray-400">Sets</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="text-xs font-medium text-gray-500">
+              {totalPieces}
+            </span>
+            <span className="text-[10px] text-gray-400">pcs</span>
+          </div>
         </div>
       </div>
 

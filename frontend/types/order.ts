@@ -49,10 +49,18 @@ export interface Order {
   items: OrderItem[];
   agent_details: SimpleAgent;
   customer_details: SimpleCustomer;
-  total_quantity: string;
+  total_quantity?: string;
+  total_sets: number;
+  total_pieces: number;
   status?: OrderStatus;
   created_at: string;
   agent: number;
+}
+
+export interface OrderItemDisplay {
+  quantity: number;
+  piece_count: number;
+  getTotalPieces: () => number;
 }
 
 export interface OrderRegisterRequest {
@@ -61,7 +69,7 @@ export interface OrderRegisterRequest {
   agent: number;
 }
 
-export interface OrderRegisterResponse extends Order {}
+export type OrderRegisterResponse = Order;
 
 export interface AddOrderItemRequest {
   qr_code: string;

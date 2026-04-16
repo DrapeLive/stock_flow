@@ -106,14 +106,22 @@ class OrderSerializer(serializers.ModelSerializer):
         read_only=True
     )
 
-    total_quantity = serializers.SerializerMethodField()
+    total_sets = serializers.SerializerMethodField()
+    total_pieces = serializers.SerializerMethodField()
 
     class Meta:
         model = Order
         fields = "__all__"
 
-    def get_total_quantity(self, obj):
+    def get_total_sets(self, obj):
         return sum(i.quantity for i in obj.items.all())
+
+    def get_total_pieces(self, obj):
+        total = 0
+        for i in obj.items.all():
+            piece_count = get_piece_count(i.size_group, i.item_type or 'gents')
+            total += i.quantity * piece_count
+        return total
 
 
 class AddOrderItemSerializer(serializers.Serializer):

@@ -19,6 +19,7 @@ import { OrderResponse, OutOfStockItem, PlaceOrderError } from "@/types/order";
 import { PageLoading } from "@/components/ui/Loading";
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 import { AxiosError } from "axios";
+import { OrderTotals } from "@/components/order";
 
 export default function OrderDetailsPage() {
   const params = useParams();
@@ -33,12 +34,21 @@ export default function OrderDetailsPage() {
   const [showOutOfStockModal, setShowOutOfStockModal] = useState(false);
   const [outOfStockItems, setOutOfStockItems] = useState<OutOfStockItem[]>([]);
 
-  const totalPieces =
+  const totalSets =
     orders?.items.reduce((sum, item) => sum + item.quantity, 0) || 0;
+
+  const totalPieces =
+    orders?.items.reduce(
+      (sum, item) =>
+        sum + item.quantity * (item.piece_count || 1),
+      0,
+    ) || 0;
 
   const totalMoney =
     orders?.items.reduce(
-      (sum, item) => sum + (Number(item.item_price) || 0) * item.quantity,
+      (sum, item) =>
+        sum +
+        (Number(item.item_price) || 0) * item.quantity * (item.piece_count || 1),
       0,
     ) || 0;
 
@@ -188,40 +198,15 @@ export default function OrderDetailsPage() {
 
         {/* Order Totals */}
         {orders && orders.items.length > 0 && (
-          <div className="mt-8 bg-gradient-to-r from-primary/5 to-primary/10 rounded-3xl p-5 border border-primary/20">
-            <div className="flex justify-between items-center">
-              <div>
-                <p className="text-[10px] text-primary/60 uppercase font-black tracking-widest">
-                  Order Summary
-                </p>
-                <div className="flex gap-4 mt-2">
-                  <div>
-                    <span className="text-xl font-black text-gray-900">
-                      {totalPieces}
-                    </span>
-                    <span className="text-sm text-gray-400 ml-1">pcs</span>
-                  </div>
-                  <div className="w-px bg-primary/20" />
-                  <div>
-                    <span className="text-xl font-black text-primary">
-                      ₹{totalMoney}
-                    </span>
-                  </div>
-                </div>
-              </div>
-              <button
-                onClick={handlePlaceOrder}
-                disabled={placingOrder}
-                className="flex items-center justify-center gap-2 bg-primary text-white font-black py-4 px-6 rounded-2xl shadow-lg shadow-primary/30 hover:opacity-90 transition-all transform active:scale-95 border border-primary/20 disabled:opacity-50"
-              >
-                {placingOrder ? (
-                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                ) : (
-                  <Package size={20} />
-                )}
-                <span>Place Order</span>
-              </button>
-            </div>
+          <div className="mt-8">
+            <OrderTotals
+              totalSets={totalSets}
+              totalPieces={totalPieces}
+              totalPrice={totalMoney}
+              onPlaceOrder={handlePlaceOrder}
+              isLoading={placingOrder}
+              buttonText="Place Order"
+            />
           </div>
         )}
 

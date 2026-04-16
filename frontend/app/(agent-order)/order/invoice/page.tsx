@@ -179,7 +179,7 @@ export default function InvoicePage() {
             <div className="grid grid-cols-12 bg-slate-800 text-white text-xs font-semibold uppercase tracking-wider px-4 py-3">
               <span className="col-span-4">Item</span>
               <span className="col-span-2 text-center">Size</span>
-              <span className="col-span-2 text-center">Qty</span>
+              <span className="col-span-2 text-center">Sets</span>
               <span className="col-span-2 text-center">Packed</span>
               <span className="col-span-2 text-right">Amount</span>
             </div>
@@ -208,9 +208,9 @@ export default function InvoicePage() {
                     {oi.size_group}
                   </span>
                   <div className="col-span-2 text-center font-semibold text-slate-700">
-                    <div>{oi.quantity}</div>
+                    <div>{oi.quantity} Set{oi.quantity !== 1 ? "s" : ""}</div>
                     <div className="text-[10px] text-slate-400 font-normal">
-                      ({totalPieces} pcs)
+                      × {pieceCount} pcs = {totalPieces}
                     </div>
                   </div>
                   <div className="col-span-2 flex justify-center">

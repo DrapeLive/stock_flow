@@ -1,0 +1,103 @@
+"use client";
+
+import Image from "next/image";
+import { Trash2, CheckCircle2, Circle } from "lucide-react";
+import { OrderItem } from "@/types/order";
+
+interface OrderItemRowProps {
+  item: OrderItem;
+  onDelete?: (itemId: number) => void;
+  onTogglePacked?: (itemId: number, packed: boolean) => void;
+  showDelete?: boolean;
+  showPackedToggle?: boolean;
+  isPacked?: boolean;
+}
+
+export default function OrderItemRow({
+  item,
+  onDelete,
+  onTogglePacked,
+  showDelete = false,
+  showPackedToggle = false,
+  isPacked = false,
+}: OrderItemRowProps) {
+  const pieceCount = item.piece_count || 1;
+  const quantity = item.quantity;
+  const totalPieces = quantity * pieceCount;
+
+  return (
+    <div
+      className={`flex items-center gap-3 bg-white border-b border-gray-50 py-4 px-2 ${
+        isPacked ? "opacity-60" : ""
+      }`}
+    >
+      {showDelete && onDelete && (
+        <button
+          onClick={() => onDelete(item.id)}
+          className="flex items-center justify-center p-2 flex-shrink-0"
+        >
+          <Trash2 className="text-red-500 w-4 h-4" />
+        </button>
+      )}
+
+      {showPackedToggle && onTogglePacked && (
+        <button
+          onClick={() => onTogglePacked(item.id, !isPacked)}
+          className="flex items-center justify-center p-2 mr-1 flex-shrink-0"
+        >
+          {isPacked ? (
+            <CheckCircle2 className="text-green-600 w-6 h-6" />
+          ) : (
+            <Circle className="text-gray-300 w-6 h-6 hover:text-primary/50 transition-colors" />
+          )}
+        </button>
+      )}
+
+      <div className="relative w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 border border-gray-100 bg-gray-50">
+        {item.variant_image ? (
+          <Image
+            src={item.variant_image}
+            alt={item.item_name || "Item"}
+            fill
+            className="object-cover"
+            unoptimized
+          />
+        ) : (
+          <div className="w-full h-full bg-gray-100" />
+        )}
+      </div>
+
+      <div className="flex-1 min-w-0">
+        <h6
+          className={`font-semibold text-sm truncate ${
+            isPacked ? "line-through text-gray-400" : "text-gray-900"
+          }`}
+        >
+          {item.item_name || "Unknown Item"}
+        </h6>
+        <p className="text-[10px] text-gray-400 mt-0.5">
+          Size: {item.size_group || "N/A"}
+        </p>
+        <p
+          className={`text-xs font-medium mt-1 ${
+            isPacked ? "text-gray-400 line-through" : "text-gray-600"
+          }`}
+        >
+          {quantity} Set{quantity !== 1 ? "s" : ""} × {pieceCount} pcs ={" "}
+          <span className="font-bold text-gray-900">{totalPieces}</span> pcs
+        </p>
+      </div>
+
+      <div className="text-right flex-shrink-0">
+        <span className="text-base font-black text-gray-900">
+          ₹
+          {(
+            (Number(item.item_price) || 0) *
+            quantity *
+            pieceCount
+          ).toLocaleString("en-IN")}
+        </span>
+      </div>
+    </div>
+  );
+}

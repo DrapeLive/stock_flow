@@ -3,10 +3,9 @@ import { PageLoading } from "@/components/ui/Loading";
 import { orderApi } from "@/lib/api/order";
 import { toastError } from "@/lib/toast";
 import { OrderItems } from "@/types/order";
-import { Trash, CheckCircle2, Circle } from "lucide-react";
-import Image from "next/image";
 import { useState, useEffect } from "react";
-import { ImagePreview } from "@/components/pages/ImagePreview";
+
+import { OrderItemRow } from "@/components/order";
 
 type Props = {
   items: OrderItems | undefined;
@@ -46,10 +45,10 @@ const OrderItem: React.FC<Props> = ({
   const togglePacked = async (
     itemId: number,
     currentPacked: number,
-    totalQuantity: number,
+    totalPieces: number,
   ) => {
     try {
-      const newPacked = currentPacked >= totalQuantity ? 0 : totalQuantity;
+      const newPacked = currentPacked >= totalPieces ? 0 : totalPieces;
       await orderApi.updateItem(itemId, { packed_quantity: newPacked });
 
       setOrderItems((prev) =>
@@ -67,93 +66,24 @@ const OrderItem: React.FC<Props> = ({
   if (loading) return <PageLoading />;
 
   return (
-    <div className="pt-3 space-y-3">
-      {orderItems?.map((item, index) => {
+    <div className="pt-3 space-y-1">
+      {orderItems?.map((item) => {
         const totalPieces = (item.piece_count || 1) * item.quantity;
         const isFullyPacked = (item.packed_quantity ?? 0) >= totalPieces;
 
         return (
-          <div
-            className={`flex w-full border-b border-gray-50 py-4 px-2 transition-all duration-300 ${isFullyPacked ? "bg-green-50/40 opacity-80" : "bg-white hover:bg-gray-50/50"}`}
-            key={index}
-          >
-            {isDelete && (
-              <button
-                type="button"
-                onClick={() => onDelete(item.id, orderId)}
-                className="flex justify-center items-center p-2"
-              >
-                <Trash className="text-red-600 w-4 h-4" />
-              </button>
-            )}
-
-            {isPacking && (
-              <button
-                type="button"
-                onClick={() => {
-                  const totalPcs = (item.piece_count || 1) * item.quantity;
-                  togglePacked(
-                    item.id,
-                    item.packed_quantity ?? 0,
-                    totalPcs,
-                  );
-                }}
-                className="flex justify-center items-center p-2 mr-1"
-                title={isFullyPacked ? "Mark as unpacked" : "Mark as packed"}
-              >
-                {isFullyPacked ? (
-                  <CheckCircle2 className="text-green-600 w-6 h-6" />
-                ) : (
-                  <Circle className="text-gray-300 w-6 h-6 hover:text-primary/50 transition-colors" />
-                )}
-              </button>
-            )}
-
-            <div
-              className={`flex flex-1 justify-between ${isFullyPacked ? "opacity-60" : ""}`}
-            >
-              <div className="flex">
-                <div className="relative w-[50px] h-[50px] flex-shrink-0">
-                  {item.variant_image ? (
-                    isDelete || isPacking ? (
-                      <Image
-                        src={item.variant_image}
-                        fill
-                        alt={item.item_name}
-                        className="rounded-md object-cover border border-gray-100"
-                        unoptimized
-                      />
-                    ) : (
-                      <ImagePreview src={item.variant_image} alt={item.item_name} />
-                    )
-                  ) : (
-                    <div className="w-full h-full bg-gray-100 rounded-md border border-gray-100" />
-                  )}
-                </div>
-                <div className="pl-3 flex flex-col justify-center">
-                  <h6
-                    className={`font-semibold text-sm ${isFullyPacked ? "line-through text-gray-400" : "text-gray-900"}`}
-                  >
-                    {item.item_name}
-                  </h6>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-6 pr-2">
-                <div className="bg-gray-50 px-2 py-1 rounded text-xs font-bold text-gray-600 border border-gray-100 min-w-[32px] text-center">
-                  {item.size_group}
-                </div>
-                <div className="flex flex-col items-end min-w-[60px]">
-                  <h3 className="text-lg font-bold leading-none">
-                    {(item.piece_count || 1) * item.quantity}
-                  </h3>
-                  <p className="text-[10px] text-gray-400 uppercase font-medium">
-                    Pieces
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
+          <OrderItemRow
+            key={item.id}
+            item={item}
+            showDelete={isDelete}
+            showPackedToggle={isPacking}
+            isPacked={isFullyPacked}
+            onDelete={() => onDelete(item.id, orderId)}
+            onTogglePacked={(id, packed) => {
+              const newPacked = packed ? totalPieces : 0;
+              togglePacked(id, item.packed_quantity ?? 0, totalPieces);
+            }}
+          />
         );
       })}
     </div>
