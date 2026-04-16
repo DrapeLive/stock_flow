@@ -39,7 +39,11 @@ export default function Page() {
   const handleUpdateStatus = async (newStatus: "PACKED" | "DISPATCHED") => {
     try {
       setLoading(true);
-      await orderApi.update(Number(id), { status: newStatus });
+      if (newStatus === "DISPATCHED") {
+        await orderApi.dispatchOrder(Number(id));
+      } else {
+        await orderApi.update(Number(id), { status: newStatus });
+      }
       await fetchData();
       if (newStatus === "PACKED") setIsPackingMode(false);
     } catch (err) {

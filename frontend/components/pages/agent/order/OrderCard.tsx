@@ -1,105 +1,98 @@
 "use client";
 import { OrderAllResponse } from "@/types/order";
 import StatusBadge from "@/components/ui/custom/StatusBadge";
-import { Info } from "lucide-react";
-import Image from "next/image";
+import { Info, User } from "lucide-react";
 
 interface OrderCardProps {
   order: OrderAllResponse[number];
   onClick: () => void;
 }
 
+const formatDate = (dateStr: string) => {
+  const date = new Date(dateStr);
+  return date.toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+  });
+};
+
+function getColorFromId(id: number) {
+  if (!id) return "hsl(0, 0%, 85%)"; // fallback
+
+  const hue = (id * 137.508) % 360;
+  return `hsl(${hue}, 65%, 85%)`; // lighter for background
+}
+
 export default function OrderCard({ order, onClick }: OrderCardProps) {
   if (order.items.length === 0) return null;
 
-  const previewImages = order.items.slice(0, 3);
-
-  const totalSets = order.total_sets || order.items.reduce((sum, item) => sum + item.quantity, 0);
-  const totalPieces = order.total_pieces || order.items.reduce(
-    (sum, item) => sum + item.quantity * (item.piece_count || 1),
-    0,
-  );
+  const totalSets =
+    order.total_sets ||
+    order.items.reduce((sum, item) => sum + item.quantity, 0);
+  const totalPieces =
+    order.total_pieces ||
+    order.items.reduce(
+      (sum, item) => sum + item.quantity * (item.piece_count || 1),
+      0,
+    );
 
   return (
     <div
-      className="flex items-center p-4 bg-white border border-gray-100 hover:border-primary/30 hover:shadow-md transition-all cursor-pointer rounded-2xl group"
       onClick={onClick}
+      className="bg-white border border-gray-100 p-4 rounded-2xl hover:border-primary/30 hover:shadow-md transition-all cursor-pointer active:scale-[0.99]"
     >
-      <div className="relative w-16 h-16 flex-shrink-0">
-        {previewImages[0]?.variant_image && (
-          <div className="absolute left-0 z-30 rotate-0">
-            <Image
-              src={previewImages[0].variant_image}
-              alt={previewImages[0].item_name || ""}
-              width={56}
-              height={56}
-              className="rounded-xl object-cover border-2 border-white shadow-sm bg-white"
-              unoptimized
-            />
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <div
+            className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+            style={{
+              backgroundColor: getColorFromId(order.customer_details?.id),
+            }}
+          >
+            <User size={18} color="white" className="text-primary" />
           </div>
-        )}
-        {previewImages[1]?.variant_image && (
-          <div className="absolute left-0 z-20 rotate-10 scale-95 opacity-80">
-            <Image
-              src={previewImages[1].variant_image}
-              alt={previewImages[1].item_name || ""}
-              width={56}
-              height={56}
-              className="rounded-xl object-cover border-2 border-white shadow-sm bg-white"
-              unoptimized
-            />
+          <div className="min-w-0">
+            <h6 className="font-bold text-gray-900 text-sm truncate leading-tight">
+              {order.customer_details?.name || "Unknown Customer"}
+            </h6>
+            <p className="text-xs text-gray-400 mt-0.5">
+              {order.items.map((item) => item.item_name).join(", ")}
+            </p>
+            <p className="text-xs text-gray-400 mt-0.5">
+              {formatDate(order.created_at)}
+            </p>
           </div>
-        )}
-        {previewImages[2]?.variant_image && (
-          <div className="absolute left-0 z-10 rotate-20 scale-90 opacity-60">
-            <Image
-              src={previewImages[2].variant_image}
-              alt={previewImages[2].item_name || ""}
-              width={56}
-              height={56}
-              className="rounded-xl object-cover border-2 border-white shadow-sm bg-white"
-              unoptimized
-            />
-          </div>
-        )}
-      </div>
-
-      <div className="flex-1 flex flex-col px-4 justify-center min-w-0">
-        <div className="flex items-center gap-2 mb-1">
-          <h6 className="font-bold text-gray-900 text-base truncate leading-tight">
-            {order.customer_details?.name || "Unknown"}
-          </h6>
         </div>
-        <p className="text-xs text-gray-400 font-medium truncate">
-          {order.items.map((item, i) => (
-            <span key={item.id}>
-              {item.item_name}
-              {i < order.items.length - 1 ? ", " : ""}
-            </span>
-          ))}
-        </p>
-      </div>
 
-      <div className="flex flex-col items-end gap-2 pr-2">
         <StatusBadge status={order.status} />
-        <div className="flex flex-col items-end">
-          <div className="flex items-center gap-1">
-            <span className="text-base font-black text-gray-900">
-              {totalSets}
-            </span>
-            <span className="text-xs text-gray-400">Sets</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <span className="text-xs font-medium text-gray-500">
-              {totalPieces}
-            </span>
-            <span className="text-[10px] text-gray-400">pcs</span>
-          </div>
-        </div>
       </div>
 
-      <div className="flex items-center pl-4 border-l border-gray-50 text-gray-200 group-hover:text-primary/30 transition-colors">
-        <Info size={18} />
+      <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-50">
+        <div className="flex items-center gap-1.5">
+          <span className="text-base font-black text-gray-900">
+            {totalSets}
+          </span>
+          <span className="text-xs text-gray-400">Sets</span>
+          <span className="text-gray-300 mx-1">•</span>
+          <span className="text-sm font-bold text-gray-600">{totalPieces}</span>
+          <span className="text-xs text-gray-400">pcs</span>
+        </div>
+
+        <div className="text-right">
+          <span className="text-sm font-black text-primary">
+            ₹
+            {order.items
+              ?.reduce(
+                (sum, item) =>
+                  sum +
+                  (Number(item.item_price) || 0) *
+                    item.quantity *
+                    (item.piece_count || 1),
+                0,
+              )
+              .toLocaleString("en-IN")}
+          </span>
+        </div>
       </div>
     </div>
   );

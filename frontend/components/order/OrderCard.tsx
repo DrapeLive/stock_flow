@@ -9,6 +9,13 @@ interface OrderCardProps {
   onClick?: () => void;
 }
 
+function getColorFromId(id: number) {
+  if (!id) return "hsl(0, 0%, 85%)"; // fallback
+
+  const hue = (id * 137.508) % 360;
+  return `hsl(${hue}, 65%, 85%)`; // lighter for background
+}
+
 const statusConfig: Record<
   OrderStatus,
   { bg: string; text: string; label: string }
@@ -66,15 +73,23 @@ export default function OrderCard({ order, onClick }: OrderCardProps) {
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-            <User size={18} className="text-primary" />
+          <div
+            className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+            style={{
+              backgroundColor: getColorFromId(order.customer_details?.id),
+            }}
+          >
+            <User size={18} color="white" className="text-primary" />
           </div>
           <div className="min-w-0">
             <h6 className="font-bold text-gray-900 text-sm truncate leading-tight">
               {order.customer_details?.name || "Unknown Customer"}
             </h6>
             <p className="text-xs text-gray-400 mt-0.5">
-              #{order.id} • {formatDate(order.created_at)}
+              {order.items.map((item) => item.item_name).join(", ")}
+            </p>
+            <p className="text-xs text-gray-400 mt-0.5">
+              {formatDate(order.created_at)}
             </p>
           </div>
         </div>
@@ -93,15 +108,14 @@ export default function OrderCard({ order, onClick }: OrderCardProps) {
           </span>
           <span className="text-xs text-gray-400">Sets</span>
           <span className="text-gray-300 mx-1">•</span>
-          <span className="text-sm font-bold text-gray-600">
-            {totalPieces}
-          </span>
+          <span className="text-sm font-bold text-gray-600">{totalPieces}</span>
           <span className="text-xs text-gray-400">pcs</span>
         </div>
 
         <div className="text-right">
           <span className="text-sm font-black text-primary">
-            ₹{order.items
+            ₹
+            {order.items
               ?.reduce(
                 (sum, item) =>
                   sum +

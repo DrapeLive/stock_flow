@@ -64,4 +64,10 @@ export const orderApi = {
       .post<{ message: string; order_id: number }>(`/api/orders/${id}/place-order/`)
       .then((r) => r.data);
   },
+
+  dispatchOrder(id: number): Promise<{ message: string }> {
+    return api
+      .post<{ message: string }>(`/api/orders/${id}/dispatch/`)
+      .then((r) => r.data);
+  },
 };

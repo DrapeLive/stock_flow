@@ -8,12 +8,13 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.decorators import action
 
-from .models import Order, OrderItem
+from .models import Order, OrderItem, OrderLog
 from .serializers import (
     OrderSerializer,
     AddOrderItemSerializer,
     OrderItemSerializer,
-    InvoiceSerializer
+    InvoiceSerializer,
+    get_piece_count
 )
 
 from apps.accounts.permissions import IsAgent
@@ -22,6 +23,21 @@ from rest_framework.permissions import IsAuthenticated
 from apps.items.models import ItemVariant, ItemVariantSize
 from apps.agents.models import AgentItem
 from .utils import SIZE_MAPPING
+
+
+def return_stock_for_item(order_item):
+    """Return stock to warehouse for an order item."""
+    if order_item.item is None or order_item.item.is_deleted:
+        return
+    
+    item_type = order_item.item.type
+    required_sizes = SIZE_MAPPING[item_type][order_item.size_group]
+    
+    for size in required_sizes:
+        ItemVariantSize.objects.filter(
+            item_variant=order_item.variant,
+            size=size
+        ).update(stock=F('stock') + order_item.quantity)
 
 
 class OrderViewSet(ModelViewSet):
@@ -134,6 +150,73 @@ class OrderViewSet(ModelViewSet):
             "message": "Order placed successfully",
             "order_id": order.id
         })
+
+    def destroy(self, request, pk=None):
+        order = self.get_object()
+        
+        if order.status != 'DRAFT':
+            with transaction.atomic():
+                for order_item in order.items.select_related('item', 'variant'):
+                    return_stock_for_item(order_item)
+                
+                OrderLog.objects.create(
+                    order=order,
+                    action='ORDER_DELETED',
+                    details={
+                        'customer': order.customer.name,
+                        'items_count': order.items.count(),
+                        'status': order.status
+                    },
+                    performed_by=request.user
+                )
+        
+        order.delete()
+        
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=True, methods=["post"], url_path="dispatch")
+    def dispatch_order(self, request, pk=None):
+        order = self.get_object()
+        
+        if order.status not in ['PENDING', 'PACKED']:
+            return Response(
+                {"error": "Only PENDING or PACKED orders can be dispatched"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        with transaction.atomic():
+            for order_item in order.items.select_related('item', 'variant'):
+                if order_item.item is None or order_item.item.is_deleted:
+                    continue
+                
+                piece_count = get_piece_count(order_item.size_group, order_item.item_type or 'gents')
+                total_pieces = order_item.quantity * piece_count
+                packed_pieces = order_item.packed_quantity or 0
+                unpacked_pieces = total_pieces - packed_pieces
+                
+                if unpacked_pieces > 0:
+                    item_type = order_item.item.type
+                    required_sizes = SIZE_MAPPING[item_type][order_item.size_group]
+                    for size in required_sizes:
+                        ItemVariantSize.objects.filter(
+                            item_variant=order_item.variant,
+                            size=size
+                        ).update(stock=F('stock') + unpacked_pieces)
+            
+            OrderLog.objects.create(
+                order=order,
+                action='DISPATCHED',
+                details={
+                    'packed_items': sum(1 for i in order.items.all() if (i.packed_quantity or 0) > 0),
+                    'total_items': order.items.count()
+                },
+                performed_by=request.user
+            )
+            
+            order.status = 'DISPATCHED'
+            order.save()
+        
+        return Response({"message": "Order dispatched successfully"})
 
 
 class AddOrderItemView(APIView):
@@ -249,6 +332,30 @@ class DeleteOrderItemView(APIView):
                             item_variant=order_item.variant,
                             size=size
                         ).update(stock=F('stock') + order_item.quantity)
+                
+                OrderLog.objects.create(
+                    order=order,
+                    action='ITEM_DELETED',
+                    details={
+                        'item_name': order_item.item_name,
+                        'size_group': order_item.size_group,
+                        'quantity': order_item.quantity,
+                        'stock_returned': True
+                    },
+                    performed_by=request.user
+                )
+        else:
+            OrderLog.objects.create(
+                order=order,
+                action='ITEM_DELETED',
+                details={
+                    'item_name': order_item.item_name,
+                    'size_group': order_item.size_group,
+                    'quantity': order_item.quantity,
+                    'stock_returned': False
+                },
+                performed_by=request.user
+            )
 
         order_item.delete()
 
@@ -291,3 +398,73 @@ class OrderItemViewSet(ModelViewSet):
         return OrderItem.objects.filter(
             order__agent__user=user
         )
+
+    def update(self, request, *args, **kwargs):
+        order_item = self.get_object()
+        order = order_item.order
+
+        if order.status not in ['DRAFT', 'PENDING', 'PACKED']:
+            return Response(
+                {"error": "Cannot edit items in this order status"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        old_quantity = order_item.quantity
+        old_size_group = order_item.size_group
+
+        new_quantity = request.data.get('quantity', old_quantity)
+        new_size_group = request.data.get('size_group', old_size_group)
+
+        if order.status != 'DRAFT':
+            with transaction.atomic():
+                if old_quantity != new_quantity or old_size_group != new_size_group:
+                    return_stock_for_item(order_item)
+
+                    if order_item.item:
+                        item_type = order_item.item.type
+                        required_sizes = SIZE_MAPPING[item_type][new_size_group]
+                        
+                        for size in required_sizes:
+                            try:
+                                size_obj = ItemVariantSize.objects.select_for_update().get(
+                                    item_variant=order_item.variant,
+                                    size=size
+                                )
+                            except ItemVariantSize.DoesNotExist:
+                                return Response(
+                                    {"error": f"Size {size} not found for this variant"},
+                                    status=status.HTTP_400_BAD_REQUEST
+                                )
+
+                            if size_obj.stock < new_quantity:
+                                return Response(
+                                    {"error": f"Insufficient stock in {size}"},
+                                    status=status.HTTP_400_BAD_REQUEST
+                                )
+
+                        for size in required_sizes:
+                            ItemVariantSize.objects.filter(
+                                item_variant=order_item.variant,
+                                size=size
+                            ).update(stock=F('stock') - new_quantity)
+
+                    order_item.quantity = new_quantity
+                    order_item.size_group = new_size_group
+
+                    OrderLog.objects.create(
+                        order=order,
+                        action='ORDER_EDITED',
+                        details={
+                            'item_id': order_item.id,
+                            'item_name': order_item.item_name,
+                            'old_quantity': old_quantity,
+                            'new_quantity': new_quantity,
+                            'old_size_group': old_size_group,
+                            'new_size_group': new_size_group
+                        },
+                        performed_by=request.user
+                    )
+
+                    order_item.save()
+
+        return super().update(request, *args, **kwargs)

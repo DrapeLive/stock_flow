@@ -86,6 +86,21 @@ class OrderItemSerializer(serializers.ModelSerializer):
     def get_piece_count(self, obj):
         return get_piece_count(obj.size_group, obj.item_type or 'gents')
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        request = self.context.get('request')
+        
+        variant_image = data.get('variant_image')
+        
+        if not variant_image and request:
+            if instance.variant and instance.variant.image:
+                variant_image = request.build_absolute_uri(instance.variant.image.url)
+                data['variant_image'] = variant_image
+        elif variant_image and request and not variant_image.startswith('http'):
+            data['variant_image'] = request.build_absolute_uri(variant_image)
+        
+        return data
+
 
 class OrderSerializer(serializers.ModelSerializer):
 
@@ -145,8 +160,9 @@ class AddOrderItemSerializer(serializers.Serializer):
         attrs["item"] = variant.item
 
         request = self.context.get("request")
-        if request and hasattr(variant.image, "url"):
-            attrs["variant_image"] = request.build_absolute_uri(variant.image.url)
+        image_url = getattr(variant.image, 'url', None) if variant.image else None
+        if request and image_url:
+            attrs["variant_image"] = request.build_absolute_uri(image_url)
         else:
             attrs["variant_image"] = None
 

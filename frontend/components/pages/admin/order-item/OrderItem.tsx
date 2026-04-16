@@ -13,6 +13,7 @@ type Props = {
   orderId?: number;
   isPacking?: boolean;
   onPackedChange?: () => void;
+  onDeleteItem?: (itemId: number) => void;
 };
 
 const OrderItem: React.FC<Props> = ({
@@ -21,6 +22,7 @@ const OrderItem: React.FC<Props> = ({
   orderId,
   isPacking,
   onPackedChange,
+  onDeleteItem,
 }) => {
   const [loading, setLoading] = useState(false);
   const [orderItems, setOrderItems] = useState(items);
@@ -30,6 +32,10 @@ const OrderItem: React.FC<Props> = ({
   }, [items]);
 
   const onDelete = async (itemId: number, orderId?: number) => {
+    if (onDeleteItem) {
+      onDeleteItem(itemId);
+      return;
+    }
     if (!orderId) return;
     try {
       setLoading(true);
