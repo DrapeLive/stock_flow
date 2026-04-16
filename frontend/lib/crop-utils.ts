@@ -39,3 +39,43 @@ function loadImage(src: string): Promise<HTMLImageElement> {
     img.src = src;
   });
 }
+
+export async function getFitFile(src: string, size: number = 1000): Promise<File> {
+  const img = await loadImage(src);
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d")!;
+
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, size, size);
+
+  const imgAspect = img.width / img.height;
+  const targetAspect = 1;
+
+  let drawWidth: number;
+  let drawHeight: number;
+
+  if (imgAspect > targetAspect) {
+    drawWidth = size * 0.9;
+    drawHeight = drawWidth / imgAspect;
+  } else {
+    drawHeight = size * 0.9;
+    drawWidth = drawHeight * imgAspect;
+  }
+
+  const x = (size - drawWidth) / 2;
+  const y = (size - drawHeight) / 2;
+
+  ctx.drawImage(img, x, y, drawWidth, drawHeight);
+
+  return new Promise<File>((resolve, reject) =>
+    canvas.toBlob(
+      (blob) =>
+        blob
+          ? resolve(new File([blob], "fitted.jpg", { type: "image/jpeg" }))
+          : reject(new Error("Canvas is empty")),
+      "image/jpeg",
+    ),
+  );
+}

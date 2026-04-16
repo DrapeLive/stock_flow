@@ -1,8 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import { ChevronDown, ChevronUp, Eye, Printer, Info, Minus } from "lucide-react";
-import { ItemStockEntry } from "@/types/item";
+import { ChevronDown, ChevronUp, Eye, Printer, Info } from "lucide-react";
+import { ItemStockEntry, ItemType } from "@/types/item";
 import { AssignedItem } from "@/types/agent";
 import VariantCard from "./VariantCard";
 
@@ -24,14 +24,14 @@ function getItemImage(item: ItemStockEntry | AssignedItem): string | null {
   return item.variants[0]?.image || null;
 }
 
-function hasOutOfStockVariants(
-  item: ItemStockEntry | AssignedItem,
-): boolean {
+function hasOutOfStockVariants(item: ItemStockEntry | AssignedItem): boolean {
   for (const variant of item.variants) {
     let variantHasStock = false;
 
     if ("sizes" in variant) {
-      variantHasStock = variant.sizes.some((s: { stock: number }) => s.stock > 0);
+      variantHasStock = variant.sizes.some(
+        (s: { stock: number }) => s.stock > 0,
+      );
     } else if ("size_ranges" in variant) {
       variantHasStock = variant.size_ranges.some(
         (sr: { stock: number }) => sr.stock > 0,
@@ -154,11 +154,7 @@ export default function ItemCard({
               isExpanded ? "bg-primary text-white" : "bg-gray-100 text-gray-500"
             }`}
           >
-            {isExpanded ? (
-              <ChevronUp size={14} />
-            ) : (
-              <ChevronDown size={14} />
-            )}
+            {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
           </div>
         </div>
       </div>
@@ -173,6 +169,7 @@ export default function ItemCard({
                 index={index}
                 context={context}
                 isCompact={true}
+                itemType={item.type as ItemType}
                 onPrintQR={context === "admin" ? onPrintQR : undefined}
                 onOrder={context === "agent" ? onOrder : undefined}
               />

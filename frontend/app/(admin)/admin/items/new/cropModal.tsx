@@ -4,7 +4,7 @@ import { useState, useCallback } from "react";
 import Cropper from "react-easy-crop";
 import type { Area } from "react-easy-crop";
 import { X, Check, ZoomIn, ZoomOut } from "lucide-react";
-import { getCroppedFile } from "@/lib/crop-utils";
+import { getCroppedFile, getFitFile } from "@/lib/crop-utils";
 
 interface Props {
   src: string;
@@ -16,12 +16,18 @@ export default function CropModal({ src, onConfirm, onCancel }: Props) {
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
+  const [fitMode, setFitMode] = useState<"crop" | "fit">("crop");
 
   const onCropComplete = useCallback((_: Area, pixels: Area) => {
     setCroppedAreaPixels(pixels);
   }, []);
 
   const handleConfirm = async () => {
+    if (fitMode === "fit") {
+      const file = await getFitFile(src);
+      onConfirm(file);
+      return;
+    }
     if (!croppedAreaPixels) return;
     const file = await getCroppedFile(src, croppedAreaPixels);
     onConfirm(file);
@@ -38,7 +44,30 @@ export default function CropModal({ src, onConfirm, onCancel }: Props) {
         >
           <X size={18} />
         </button>
-        <span className="text-white font-semibold text-sm">Crop Image</span>
+        <div className="flex items-center gap-1 bg-white/10 rounded-full p-0.5">
+          <button
+            type="button"
+            onClick={() => setFitMode("crop")}
+            className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+              fitMode === "crop"
+                ? "bg-white text-black"
+                : "text-white/60 hover:text-white"
+            }`}
+          >
+            Crop
+          </button>
+          <button
+            type="button"
+            onClick={() => setFitMode("fit")}
+            className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+              fitMode === "fit"
+                ? "bg-white text-black"
+                : "text-white/60 hover:text-white"
+            }`}
+          >
+            Show Whole Image
+          </button>
+        </div>
         <button
           type="button"
           onClick={handleConfirm}
@@ -51,19 +80,30 @@ export default function CropModal({ src, onConfirm, onCancel }: Props) {
 
       {/* Crop area */}
       <div className="relative flex-1">
-        <Cropper
-          image={src}
-          crop={crop}
-          zoom={zoom}
-          aspect={1}
-          onCropChange={setCrop}
-          onZoomChange={setZoom}
-          onCropComplete={onCropComplete}
-          style={{ containerStyle: { background: "#000" } }}
-        />
+        {fitMode === "fit" ? (
+          <div className="w-full h-full flex items-center justify-center bg-white">
+            <img
+              src={src}
+              alt="Preview"
+              className="max-w-[90%] max-h-[90%] object-contain"
+            />
+          </div>
+        ) : (
+          <Cropper
+            image={src}
+            crop={crop}
+            zoom={zoom}
+            aspect={1}
+            onCropChange={setCrop}
+            onZoomChange={setZoom}
+            onCropComplete={onCropComplete}
+            style={{ containerStyle: { background: "#000" } }}
+          />
+        )}
       </div>
 
-      {/* Zoom bar */}
+      {fitMode === "crop" && (
+      /* Zoom bar */
       <div className="flex items-center gap-3 px-6 py-5 flex-shrink-0">
         <button
           type="button"
@@ -89,6 +129,7 @@ export default function CropModal({ src, onConfirm, onCancel }: Props) {
           <ZoomIn size={18} />
         </button>
       </div>
+)}
     </div>
   );
 }
