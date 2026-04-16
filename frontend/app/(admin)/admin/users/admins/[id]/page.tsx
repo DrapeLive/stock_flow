@@ -12,7 +12,13 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
-import { Trash2, ArrowLeft, ShieldAlert } from "lucide-react";
+import { Trash2, ArrowLeft, ShieldAlert, Pencil, Eye } from "lucide-react";
+
+function getColorFromId(id: number): string {
+  if (!id) return "hsl(0, 0%, 85%)";
+  const hue = (id * 137.508) % 360;
+  return `hsl(${hue}, 65%, 85%)`;
+}
 
 export default function AdminDetailPage() {
   const { id } = useParams();
@@ -25,6 +31,7 @@ export default function AdminDetailPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -59,6 +66,7 @@ export default function AdminDetailPage() {
         email: formData.email,
       });
       toastSuccess("Admin updated successfully");
+      setIsEditing(false);
       router.refresh();
     } catch (error: any) {
       console.error("Error updating admin:", error);
@@ -87,7 +95,8 @@ export default function AdminDetailPage() {
 
   return (
     <div className="w-full px-4 py-8 flex flex-col min-h-screen bg-white">
-      <div className="flex items-center justify-between mb-8">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
         <button onClick={() => router.back()} className="p-2 -ml-2 rounded-full hover:bg-gray-50 transition-colors">
           <ArrowLeft size={24} className="text-gray-900" />
         </button>
@@ -95,50 +104,90 @@ export default function AdminDetailPage() {
           <h1 className="text-xl font-black text-gray-900 tracking-tight">Admin Profile</h1>
           <p className="text-[10px] text-gray-400 font-black uppercase tracking-[0.2em]">Master Control</p>
         </div>
-        <button onClick={handleDelete} className="p-2 rounded-xl text-red-500 hover:bg-red-50 transition-colors">
-          <Trash2 size={20} />
-        </button>
+        <div className="flex items-center gap-1">
+          <button 
+            onClick={() => setIsEditing(!isEditing)} 
+            className="p-2 rounded-xl hover:bg-gray-50 transition-colors"
+            title={isEditing ? "View details" : "Edit details"}
+          >
+            {isEditing ? (
+              <Eye size={20} className="text-gray-700" />
+            ) : (
+              <Pencil size={20} className="text-gray-700" />
+            )}
+          </button>
+          <button onClick={handleDelete} className="p-2 rounded-xl text-red-500 hover:bg-red-50 transition-colors">
+            <Trash2 size={20} />
+          </button>
+        </div>
       </div>
 
-      <div className="flex flex-col items-center mb-8">
-        <div className="w-20 h-20 bg-amber-50 rounded-3xl flex items-center justify-center mb-4 shadow-sm">
-          <ShieldAlert size={40} className="text-amber-500" />
+      {/* Avatar Section */}
+      <div className="flex flex-col items-center mb-6">
+        <div 
+          className="w-20 h-20 rounded-3xl flex items-center justify-center mb-4 shadow-sm"
+          style={{ backgroundColor: isEditing ? "#fef3c7" : getColorFromId(admin.id) }}
+        >
+          <ShieldAlert size={40} className={isEditing ? "text-amber-500" : "text-gray-600"} />
         </div>
         <h2 className="text-2xl font-black text-gray-900">{admin.username}</h2>
         <span className="text-xs font-bold text-gray-400 mt-1 font-mono tracking-tighter">ADMINISTRATOR</span>
       </div>
 
-      <div className="bg-gray-50/50 border border-gray-100 rounded-[2rem] p-6 space-y-6">
-        <FieldGroup className="space-y-6">
-          <Field>
-            <FieldLabel className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 block">System username</FieldLabel>
-            <Input
-              value={formData.username}
-              onChange={(e) => handleChange("username", e.target.value)}
-              className="bg-white border-gray-100 rounded-xl h-12 font-bold"
-            />
-          </Field>
+      {/* User Details Section */}
+      {isEditing ? (
+        <>
+          <div className="bg-gray-50/50 border border-gray-100 rounded-[2rem] p-6 space-y-6 mb-6">
+            <FieldGroup className="space-y-6">
+              <Field>
+                <FieldLabel className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 block">System username</FieldLabel>
+                <Input
+                  value={formData.username}
+                  onChange={(e) => handleChange("username", e.target.value)}
+                  className="bg-white border-gray-100 rounded-xl h-12 font-bold"
+                />
+              </Field>
 
-          <Field>
-            <FieldLabel className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 block">Recovery Email</FieldLabel>
-            <Input
-              value={formData.email}
-              onChange={(e) => handleChange("email", e.target.value)}
-              className="bg-white border-gray-100 rounded-xl h-12 font-bold"
-            />
-          </Field>
-        </FieldGroup>
-      </div>
+              <Field>
+                <FieldLabel className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 block">Recovery Email</FieldLabel>
+                <Input
+                  value={formData.email}
+                  onChange={(e) => handleChange("email", e.target.value)}
+                  className="bg-white border-gray-100 rounded-xl h-12 font-bold"
+                />
+              </Field>
+            </FieldGroup>
+          </div>
 
-      <div className="mt-8 mb-20 px-4">
-        <StockFlowButton
-          variant="filled"
-          text={saving ? "Processing..." : "Commit Update"}
-          onClick={handleUpdate}
-          disabled={saving}
-          className="w-full h-14 rounded-2xl bg-black text-white font-bold shadow-lg shadow-black/10 flex items-center justify-center gap-2 active:scale-95 transition-all text-sm uppercase tracking-widest"
-        />
-      </div>
+          <div className="mb-20 px-4">
+            <StockFlowButton
+              variant="filled"
+              text={saving ? "Processing..." : "Commit Update"}
+              onClick={handleUpdate}
+              disabled={saving}
+              className="w-full h-14 rounded-2xl bg-black text-white font-bold shadow-lg shadow-black/10 flex items-center justify-center gap-2 active:scale-95 transition-all text-sm uppercase tracking-widest"
+            />
+          </div>
+        </>
+      ) : (
+        <>
+          {/* View Mode - Compact Details */}
+          <div className="bg-gray-50 border border-gray-100 rounded-2xl p-4 mb-6 w-full">
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-xs font-bold text-gray-400 uppercase">Username</span>
+                <span className="text-sm font-medium text-gray-900">{admin.username}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-xs font-bold text-gray-400 uppercase">Recovery Email</span>
+                <span className="text-sm font-medium text-gray-900">{admin.email || "—"}</span>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      <div className="h-20"></div>
     </div>
   );
 }
