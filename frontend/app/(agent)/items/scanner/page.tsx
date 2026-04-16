@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Scanner } from "@yudiel/react-qr-scanner";
+import { ImagePreview } from "@/components/pages/ImagePreview";
 import { itemApi } from "@/lib/api/item";
 import { customerApi } from "@/lib/api/customer";
 import { PageLoading } from "@/components/ui/Loading";
@@ -228,12 +229,9 @@ export default function PriceCheckScannerPage() {
         <div className="max-w-md mx-auto px-6 pt-6">
           <div className="bg-white rounded-[40px] overflow-hidden shadow-xl shadow-color-primary/5 border border-gray-100 mb-4 aspect-square relative">
             {selectedVariant?.image ? (
-              <Image
+              <ImagePreview
                 src={selectedVariant.image}
                 alt={scanResult.name}
-                fill
-                className="object-cover"
-                unoptimized
               />
             ) : (
               <div className="w-full h-full bg-gray-50 flex items-center justify-center">
@@ -254,13 +252,14 @@ export default function PriceCheckScannerPage() {
                       : "border hover:border-gray-200"
                   }`}
                 >
-                  <Image
-                    src={v.image || ""}
-                    alt={`Variant ${v.id}`}
-                    fill
-                    className="object-cover"
-                    unoptimized
-                  />
+                  {v.image ? (
+                    <ImagePreview
+                      src={v.image}
+                      alt={`Variant ${v.id}`}
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gray-100" />
+                  )}
                   {selectedVariant?.id === v.id && (
                     <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
                       <Check className="text-white" size={24} strokeWidth={4} />

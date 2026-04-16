@@ -7,6 +7,7 @@ import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import Image from "next/image";
+import { ImagePreview } from "@/components/pages/ImagePreview";
 import {
   Select,
   SelectContent,
@@ -156,7 +157,7 @@ export default function ItemEditPage() {
       <div className="flex flex-col items-center mb-8">
         <div className="relative w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center mb-3 overflow-hidden">
           {variants[0]?.imageUrl ? (
-            <Image src={variants[0].imageUrl} alt={common.name} fill className="object-cover" unoptimized />
+            <ImagePreview src={variants[0].imageUrl} alt={common.name} />
           ) : (
             <Package size={36} className="text-primary" />
           )}

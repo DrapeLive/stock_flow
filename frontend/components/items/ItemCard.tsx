@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { ChevronDown, ChevronUp, Eye, Printer, Info } from "lucide-react";
+import { ImagePreview } from "@/components/pages/ImagePreview";
 import { ItemStockEntry, ItemType } from "@/types/item";
 import { AssignedItem } from "@/types/agent";
 import VariantCard from "./VariantCard";
@@ -73,12 +74,9 @@ export default function ItemCard({
       >
         <div className="relative w-14 h-14 rounded-xl bg-gray-50 overflow-hidden flex-shrink-0 border border-gray-100">
           {image ? (
-            <Image
+            <ImagePreview
               src={image}
               alt={item.name}
-              fill
-              className="object-cover"
-              unoptimized
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center">

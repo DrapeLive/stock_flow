@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { ArrowLeft, PackagePlus, Minus, Plus, Check, Info } from "lucide-react";
+import { ImagePreview } from "@/components/pages/ImagePreview";
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 import { itemApi } from "@/lib/api/item";
 import { orderApi } from "@/lib/api/order";
@@ -188,12 +189,9 @@ export default function ProductDetailPage() {
       <div className="max-w-md mx-auto px-6 pt-6">
         <div className="bg-white rounded-[40px] overflow-hidden border-2 border-black mb-8 aspect-square relative">
           {selectedVariant?.image ? (
-            <Image
+            <ImagePreview
               src={selectedVariant.image}
               alt={data?.name || "Product"}
-              fill
-              className="object-cover"
-              unoptimized
             />
           ) : (
             <div className="w-full h-full bg-gray-50 flex items-center justify-center">
@@ -231,13 +229,14 @@ export default function ProductDetailPage() {
                     : "border hover:border-gray-200"
                 }`}
               >
-                <Image
-                  src={v.image || ""}
-                  alt={`Variant ${index + 1}`}
-                  fill
-                  className="object-cover"
-                  unoptimized
-                />
+                {v.image ? (
+                  <ImagePreview
+                    src={v.image}
+                    alt={`Variant ${index + 1}`}
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gray-100" />
+                )}
                 {selectedVariant?.id === v.id && (
                   <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
                     <Check className="text-white" size={24} strokeWidth={4} />

@@ -8,6 +8,7 @@ import { toastSuccess, toastError } from "@/lib/toast";
 import { AgentResponse, AgentUpdateRequest, AssignedItem } from "@/types/agent";
 import { Item } from "@/types/item";
 import Image from "next/image";
+import { ImagePreview } from "@/components/pages/ImagePreview";
 import {
   Field,
   FieldGroup,
@@ -208,7 +209,9 @@ export default function AgentDetailPage() {
                   className="flex items-center gap-2 px-3 py-2 bg-primary/10 rounded-xl border border-primary/20"
                 >
                   {item.variants?.[0]?.image ? (
-                    <Image src={item.variants[0].image} alt={item.name} width={20} height={20} className="rounded object-cover" unoptimized />
+                    <div className="relative w-5 h-5 rounded overflow-hidden flex-shrink-0">
+                      <ImagePreview src={item.variants[0].image} alt={item.name} />
+                    </div>
                   ) : (
                     <Package size={14} className="text-primary" />
                   )}

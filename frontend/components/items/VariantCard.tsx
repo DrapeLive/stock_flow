@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { Printer } from "lucide-react";
+import { ImagePreview } from "@/components/pages/ImagePreview";
 import {
   ItemVariantQR,
   SIZE_RANGE_TO_SIZES,
@@ -176,15 +177,11 @@ export default function VariantCard({
         }`}
       >
         <div className="flex items-center gap-2 mb-2">
-          <div className="w-8 h-8 rounded bg-gray-200 overflow-hidden flex-shrink-0">
+          <div className="relative w-8 h-8 rounded bg-gray-200 overflow-hidden flex-shrink-0">
             {variant.image ? (
-              <Image
+              <ImagePreview
                 src={variant.image}
                 alt={`Variant ${index + 1}`}
-                width={32}
-                height={32}
-                className="object-cover"
-                unoptimized
               />
             ) : (
               <div className="w-full h-full" />
@@ -251,12 +248,9 @@ export default function VariantCard({
       <div className="flex items-center gap-3 mb-3">
         <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-gray-100 border border-gray-200 flex-shrink-0">
           {variant.image ? (
-            <Image
+            <ImagePreview
               src={variant.image}
               alt={`Variant ${index + 1}`}
-              fill
-              className="object-cover"
-              unoptimized
             />
           ) : (
             <div className="w-full h-full" />

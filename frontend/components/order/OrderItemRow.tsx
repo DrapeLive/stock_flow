@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { Trash2, CheckCircle2, Circle } from "lucide-react";
+import { ImagePreview } from "@/components/pages/ImagePreview";
 import { OrderItem } from "@/types/order";
 
 interface OrderItemRowProps {
@@ -55,12 +56,9 @@ export default function OrderItemRow({
 
       <div className="relative w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 border border-gray-100 bg-gray-50">
         {item.variant_image ? (
-          <Image
+          <ImagePreview
             src={item.variant_image}
             alt={item.item_name || "Item"}
-            fill
-            className="object-cover"
-            unoptimized
           />
         ) : (
           <div className="w-full h-full bg-gray-100" />
