@@ -23,6 +23,7 @@ export default function Page() {
   const [data, setData] = useState<OrderResponse>();
   const [isPackingMode, setIsPackingMode] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showDispatchDialog, setShowDispatchDialog] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
   const fetchData = useCallback(async () => {
@@ -44,6 +45,14 @@ export default function Page() {
   };
 
   const handleUpdateStatus = async (newStatus: "PACKED" | "DISPATCHED") => {
+    if (newStatus === "DISPATCHED" && isPartiallyPacked) {
+      setShowDispatchDialog(true);
+      return;
+    }
+    await updateStatus(newStatus);
+  };
+
+  const updateStatus = async (newStatus: "PACKED" | "DISPATCHED") => {
     try {
       setLoading(true);
       if (newStatus === "DISPATCHED") {
@@ -58,6 +67,11 @@ export default function Page() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleConfirmDispatch = async () => {
+    setShowDispatchDialog(false);
+    await updateStatus("DISPATCHED");
   };
 
   const handleTabChange = (tab: Tab) => {
@@ -81,13 +95,20 @@ export default function Page() {
     }
   };
 
-  const allItemsPacked = data?.items.every(
-    (item) => item.packed_quantity! >= item.quantity
+  const anyItemPacked = data?.items.some(
+    (item) => (item.packed_quantity ?? 0) > 0,
   );
+
+  const allItemsPacked = data?.items.every(
+    (item) => (item.packed_quantity ?? 0) >= item.quantity,
+  );
+
+  const isPartiallyPacked = anyItemPacked && !allItemsPacked;
 
   const isDeletable = data?.status === "PENDING" || data?.status === "PACKED";
 
-  if (loading && !data) return <h2 className="flex justify-center mt-10">Loading...</h2>;
+  if (loading && !data)
+    return <h2 className="flex justify-center mt-10">Loading...</h2>;
 
   return (
     <div className="min-h-screen bg-white pb-20">
@@ -131,7 +152,7 @@ export default function Page() {
       <OrderFooter
         activeTab={activeTab}
         status={data?.status}
-        allItemsPacked={!!allItemsPacked}
+        anyItemPacked={anyItemPacked}
         onUpdateStatus={handleUpdateStatus}
       />
 
@@ -142,7 +163,8 @@ export default function Page() {
               Delete Order?
             </h3>
             <p className="text-sm text-gray-500 mb-6">
-              This will return the stock back to the warehouse. This action cannot be undone.
+              This will return the stock back to the warehouse. This action
+              cannot be undone.
             </p>
             <div className="flex gap-3">
               <button
@@ -158,6 +180,34 @@ export default function Page() {
                 className="flex-1 py-3 px-4 rounded-xl bg-red-500 text-white font-medium hover:bg-red-600 transition-colors disabled:opacity-50"
               >
                 {deleting ? "Deleting..." : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showDispatchDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">
+              Order Not Fully Packed
+            </h3>
+            <p className="text-sm text-gray-500 mb-6">
+              Unpacked items will be returned to the warehouse. Are you sure you
+              want to dispatch this order?
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDispatchDialog(false)}
+                className="flex-1 py-3 px-4 rounded-xl border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmDispatch}
+                className="flex-1 py-3 px-4 rounded-xl bg-primary text-white font-medium hover:bg-primary/90 transition-colors"
+              >
+                Dispatch
               </button>
             </div>
           </div>

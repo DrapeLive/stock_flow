@@ -91,6 +91,7 @@ export default function OrderItemsSection({
           showDelete={isEditable}
           orderId={orderId}
           onDeleteItem={handleDeleteClick}
+          status={status}
         />
       </div>
 
