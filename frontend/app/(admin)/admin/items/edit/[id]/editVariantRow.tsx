@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import Image from "next/image";
 import CropModal from "../../new/cropModal";
 import type { EditableVariant } from "@/types/item";
+import imageCompression from "browser-image-compression";
 
 interface Props {
   variant: EditableVariant;
@@ -44,12 +45,19 @@ export default function EditVariantRow({
       {cropSrc && (
         <CropModal
           src={cropSrc}
-          onConfirm={(file) => {
+          onConfirm={async (file) => {
+            const compressedFile = await imageCompression(file, {
+              maxSizeMB: 0.3,
+              maxWidthOrHeight: 1024,
+              useWebWorker: true,
+            });
+
             onChange({
               ...variant,
-              newImage: file,
-              imagePreview: URL.createObjectURL(file),
+              newImage: compressedFile,
+              imagePreview: URL.createObjectURL(compressedFile),
             });
+
             setCropSrc(null);
           }}
           onCancel={() => setCropSrc(null)}

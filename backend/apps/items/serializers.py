@@ -1,4 +1,6 @@
-import os
+from PIL import Image
+from io import BytesIO
+from django.core.files.base import ContentFile
 import uuid
 from rest_framework import serializers
 from .models import Item, ItemVariant, ItemVariantSize
@@ -64,105 +66,121 @@ class CreateItemSerializer(serializers.Serializer):
 
     def validate_variants(self, variants):
         item_type = self.initial_data.get('type')
-        
+
         for variant in variants:
             for size_data in variant.get('sizes', []):
                 size = size_data.get('size')
                 if not size:
                     raise serializers.ValidationError("Size is required for each variant size")
-                    
+
                 if item_type == 'kids' and size not in KIDS_SIZES:
                     raise serializers.ValidationError(f"'{size}' is not a valid size for kids items")
                 if item_type == 'gents' and size not in GENTS_SIZES:
                     raise serializers.ValidationError(f"'{size}' is not a valid size for gents items")
-        
+
         return variants
 
     def create(self, validated_data):
         variants_data = validated_data.pop('variants', [])
-        
+
         item = Item.objects.create(
             name=validated_data['name'],
             description=validated_data.get('description', ''),
             price=validated_data['price'],
             type=validated_data['type']
         )
-        
+
         for variant_data in variants_data:
             self._create_variant(item, variant_data)
-        
+
         return item
 
     def _create_variant(self, item, variant_data):
         image_file = variant_data.pop('image', None)
-        
+
         variant = ItemVariant.objects.create(
             item=item,
             qr_code=uuid.uuid4()
         )
-        
+
         if image_file:
             self._save_variant_image(variant, image_file)
-        
+
         for size_data in variant_data.get('sizes', []):
             ItemVariantSize.objects.create(
                 item_variant=variant,
                 size=size_data['size'],
                 stock=size_data.get('stock', 0)
             )
-        
+
         return variant
 
     def _save_variant_image(self, variant, image_file):
-        if image_file and hasattr(image_file, 'name') and hasattr(image_file, 'content_type'):
-            ext = os.path.splitext(image_file.name)[1] or '.jpg'
-            unique_name = f"{uuid.uuid4().hex}{ext}"
-            if variant.image:
-                variant.image.delete(save=False)
-            variant.image.save(unique_name, image_file, save=True)
+        if not image_file:
+            return
+
+        img = Image.open(image_file)
+
+        # Convert to RGB (important for PNGs with transparency)
+        if img.mode in ("RGBA", "P"):
+            img = img.convert("RGB")
+
+        # Resize
+        img.thumbnail((1024, 1024))
+
+        # Compress
+        buffer = BytesIO()
+        img.save(buffer, format="JPEG", quality=70)  # 🔥 adjust quality (60–80 sweet spot)
+
+        file_name = f"{uuid.uuid4().hex}.jpg"
+
+        if variant.image:
+            variant.image.delete(save=False)
+
+        variant.image.save(file_name, ContentFile(buffer.getvalue()), save=True)
 
     def update(self, instance, validated_data):
         variants_data = validated_data.pop('variants', [])
-        
+
         instance.name = validated_data.get('name', instance.name)
         instance.description = validated_data.get('description', instance.description)
         instance.price = validated_data.get('price', instance.price)
         instance.type = validated_data.get('type', instance.type)
         instance.save()
-        
+
         existing_variants = {v.id: v for v in instance.variants.all()}
         incoming_ids = set()
-        
+
         for variant_data in variants_data:
             variant_id = variant_data.get('id')
             incoming_ids.add(variant_id)
-            
+
             if variant_id and variant_id in existing_variants:
                 variant = existing_variants[variant_id]
-                
+
                 image_file = variant_data.get('image')
                 if image_file:
                     self._save_variant_image(variant, image_file)
-                
+
                 variant.save()
                 self._update_sizes(variant, variant_data.get('sizes', []))
                 del existing_variants[variant_id]
             else:
                 self._create_variant(instance, variant_data)
-        
+
         for variant in existing_variants.values():
             variant.delete()
-        
+
         return instance
 
     def _update_sizes(self, variant, sizes_data):
         existing_sizes = {s.size: s for s in variant.sizes.all()}
         incoming_sizes = set()
-        
+
         for size_data in sizes_data:
             size_name = size_data['size']
             incoming_sizes.add(size_name)
-            
+
             if size_name in existing_sizes:
                 existing_sizes[size_name].stock = size_data.get('stock', existing_sizes[size_name].stock)
                 existing_sizes[size_name].save()
@@ -173,7 +191,7 @@ class CreateItemSerializer(serializers.Serializer):
                     size=size_name,
                     stock=size_data.get('stock', 0)
                 )
-        
+
         for size in existing_sizes.values():
             size.delete()
 

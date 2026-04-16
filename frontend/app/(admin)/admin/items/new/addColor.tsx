@@ -15,12 +15,9 @@ import {
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 import CropModal from "./cropModal";
 import CommonDetailsBadge from "./commonDetailsBadge";
-import {
-  ColorVariant,
-  CommonDetails,
-  FrontendSizeRange,
-} from "@/types/item";
+import { ColorVariant, CommonDetails, FrontendSizeRange } from "@/types/item";
 import { SIZES_BY_TYPE } from "@/types/item";
+import imageCompression from "browser-image-compression";
 
 interface Props {
   initial: ColorVariant;
@@ -56,11 +53,17 @@ export default function Step2AddColor({
     e.target.value = "";
   };
 
-  const handleCropDone = (file: File) => {
+  const handleCropDone = async (file: File) => {
+    const compressedFile = await imageCompression(file, {
+      maxSizeMB: 0.3, // 🔥 target size (300KB)
+      maxWidthOrHeight: 1024, // 🔥 resize
+      useWebWorker: true,
+    });
+
     setVariant((v) => ({
       ...v,
-      image: file,
-      imagePreview: URL.createObjectURL(file),
+      image: compressedFile,
+      imagePreview: URL.createObjectURL(compressedFile),
     }));
     setCropSrc(null);
   };
