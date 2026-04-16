@@ -21,15 +21,6 @@ const formatTime = (iso: string) =>
     minute: "2-digit",
   });
 
-const statusStyles: Record<InvoiceResponse["status"], string> = {
-  DRAFT: "bg-gray-50 text-gray-700 border border-gray-200 ring-1 ring-gray-300/40",
-  PENDING:
-    "bg-amber-50 text-amber-700 border border-amber-200 ring-1 ring-amber-300/40",
-  DISPATCHED:
-    "bg-emerald-50 text-emerald-700 border border-emerald-200 ring-1 ring-emerald-300/40",
-  PACKED: "bg-red-50 text-red-700 border border-red-200 ring-1 ring-red-300/40",
-};
-
 // ── Page Component ─────────────────────────────────────────────────────────────
 export default function InvoicePage() {
   const router = useRouter();
@@ -127,7 +118,7 @@ export default function InvoicePage() {
         className="w-full max-w-2xl bg-white rounded-2xl shadow-xl shadow-slate-200/70 overflow-hidden border border-slate-100"
       >
         {/* Top accent bar */}
-        <div className="h-1.5 w-full bg-gradient-to-r from-indigo-500 via-violet-500 to-purple-500" />
+        <div className="h-1.5 w-full bg-primary" />
 
         {/* ── Invoice Header ── */}
         <div className="px-8 pt-8 pb-6 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 border-b border-slate-100">
@@ -145,11 +136,6 @@ export default function InvoicePage() {
           </div>
 
           <div className="flex flex-col items-start sm:items-end gap-2">
-            <span
-              className={`text-xs font-semibold px-3 py-1 rounded-full tracking-wide uppercase ${statusStyles[invoice.status]}`}
-            >
-              {invoice.status}
-            </span>
             <div className="text-right">
               <p className="text-xs text-slate-400">Agent</p>
               <p className="text-sm font-medium text-slate-700">
@@ -177,10 +163,9 @@ export default function InvoicePage() {
           <div className="rounded-xl overflow-hidden border border-slate-100">
             {/* Table head */}
             <div className="grid grid-cols-12 bg-slate-800 text-white text-xs font-semibold uppercase tracking-wider px-4 py-3">
-              <span className="col-span-4">Item</span>
+              <span className="col-span-5">Item</span>
               <span className="col-span-2 text-center">Size</span>
               <span className="col-span-2 text-center">Sets</span>
-              <span className="col-span-2 text-center">Packed</span>
               <span className="col-span-2 text-right">Amount</span>
             </div>
 
@@ -198,34 +183,28 @@ export default function InvoicePage() {
                     idx % 2 === 0 ? "bg-white" : "bg-slate-50"
                   }`}
                 >
-                  <div className="col-span-4">
-                    <p className="font-medium text-slate-800">{oi.item_name}</p>
+                  <div className="col-span-5">
+                    <p className="font-medium text-slate-800 text-xl">
+                      {oi.item_name}
+                    </p>
                     <p className="text-xs text-slate-400 mt-0.5">
-                      ₹{itemPrice.toLocaleString("en-IN")} / pc
+                      Rs. {itemPrice.toLocaleString("en-IN")} / pc
                     </p>
                   </div>
                   <span className="col-span-2 text-center text-slate-500 text-xs font-mono bg-slate-100 rounded px-1.5 py-0.5 mx-auto">
                     {oi.size_group}
                   </span>
                   <div className="col-span-2 text-center font-semibold text-slate-700">
-                    <div>{oi.quantity} Set{oi.quantity !== 1 ? "s" : ""}</div>
+                    <div>
+                      {oi.quantity} Set{oi.quantity !== 1 ? "s" : ""}
+                    </div>
                     <div className="text-[10px] text-slate-400 font-normal">
                       × {pieceCount} pcs = {totalPieces}
                     </div>
                   </div>
-                  <div className="col-span-2 flex justify-center">
-                    <span
-                      className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                        (oi.packed_quantity ?? 0) >= totalPieces
-                          ? "bg-emerald-100 text-emerald-700"
-                          : "bg-orange-100 text-orange-600"
-                      }`}
-                    >
-                      {oi.packed_quantity ?? 0}/{totalPieces}
-                    </span>
-                  </div>
+
                   <span className="col-span-2 text-right font-semibold text-slate-800">
-                    ₹{amount.toLocaleString("en-IN")}
+                    Rs. {amount.toLocaleString("en-IN")}
                   </span>
                 </div>
               );
@@ -239,7 +218,7 @@ export default function InvoicePage() {
             <div className="flex justify-between px-5 py-3 text-sm text-slate-500 border-b border-slate-100">
               <span>Subtotal</span>
               <span className="font-medium text-slate-700">
-                ₹{invoice.total_price.toLocaleString("en-IN")}
+                Rs. {invoice.total_price.toLocaleString("en-IN")}
               </span>
             </div>
             <div className="flex justify-between px-5 py-3 text-sm text-slate-500 border-b border-slate-100">
@@ -249,7 +228,7 @@ export default function InvoicePage() {
             <div className="flex justify-between px-5 py-4 bg-slate-800 text-white">
               <span className="font-semibold text-sm tracking-wide">Total</span>
               <span className="font-display text-xl">
-                ₹{invoice.total_price.toLocaleString("en-IN")}
+                Rs. {invoice.total_price.toLocaleString("en-IN")}
               </span>
             </div>
           </div>
@@ -262,39 +241,6 @@ export default function InvoicePage() {
         </div>
       </div>
 
-      {/* ── Share Button ── */}
-      {/*<div className="w-full max-w-2xl mt-6">
-        <button
-          onClick={handleShareWhatsApp}
-          className="group w-full flex items-center justify-center gap-3 bg-[#25D366] hover:bg-[#1ebe5d] active:scale-[0.98] text-white font-semibold text-base py-4 rounded-2xl shadow-lg shadow-[#25D366]/30 transition-all duration-200"
-        >
-          <svg
-            className="w-5 h-5"
-            viewBox="0 0 32 32"
-            fill="white"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path d="M16.002 2.667C8.638 2.667 2.667 8.637 2.667 16a13.283 13.283 0 0 0 1.784 6.667L2.667 29.333l6.867-1.77A13.266 13.266 0 0 0 16.002 29.333C23.365 29.333 29.333 23.363 29.333 16S23.365 2.667 16.002 2.667zm0 2.4c5.997 0 10.931 4.934 10.931 10.933 0 5.998-4.934 10.933-10.931 10.933a10.89 10.89 0 0 1-5.556-1.521l-.398-.239-4.075 1.049 1.076-3.959-.261-.41A10.887 10.887 0 0 1 5.07 16c0-5.999 4.934-10.933 10.932-10.933zm-3.29 5.266c-.198 0-.52.074-.792.37-.273.296-1.04 1.016-1.04 2.478 0 1.462 1.064 2.876 1.213 3.074.148.198 2.072 3.164 5.02 4.312 2.484.98 2.948.785 3.48.736.533-.05 1.72-.703 1.963-1.382.245-.679.245-1.261.172-1.382-.074-.12-.272-.197-.57-.345-.297-.148-1.756-.867-2.028-.965-.272-.1-.47-.148-.667.148-.198.297-.766.965-.94 1.163-.172.197-.345.222-.642.074-.297-.148-1.252-.462-2.384-1.47-.881-.784-1.476-1.752-1.649-2.048-.172-.297-.018-.457.13-.604.132-.132.296-.346.445-.519.148-.172.197-.297.296-.494.099-.198.05-.37-.025-.52-.074-.147-.659-1.614-.908-2.207-.24-.58-.485-.5-.667-.51l-.567-.009z" />
-          </svg>
-          Share Invoice via WhatsApp
-          <svg
-            className="w-4 h-4 opacity-70 group-hover:translate-x-0.5 transition-transform"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={2}
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M9 5l7 7-7 7"
-            />
-          </svg>
-        </button>
-        <p className="text-center text-xs text-slate-400 mt-3">
-          Sharing will open WhatsApp and redirect you to the home page.
-        </p>
-      </div>*/}
       {/* ── Download PDF Button ── */}
       <div className="w-full max-w-2xl mt-6">
         <PDFDownloadLink
@@ -303,7 +249,7 @@ export default function InvoicePage() {
           className="w-full"
         >
           {({ loading }) => (
-            <button className="w-full flex items-center justify-center gap-3 bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] text-white font-semibold text-base py-4 rounded-2xl shadow-lg transition-all duration-200">
+            <button className="w-full flex items-center justify-center gap-3 bg-primary hover:bg-primary/90 active:scale-[0.98] text-white font-semibold text-base py-4 rounded-2xl shadow-lg transition-all duration-200">
               {loading ? "Generating PDF..." : "Download Invoice PDF"}
             </button>
           )}
