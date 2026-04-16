@@ -14,9 +14,14 @@ import { Search } from "lucide-react";
 interface ImagePreviewProps {
   src: string;
   alt?: string;
+  enlargeDisabled?: boolean;
 }
 
-export function ImagePreview({ src, alt = "Image" }: ImagePreviewProps) {
+export function ImagePreview({
+  src,
+  alt = "Image",
+  enlargeDisabled = false,
+}: ImagePreviewProps) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -24,6 +29,7 @@ export function ImagePreview({ src, alt = "Image" }: ImagePreviewProps) {
       <button
         type="button"
         onClick={(e) => {
+          if (enlargeDisabled) return;
           e.stopPropagation();
           setOpen(true);
         }}
@@ -39,12 +45,14 @@ export function ImagePreview({ src, alt = "Image" }: ImagePreviewProps) {
             unoptimized
           />
         </div>
-        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center rounded-md">
-          <Search
-            size={20}
-            className="text-white opacity-0 group-hover:opacity-100 transition-opacity"
-          />
-        </div>
+        {!enlargeDisabled && (
+          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center rounded-md">
+            <Search
+              size={20}
+              className="text-white opacity-0 group-hover:opacity-100 transition-opacity"
+            />
+          </div>
+        )}
       </button>
 
       <Dialog open={open} onOpenChange={setOpen}>

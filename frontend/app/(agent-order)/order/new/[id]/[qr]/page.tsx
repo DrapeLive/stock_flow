@@ -2,19 +2,22 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import Image from "next/image";
-import { ArrowLeft, PackagePlus, Minus, Plus, Check, Info } from "lucide-react";
+import {
+  ArrowLeft,
+  PackagePlus,
+  Minus,
+  Plus,
+  Check,
+  Info,
+  ChevronDown,
+} from "lucide-react";
 import { ImagePreview } from "@/components/pages/ImagePreview";
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 import { itemApi } from "@/lib/api/item";
 import { orderApi } from "@/lib/api/order";
 import { PageLoading } from "@/components/ui/Loading";
 import { toastSuccess, toastError } from "@/lib/toast";
-import type {
-  ItemQRResponse,
-  ItemVariant,
-  ItemType,
-} from "@/types/item";
+import type { ItemQRResponse, ItemVariant, ItemType } from "@/types/item";
 
 import {
   Select,
@@ -27,7 +30,33 @@ import {
   SIZES_BY_TYPE,
   SIZE_RANGE_TO_SIZES,
   FrontendSizeRange,
+  SIZE_RANGE_PIECE_COUNT,
 } from "@/types/item";
+
+function getStockForSizeGroup(
+  variant: ItemVariant | null,
+  sizeGroup: string | null,
+): number {
+  if (!variant || !sizeGroup) return 0;
+
+  const sizesInGroup =
+    SIZE_RANGE_TO_SIZES[sizeGroup as FrontendSizeRange] || [];
+
+  const sizeSet = new Set(sizesInGroup);
+
+  const relevantStocks = variant.sizes
+    .filter((s) => sizeSet.has(s.size))
+    .map((s) => s.stock);
+
+  if (relevantStocks.length === 0) return 0;
+
+  return Math.min(...relevantStocks);
+}
+
+function getPiecesForGroup(sizeGroup: string | null): number {
+  if (!sizeGroup) return 0;
+  return SIZE_RANGE_PIECE_COUNT[sizeGroup] || 0;
+}
 
 function getAvailableSizeRanges(
   variant: ItemVariant | null,
@@ -43,8 +72,10 @@ function getAvailableSizeRanges(
       const rangeSizes = SIZE_RANGE_TO_SIZES[range];
       const rangeSizeSet = new Set(rangeSizes);
 
-      if (rangeSizeSet.size === variantSizeSet.size &&
-          [...rangeSizeSet].every((s) => variantSizeSet.has(s))) {
+      if (
+        rangeSizeSet.size === variantSizeSet.size &&
+        [...rangeSizeSet].every((s) => variantSizeSet.has(s))
+      ) {
         return [range];
       }
     }
@@ -63,8 +94,7 @@ function getMaxSizeGroup(sizeGroups: string[]): string | null {
   if (sizeGroups.length === 1) return sizeGroups[0];
 
   return sizeGroups.reduce((max, current) => {
-    const maxSizes =
-      SIZE_RANGE_TO_SIZES[max as FrontendSizeRange]?.length || 0;
+    const maxSizes = SIZE_RANGE_TO_SIZES[max as FrontendSizeRange]?.length || 0;
     const currentSizes =
       SIZE_RANGE_TO_SIZES[current as FrontendSizeRange]?.length || 0;
     return currentSizes > maxSizes ? current : max;
@@ -119,6 +149,23 @@ export default function ProductDetailPage() {
     }
   }, [sizeGroups, selectedSizeGroup]);
 
+  const availableStock = getStockForSizeGroup(
+    selectedVariant,
+    selectedSizeGroup,
+  );
+
+  const pieceCount = getPiecesForGroup(selectedSizeGroup);
+
+  useEffect(() => {
+    if (quantity > availableStock) {
+      setValidationError(
+        `Only ${availableStock} items available for selected size group`,
+      );
+    } else {
+      setValidationError(null);
+    }
+  }, [quantity, availableStock]);
+
   const handleSubmit = async () => {
     if (!selectedVariant) {
       setValidationError("Please select a color/variant");
@@ -130,6 +177,13 @@ export default function ProductDetailPage() {
     }
     if (quantity < 1) {
       setValidationError("Quantity must be at least 1");
+      return;
+    }
+
+    if (quantity > availableStock) {
+      setValidationError(
+        `Only ${availableStock} items available for selected size group`,
+      );
       return;
     }
 
@@ -160,7 +214,6 @@ export default function ProductDetailPage() {
       setLoading(false);
     }
   };
-
   if (loading) return <PageLoading />;
 
   return (
@@ -233,6 +286,7 @@ export default function ProductDetailPage() {
                   <ImagePreview
                     src={v.image}
                     alt={`Variant ${index + 1}`}
+                    enlargeDisabled={true}
                   />
                 ) : (
                   <div className="w-full h-full bg-gray-100" />
@@ -248,29 +302,65 @@ export default function ProductDetailPage() {
         </div>
 
         <div className="mb-8">
-          <h3 className="font-bold text-gray-900 mb-4">Size Group</h3>
+          {/* Header */}
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-bold text-gray-900">Size Group</h3>
+
+            {selectedSizeGroup && (
+              <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider bg-gray-100 px-3 py-1 rounded-full">
+                {pieceCount} pcs / set
+              </span>
+            )}
+          </div>
+
+          {/* Select Box */}
           {sizeGroups.length > 0 ? (
-            <Select
-              value={selectedSizeGroup || undefined}
-              onValueChange={(value) => {
-                setSelectedSizeGroup(value);
-                setValidationError(null);
-              }}
-            >
-              <SelectTrigger className="w-full h-12 rounded-2xl border-2 border-gray-100 bg-white px-4">
-                <SelectValue placeholder="Select size group" />
-              </SelectTrigger>
-              <SelectContent>
-                {sizeGroups.map((group) => (
-                  <SelectItem key={group} value={group}>
-                    {group}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="relative">
+              <Select
+                value={selectedSizeGroup || undefined}
+                onValueChange={(value) => {
+                  setSelectedSizeGroup(value);
+                  setValidationError(null);
+                }}
+              >
+                <SelectTrigger className="w-full h-14 border-2 border-gray-100 bg-white px-4 pr-10 flex items-center text-sm font-semibold shadow-sm">
+                  <SelectValue placeholder="Select size group" />
+                </SelectTrigger>
+
+                <SelectContent>
+                  {sizeGroups.map((group) => (
+                    <SelectItem key={group} value={group}>
+                      {group}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* Chevron */}
+              <div className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">
+                <ChevronDown size={18} />
+              </div>
+            </div>
           ) : (
-            <div className="w-full h-12 rounded-2xl border-2 border-gray-100 bg-gray-50 px-4 flex items-center text-gray-400 font-medium">
+            <div className="w-full h-14 rounded-2xl border-2 border-gray-100 bg-gray-50 px-4 flex items-center text-gray-400 font-medium">
               No sizes available
+            </div>
+          )}
+
+          {/* Stock Info */}
+          {selectedSizeGroup && (
+            <div className="mt-3 flex items-center justify-between text-xs font-bold uppercase tracking-wider px-2">
+              <span className="text-gray-400">Available Sets</span>
+
+              <span
+                className={`${
+                  availableStock === 0
+                    ? "text-rose-500"
+                    : availableStock < 5 && "text-amber-500"
+                }`}
+              >
+                {availableStock}
+              </span>
             </div>
           )}
         </div>
@@ -297,7 +387,9 @@ export default function ProductDetailPage() {
             />
 
             <button
-              onClick={() => setQuantity(quantity + 1)}
+              onClick={() =>
+                setQuantity((prev) => Math.min(availableStock, prev + 1))
+              }
               className="w-10 h-10 rounded-xl bg-gray-900 flex items-center justify-center text-white hover:bg-black active:scale-90 transition-all font-bold"
             >
               <Plus size={20} />
@@ -320,6 +412,7 @@ export default function ProductDetailPage() {
             variant="filled"
             icon={<PackagePlus />}
             onClick={handleSubmit}
+            disabled={loading || availableStock === 0 || !!validationError}
             className="w-full py-4 active:scale-95 transition-all"
           />
         </div>
