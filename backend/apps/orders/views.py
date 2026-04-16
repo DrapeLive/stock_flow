@@ -385,6 +385,38 @@ class InvoiceView(APIView):
         return Response(serializer.data)
 
 
+class OrderLogsView(APIView):
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, order_id):
+        order = get_object_or_404(Order, id=order_id)
+
+        if request.user.role != 'ADMIN' and order.agent.user != request.user:
+            return Response({"error": "Unauthorized"}, status=403)
+
+        logs = order.logs.all().order_by('-created_at')
+
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+
+        result = []
+        for log in logs:
+            user_name = None
+            if log.performed_by:
+                user_name = log.performed_by.username
+            
+            result.append({
+                'id': log.id,
+                'action': log.action,
+                'details': log.details,
+                'performed_by': user_name,
+                'created_at': log.created_at.isoformat()
+            })
+
+        return Response(result)
+
+
 class OrderItemViewSet(ModelViewSet):
 
     queryset = OrderItem.objects.all()

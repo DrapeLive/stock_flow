@@ -10,6 +10,14 @@ import type {
 } from "@/types/order";
 import { api } from "./axios";
 
+export interface OrderLog {
+  id: number;
+  action: string;
+  details: Record<string, unknown>;
+  performed_by: string | null;
+  created_at: string;
+}
+
 export const orderApi = {
   getAll(): Promise<OrderAllResponse> {
     return api.get<OrderAllResponse>("/api/orders/").then((r) => r.data);
@@ -68,6 +76,12 @@ export const orderApi = {
   dispatchOrder(id: number): Promise<{ message: string }> {
     return api
       .post<{ message: string }>(`/api/orders/${id}/dispatch/`)
+      .then((r) => r.data);
+  },
+
+  getOrderLogs(orderId: number): Promise<OrderLog[]> {
+    return api
+      .get<OrderLog[]>(`/api/orders/${orderId}/logs/`)
       .then((r) => r.data);
   },
 };
