@@ -1,15 +1,24 @@
 "use client";
 import OrderItem from "@/components/pages/admin/order-item/OrderItem";
 import { customerApi } from "@/lib/api/customer";
-import { toastError } from "@/lib/toast";
+import { toastError, toastSuccess } from "@/lib/toast";
 import { CustomerResponse } from "@/types/customer";
-import { ChevronLeft, Plus, User, ShoppingBag, Package } from "lucide-react";
+import {
+  ChevronLeft,
+  Plus,
+  User,
+  ShoppingBag,
+  Package,
+  AlertTriangle,
+  X,
+} from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { orderApi } from "@/lib/api/order";
-import { OrderResponse } from "@/types/order";
+import { OrderResponse, OutOfStockItem, PlaceOrderError } from "@/types/order";
 import { PageLoading } from "@/components/ui/Loading";
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
+import { AxiosError } from "axios";
 
 export default function OrderDetailsPage() {
   const params = useParams();
@@ -18,8 +27,43 @@ export default function OrderDetailsPage() {
 
   const [data, setData] = useState<CustomerResponse>();
   const [loading, setLoading] = useState(true);
+  const [placingOrder, setPlacingOrder] = useState(false);
   const [orders, setOrders] = useState<OrderResponse>();
   const [loadError, setLoadError] = useState(false);
+  const [showOutOfStockModal, setShowOutOfStockModal] = useState(false);
+  const [outOfStockItems, setOutOfStockItems] = useState<OutOfStockItem[]>([]);
+
+  const totalPieces =
+    orders?.items.reduce((sum, item) => sum + item.quantity, 0) || 0;
+
+  const totalMoney =
+    orders?.items.reduce(
+      (sum, item) => sum + (Number(item.item_price) || 0) * item.quantity,
+      0,
+    ) || 0;
+
+  const handlePlaceOrder = async () => {
+    const orderKey = localStorage.getItem("orderKey");
+    if (!orderKey) return;
+
+    setPlacingOrder(true);
+    try {
+      await orderApi.placeOrder(Number(orderKey));
+      toastSuccess("Order placed successfully!");
+      localStorage.removeItem("orderKey");
+      router.push("/");
+    } catch (error) {
+      const axiosError = error as AxiosError<PlaceOrderError>;
+      if (axiosError.response?.data?.out_of_stock_items) {
+        setOutOfStockItems(axiosError.response.data.out_of_stock_items);
+        setShowOutOfStockModal(true);
+      } else {
+        toastError(axiosError.response?.data?.error || "Failed to place order");
+      }
+    } finally {
+      setPlacingOrder(false);
+    }
+  };
 
   useEffect(() => {
     setLoading(true);
@@ -142,16 +186,102 @@ export default function OrderDetailsPage() {
           )}
         </div>
 
-        {/* Finalize Order Button - Conceptual */}
+        {/* Order Totals */}
         {orders && orders.items.length > 0 && (
-          <div className="mt-10 px-4">
-            <button
-              onClick={() => router.push("/order/invoice")}
-              className="flex items-center justify-center gap-3 w-full bg-primary text-white font-black py-4 rounded-3xl shadow-lg shadow-primary/30 hover:opacity-90 transition-all transform active:scale-95 border border-primary/20"
-            >
-              <Package size={20} />
-              <span>Finish Order</span>
-            </button>
+          <div className="mt-8 bg-gradient-to-r from-primary/5 to-primary/10 rounded-3xl p-5 border border-primary/20">
+            <div className="flex justify-between items-center">
+              <div>
+                <p className="text-[10px] text-primary/60 uppercase font-black tracking-widest">
+                  Order Summary
+                </p>
+                <div className="flex gap-4 mt-2">
+                  <div>
+                    <span className="text-xl font-black text-gray-900">
+                      {totalPieces}
+                    </span>
+                    <span className="text-sm text-gray-400 ml-1">pcs</span>
+                  </div>
+                  <div className="w-px bg-primary/20" />
+                  <div>
+                    <span className="text-xl font-black text-primary">
+                      ₹{totalMoney}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={handlePlaceOrder}
+                disabled={placingOrder}
+                className="flex items-center justify-center gap-2 bg-primary text-white font-black py-4 px-6 rounded-2xl shadow-lg shadow-primary/30 hover:opacity-90 transition-all transform active:scale-95 border border-primary/20 disabled:opacity-50"
+              >
+                {placingOrder ? (
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <Package size={20} />
+                )}
+                <span>Place Order</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Out of Stock Modal */}
+        {showOutOfStockModal && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center">
+                    <AlertTriangle className="text-red-500" size={20} />
+                  </div>
+                  <h3 className="text-lg font-black text-gray-900">
+                    Out of Stock
+                  </h3>
+                </div>
+                <button
+                  onClick={() => setShowOutOfStockModal(false)}
+                  className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
+                >
+                  <X size={20} className="text-gray-400" />
+                </button>
+              </div>
+              <p className="text-sm text-gray-500 mb-4">
+                Some items are no longer available. Another agent may have
+                placed an order.
+              </p>
+              <div className="space-y-3 mb-6 max-h-48 overflow-y-auto">
+                {outOfStockItems.map((item, idx) => (
+                  <div
+                    key={idx}
+                    className="bg-red-50 rounded-xl p-3 border border-red-100"
+                  >
+                    <p className="font-bold text-gray-900 text-sm">
+                      {item.item_name}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Size: {item.size_group} ({item.size})
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      Required: {item.required} | Available: {item.available}
+                    </p>
+                  </div>
+                ))}
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowOutOfStockModal(false)}
+                  className="flex-1 py-3 rounded-xl border border-gray-200 text-gray-600 font-bold text-sm hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => setShowOutOfStockModal(false)}
+                  className="flex-1 py-3 rounded-xl bg-primary text-white font-bold text-sm hover:opacity-90 transition-opacity"
+                >
+                  Remove Items
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>

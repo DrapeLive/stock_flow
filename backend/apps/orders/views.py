@@ -6,6 +6,7 @@ from rest_framework.viewsets import ModelViewSet
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.decorators import action
 
 from .models import Order, OrderItem
 from .serializers import (
@@ -31,7 +32,7 @@ class OrderViewSet(ModelViewSet):
     def get_queryset(self):
 
         if self.action == "list":
-            Order.objects.filter(items__isnull=True).delete()
+            Order.objects.filter(status='DRAFT').delete()
 
         user = self.request.user
 
@@ -51,6 +52,89 @@ class OrderViewSet(ModelViewSet):
             agent=self.request.user.agent
         )
 
+    @action(detail=True, methods=["post"], url_path="place-order")
+    def place_order(self, request, pk=None):
+        order = self.get_object()
+
+        if order.status != 'DRAFT':
+            return Response(
+                {"error": "Only DRAFT orders can be placed"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if not order.items.exists():
+            return Response(
+                {"error": "Cannot place an empty order"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        out_of_stock_items = []
+
+        with transaction.atomic():
+            for order_item in order.items.select_related('item', 'variant'):
+                if order_item.item is None or order_item.item.is_deleted:
+                    continue
+
+                item_type = order_item.item.type
+                required_sizes = SIZE_MAPPING[item_type][order_item.size_group]
+
+                for size in required_sizes:
+                    try:
+                        size_obj = ItemVariantSize.objects.select_for_update().get(
+                            item_variant=order_item.variant,
+                            size=size
+                        )
+                    except ItemVariantSize.DoesNotExist:
+                        out_of_stock_items.append({
+                            "item_name": order_item.item_name,
+                            "size_group": order_item.size_group,
+                            "size": size,
+                            "required": order_item.quantity,
+                            "available": 0,
+                            "order_item_id": order_item.id
+                        })
+                        continue
+
+                    if size_obj.stock < order_item.quantity:
+                        out_of_stock_items.append({
+                            "item_name": order_item.item_name,
+                            "size_group": order_item.size_group,
+                            "size": size,
+                            "required": order_item.quantity,
+                            "available": size_obj.stock,
+                            "order_item_id": order_item.id
+                        })
+
+            if out_of_stock_items:
+                return Response(
+                    {
+                        "error": "Some items are no longer available. Another agent may have placed an order.",
+                        "out_of_stock_items": out_of_stock_items
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            for order_item in order.items.select_related('item', 'variant'):
+                if order_item.item is None or order_item.item.is_deleted:
+                    continue
+
+                item_type = order_item.item.type
+                required_sizes = SIZE_MAPPING[item_type][order_item.size_group]
+
+                for size in required_sizes:
+                    ItemVariantSize.objects.filter(
+                        item_variant=order_item.variant,
+                        size=size
+                    ).update(stock=F('stock') - order_item.quantity)
+
+            order.status = 'PENDING'
+            order.save()
+
+        return Response({
+            "message": "Order placed successfully",
+            "order_id": order.id
+        })
+
 
 class AddOrderItemView(APIView):
 
@@ -62,6 +146,12 @@ class AddOrderItemView(APIView):
         serializer.is_valid(raise_exception=True)
 
         order = get_object_or_404(Order, id=order_id)
+
+        if order.status != 'DRAFT':
+            return Response(
+                {"error": "Items can only be added to DRAFT orders"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         agent = request.user.agent
 
@@ -147,17 +237,18 @@ class DeleteOrderItemView(APIView):
             order=order
         )
 
-        if order_item.item is not None and not order_item.item.is_deleted:
-            item_type = order_item.item.type
-            required_sizes = SIZE_MAPPING[item_type][order_item.size_group]
+        if order.status != 'DRAFT':
+            if order_item.item is not None and not order_item.item.is_deleted:
+                item_type = order_item.item.type
+                required_sizes = SIZE_MAPPING[item_type][order_item.size_group]
 
-            with transaction.atomic():
+                with transaction.atomic():
 
-                for size in required_sizes:
-                    ItemVariantSize.objects.filter(
-                        item_variant=order_item.variant,
-                        size=size
-                    ).update(stock=F('stock') + order_item.quantity)
+                    for size in required_sizes:
+                        ItemVariantSize.objects.filter(
+                            item_variant=order_item.variant,
+                            size=size
+                        ).update(stock=F('stock') + order_item.quantity)
 
         order_item.delete()
 

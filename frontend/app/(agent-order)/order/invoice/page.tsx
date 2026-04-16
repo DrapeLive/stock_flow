@@ -22,6 +22,7 @@ const formatTime = (iso: string) =>
   });
 
 const statusStyles: Record<InvoiceResponse["status"], string> = {
+  DRAFT: "bg-gray-50 text-gray-700 border border-gray-200 ring-1 ring-gray-300/40",
   PENDING:
     "bg-amber-50 text-amber-700 border border-amber-200 ring-1 ring-amber-300/40",
   DISPATCHED:

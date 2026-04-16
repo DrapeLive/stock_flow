@@ -7,6 +7,7 @@ from apps.items.models import Item, ItemVariant
 class Order(models.Model):
 
     STATUS_CHOICES = (
+        ('DRAFT', 'Draft'),
         ('PENDING', 'Pending'),
         ('PACKED', 'Packed'),
         ('DISPATCHED', 'Dispatched')
@@ -18,7 +19,7 @@ class Order(models.Model):
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
-        default='PENDING'
+        default='DRAFT'
     )
 
     created_at = models.DateTimeField(auto_now_add=True)

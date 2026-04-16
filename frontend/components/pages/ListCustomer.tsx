@@ -42,7 +42,7 @@ const ListCustomer: React.FC = () => {
       const agentIdValue = res.id;
       const res1 = await orderApi.create({
         customer: id,
-        status: "PENDING",
+        status: "DRAFT",
         agent: agentIdValue,
       });
       if (res1.id) {

@@ -1,6 +1,20 @@
 import type { Item } from "./item";
 
-export type OrderStatus = "PENDING" | "PACKED" | "DISPATCHED";
+export type OrderStatus = "DRAFT" | "PENDING" | "PACKED" | "DISPATCHED";
+
+export interface OutOfStockItem {
+  item_name: string;
+  size_group: string;
+  size: string;
+  required: number;
+  available: number;
+  order_item_id: number;
+}
+
+export interface PlaceOrderError {
+  error: string;
+  out_of_stock_items: OutOfStockItem[];
+}
 
 export interface SimpleAgent {
   id: number;

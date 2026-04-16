@@ -58,4 +58,10 @@ export const orderApi = {
       .get<InvoiceResponse>(`/api/orders/${id}/invoice/`)
       .then((r) => r.data);
   },
+
+  placeOrder(id: number): Promise<{ message: string; order_id: number }> {
+    return api
+      .post<{ message: string; order_id: number }>(`/api/orders/${id}/place-order/`)
+      .then((r) => r.data);
+  },
 };
