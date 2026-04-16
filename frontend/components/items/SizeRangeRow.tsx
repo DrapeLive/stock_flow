@@ -14,7 +14,7 @@ export default function SizeRangeRow({
   isDisabled = false,
 }: SizeRangeRowProps) {
   const piecesPerSet = SIZE_RANGE_PIECE_COUNT[sizeRange] || 1;
-  const setsAvailable = Math.floor(stock / piecesPerSet);
+  const setsAvailable = Math.floor(stock);
 
   return (
     <div

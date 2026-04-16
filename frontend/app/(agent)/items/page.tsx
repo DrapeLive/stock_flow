@@ -7,10 +7,29 @@ import { PageLoading } from "@/components/ui/Loading";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
 import { ItemList } from "@/components/items";
+import { ItemType, UIItem } from "@/types/item";
+
+function normalizeAgentItem(item: AssignedItem): UIItem {
+  return {
+    id: item.id,
+    name: item.name,
+    type: item.type as ItemType,
+    price: item.price,
+    variants: item.variants.map((v) => ({
+      id: v.id,
+      image: v.image,
+      qr_code: null,
+      sizes: v.size_ranges.map((sr) => ({
+        size: sr.size_range,
+        stock: sr.stock,
+      })),
+    })),
+  };
+}
 
 export default function MyItemsPage() {
   const { user } = useAuth();
-  const [items, setItems] = useState<AssignedItem[]>([]);
+  const [items, setItems] = useState<UIItem[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
@@ -19,7 +38,7 @@ export default function MyItemsPage() {
     setLoading(true);
     try {
       const agent = await agentApi.getProfile(user.id);
-      setItems(agent.assigned_items || []);
+      setItems((agent.assigned_items || []).map(normalizeAgentItem));
     } catch (error) {
       console.error("Error fetching items:", error);
     } finally {

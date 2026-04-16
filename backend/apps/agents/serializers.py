@@ -38,37 +38,28 @@ class AgentItemListSerializer(serializers.Serializer):
 
         for variant in item.variants.all():
             image_key = variant.image.url if variant.image else None
+
             if variants_by_image[image_key]["id"] is None:
                 variants_by_image[image_key]["id"] = variant.id
                 variants_by_image[image_key]["image_obj"] = variant.image
+
             for size_obj in variant.sizes.all():
                 variants_by_image[image_key]["sizes"][size_obj.size] += size_obj.stock
 
         result = []
-        for image_key, data in variants_by_image.items():
+
+        for _, data in variants_by_image.items():
             image = get_image_url(data["image_obj"])
-            available_sizes = dict(data["sizes"])
             first_variant_id = data["id"]
 
-            size_ranges = []
-            item_size_mapping = SIZE_MAPPING.get(item.type, {})
-
-            for size_range, required_sizes in item_size_mapping.items():
-                all_available = True
-                min_stock = float('inf')
-
-                for size in required_sizes:
-                    if size in available_sizes:
-                        min_stock = min(min_stock, available_sizes[size])
-                    else:
-                        all_available = False
-                        break
-
-                if all_available and min_stock > 0:
-                    size_ranges.append({
-                        "size_range": size_range,
-                        "stock": int(min_stock)
-                    })
+            size_ranges = [
+                {
+                    "size_range": size,
+                    "stock": stock
+                }
+                for size, stock in data["sizes"].items()
+                if stock > 0
+            ]
 
             result.append({
                 "id": first_variant_id,
@@ -77,7 +68,6 @@ class AgentItemListSerializer(serializers.Serializer):
             })
 
         return result
-
     @classmethod
     def from_item(cls, item, request=None):
         return cls({

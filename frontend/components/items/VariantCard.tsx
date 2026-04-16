@@ -1,20 +1,17 @@
 "use client";
 
-import Image from "next/image";
 import { Printer } from "lucide-react";
 import { ImagePreview } from "@/components/pages/ImagePreview";
 import {
-  ItemVariantQR,
   SIZE_RANGE_TO_SIZES,
   SIZE_RANGE_PIECE_COUNT,
-  SIZES_BY_TYPE,
   ItemType,
+  UIVariant,
 } from "@/types/item";
-import { AgentItemVariant } from "@/types/agent";
 import SizeRangeRow from "./SizeRangeRow";
 
 interface VariantCardProps {
-  variant: ItemVariantQR | AgentItemVariant;
+  variant: UIVariant;
   index: number;
   context: "admin" | "agent";
   isCompact?: boolean;
@@ -24,133 +21,80 @@ interface VariantCardProps {
 }
 
 function getSizeRangesWithStock(
-  variant: ItemVariantQR | AgentItemVariant,
+  variant: UIVariant,
   itemType?: ItemType,
 ): { sizeRange: string; stock: number }[] {
-  const hasSizeRanges = "size_ranges" in variant;
-  const sizes = "sizes" in variant ? (variant as ItemVariantQR).sizes : undefined;
+  const sizes = variant.sizes;
 
-  if (hasSizeRanges) {
+  const result: { sizeRange: string; stock: number }[] = [];
+
+  // Convert sizes to map for quick lookup
+  const sizeMap: Record<string, number> = {};
+  for (const s of sizes) {
+    sizeMap[s.size] = s.stock;
+  }
+
+  for (const [range, groupedSizes] of Object.entries(SIZE_RANGE_TO_SIZES)) {
+    const matched = groupedSizes.filter((s) => sizeMap[s] !== undefined);
+
+    // ❌ skip if nothing matches
+    if (matched.length === 0) continue;
+
+    // =========================
+    // 👕 GENTS LOGIC
+    // =========================
     if (itemType === "gents") {
-      const sizeRanges = variant.size_ranges.map((sr) => ({
-        sizeRange: sr.size_range,
-        stock: sr.stock,
-      }));
-      return getPerfectMatchSizes(sizeRanges, sizes);
+      // ✅ only consider FULL matches
+      if (matched.length !== groupedSizes.length) continue;
+
+      const stocks = groupedSizes.map((s) => sizeMap[s]);
+      const minStock = Math.min(...stocks);
+
+      result.push({
+        sizeRange: range,
+        stock: minStock,
+      });
     }
-    if (itemType === "kids") {
-      const sizeRanges = variant.size_ranges.map((sr) => ({
-        sizeRange: sr.size_range,
-        stock: sr.stock,
-      }));
-      return getMinStockForKids(sizeRanges, sizes);
+
+    // =========================
+    // 👶 KIDS LOGIC
+    // =========================
+    else {
+      // require full match
+      if (matched.length !== groupedSizes.length) continue;
+
+      const stocks = groupedSizes.map((s) => sizeMap[s]);
+      const minStock = Math.min(...stocks);
+
+      result.push({
+        sizeRange: range,
+        stock: minStock,
+      });
     }
-    return variant.size_ranges.map((sr) => ({
-      sizeRange: sr.size_range,
-      stock: sr.stock,
-    }));
   }
 
+  // =========================
+  // 🧠 IMPORTANT PART (GENTS ONLY)
+  // =========================
   if (itemType === "gents") {
-    const sizeRanges = getSizeRangesWithStockGrouped(variant, itemType);
-    return getPerfectMatchSizes(sizeRanges, sizes);
+    // pick ONLY the largest matching group
+    return result.length
+      ? [
+          result.sort(
+            (a, b) =>
+              SIZE_RANGE_TO_SIZES[b.sizeRange].length -
+              SIZE_RANGE_TO_SIZES[a.sizeRange].length,
+          )[0],
+        ]
+      : [];
   }
 
-  if (itemType === "kids") {
-    return getSizeRangesWithStockGrouped(variant, itemType);
-  }
-
-  return getSizeRangesWithStockGrouped(variant);
+  return result;
 }
-
-function getSizeRangesWithStockGrouped(
-  variant: ItemVariantQR | AgentItemVariant,
-  itemType?: ItemType,
-): { sizeRange: string; stock: number }[] {
-  const sizes =
-    "sizes" in variant ? ((variant as ItemVariantQR).sizes as { size: string; stock: number }[]) : [];
-  const sizeGroups: Record<string, number> = {};
-  const sizeMinStock: Record<string, number> = {};
-
-  for (const sizeObj of sizes) {
-    for (const [range, sizesInRange] of Object.entries(SIZE_RANGE_TO_SIZES)) {
-      if (sizesInRange.includes(sizeObj.size)) {
-        if (itemType === "kids") {
-          const currentMin = sizeMinStock[range];
-          if (currentMin === undefined || sizeObj.stock < currentMin) {
-            sizeMinStock[range] = sizeObj.stock;
-          }
-        } else {
-          sizeGroups[range] = (sizeGroups[range] || 0) + sizeObj.stock;
-        }
-      }
-    }
-  }
-
-  if (itemType === "kids") {
-    return Object.entries(sizeMinStock).map(([sizeRange, stock]) => ({
-      sizeRange,
-      stock,
-    }));
-  }
-
-  return Object.entries(sizeGroups).map(([sizeRange, stock]) => ({
-    sizeRange,
-    stock,
-  }));
-}
-
-function getMinStockForKids(
-  sizeRanges: { sizeRange: string; stock: number }[],
-  sizes?: { size: string; stock: number }[],
-): { sizeRange: string; stock: number }[] {
-  if (!sizes || sizes.length === 0) return sizeRanges;
-
-  return sizeRanges.map(({ sizeRange }) => {
-    const rangeSizes = SIZE_RANGE_TO_SIZES[sizeRange as keyof typeof SIZE_RANGE_TO_SIZES];
-    if (!rangeSizes) return { sizeRange, stock: 0 };
-
-    const availableSizes = sizes.filter((s) => rangeSizes.includes(s.size));
-    if (availableSizes.length === 0) return { sizeRange, stock: 0 };
-
-    const minStock = Math.min(...availableSizes.map((s) => s.stock));
-    return { sizeRange, stock: minStock };
-  });
-}
-
-function getPerfectMatchSizes(
-  sizeRanges: { sizeRange: string; stock: number }[],
-  sizes?: { size: string; stock: number }[],
-): { sizeRange: string; stock: number }[] {
-  if (!sizes || sizes.length === 0) return sizeRanges;
-
-  const variantSizes = Array.from(new Set(sizes.map((s) => s.size)));
-  const variantSizeSet = new Set(variantSizes);
-
-  for (const range of SIZES_BY_TYPE.gents) {
-    const rangeSizes = SIZE_RANGE_TO_SIZES[range];
-    const rangeSizeSet = new Set(rangeSizes);
-
-    if (
-      rangeSizeSet.size === variantSizeSet.size &&
-      [...rangeSizeSet].every((s) => variantSizeSet.has(s))
-    ) {
-      const matched = sizeRanges.find((sr) => sr.sizeRange === range);
-      return matched ? [matched] : [];
-    }
-  }
-
-  return sizeRanges;
-}
-
-function isVariantOutOfStock(
-  variant: ItemVariantQR | AgentItemVariant,
-  itemType?: ItemType,
-): boolean {
+function isVariantOutOfStock(variant: UIVariant, itemType?: ItemType): boolean {
   const sizeRanges = getSizeRangesWithStock(variant, itemType);
-  return sizeRanges.every(({ stock, sizeRange }) => {
-    const piecesPerSet = SIZE_RANGE_PIECE_COUNT[sizeRange] || 1;
-    return Math.floor(stock / piecesPerSet) === 0;
+  return sizeRanges.every((s) => {
+    return s.stock === 0;
   });
 }
 
@@ -179,10 +123,7 @@ export default function VariantCard({
         <div className="flex items-center gap-2 mb-2">
           <div className="relative w-8 h-8 rounded bg-gray-200 overflow-hidden flex-shrink-0">
             {variant.image ? (
-              <ImagePreview
-                src={variant.image}
-                alt={`Variant ${index + 1}`}
-              />
+              <ImagePreview src={variant.image} alt={`Variant ${index + 1}`} />
             ) : (
               <div className="w-full h-full" />
             )}
@@ -248,10 +189,7 @@ export default function VariantCard({
       <div className="flex items-center gap-3 mb-3">
         <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-gray-100 border border-gray-200 flex-shrink-0">
           {variant.image ? (
-            <ImagePreview
-              src={variant.image}
-              alt={`Variant ${index + 1}`}
-            />
+            <ImagePreview src={variant.image} alt={`Variant ${index + 1}`} />
           ) : (
             <div className="w-full h-full" />
           )}

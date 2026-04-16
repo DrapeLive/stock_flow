@@ -150,3 +150,21 @@ export type WizardStep =
   | { screen: "common" }
   | { screen: "list" }
   | { screen: "add-color"; editingId?: string };
+
+export interface UIVariant {
+  id: number;
+  image: string | null;
+  qr_code: string | null;
+  sizes: {
+    size: string;
+    stock: number;
+  }[];
+}
+
+export interface UIItem {
+  id: number;
+  name: string;
+  type: ItemType;
+  price: string;
+  variants: UIVariant[];
+}

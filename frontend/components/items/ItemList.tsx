@@ -2,8 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { Plus, ShoppingBag, Search, QrCode, X } from "lucide-react";
-import { ItemStockEntry } from "@/types/item";
-import { AssignedItem } from "@/types/agent";
+import { UIItem } from "@/types/item";
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 import ItemCard from "./ItemCard";
 import QRScanModal from "./QRScanModal";
@@ -11,7 +10,7 @@ import QRScanModal from "./QRScanModal";
 type StockTab = "in_stock" | "out_of_stock";
 
 interface ItemListProps {
-  items: (ItemStockEntry | AssignedItem)[];
+  items: UIItem[];
   loading: boolean;
   context: "admin" | "agent";
   onAddItem?: () => void;
@@ -22,27 +21,17 @@ interface ItemListProps {
   title?: string;
 }
 
-function isItemOutOfStock(item: ItemStockEntry | AssignedItem): boolean {
-  for (const variant of item.variants) {
-    let variantHasStock = false;
-
-    if ("sizes" in variant) {
-      variantHasStock = variant.sizes.some((s) => s.stock > 0);
-    } else if ("size_ranges" in variant) {
-      variantHasStock = variant.size_ranges.some((sr) => sr.stock > 0);
-    }
-
-    if (variantHasStock) return false;
-  }
-  return item.variants.length > 0;
+function isItemOutOfStock(item: UIItem): boolean {
+  return item.variants.every((variant) =>
+    variant.sizes.every((s) => s.stock === 0),
+  );
 }
-
 function filterItems(
-  items: (ItemStockEntry | AssignedItem)[],
+  items: UIItem[],
   tab: StockTab,
   searchQuery: string,
   qrFilter: string | null,
-): (ItemStockEntry | AssignedItem)[] {
+): UIItem[] {
   let filtered = items;
 
   if (tab === "in_stock") {
@@ -61,11 +50,7 @@ function filterItems(
   if (qrFilter) {
     const qr = qrFilter.toLowerCase();
     filtered = filtered.filter((item) =>
-      item.variants.some(
-        (v) =>
-          "qr_code" in v &&
-          v.qr_code?.toLowerCase().includes(qr),
-      ),
+      item.variants.some((v) => v.qr_code?.toLowerCase().includes(qr)),
     );
   }
 

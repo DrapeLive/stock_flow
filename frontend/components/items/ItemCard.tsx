@@ -3,12 +3,12 @@
 import Image from "next/image";
 import { ChevronDown, ChevronUp, Eye, Printer, Info } from "lucide-react";
 import { ImagePreview } from "@/components/pages/ImagePreview";
-import { ItemStockEntry, ItemType } from "@/types/item";
+import { ItemStockEntry, ItemType, UIItem } from "@/types/item";
 import { AssignedItem } from "@/types/agent";
 import VariantCard from "./VariantCard";
 
 interface ItemCardProps {
-  item: ItemStockEntry | AssignedItem;
+  item: UIItem;
   context: "admin" | "agent";
   isExpanded: boolean;
   onToggle: () => void;
@@ -18,30 +18,14 @@ interface ItemCardProps {
   onOrder?: (variantId: number) => void;
 }
 
-function getItemImage(item: ItemStockEntry | AssignedItem): string | null {
-  if ("image" in item) {
-    return item.image;
-  }
+function getItemImage(item: UIItem): string | null {
   return item.variants[0]?.image || null;
 }
 
-function hasOutOfStockVariants(item: ItemStockEntry | AssignedItem): boolean {
-  for (const variant of item.variants) {
-    let variantHasStock = false;
-
-    if ("sizes" in variant) {
-      variantHasStock = variant.sizes.some(
-        (s: { stock: number }) => s.stock > 0,
-      );
-    } else if ("size_ranges" in variant) {
-      variantHasStock = variant.size_ranges.some(
-        (sr: { stock: number }) => sr.stock > 0,
-      );
-    }
-
-    if (!variantHasStock) return true;
-  }
-  return false;
+function hasOutOfStockVariants(item: UIItem): boolean {
+  return item.variants.some((variant) =>
+    variant.sizes.every((s) => s.stock === 0),
+  );
 }
 
 export default function ItemCard({
@@ -56,7 +40,7 @@ export default function ItemCard({
 }: ItemCardProps) {
   const hasPartialOutOfStock = hasOutOfStockVariants(item);
   const image = getItemImage(item);
-  const price = "price" in item ? item.price : null;
+  const price = item.price;
 
   return (
     <div
@@ -74,10 +58,7 @@ export default function ItemCard({
       >
         <div className="relative w-14 h-14 rounded-xl bg-gray-50 overflow-hidden flex-shrink-0 border border-gray-100">
           {image ? (
-            <ImagePreview
-              src={image}
-              alt={item.name}
-            />
+            <ImagePreview src={image} alt={item.name} />
           ) : (
             <div className="w-full h-full flex items-center justify-center">
               <Info size={20} className="text-gray-300" />
