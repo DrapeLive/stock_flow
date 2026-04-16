@@ -16,12 +16,64 @@ import {
   X,
   ShoppingCart,
 } from "lucide-react";
-import type { ItemQRResponse } from "@/types/item";
+import type { ItemQRResponse, ItemVariant, ItemType } from "@/types/item";
+import {
+  SIZES_BY_TYPE,
+  SIZE_RANGE_TO_SIZES,
+  FrontendSizeRange,
+} from "@/types/item";
 import type { Customer, CustomerAllResponse } from "@/types/customer";
+
+function getAvailableSizeRanges(
+  variant: ItemVariant | null,
+  type: ItemType | undefined,
+): string[] {
+  if (!variant || !type) return [];
+
+  const variantSizes = Array.from(new Set(variant.sizes.map((s) => s.size)));
+  const variantSizeSet = new Set(variantSizes);
+
+  if (type === "gents") {
+    for (const range of SIZES_BY_TYPE[type]) {
+      const rangeSizes = SIZE_RANGE_TO_SIZES[range];
+      const rangeSizeSet = new Set(rangeSizes);
+      if (
+        rangeSizeSet.size === variantSizeSet.size &&
+        [...rangeSizeSet].every((s) => variantSizeSet.has(s))
+      ) {
+        return [range];
+      }
+    }
+    return variantSizes;
+  }
+
+  return SIZES_BY_TYPE[type].filter((range) => {
+    const requiredSizes = SIZE_RANGE_TO_SIZES[range];
+    return requiredSizes.every((s) => variantSizeSet.has(s));
+  });
+}
+
+function getSizeGroupStock(
+  variant: ItemVariant | null,
+  sizeGroup: string,
+): number {
+  if (!variant) return 0;
+  const sizes = SIZE_RANGE_TO_SIZES[sizeGroup as FrontendSizeRange] || [];
+  let minStock = Infinity;
+  for (const size of sizes) {
+    const sizeObj = variant.sizes.find((s) => s.size === size);
+    if (!sizeObj) return 0;
+    minStock = Math.min(minStock, sizeObj.stock);
+  }
+  return minStock === Infinity ? 0 : minStock;
+}
 
 export default function PriceCheckScannerPage() {
   const router = useRouter();
   const [scanResult, setScanResult] = useState<ItemQRResponse | null>(null);
+  const [selectedVariant, setSelectedVariant] = useState<ItemVariant | null>(
+    null,
+  );
   const [loading, setLoading] = useState(false);
   const [showCustomerSelect, setShowCustomerSelect] = useState(false);
   const [customers, setCustomers] = useState<CustomerAllResponse>([]);
@@ -48,6 +100,14 @@ export default function PriceCheckScannerPage() {
     try {
       const result = await itemApi.byqr(data[0].rawValue);
       setScanResult(result);
+      if (result.matched_variant_id) {
+        const matched = result.variants.find(
+          (v) => v.id === result.matched_variant_id,
+        );
+        setSelectedVariant(matched || result.variants[0] || null);
+      } else {
+        setSelectedVariant(result.variants[0] || null);
+      }
     } catch (err: any) {
       console.error("Error fetching item:", err);
       toastError(err.response?.data?.error || "Item not found", err);
@@ -58,8 +118,8 @@ export default function PriceCheckScannerPage() {
   };
 
   const handleSelectCustomer = (customerId: number) => {
-    if (scanResult) {
-      const qrCode = scanResult.variants[0]?.qr_code;
+    if (scanResult && selectedVariant) {
+      const qrCode = selectedVariant.qr_code;
       if (qrCode) {
         router.push(`/order/new/${customerId}/${qrCode}`);
       }
@@ -76,6 +136,7 @@ export default function PriceCheckScannerPage() {
 
   const handleScanAnother = () => {
     setScanResult(null);
+    setSelectedVariant(null);
     setScanned(false);
   };
 
@@ -165,10 +226,10 @@ export default function PriceCheckScannerPage() {
         </div>
 
         <div className="max-w-md mx-auto px-6 pt-6">
-          <div className="bg-white rounded-[40px] overflow-hidden shadow-xl shadow-color-primary/5 border border-gray-100 mb-6 aspect-square relative">
-            {scanResult.variants[0]?.image ? (
+          <div className="bg-white rounded-[40px] overflow-hidden shadow-xl shadow-color-primary/5 border border-gray-100 mb-4 aspect-square relative">
+            {selectedVariant?.image ? (
               <Image
-                src={scanResult.variants[0].image}
+                src={selectedVariant.image}
                 alt={scanResult.name}
                 fill
                 className="object-cover"
@@ -179,6 +240,35 @@ export default function PriceCheckScannerPage() {
                 <Package size={64} className="text-gray-200" />
               </div>
             )}
+          </div>
+
+          <div className="mb-6">
+            <div className="flex p-2 gap-4 overflow-x-auto pb-2 scrollbar-none">
+              {scanResult.variants.map((v) => (
+                <button
+                  key={v.id}
+                  onClick={() => setSelectedVariant(v)}
+                  className={`relative flex-shrink-0 w-20 h-20 rounded-3xl border-2 transition-all overflow-hidden ${
+                    selectedVariant?.id === v.id
+                      ? "border border-primary scale-105"
+                      : "border hover:border-gray-200"
+                  }`}
+                >
+                  <Image
+                    src={v.image || ""}
+                    alt={`Variant ${v.id}`}
+                    fill
+                    className="object-cover"
+                    unoptimized
+                  />
+                  {selectedVariant?.id === v.id && (
+                    <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
+                      <Check className="text-white" size={24} strokeWidth={4} />
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="text-center mb-6">
@@ -199,35 +289,50 @@ export default function PriceCheckScannerPage() {
             </p>
           </div>
 
-          {scanResult.variants && scanResult.variants.length > 0 && (
-            <div className="mb-6">
-              <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-3">
-                Available Sizes
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {scanResult.variants.flatMap((variant, vIdx) =>
-                  variant.sizes.map((size, sIdx) => (
+          {(() => {
+            const sizeGroups = getAvailableSizeRanges(
+              selectedVariant,
+              scanResult.type as ItemType,
+            );
+            return sizeGroups.length > 0 ? (
+              <div className="mb-6">
+                <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-3">
+                  Available Size Groups
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {sizeGroups.map((group) => (
                     <div
-                      key={`${vIdx}-${sIdx}`}
-                      className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-100 rounded-xl"
+                      key={group}
+                      className="flex items-center gap-2 px-4 py-3 bg-white border border-gray-100 rounded-xl"
                     >
                       <span className="font-bold text-sm text-gray-700">
-                        {size.size}
+                        {group}
                       </span>
                       <span className="text-gray-300">•</span>
                       <span className="text-xs font-bold text-gray-400">
-                        {size.stock} stock
+                        {getSizeGroupStock(selectedVariant, group)} stock
                       </span>
                     </div>
-                  )),
-                )}
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            ) : (
+              <div className="mb-6">
+                <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-3">
+                  Availability
+                </p>
+                <div className="flex items-center gap-2 px-4 py-3 bg-red-50 border border-red-100 rounded-xl">
+                  <span className="font-bold text-sm text-red-500">
+                    Out of stock
+                  </span>
+                </div>
+              </div>
+            );
+          })()}
 
           <button
             onClick={handleQuickOrder}
-            className="w-full flex items-center justify-center gap-3 bg-color-primary text-white py-4 px-6 rounded-2xl shadow-lg shadow-color-primary/25 font-bold active:scale-[0.98] transition-all"
+            className="w-full mb-6 flex items-center justify-center gap-3 bg-linear-to-r from-primary to-primary/80 text-white py-4 px-6 rounded-2xl shadow-lg shadow-primary/25 active:scale-[0.98] transition-all"
           >
             <ShoppingCart size={20} strokeWidth={2.5} />
             Order for Customer
@@ -235,7 +340,7 @@ export default function PriceCheckScannerPage() {
 
           <button
             onClick={handleScanAnother}
-            className="w-full mt-3 flex items-center justify-center gap-2 text-gray-400 py-3 font-bold text-sm active:scale-[0.98] transition-all"
+            className="w-full mt-3 flex items-center justify-center gap-2 text-gray-400 border rounded-2xl border-gray-400 py-3 font-bold text-sm active:scale-[0.98] transition-all"
           >
             <QrCode size={16} />
             Scan Another Item
