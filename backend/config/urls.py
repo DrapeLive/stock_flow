@@ -36,5 +36,5 @@ urlpatterns = [
     path('api/orders/', include('apps.orders.urls')),
     path('api/dashboard/', include('apps.dashboard.urls')),
 ]
-if settings.DEBUG and not settings.AZURE_ACCOUNT_NAME:
+if not settings.AZURE_ACCOUNT_NAME:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

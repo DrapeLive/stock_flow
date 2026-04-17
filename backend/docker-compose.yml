@@ -22,7 +22,7 @@ services:
       db:
         condition: service_healthy
     volumes:
-      - ./media:/app/backend/media
+      - ./media:/app/media
     ports:
       - "127.0.0.1:8000:8000"
 

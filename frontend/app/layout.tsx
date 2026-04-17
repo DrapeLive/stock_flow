@@ -13,10 +13,6 @@ const poppins = Poppins({
 export const metadata: Metadata = {
   title: "Stock Flow",
   description: "Manage all your orders in one place",
-  icons: {
-    icon: "/favicon.ico",
-    apple: "/apple-icon.png",
-  },
   appleWebApp: {
     capable: true,
     title: "StockFlow",
