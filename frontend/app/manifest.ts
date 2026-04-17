@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
     id: "/",
     name: "Stock Flow",
     short_name: "StockFlow",
-    description: "Control your stock seamlessly",
+    description: "Control your stock seamlessly.",
     start_url: "/login",
     display: "fullscreen",
     background_color: "#ffffff",

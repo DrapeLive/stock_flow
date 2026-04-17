@@ -12,7 +12,7 @@ const poppins = Poppins({
 
 export const metadata: Metadata = {
   title: "Stock Flow",
-  description: "Manage all your orders in one place",
+  description: "Control your stock seamlessly.",
   appleWebApp: {
     capable: true,
     title: "StockFlow",
