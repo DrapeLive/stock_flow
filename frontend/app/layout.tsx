@@ -18,6 +18,21 @@ export const metadata: Metadata = {
     title: "StockFlow",
     statusBarStyle: "black-translucent",
   },
+  openGraph: {
+    title: "StockFlow",
+    description: "Control your stock seamlessly",
+    url: "https://stockflow-sigma.vercel.app",
+    siteName: "Stock Flow",
+    images: [
+      {
+        url: "/opengraph.jpg",
+        width: 1200,
+        height: 630,
+        alt: "StockFlow App",
+      },
+    ],
+    type: "website",
+  },
 };
 
 export const viewport: Viewport = {
