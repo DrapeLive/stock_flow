@@ -1,6 +1,7 @@
 
 from django.contrib import admin
 from django.urls import path, include
+from django.http import JsonResponse
 from drf_spectacular.views import (
     SpectacularAPIView,
     SpectacularSwaggerView,
@@ -11,6 +12,8 @@ from django.conf import settings
 from django.conf.urls.static import static
 
 urlpatterns = [
+    path('health/', lambda r: JsonResponse({'status': 'ok'}), name='health'),
+
     # API schema
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
 
@@ -33,4 +36,5 @@ urlpatterns = [
     path('api/orders/', include('apps.orders.urls')),
     path('api/dashboard/', include('apps.dashboard.urls')),
 ]
-urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+if settings.DEBUG and not settings.AZURE_ACCOUNT_NAME:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
