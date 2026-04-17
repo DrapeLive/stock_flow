@@ -1,5 +1,9 @@
 import { defaultCache } from "@serwist/next/worker";
-import type { PrecacheEntry, SerwistGlobalConfig, RuntimeCaching } from "serwist";
+import type {
+  PrecacheEntry,
+  SerwistGlobalConfig,
+  RuntimeCaching,
+} from "serwist";
 import { Serwist, NetworkFirst, ExpirationPlugin } from "serwist";
 
 declare global {
@@ -11,7 +15,7 @@ declare global {
 declare const self: WorkerGlobalScope;
 
 const stockListCache: RuntimeCaching = {
-  matcher: /\api\/items\/stock-list/,
+  matcher: /\/api\/items\/stock-list/,
   handler: new NetworkFirst({
     cacheName: "stock-list-cache",
     plugins: [
