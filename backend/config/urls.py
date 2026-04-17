@@ -1,6 +1,6 @@
 
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import path, include, re_path
 from django.http import JsonResponse
 from drf_spectacular.views import (
     SpectacularAPIView,
@@ -9,7 +9,7 @@ from drf_spectacular.views import (
 )
 
 from django.conf import settings
-from django.conf.urls.static import static
+from django.conf.urls.static import serve
 
 urlpatterns = [
     path('health/', lambda r: JsonResponse({'status': 'ok'}), name='health'),
@@ -36,5 +36,9 @@ urlpatterns = [
     path('api/orders/', include('apps.orders.urls')),
     path('api/dashboard/', include('apps.dashboard.urls')),
 ]
-if not settings.AZURE_ACCOUNT_NAME:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+urlpatterns += [
+    re_path(r'^media/(?P<path>.*)$', serve, {
+        'document_root': settings.MEDIA_ROOT,
+    }),
+]

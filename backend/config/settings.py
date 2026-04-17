@@ -183,26 +183,14 @@ CORS_ALLOWED_ORIGINS = [
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
-# Storage backends — Azure Blob for media when configured, WhiteNoise for static.
-AZURE_ACCOUNT_NAME = config('AZURE_ACCOUNT_NAME', default='')
-AZURE_ACCOUNT_KEY = config('AZURE_ACCOUNT_KEY', default='')
-AZURE_CONTAINER = config('AZURE_CONTAINER', default='media')
-
-if AZURE_ACCOUNT_NAME:
-    _default_storage = {
-        'BACKEND': 'storages.backends.azure_storage.AzureStorage',
-        'OPTIONS': {
-            'account_name': AZURE_ACCOUNT_NAME,
-            'account_key': AZURE_ACCOUNT_KEY,
-            'azure_container': AZURE_CONTAINER,
-        },
-    }
-else:
-    _default_storage = {'BACKEND': 'django.core.files.storage.FileSystemStorage'}
 
 STORAGES = {
-    'default': _default_storage,
-    'staticfiles': {'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage'},
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
 }
 
 # Production security
