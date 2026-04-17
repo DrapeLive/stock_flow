@@ -2,7 +2,6 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    id: "/",
     name: "Stock Flow",
     short_name: "StockFlow",
     description: "Control your stock seamlessly.",
