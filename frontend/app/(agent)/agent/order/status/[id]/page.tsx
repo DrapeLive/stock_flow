@@ -38,7 +38,7 @@ export default function Page() {
 
   const handleViewInvoice = () => {
     localStorage.setItem("orderKey", id);
-    router.push("/order/invoice");
+    router.push("/agent/order/invoice");
   };
 
   const handleDeleteOrder = async () => {
@@ -47,7 +47,7 @@ export default function Page() {
     try {
       await orderApi.delete(Number(id));
       toastSuccess("Order deleted successfully");
-      router.push("/");
+      router.push("/agent");
     } catch (err) {
       toastError("Failed to delete order");
       console.error(err);
@@ -66,7 +66,7 @@ export default function Page() {
     <div className="min-h-screen bg-white pb-6">
       <OrderDetailHeader
         orderId={id}
-        backHref="/"
+        backHref="/agent"
         onViewInvoice={handleViewInvoice}
       />
 

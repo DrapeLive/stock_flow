@@ -11,23 +11,27 @@ export default function OrderScannerPage() {
 
   return (
     <div className="min-h-screen bg-gray-50/50 flex flex-col">
-       {/* Header */}
-       <div className="bg-white border-b border-gray-100 px-6 py-6 sticky top-0 z-10">
+      {/* Header */}
+      <div className="bg-white border-b border-gray-100 px-6 py-6 sticky top-0 z-10">
         <div className="max-w-md mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <button 
+            <button
               onClick={() => router.back()}
               className="p-2 rounded-xl hover:bg-gray-50 text-gray-400 transition-colors"
             >
               <ArrowLeft size={20} />
             </button>
             <div className="flex flex-col">
-              <h1 className="text-xl font-black text-gray-900 leading-tight">Scan Item</h1>
-              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Step 3: QR Scanner</p>
+              <h1 className="text-xl font-black text-gray-900 leading-tight">
+                Scan Item
+              </h1>
+              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+                Step 3: QR Scanner
+              </p>
             </div>
           </div>
-          <button 
-            onClick={() => router.push(`/order/new/${id}`)}
+          <button
+            onClick={() => router.push(`/agent/order/new/${id}`)}
             className="p-2 rounded-xl hover:bg-rose-50 text-rose-500 transition-colors border border-transparent hover:border-rose-100"
           >
             <X size={20} />

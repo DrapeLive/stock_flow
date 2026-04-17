@@ -3,6 +3,7 @@ import { Poppins } from "next/font/google";
 import { Toaster } from "sonner";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
+import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 
 const poppins = Poppins({
   variable: "--font-poppins",
@@ -47,7 +48,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${poppins.variable} antialiased  py-4 px-5 `}>
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <ServiceWorkerRegister />
+          {children}
+        </AuthProvider>
         <Toaster
           position="top-right"
           richColors

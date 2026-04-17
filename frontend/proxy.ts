@@ -28,15 +28,12 @@ function isTokenExpired(token: string) {
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  const publicRoutes = ["/login", "/reset-password"];
-  const isPublic = publicRoutes.some((route) => pathname.startsWith(route));
-
   const token = request.cookies.get("token")?.value;
   const role = request.cookies.get("role")?.value;
 
-  // Check if token exists but is expired/invalid
+  // Expired token cleanup
   if (token && isTokenExpired(token)) {
-    const response = NextResponse.redirect(new URL("/login", request.url));
+    const response = NextResponse.redirect(new URL("/", request.url));
     response.cookies.delete("token");
     response.cookies.delete("role");
     response.cookies.delete("auth_user");
@@ -44,24 +41,8 @@ export function proxy(request: NextRequest) {
     return response;
   }
 
-  // Not logged in -> redirect to login
-  if (!token && !isPublic) {
-    return NextResponse.redirect(new URL("/login", request.url));
-  }
-
-  // Logged in but trying to access login page -> redirect home
-  if (token && isPublic) {
-    return NextResponse.redirect(new URL("/", request.url));
-  }
-
-  // 🔹 NEW: If admin tries to access root -> redirect to /admin
-  if (token && role === "ADMIN" && pathname === "/") {
-    return NextResponse.redirect(new URL("/admin", request.url));
-  }
-
-  // Non-admin trying to access admin
   if (pathname.startsWith("/admin") && role !== "ADMIN") {
-    return NextResponse.redirect(new URL("/", request.url));
+    return NextResponse.redirect(new URL("/agent", request.url));
   }
 
   return NextResponse.next();
@@ -69,6 +50,6 @@ export function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!api|_next/static|_next/image|favicon.ico|sw.js|manifest.webmanifest|robots.txt|sitemap.xml|opengraph.jpg).*)",
+    "/((?!api|_next/static|_next/image|favicon.ico|sw.js|manifest.webmanifest|robots.txt|sitemap.xml|.*\\.(?:png|jpg|jpeg|svg|webp|ico)$).*)",
   ],
 };

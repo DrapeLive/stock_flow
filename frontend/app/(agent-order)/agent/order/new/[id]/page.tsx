@@ -62,7 +62,7 @@ export default function OrderDetailsPage() {
       await orderApi.placeOrder(Number(orderKey));
       toastSuccess("Order placed successfully!");
       localStorage.removeItem("orderKey");
-      router.push("/");
+      router.push("/agent");
     } catch (error) {
       const axiosError = error as AxiosError<PlaceOrderError>;
       if (axiosError.response?.data?.out_of_stock_items) {
@@ -103,7 +103,7 @@ export default function OrderDetailsPage() {
   useEffect(() => {
     if (loadError) {
       toastError("Server Error");
-      router.push(`/order/new/`);
+      router.push(`/agent/order/new/`);
     }
   }, [loadError, router]);
 
@@ -116,7 +116,7 @@ export default function OrderDetailsPage() {
         <div className="max-w-md mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button
-              onClick={() => router.push("/order/new")}
+              onClick={() => router.push("/agent/order/new")}
               className="p-2 rounded-xl hover:bg-gray-50 text-gray-400 transition-colors"
             >
               <ChevronLeft size={20} />
@@ -171,7 +171,7 @@ export default function OrderDetailsPage() {
             text="Add Item"
             variant="filled"
             icon={<Plus className="size-4" />}
-            onClick={() => router.push(`/order/new/${id}/scanner`)}
+            onClick={() => router.push(`/agent/order/new/${id}/scanner`)}
             className="shadow-lg shadow-primary/20 ring-1 ring-primary/10 transition-all active:scale-95"
           />
         </div>

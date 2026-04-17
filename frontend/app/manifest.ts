@@ -6,8 +6,9 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "Stock Flow",
     short_name: "StockFlow",
     description: "Control your stock seamlessly.",
-    start_url: "/login",
-    display: "fullscreen",
+    start_url: "/",
+    scope: "/",
+    display: "standalone",
     background_color: "#ffffff",
     theme_color: "#ff6200",
     icons: [
@@ -23,18 +24,12 @@ export default function manifest(): MetadataRoute.Manifest {
         type: "image/png",
         purpose: "any",
       },
-      {
-        src: "/web-app-manifest-512x512.png",
-        sizes: "512x512",
-        type: "image/png",
-        purpose: "maskable",
-      },
     ],
     screenshots: [
       {
         src: "/mobile-screenshot.jpeg",
         sizes: "720x1485",
-        type: "image/png",
+        type: "image/jpeg",
       },
     ],
     protocol_handlers: [

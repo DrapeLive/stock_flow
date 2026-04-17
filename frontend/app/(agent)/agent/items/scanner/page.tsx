@@ -122,7 +122,7 @@ export default function PriceCheckScannerPage() {
     if (scanResult && selectedVariant) {
       const qrCode = selectedVariant.qr_code;
       if (qrCode) {
-        router.push(`/order/new/${customerId}/${qrCode}`);
+        router.push(`/agent/order/new/${customerId}/${qrCode}`);
       }
     }
   };
@@ -229,10 +229,7 @@ export default function PriceCheckScannerPage() {
         <div className="max-w-md mx-auto px-6 pt-6">
           <div className="bg-white rounded-[40px] overflow-hidden shadow-xl shadow-color-primary/5 border border-gray-100 mb-4 aspect-square relative">
             {selectedVariant?.image ? (
-              <ImagePreview
-                src={selectedVariant.image}
-                alt={scanResult.name}
-              />
+              <ImagePreview src={selectedVariant.image} alt={scanResult.name} />
             ) : (
               <div className="w-full h-full bg-gray-50 flex items-center justify-center">
                 <Package size={64} className="text-gray-200" />
@@ -253,10 +250,7 @@ export default function PriceCheckScannerPage() {
                   }`}
                 >
                   {v.image ? (
-                    <ImagePreview
-                      src={v.image}
-                      alt={`Variant ${v.id}`}
-                    />
+                    <ImagePreview src={v.image} alt={`Variant ${v.id}`} />
                   ) : (
                     <div className="w-full h-full bg-gray-100" />
                   )}

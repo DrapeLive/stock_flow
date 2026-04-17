@@ -201,7 +201,7 @@ export default function ProductDetailPage() {
           size_group: selectedSizeGroup,
         });
         toastSuccess("Item Added Successfully");
-        router.push(`/order/new/${id}`);
+        router.push(`/agent/order/new/${id}`);
       } else {
         setValidationError(
           "Order session not found. Please restart the order.",

@@ -41,7 +41,7 @@ export default function Home() {
   const order_len = pendingPacked.length;
 
   if (loading) return <PageLoading />;
-  if (loadError) router.push("/login");
+  if (loadError) return null;
   if (order_len === 0) return <EmptyState title="No Active Orders" />;
 
   return (
@@ -53,7 +53,7 @@ export default function Home() {
           <OrderCard
             key={order.id}
             order={order}
-            onClick={() => router.push(`/order/status/${order.id}`)}
+            onClick={() => router.push(`/agent/order/status/${order.id}`)}
           />
         ))}
       </div>

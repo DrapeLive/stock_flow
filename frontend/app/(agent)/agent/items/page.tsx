@@ -66,7 +66,7 @@ export default function MyItemsPage() {
   }, [user, fetchData]);
 
   const handleOrder = () => {
-    router.push("/order/new");
+    router.push("/agent/order/new");
   };
 
   if (loading) return <PageLoading />;

@@ -1,7 +1,13 @@
 "use client";
 
 import { AuthUser, LoginResponse } from "@/types/auth";
-import { createContext, useContext, useState, useEffect, useCallback } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+} from "react";
 import Cookies from "js-cookie";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api/axios";
@@ -80,7 +86,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     Cookies.remove(COOKIE_KEYS.refresh);
     Cookies.remove(COOKIE_KEYS.role);
 
-    router.push("/login");
+    router.push("/");
   }, [router]);
 
   useEffect(() => {
@@ -91,13 +97,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           logout();
         }
         return Promise.reject(error);
-      }
+      },
     );
 
     return () => {
       api.interceptors.response.eject(responseInterceptor);
     };
   }, [logout]);
+
+  useEffect(() => {
+    if (accessToken === null && role === null) return;
+
+    const pathname = window.location.pathname;
+
+    if (!accessToken) {
+      if (pathname !== "/") {
+        router.replace("/");
+      }
+      return;
+    }
+
+    if (accessToken) {
+      if (pathname === "/") {
+        if (role === "ADMIN") {
+          router.replace("/admin");
+        } else {
+          router.replace("/agent");
+        }
+        return;
+      }
+
+      if (pathname.startsWith("/admin") && role !== "ADMIN") {
+        router.replace("/agent");
+      }
+    }
+  }, [accessToken, role, router]);
 
   return (
     <AuthContext.Provider

@@ -73,7 +73,7 @@ export default function InvoicePage() {
         <div className="text-center">
           <p className="text-slate-500 mb-4">Failed to load invoice.</p>
           <button
-            onClick={() => router.push("/")}
+            onClick={() => router.push("/agent")}
             className="text-sm text-indigo-600 hover:underline"
           >
             ← Go home
@@ -89,7 +89,7 @@ export default function InvoicePage() {
       {/* ── Header ── */}
       <header className="w-full max-w-2xl flex items-center justify-between mb-6">
         <button
-          onClick={() => router.push("/")}
+          onClick={() => router.push("/agent")}
           className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 transition-colors"
         >
           <svg

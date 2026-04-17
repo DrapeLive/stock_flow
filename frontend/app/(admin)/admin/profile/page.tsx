@@ -28,7 +28,7 @@ export default function Profile() {
 
   const handleLogout = () => {
     logout();
-    router.push("/login");
+    router.push("/");
   };
 
   if (loading) {

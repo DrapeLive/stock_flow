@@ -42,10 +42,10 @@ export default function History() {
 
   return (
     <div className="min-h-screen min-w-full px-4 bg-gray-50/30">
-      <OrderListHeader 
-        title="Dispatched Orders" 
-        count={order_len} 
-        countColor="green" 
+      <OrderListHeader
+        title="Dispatched Orders"
+        count={order_len}
+        countColor="green"
       />
 
       <div className="space-y-3 pb-32">
@@ -53,7 +53,7 @@ export default function History() {
           <OrderCard
             key={order.id}
             order={order}
-            onClick={() => router.push(`/order/status/${order.id}`)}
+            onClick={() => router.push(`/agent/order/status/${order.id}`)}
           />
         ))}
       </div>

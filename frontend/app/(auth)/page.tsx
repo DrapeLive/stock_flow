@@ -8,23 +8,16 @@ import { authApi } from "@/lib/api";
 import { toastError } from "@/lib/toast";
 import { LogIn, Package } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 export default function Login() {
-  const { login, isAuthenticated, user } = useAuth();
+  const { login } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
   const router = useRouter();
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      if (user?.role === "ADMIN") router.push("/admin");
-      else router.push("/");
-    }
-  }, [isAuthenticated, user, router]);
 
   const handleLogin = async () => {
     setLoading(true);
@@ -36,6 +29,12 @@ export default function Login() {
       });
 
       login(res);
+
+      if (res.role === "ADMIN") {
+        router.replace("/admin");
+      } else {
+        router.replace("/agent");
+      }
     } catch (err) {
       toastError("Invalid email or password", err);
     } finally {

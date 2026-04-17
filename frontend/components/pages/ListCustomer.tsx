@@ -48,7 +48,7 @@ const ListCustomer: React.FC = () => {
       if (res1.id) {
         localStorage.setItem("orderKey", String(res1.id));
       }
-      router.push(`/order/new/${id}`);
+      router.push(`/agent/order/new/${id}`);
     } catch {
       alert("Error creating order. Please try again.");
     } finally {
