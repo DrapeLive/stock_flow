@@ -12,7 +12,12 @@ interface OrderDetailItemsProps {
   onRefresh?: () => void;
 }
 
-export default function OrderDetailItems({ items, orderId, status, onRefresh }: OrderDetailItemsProps) {
+export default function OrderDetailItems({
+  items,
+  orderId,
+  status,
+  onRefresh,
+}: OrderDetailItemsProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<number | null>(null);
 
@@ -35,13 +40,16 @@ export default function OrderDetailItems({ items, orderId, status, onRefresh }: 
     }
   };
 
-  const isEditable = status === "DRAFT" || status === "PENDING" || status === "PACKED";
+  const isEditable =
+    status === "DRAFT" || status === "PENDING" || status === "PACKED";
 
   return (
     <>
       <div className="flex justify-between items-end mb-4 border-b border-gray-100 pb-2">
         <div>
-          <h2 className="text-lg font-extrabold text-gray-900 leading-tight">Items</h2>
+          <h2 className="text-lg font-extrabold text-gray-900 leading-tight">
+            Items
+          </h2>
           <p className="text-xs text-gray-400 font-medium">Order items below</p>
         </div>
         {status && status !== "DISPATCHED" && status !== "DRAFT" && (
@@ -52,9 +60,9 @@ export default function OrderDetailItems({ items, orderId, status, onRefresh }: 
       </div>
 
       <div className="bg-white rounded-2xl overflow-hidden">
-        <OrderItem 
-          items={items} 
-          showDelete={isEditable}
+        <OrderItem
+          items={items}
+          isDeletable={isEditable}
           orderId={orderId}
           onDeleteItem={handleDeleteClick}
         />
@@ -63,12 +71,13 @@ export default function OrderDetailItems({ items, orderId, status, onRefresh }: 
       {showDeleteDialog && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl">
-            <h3 className="text-lg font-bold text-gray-900 mb-2">Delete Item?</h3>
+            <h3 className="text-lg font-bold text-gray-900 mb-2">
+              Delete Item?
+            </h3>
             <p className="text-sm text-gray-500 mb-6">
-              {status !== "DRAFT" 
+              {status !== "DRAFT"
                 ? "This will return the stock back to the warehouse. This action cannot be undone."
-                : "Are you sure you want to remove this item from the order?"
-              }
+                : "Are you sure you want to remove this item from the order?"}
             </p>
             <div className="flex gap-3">
               <button

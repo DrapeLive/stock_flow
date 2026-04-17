@@ -39,8 +39,7 @@ export default function OrderDetailsPage() {
 
   const totalPieces =
     orders?.items.reduce(
-      (sum, item) =>
-        sum + item.quantity * (item.piece_count || 1),
+      (sum, item) => sum + item.quantity * (item.piece_count || 1),
       0,
     ) || 0;
 
@@ -48,7 +47,9 @@ export default function OrderDetailsPage() {
     orders?.items.reduce(
       (sum, item) =>
         sum +
-        (Number(item.item_price) || 0) * item.quantity * (item.piece_count || 1),
+        (Number(item.item_price) || 0) *
+          item.quantity *
+          (item.piece_count || 1),
       0,
     ) || 0;
 
@@ -190,7 +191,7 @@ export default function OrderDetailsPage() {
               <OrderItem
                 orderId={orders.id}
                 items={orders.items}
-                isDelete={true}
+                isDeletable={true}
               />
             </div>
           )}

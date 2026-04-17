@@ -9,7 +9,7 @@ import { OrderItemRow } from "@/components/order";
 
 type Props = {
   items: OrderItems | undefined;
-  isDelete?: boolean;
+  isDeletable?: boolean;
   orderId?: number;
   isPacking?: boolean;
   onPackedChange?: () => void;
@@ -19,7 +19,7 @@ type Props = {
 
 const OrderItem: React.FC<Props> = ({
   items,
-  isDelete,
+  isDeletable,
   orderId,
   isPacking,
   onPackedChange,
@@ -41,7 +41,7 @@ const OrderItem: React.FC<Props> = ({
   const handleTogglePacked = async () => {
     if (!pendingUnpack) return;
     const { itemId, newPacked } = pendingUnpack;
-    
+
     try {
       setLoading(true);
       await orderApi.updateItem(itemId, { packed_quantity: newPacked });
@@ -73,7 +73,7 @@ const OrderItem: React.FC<Props> = ({
     totalPieces: number,
   ) => {
     const newPacked = currentPacked >= totalPieces ? 0 : totalPieces;
-    
+
     if (status === "PACKED" && newPacked < currentPacked) {
       setPendingUnpack({ itemId, newPacked });
       setShowUnpackDialog(true);
@@ -81,10 +81,13 @@ const OrderItem: React.FC<Props> = ({
     }
 
     try {
-      const updatePromise = orderApi.updateItem(itemId, { packed_quantity: newPacked });
-      const statusPromise = status === "PACKED" && orderId 
-        ? orderApi.update(orderId, { status: "PENDING" })
-        : Promise.resolve();
+      const updatePromise = orderApi.updateItem(itemId, {
+        packed_quantity: newPacked,
+      });
+      const statusPromise =
+        status === "PACKED" && orderId
+          ? orderApi.update(orderId, { status: "PENDING" })
+          : Promise.resolve();
 
       setLoading(true);
       await Promise.all([updatePromise, statusPromise]);
@@ -137,10 +140,10 @@ const OrderItem: React.FC<Props> = ({
             <OrderItemRow
               key={item.id}
               item={item}
-              showDelete={isDelete}
+              showDelete={isDeletable}
               showPackedToggle={isPacking}
               isPacked={isFullyPacked}
-              onDelete={() => onDelete(item.id, orderId)}
+              onDelete={() => onDeleteItem?.(item.id)}
               onTogglePacked={(id, packed) => {
                 const newPacked = packed ? totalPieces : 0;
                 togglePacked(id, item.packed_quantity ?? 0, totalPieces);

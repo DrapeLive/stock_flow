@@ -51,21 +51,28 @@ export default function OrderItemsSection({
     }
   };
 
-  const isEditable = status === "DRAFT" || status === "PENDING" || status === "PACKED";
+  const isEditable =
+    status === "DRAFT" || status === "PENDING" || status === "PACKED";
 
   return (
     <>
       <div className="flex justify-between items-end mb-4 border-b border-gray-100 pb-2">
         <div>
-          <h2 className="text-lg font-extrabold text-gray-900 leading-tight">Items to {activeTab}</h2>
-          <p className="text-xs text-gray-400 font-medium">Manage order items below</p>
+          <h2 className="text-lg font-extrabold text-gray-900 leading-tight">
+            Items to {activeTab}
+          </h2>
+          <p className="text-xs text-gray-400 font-medium">
+            Manage order items below
+          </p>
         </div>
 
         {activeTab === "Packing" && status !== "DISPATCHED" && (
           <button
             onClick={onTogglePackingMode}
             className={`px-4 py-2 rounded-xl flex gap-2 items-center font-bold text-sm transition-all ${
-              isPackingMode ? "bg-green-600 text-white shadow-lg" : "bg-primary text-white shadow-md"
+              isPackingMode
+                ? "bg-green-600 text-white shadow-lg"
+                : "bg-primary text-white shadow-md"
             }`}
           >
             {isPackingMode ? (
@@ -88,7 +95,7 @@ export default function OrderItemsSection({
           items={items}
           isPacking={isPackingMode && activeTab === "Packing"}
           onPackedChange={onPackedChange}
-          showDelete={isEditable}
+          isDeletable={isEditable}
           orderId={orderId}
           onDeleteItem={handleDeleteClick}
           status={status}
@@ -98,12 +105,13 @@ export default function OrderItemsSection({
       {showDeleteDialog && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl">
-            <h3 className="text-lg font-bold text-gray-900 mb-2">Delete Item?</h3>
+            <h3 className="text-lg font-bold text-gray-900 mb-2">
+              Delete Item?
+            </h3>
             <p className="text-sm text-gray-500 mb-6">
               {status !== "DRAFT"
                 ? "This will return the stock back to the warehouse. This action cannot be undone."
-                : "Are you sure you want to remove this item from the order?"
-              }
+                : "Are you sure you want to remove this item from the order?"}
             </p>
             <div className="flex gap-3">
               <button

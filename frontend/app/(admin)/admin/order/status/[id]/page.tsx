@@ -152,7 +152,7 @@ export default function Page() {
       <OrderFooter
         activeTab={activeTab}
         status={data?.status}
-        anyItemPacked={anyItemPacked}
+        anyItemPacked={anyItemPacked!}
         onUpdateStatus={handleUpdateStatus}
       />
 

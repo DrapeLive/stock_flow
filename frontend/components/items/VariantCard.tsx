@@ -7,6 +7,7 @@ import {
   SIZE_RANGE_PIECE_COUNT,
   ItemType,
   UIVariant,
+  FrontendSizeRange,
 } from "@/types/item";
 import SizeRangeRow from "./SizeRangeRow";
 
@@ -26,7 +27,7 @@ function getSizeRangesWithStock(
 ): { sizeRange: string; stock: number }[] {
   const sizes = variant.sizes;
 
-  const result: { sizeRange: string; stock: number }[] = [];
+  const result: { sizeRange: FrontendSizeRange; stock: number }[] = [];
 
   // Convert sizes to map for quick lookup
   const sizeMap: Record<string, number> = {};
@@ -34,7 +35,10 @@ function getSizeRangesWithStock(
     sizeMap[s.size] = s.stock;
   }
 
-  for (const [range, groupedSizes] of Object.entries(SIZE_RANGE_TO_SIZES)) {
+  for (const [range, groupedSizes] of Object.entries(SIZE_RANGE_TO_SIZES) as [
+    FrontendSizeRange,
+    string[],
+  ][]) {
     const matched = groupedSizes.filter((s) => sizeMap[s] !== undefined);
 
     // ❌ skip if nothing matches
