@@ -16,6 +16,7 @@ type Props = {
   onPackedChange?: () => void;
   onDeleteItem?: (itemId: number) => void;
   status?: string;
+  outOfStockItemIds?: number[];
 };
 
 const OrderItem: React.FC<Props> = ({
@@ -27,6 +28,7 @@ const OrderItem: React.FC<Props> = ({
   onPackedChange,
   onDeleteItem,
   status,
+  outOfStockItemIds = [],
 }) => {
   const [loading, setLoading] = useState(false);
   const [orderItems, setOrderItems] = useState(items);
@@ -152,6 +154,7 @@ const OrderItem: React.FC<Props> = ({
                 showDelete={isDeletable}
                 showPackedToggle={isPacking}
                 isPacked={isFullyPacked}
+                isOutOfStock={outOfStockItemIds.includes(item.id)}
                 onDelete={() => onDeleteItem?.(item.id)}
                 onTogglePacked={(id, packed) => {
                   const newPacked = packed ? totalPieces : 0;
