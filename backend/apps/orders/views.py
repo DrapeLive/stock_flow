@@ -264,32 +264,6 @@ class AddOrderItemView(APIView):
 
         with transaction.atomic():
 
-            for size in required_sizes:
-                try:
-                    size_obj = ItemVariantSize.objects.select_for_update().get(
-                        item_variant__item=item,
-                        item_variant=variant,
-                        size=size
-                    )
-                except ItemVariantSize.DoesNotExist:
-                    return Response(
-                        {"error": f"Size {size} not found for this variant"},
-                        status=status.HTTP_400_BAD_REQUEST
-                    )
-
-                if size_obj.stock < qty:
-                    return Response(
-                        {"error": f"Insufficient stock in {size}"},
-                        status=status.HTTP_400_BAD_REQUEST
-                    )
-
-            for size in required_sizes:
-                ItemVariantSize.objects.filter(
-                    item_variant__item=item,
-                    item_variant=variant,
-                    size=size
-                ).update(stock=F('stock') - qty)
-
             OrderItem.objects.create(
                 order=order,
                 item=item,
