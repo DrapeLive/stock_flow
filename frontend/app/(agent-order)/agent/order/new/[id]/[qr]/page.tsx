@@ -153,7 +153,7 @@ export default function ProductDetailPage() {
           setExistingOrderItems(
             orderResponse.items.map((item) => ({
               id: item.id,
-              variant_id: item.variant,
+              variant_id: item.variant || 0,
               size_group: item.size_group || "",
               quantity: item.quantity,
             })),

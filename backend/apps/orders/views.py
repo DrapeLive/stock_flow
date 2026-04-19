@@ -134,7 +134,15 @@ class OrderViewSet(ModelViewSet):
     def get_queryset(self):
 
         if self.action == "list":
-            Order.objects.filter(status='DRAFT').delete()
+            from django.utils import timezone
+            from datetime import timedelta
+
+            cutoff = timezone.now() - timedelta(minutes=30)
+            Order.objects.filter(
+                status='DRAFT',
+                agent__user=self.request.user,
+                created_at__lt=cutoff
+            ).delete()
 
         user = self.request.user
 
