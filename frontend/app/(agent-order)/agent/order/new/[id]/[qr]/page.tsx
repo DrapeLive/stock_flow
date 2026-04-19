@@ -16,6 +16,7 @@ import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 import { itemApi } from "@/lib/api/item";
 import { orderApi } from "@/lib/api/order";
 import { PageLoading } from "@/components/ui/Loading";
+import { OrderItems, OrderResponse } from "@/types/order";
 import { toastSuccess, toastError } from "@/lib/toast";
 import type { ItemQRResponse, ItemVariant, ItemType } from "@/types/item";
 
@@ -117,18 +118,45 @@ export default function ProductDetailPage() {
   const [loading, setLoading] = useState(false);
   const [loadingError, setLoadingError] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [existingOrderItems, setExistingOrderItems] = useState<
+    Array<{ id: number; variant_id: number; size_group: string; quantity: number }>
+  >([]);
+  const [initialQuantity, setInitialQuantity] = useState<number>(1);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editingItemId, setEditingItemId] = useState<number | null>(null);
 
   useEffect(() => {
     setLoading(true);
     const fetchData = async () => {
       try {
-        const response = await itemApi.byqr(params.qr);
-        setData(response);
-        if (response.variants?.length > 0) {
+        const [itemResponse, orderResponse] = await Promise.all([
+          itemApi.byqr(params.qr),
+          (async () => {
+            const orderKey = localStorage.getItem("orderKey");
+            if (orderKey) {
+              return orderApi.getOne(parseInt(orderKey, 10));
+            }
+            return null;
+          })(),
+        ]);
+
+        setData(itemResponse);
+        if (itemResponse.variants?.length > 0) {
           setSelectedVariant(
-            response.variants.find(
-              (v) => v.id === (response.matched_variant_id || 0),
-            ) || response.variants[0],
+            itemResponse.variants.find(
+              (v) => v.id === (itemResponse.matched_variant_id || 0),
+            ) || itemResponse.variants[0],
+          );
+        }
+
+        if (orderResponse) {
+          setExistingOrderItems(
+            orderResponse.items.map((item) => ({
+              id: item.id,
+              variant_id: item.variant,
+              size_group: item.size_group || "",
+              quantity: item.quantity,
+            })),
           );
         }
       } catch (e) {
@@ -149,10 +177,21 @@ export default function ProductDetailPage() {
     }
   }, [sizeGroups, selectedSizeGroup]);
 
-  const availableStock = getStockForSizeGroup(
-    selectedVariant,
-    selectedSizeGroup,
-  );
+  const availableStock = (() => {
+    if (!selectedVariant || !selectedSizeGroup) return 0;
+    const total = getStockForSizeGroup(selectedVariant, selectedSizeGroup);
+
+    const reservedInOrder = existingOrderItems
+      .filter(
+        (item) =>
+          item.variant_id === selectedVariant.id &&
+          item.size_group === (selectedSizeGroup || "") &&
+          (isEditMode ? item.id !== editingItemId : true),
+      )
+      .reduce((sum, item) => sum + item.quantity, 0);
+
+    return Math.max(0, total - reservedInOrder);
+  })();
 
   const pieceCount = getPiecesForGroup(selectedSizeGroup);
 
@@ -194,13 +233,56 @@ export default function ProductDetailPage() {
       const orderKey = localStorage.getItem("orderKey");
       if (orderKey) {
         const orderId = parseInt(orderKey, 10);
-        console.log(selectedVariant, selectedVariant.qr_code);
-        await orderApi.addItem(orderId, {
-          qr_code: selectedVariant.qr_code,
-          quantity: quantity,
-          size_group: selectedSizeGroup,
-        });
-        toastSuccess("Item Added Successfully");
+        const qrCode = selectedVariant.qr_code;
+
+        const existingSameVariant = existingOrderItems.find(
+          (item) =>
+            item.variant_id === selectedVariant.id &&
+            item.size_group === selectedSizeGroup,
+        );
+
+        if (existingSameVariant && !isEditMode) {
+          const newQty = existingSameVariant.quantity + quantity;
+          await orderApi.updateItem(existingSameVariant.id, { quantity: newQty });
+          setExistingOrderItems((prev) =>
+            prev.map((item) =>
+              item.id === existingSameVariant.id
+                ? { ...item, quantity: newQty }
+                : item,
+            ),
+          );
+          toastSuccess("Quantity Updated");
+        } else if (isEditMode && editingItemId) {
+          await orderApi.updateItem(editingItemId, { quantity });
+          setExistingOrderItems((prev) =>
+            prev.map((item) =>
+              item.id === editingItemId ? { ...item, quantity } : item,
+            ),
+          );
+          toastSuccess("Item Updated");
+        } else {
+          await orderApi.addItem(orderId, {
+            qr_code: qrCode,
+            quantity,
+            size_group: selectedSizeGroup,
+          });
+          const order = await orderApi.getOne(orderId);
+          const newItem = order.items.find(
+            (i) => (i.variant || 0) === selectedVariant.id && (i.size_group || "") === selectedSizeGroup,
+          );
+          if (newItem) {
+            setExistingOrderItems((prev) => [
+              ...prev,
+              {
+                id: newItem.id,
+                variant_id: newItem.variant || 0,
+                size_group: newItem.size_group || "",
+                quantity: newItem.quantity,
+              },
+            ]);
+          }
+          toastSuccess("Item Added Successfully");
+        }
         router.push(`/agent/order/new/${id}`);
       } else {
         setValidationError(
@@ -232,7 +314,7 @@ export default function ProductDetailPage() {
                 Item Details
               </h1>
               <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
-                Step 4: Configure Item
+                {isEditMode ? "Editing Item" : "Step 4: Configure Item"}
               </p>
             </div>
           </div>
@@ -269,35 +351,61 @@ export default function ProductDetailPage() {
 
         <div className="mb-8">
           <div className="flex p-2 gap-4 overflow-x-auto pb-2 scrollbar-none">
-            {data?.variants.map((v, index) => (
-              <button
-                key={index}
-                onClick={() => {
-                  setSelectedVariant(v);
-                  setValidationError(null);
-                }}
-                className={`relative flex-shrink-0 w-20 h-20 rounded-3xl border-2 transition-all overflow-hidden ${
-                  selectedVariant?.id === v.id
-                    ? "border border-primary scale-105"
-                    : "border hover:border-gray-200"
-                }`}
-              >
-                {v.image ? (
-                  <ImagePreview
-                    src={v.image}
-                    alt={`Variant ${index + 1}`}
-                    enlargeDisabled={true}
-                  />
-                ) : (
-                  <div className="w-full h-full bg-gray-100" />
-                )}
-                {selectedVariant?.id === v.id && (
-                  <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
-                    <Check className="text-white" size={24} strokeWidth={4} />
-                  </div>
-                )}
-              </button>
-            ))}
+            {data?.variants.map((v, index) => {
+              const existingForThisVariant = existingOrderItems.find(
+                (item) => item.variant_id === v.id,
+              );
+              return (
+                <button
+                  key={index}
+                  onClick={() => {
+                    setSelectedVariant(v);
+                    setValidationError(null);
+
+                    if (
+                      existingForThisVariant &&
+                      selectedSizeGroup === existingForThisVariant.size_group &&
+                      selectedSizeGroup !== null
+                    ) {
+                      setIsEditMode(true);
+                      setEditingItemId(existingForThisVariant.id);
+                      setQuantity(existingForThisVariant.quantity);
+                      setInitialQuantity(existingForThisVariant.quantity);
+                    } else {
+                      setIsEditMode(false);
+                      setEditingItemId(null);
+                      setQuantity(1);
+                      setInitialQuantity(1);
+                    }
+                  }}
+                  className={`relative flex-shrink-0 w-20 h-20 rounded-3xl border-2 transition-all overflow-hidden ${
+                    selectedVariant?.id === v.id
+                      ? "border border-primary scale-105"
+                      : "border hover:border-gray-200"
+                  }`}
+                >
+                  {v.image ? (
+                    <ImagePreview
+                      src={v.image}
+                      alt={`Variant ${index + 1}`}
+                      enlargeDisabled={true}
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gray-100" />
+                  )}
+                  {existingForThisVariant && (
+                    <div className="absolute bottom-1 right-1 bg-primary text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">
+                      {existingForThisVariant.quantity}
+                    </div>
+                  )}
+                  {selectedVariant?.id === v.id && (
+                    <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
+                      <Check className="text-white" size={24} strokeWidth={4} />
+                    </div>
+                  )}
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -321,6 +429,19 @@ export default function ProductDetailPage() {
                 onValueChange={(value) => {
                   setSelectedSizeGroup(value);
                   setValidationError(null);
+
+                  const existingForSize = existingOrderItems.find(
+                    (item) =>
+                      selectedVariant &&
+                      item.variant_id === selectedVariant.id &&
+                      item.size_group === value,
+                  );
+                  if (existingForSize && !isEditMode) {
+                    setIsEditMode(true);
+                    setEditingItemId(existingForSize.id);
+                    setQuantity(existingForSize.quantity);
+                    setInitialQuantity(existingForSize.quantity);
+                  }
                 }}
               >
                 <SelectTrigger className="w-full h-14 border-2 border-gray-100 bg-white px-4 pr-10 flex items-center text-sm font-semibold shadow-sm">
@@ -408,7 +529,7 @@ export default function ProductDetailPage() {
 
         <div className="px-4">
           <StockFlowButton
-            text="Add to Order"
+            text={isEditMode ? "Update Quantity" : "Add to Order"}
             variant="filled"
             icon={<PackagePlus />}
             onClick={handleSubmit}
