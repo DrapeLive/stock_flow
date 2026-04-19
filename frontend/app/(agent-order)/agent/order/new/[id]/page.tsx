@@ -34,6 +34,8 @@ export default function OrderDetailsPage() {
   const [showOutOfStockModal, setShowOutOfStockModal] = useState(false);
   const [outOfStockItems, setOutOfStockItems] = useState<OutOfStockItem[]>([]);
 
+  const outOfStockItemIds = outOfStockItems.map((item) => item.order_item_id);
+
   const totalSets =
     orders?.items.reduce((sum, item) => sum + item.quantity, 0) || 0;
 
@@ -192,6 +194,8 @@ export default function OrderDetailsPage() {
                 orderId={orders.id}
                 items={orders.items}
                 isDeletable={true}
+                isEditable={true}
+                outOfStockItemIds={outOfStockItemIds}
               />
             </div>
           )}
@@ -232,26 +236,44 @@ export default function OrderDetailsPage() {
                 </button>
               </div>
               <p className="text-sm text-gray-500 mb-4">
-                Some items are no longer available. Another agent may have
-                placed an order.
+                Some items are no longer available. Stock may have been taken by another agent.
               </p>
               <div className="space-y-3 mb-6 max-h-48 overflow-y-auto">
-                {outOfStockItems.map((item, idx) => (
-                  <div
-                    key={idx}
-                    className="bg-red-50 rounded-xl p-3 border border-red-100"
-                  >
-                    <p className="font-bold text-gray-900 text-sm">
-                      {item.item_name}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Size: {item.size_group} ({item.size})
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      Required: {item.required} | Available: {item.available}
-                    </p>
-                  </div>
-                ))}
+                {(() => {
+                  const grouped = outOfStockItems.reduce((acc, item) => {
+                    const key = item.order_item_id;
+                    if (!acc[key]) {
+                      acc[key] = {
+                        item_name: item.item_name,
+                        size_group: item.size_group,
+                        required: item.required,
+                        available: item.available,
+                        order_item_id: item.order_item_id,
+                      };
+                    } else {
+                      acc[key].available = Math.min(acc[key].available, item.available);
+                    }
+                    return acc;
+                  }, {} as Record<number, { item_name: string; size_group: string; required: number; available: number; order_item_id: number }>);
+
+                  return Object.values(grouped).map((item, idx) => (
+                    <div
+                      key={idx}
+                      className="bg-red-50 rounded-xl p-3 border border-red-200"
+                    >
+                      <p className="font-bold text-gray-900 text-sm">
+                        {item.item_name}, {item.size_group}
+                      </p>
+                      <p className="text-xs mt-1">
+                        <span className="text-gray-500">Requested: </span>
+                        <span className="font-semibold text-gray-900">{item.required}</span>
+                        <span className="text-gray-400"> | </span>
+                        <span className="text-gray-500">Available: </span>
+                        <span className="font-semibold text-red-600">{item.available}</span>
+                      </p>
+                    </div>
+                  ));
+                })()}
               </div>
               <div className="flex gap-3">
                 <button

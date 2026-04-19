@@ -106,6 +106,9 @@ export interface ColorVariant {
 export type FrontendSizeRange =
   | "20-36"
   | "20-38"
+  | "20-30"
+  | "26-36"
+  | "26-38"
   | "S,M,L,XL"
   | "M,L,XL,XXL"
   | "S,M,L,XL,XXL"
@@ -123,12 +126,15 @@ export interface EditableVariant {
 
 export const SIZES_BY_TYPE: Record<ItemType, FrontendSizeRange[]> = {
   gents: ["S,M,L,XL", "M,L,XL,XXL", "S,M,L,XL,XXL", "M,L,XL"],
-  kids: ["20-36", "20-38"],
+  kids: ["20-36", "20-38", "26-36", "26-38", "20-30"],
 };
 
 export const SIZE_RANGE_TO_SIZES: Record<FrontendSizeRange, string[]> = {
   "20-36": ["20-24", "26-30", "32-36"],
   "20-38": ["20-24", "26-30", "32-36", "38"],
+  "20-30": ["20-24", "26-30"],
+  "26-36": ["26-30", "32-36"],
+  "26-38": ["26-30", "32-36", "38"],
   "S,M,L,XL": ["S", "M,L,XL"],
   "M,L,XL,XXL": ["M,L,XL", "XXL"],
   "S,M,L,XL,XXL": ["S", "M,L,XL", "XXL"],
@@ -138,6 +144,9 @@ export const SIZE_RANGE_TO_SIZES: Record<FrontendSizeRange, string[]> = {
 export const SIZE_RANGE_PIECE_COUNT: Record<string, number> = {
   "20-36": 9,
   "20-38": 10,
+  "20-30": 6,
+  "26-36": 6,
+  "26-38": 8,
   "S,M,L,XL": 4,
   "M,L,XL,XXL": 4,
   "S,M,L,XL,XXL": 5,
