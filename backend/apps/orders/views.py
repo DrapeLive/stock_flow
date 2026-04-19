@@ -193,18 +193,17 @@ class OrderViewSet(ModelViewSet):
                     continue
                 
                 piece_count = get_piece_count(order_item.size_group, order_item.item_type or 'gents')
-                total_pieces = order_item.quantity * piece_count
-                packed_pieces = order_item.packed_quantity or 0
-                unpacked_pieces = total_pieces - packed_pieces
+                packed_sets = (order_item.packed_quantity or 0) // piece_count if piece_count > 0 else 0
+                unpacked_sets = order_item.quantity - packed_sets
                 
-                if unpacked_pieces > 0:
+                if unpacked_sets > 0:
                     item_type = order_item.item.type
                     required_sizes = SIZE_MAPPING[item_type][order_item.size_group]
                     for size in required_sizes:
                         ItemVariantSize.objects.filter(
                             item_variant=order_item.variant,
                             size=size
-                        ).update(stock=F('stock') + unpacked_pieces)
+                        ).update(stock=F('stock') + unpacked_sets)
             
             OrderLog.objects.create(
                 order=order,
