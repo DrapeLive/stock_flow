@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import { Scanner } from "@yudiel/react-qr-scanner";
 import { ImagePreview } from "@/components/pages/ImagePreview";
 import { itemApi } from "@/lib/api/item";
@@ -22,6 +21,7 @@ import {
   SIZES_BY_TYPE,
   SIZE_RANGE_TO_SIZES,
   FrontendSizeRange,
+  SIZE_RANGE_PIECE_COUNT,
 } from "@/types/item";
 import type { Customer, CustomerAllResponse } from "@/types/customer";
 
@@ -204,7 +204,7 @@ export default function PriceCheckScannerPage() {
         <div className="bg-white border-b border-gray-100 px-6 py-6 sticky top-0 z-10">
           <div className="max-w-md mx-auto flex items-center justify-between">
             <button
-              onClick={() => router.push("/items")}
+              onClick={() => router.push("/agent/items")}
               className="p-2 rounded-xl hover:bg-gray-50 text-gray-400 transition-colors"
             >
               <X size={20} />
@@ -250,7 +250,11 @@ export default function PriceCheckScannerPage() {
                   }`}
                 >
                   {v.image ? (
-                    <ImagePreview src={v.image} alt={`Variant ${v.id}`} />
+                    <ImagePreview
+                      src={v.image}
+                      alt={`Variant ${v.id}`}
+                      enlargeDisabled={true}
+                    />
                   ) : (
                     <div className="w-full h-full bg-gray-100" />
                   )}
@@ -293,20 +297,27 @@ export default function PriceCheckScannerPage() {
                   Available Size Groups
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  {sizeGroups.map((group) => (
-                    <div
-                      key={group}
-                      className="flex items-center gap-2 px-4 py-3 bg-white border border-gray-100 rounded-xl"
-                    >
-                      <span className="font-bold text-sm text-gray-700">
-                        {group}
-                      </span>
-                      <span className="text-gray-300">•</span>
-                      <span className="text-xs font-bold text-gray-400">
-                        {getSizeGroupStock(selectedVariant, group)} stock
-                      </span>
-                    </div>
-                  ))}
+                  {sizeGroups.map((group) => {
+                    const stock = getSizeGroupStock(selectedVariant, group);
+                    const setsAvailable = Math.floor(stock);
+                    const piecesPerSet = SIZE_RANGE_PIECE_COUNT[group] || 1;
+                    return (
+                      <div
+                        key={group}
+                        className="flex-shrink-0 px-3 py-2 rounded-lg min-w-[80px] bg-gray-50"
+                      >
+                        <span className="text-xs font-bold block text-gray-700">
+                          {group}
+                        </span>
+                        <span className="text-sm font-black block text-gray-900">
+                          {setsAvailable} Sets
+                        </span>
+                        <span className="text-[10px] text-gray-400 block">
+                          {piecesPerSet} pcs/set
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             ) : (
@@ -348,7 +359,7 @@ export default function PriceCheckScannerPage() {
       <div className="bg-white border-b border-gray-100 px-6 py-6 sticky top-0 z-10">
         <div className="max-w-md mx-auto flex items-center gap-4">
           <button
-            onClick={() => router.push("/items")}
+            onClick={() => router.push("/agent/items")}
             className="p-2 rounded-xl hover:bg-gray-50 text-gray-400 transition-colors"
           >
             <ArrowLeft size={20} />

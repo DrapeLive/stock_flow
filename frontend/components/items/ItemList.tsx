@@ -18,6 +18,7 @@ interface ItemListProps {
   onPrintAll?: (id: number) => void;
   onPrintQR?: (qr: string) => void;
   onOrder?: (variantId: number) => void;
+  onPriceCheck?: () => void;
   title?: string;
 }
 
@@ -66,6 +67,7 @@ export default function ItemList({
   onPrintAll,
   onPrintQR,
   onOrder,
+  onPriceCheck,
   title,
 }: ItemListProps) {
   const [activeTab, setActiveTab] = useState<StockTab>("in_stock");
@@ -128,19 +130,33 @@ export default function ItemList({
 
       <div className="pt-6 pb-4 px-4">
         <div className="flex items-start justify-between gap-4">
-          <div className="flex flex-col">
+          <div className="flex flex-col w-full">
             <h1 className="text-xl font-extrabold text-gray-900">
               {headerTitle}
             </h1>
-            <div className="flex gap-2 items-center mt-1">
-              <span className="text-gray-400 text-xs font-medium">
-                {headerSubtitle}
-              </span>
-              <div className="bg-primary/10 text-primary rounded-full py-0.5 px-3 border border-primary/20">
-                <span className="font-bold text-xs">
-                  {context === "admin" ? items.length : inStockCount}
+            <div className="flex w-full justify-between">
+              <div className="flex gap-2 items-center mt-1">
+                <span className="text-gray-400 text-xs font-medium">
+                  {headerSubtitle}
                 </span>
+                <div className="bg-primary/10 text-primary rounded-full py-0.5 px-3 border border-primary/20">
+                  <span className="font-bold text-xs">
+                    {context === "admin" ? items.length : inStockCount}
+                  </span>
+                </div>
               </div>
+
+              {context === "agent" && onPriceCheck && (
+                <button
+                  onClick={onPriceCheck}
+                  className="flex items-center gap-1.5 px-2.5 py-1 bg-black  hover:bg-black/80 rounded-md transition-colors"
+                >
+                  <QrCode size={20} className="text-white" />
+                  <span className="text-[12px] font-bold text-white">
+                    Check Price
+                  </span>
+                </button>
+              )}
             </div>
           </div>
           {context === "admin" && onAddItem && (

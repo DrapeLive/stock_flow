@@ -69,6 +69,10 @@ export default function MyItemsPage() {
     router.push("/agent/order/new");
   };
 
+  const handlePriceCheck = () => {
+    router.push("/agent/items/scanner");
+  };
+
   if (loading) return <PageLoading />;
 
   return (
@@ -77,6 +81,7 @@ export default function MyItemsPage() {
       loading={loading}
       context="agent"
       onOrder={handleOrder}
+      onPriceCheck={handlePriceCheck}
     />
   );
 }
