@@ -136,7 +136,7 @@ export default function ItemList({
             </h1>
             <div className="flex w-full justify-between">
               <div className="flex gap-2 items-center mt-1">
-                <span className="text-gray-400 text-xs font-medium">
+                <span className="text-gray-400 text-sm font-medium">
                   {headerSubtitle}
                 </span>
                 <div className="bg-primary/10 text-primary rounded-full py-0.5 px-3 border border-primary/20">

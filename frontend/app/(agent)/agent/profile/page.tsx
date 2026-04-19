@@ -125,7 +125,7 @@ export default function Profile() {
 
           <div className="bg-white px-5 py-4 rounded-3xl border border-gray-100 shadow-sm">
             <button
-              onClick={() => router.push("/customers")}
+              onClick={() => router.push("/agent/customers/")}
               className="flex justify-between items-center w-full py-2 group"
             >
               <div className="flex items-center gap-4">

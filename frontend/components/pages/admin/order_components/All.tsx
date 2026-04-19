@@ -23,7 +23,11 @@ const All: React.FC = () => {
     const fetchData = async () => {
       try {
         const response = await orderApi.getAll();
-        setData(response);
+        const sorted = [...response].sort(
+          (a, b) =>
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+        );
+        setData(sorted);
       } catch (error) {
         console.error("Error fetching data:", error);
       } finally {

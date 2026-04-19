@@ -19,7 +19,7 @@ export default function CustomersPage() {
     }
   };
   return (
-    <div className="min-h-screen min-w-full px-4">
+    <div className="min-h-screen min-w-full px-0">
       <div className="bg-gray-100/50 p-1.5 mt-2 flex items-center justify-between space-x-1 border border-gray-200 rounded-full mb-6">
         {(["Customers", "Agents", "Admins"] as Tab[]).map((tab) => (
           <button
