@@ -40,16 +40,20 @@ export default function AgentCustomersPage() {
       {/* Header */}
       <div className="bg-white border-b border-gray-100 px-6 py-6 sticky top-0 z-10">
         <div className="max-w-md mx-auto flex items-center gap-4">
-          <button 
+          <button
             onClick={() => router.back()}
             className="p-2 rounded-xl hover:bg-gray-50 text-gray-400 transition-colors"
           >
             <ArrowLeft size={20} />
           </button>
           <div className="flex flex-col">
-            <h1 className="text-xl font-black text-gray-900 leading-tight">My Customers</h1>
+            <h1 className="text-xl font-black text-gray-900 leading-tight">
+              My Customers
+            </h1>
             <div className="flex gap-2 items-center mt-1">
-              <span className="text-gray-400 text-[10px] font-bold uppercase tracking-wider">Total Linked</span>
+              <span className="text-gray-400 text-[10px] font-bold uppercase tracking-wider">
+                Total Linked
+              </span>
               <div className="bg-primary/10 text-primary rounded-full py-0.5 px-3 border border-primary/20">
                 <span className="font-bold text-xs">{data.length}</span>
               </div>
@@ -58,12 +62,14 @@ export default function AgentCustomersPage() {
         </div>
       </div>
 
-      <div className="max-w-md mx-auto px-6 pt-6">
+      <div className="max-w-md mx-auto pt-6">
         {data.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-gray-300">
             <Info size={40} className="mb-4 opacity-20" />
             <h2 className="text-xl font-bold">No Customers Found</h2>
-            <p className="text-sm text-gray-400 mt-1">You haven't been assigned any customers yet.</p>
+            <p className="text-sm text-gray-400 mt-1">
+              You haven't been assigned any customers yet.
+            </p>
           </div>
         ) : (
           <div className="space-y-3 pb-10">
@@ -88,7 +94,9 @@ export default function AgentCustomersPage() {
                 </div>
 
                 <div className="flex flex-col items-end justify-center px-4 border-l border-gray-50">
-                  <span className="text-[10px] text-gray-300 font-bold uppercase tracking-widest mb-1">Orders</span>
+                  <span className="text-[10px] text-gray-300 font-bold uppercase tracking-widest mb-1">
+                    Orders
+                  </span>
                   <span className="text-lg font-black leading-none text-gray-900">
                     {item.total_orders}
                   </span>

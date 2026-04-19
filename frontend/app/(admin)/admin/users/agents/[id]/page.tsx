@@ -185,7 +185,7 @@ export default function AgentDetailPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <button
-          onClick={() => router.back()}
+          onClick={() => router.push("/admin/users/")}
           className="p-2 -ml-2 rounded-full hover:bg-gray-50 transition-colors"
         >
           <ArrowLeft size={24} className="text-gray-900" />
