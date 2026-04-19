@@ -63,8 +63,7 @@ export default function OrderDetailsPage() {
     try {
       await orderApi.placeOrder(Number(orderKey));
       toastSuccess("Order placed successfully!");
-      localStorage.removeItem("orderKey");
-      router.push("/agent");
+      router.push("/agent/order/invoice");
     } catch (error) {
       const axiosError = error as AxiosError<PlaceOrderError>;
       if (axiosError.response?.data?.out_of_stock_items) {
@@ -236,25 +235,41 @@ export default function OrderDetailsPage() {
                 </button>
               </div>
               <p className="text-sm text-gray-500 mb-4">
-                Some items are no longer available. Stock may have been taken by another agent.
+                Some items are no longer available. Stock may have been taken by
+                another agent.
               </p>
               <div className="space-y-3 mb-6 max-h-48 overflow-y-auto">
                 {(() => {
-                  const grouped = outOfStockItems.reduce((acc, item) => {
-                    const key = item.order_item_id;
-                    if (!acc[key]) {
-                      acc[key] = {
-                        item_name: item.item_name,
-                        size_group: item.size_group,
-                        required: item.required,
-                        available: item.available,
-                        order_item_id: item.order_item_id,
-                      };
-                    } else {
-                      acc[key].available = Math.min(acc[key].available, item.available);
-                    }
-                    return acc;
-                  }, {} as Record<number, { item_name: string; size_group: string; required: number; available: number; order_item_id: number }>);
+                  const grouped = outOfStockItems.reduce(
+                    (acc, item) => {
+                      const key = item.order_item_id;
+                      if (!acc[key]) {
+                        acc[key] = {
+                          item_name: item.item_name,
+                          size_group: item.size_group,
+                          required: item.required,
+                          available: item.available,
+                          order_item_id: item.order_item_id,
+                        };
+                      } else {
+                        acc[key].available = Math.min(
+                          acc[key].available,
+                          item.available,
+                        );
+                      }
+                      return acc;
+                    },
+                    {} as Record<
+                      number,
+                      {
+                        item_name: string;
+                        size_group: string;
+                        required: number;
+                        available: number;
+                        order_item_id: number;
+                      }
+                    >,
+                  );
 
                   return Object.values(grouped).map((item, idx) => (
                     <div
@@ -266,10 +281,14 @@ export default function OrderDetailsPage() {
                       </p>
                       <p className="text-xs mt-1">
                         <span className="text-gray-500">Requested: </span>
-                        <span className="font-semibold text-gray-900">{item.required}</span>
+                        <span className="font-semibold text-gray-900">
+                          {item.required}
+                        </span>
                         <span className="text-gray-400"> | </span>
                         <span className="text-gray-500">Available: </span>
-                        <span className="font-semibold text-red-600">{item.available}</span>
+                        <span className="font-semibold text-red-600">
+                          {item.available}
+                        </span>
                       </p>
                     </div>
                   ));
