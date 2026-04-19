@@ -94,6 +94,7 @@ export default function OrderItemsSection({
         <OrderItem
           items={items}
           isPacking={isPackingMode && activeTab === "Packing"}
+          isDispatching={activeTab === "Dispatching"}
           onPackedChange={onPackedChange}
           isDeletable={isEditable}
           orderId={orderId}

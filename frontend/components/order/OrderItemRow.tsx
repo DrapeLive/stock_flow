@@ -29,7 +29,7 @@ export default function OrderItemRow({
   return (
     <div
       className={`flex items-center gap-3 bg-white border-b border-gray-50 py-4 px-2 ${
-        isPacked ? "opacity-60" : ""
+        isPacked ? "bg-green-50" : ""
       }`}
     >
       {showDelete && onDelete && (
@@ -68,7 +68,7 @@ export default function OrderItemRow({
       <div className="flex-1 min-w-0">
         <h6
           className={`font-semibold text-sm truncate ${
-            isPacked ? "line-through text-gray-400" : "text-gray-900"
+            isPacked ? "text-green-700" : "text-gray-900"
           }`}
         >
           {item.item_name || "Unknown Item"}
@@ -78,7 +78,7 @@ export default function OrderItemRow({
         </p>
         <p
           className={`text-xs font-medium mt-1 ${
-            isPacked ? "text-gray-400 line-through" : "text-gray-600"
+            isPacked ? "text-green-600" : "text-gray-600"
           }`}
         >
           {quantity} Set{quantity !== 1 ? "s" : ""} × {pieceCount} pcs ={" "}

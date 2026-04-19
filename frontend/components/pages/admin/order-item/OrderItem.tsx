@@ -12,6 +12,7 @@ type Props = {
   isDeletable?: boolean;
   orderId?: number;
   isPacking?: boolean;
+  isDispatching?: boolean;
   onPackedChange?: () => void;
   onDeleteItem?: (itemId: number) => void;
   status?: string;
@@ -22,6 +23,7 @@ const OrderItem: React.FC<Props> = ({
   isDeletable,
   orderId,
   isPacking,
+  isDispatching,
   onPackedChange,
   onDeleteItem,
   status,
@@ -132,25 +134,32 @@ const OrderItem: React.FC<Props> = ({
   return (
     <>
       <div className="pt-3 space-y-1">
-        {orderItems?.map((item) => {
-          const totalPieces = (item.piece_count || 1) * item.quantity;
-          const isFullyPacked = (item.packed_quantity ?? 0) >= totalPieces;
+        {orderItems
+          ?.filter((item) => {
+            if (!isDispatching) return true;
+            const totalPieces = (item.piece_count || 1) * item.quantity;
+            const isFullyPacked = (item.packed_quantity ?? 0) >= totalPieces;
+            return isFullyPacked;
+          })
+          .map((item) => {
+            const totalPieces = (item.piece_count || 1) * item.quantity;
+            const isFullyPacked = (item.packed_quantity ?? 0) >= totalPieces;
 
-          return (
-            <OrderItemRow
-              key={item.id}
-              item={item}
-              showDelete={isDeletable}
-              showPackedToggle={isPacking}
-              isPacked={isFullyPacked}
-              onDelete={() => onDeleteItem?.(item.id)}
-              onTogglePacked={(id, packed) => {
-                const newPacked = packed ? totalPieces : 0;
-                togglePacked(id, item.packed_quantity ?? 0, totalPieces);
-              }}
-            />
-          );
-        })}
+            return (
+              <OrderItemRow
+                key={item.id}
+                item={item}
+                showDelete={isDeletable}
+                showPackedToggle={isPacking}
+                isPacked={isFullyPacked}
+                onDelete={() => onDeleteItem?.(item.id)}
+                onTogglePacked={(id, packed) => {
+                  const newPacked = packed ? totalPieces : 0;
+                  togglePacked(id, item.packed_quantity ?? 0, totalPieces);
+                }}
+              />
+            );
+          })}
       </div>
 
       {showUnpackDialog && (
