@@ -1,15 +1,17 @@
 "use client";
 
 import Image from "next/image";
-import { Trash2, CheckCircle2, Circle } from "lucide-react";
+import { Trash2, CheckCircle2, Circle, Pencil } from "lucide-react";
 import { ImagePreview } from "@/components/pages/ImagePreview";
 import { OrderItem } from "@/types/order";
 
 interface OrderItemRowProps {
   item: OrderItem;
   onDelete?: (itemId: number) => void;
+  onEdit?: (item: OrderItem) => void;
   onTogglePacked?: (itemId: number, packed: boolean) => void;
   showDelete?: boolean;
+  showEdit?: boolean;
   showPackedToggle?: boolean;
   isPacked?: boolean;
   isOutOfStock?: boolean;
@@ -18,8 +20,10 @@ interface OrderItemRowProps {
 export default function OrderItemRow({
   item,
   onDelete,
+  onEdit,
   onTogglePacked,
   showDelete = false,
+  showEdit = false,
   showPackedToggle = false,
   isPacked = false,
   isOutOfStock = false,
@@ -40,6 +44,15 @@ export default function OrderItemRow({
           className="flex items-center justify-center p-2 flex-shrink-0"
         >
           <Trash2 className="text-red-500 w-4 h-4" />
+        </button>
+      )}
+
+      {showEdit && onEdit && (
+        <button
+          onClick={() => onEdit(item)}
+          className="flex items-center justify-center p-2 flex-shrink-0"
+        >
+          <Pencil className="text-primary w-4 h-4" />
         </button>
       )}
 

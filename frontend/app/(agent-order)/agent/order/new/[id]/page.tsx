@@ -194,6 +194,7 @@ export default function OrderDetailsPage() {
                 orderId={orders.id}
                 items={orders.items}
                 isDeletable={true}
+                isEditable={true}
                 outOfStockItemIds={outOfStockItemIds}
               />
             </div>
