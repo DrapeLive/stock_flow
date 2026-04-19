@@ -143,6 +143,10 @@ class OrderViewSet(ModelViewSet):
             "items__item"
         )
 
+        customer_id = self.request.query_params.get('customer')
+        if customer_id:
+            qs = qs.filter(customer_id=customer_id)
+
         if user.role == "ADMIN":
             return qs
 

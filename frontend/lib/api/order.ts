@@ -23,6 +23,10 @@ export const orderApi = {
     return api.get<OrderAllResponse>("/api/orders/").then((r) => r.data);
   },
 
+  getByCustomer(customerId: number): Promise<OrderAllResponse> {
+    return api.get<OrderAllResponse>(`/api/orders/?customer=${customerId}`).then((r) => r.data);
+  },
+
   getOne(id: number): Promise<OrderResponse> {
     return api.get<OrderResponse>(`/api/orders/${id}/`).then((r) => r.data);
   },
