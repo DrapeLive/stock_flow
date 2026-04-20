@@ -1,9 +1,9 @@
 import type { ItemType } from "@/types/item";
 import {
-  SIZES_BY_TYPE,
   SIZE_RANGE_TO_SIZES,
   FrontendSizeRange,
   SIZE_RANGE_PIECE_COUNT,
+  getSizesForItemType,
 } from "@/types/item";
 
 export function getStockForSizeGroup(
@@ -40,8 +40,10 @@ export function getAvailableSizeRanges(
   const variantSizes = Array.from(new Set(variant.sizes.map((s) => s.size)));
   const variantSizeSet = new Set(variantSizes);
 
+  const availableRanges = getSizesForItemType(type, "order_creation");
+
   if (type === "gents") {
-    for (const range of SIZES_BY_TYPE[type]) {
+    for (const range of availableRanges) {
       const rangeSizes = SIZE_RANGE_TO_SIZES[range];
       const rangeSizeSet = new Set(rangeSizes);
 
@@ -56,7 +58,7 @@ export function getAvailableSizeRanges(
     return variantSizes;
   }
 
-  return SIZES_BY_TYPE[type].filter((range) => {
+  return availableRanges.filter((range) => {
     const requiredSizes = SIZE_RANGE_TO_SIZES[range];
     return requiredSizes.every((s) => variantSizeSet.has(s));
   });

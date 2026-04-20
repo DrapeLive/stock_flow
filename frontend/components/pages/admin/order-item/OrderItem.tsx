@@ -6,10 +6,10 @@ import { toastError, toastSuccess } from "@/lib/toast";
 import { OrderItem as OrderItemType, OrderItems } from "@/types/order";
 import { VariantAllItem, VariantSize, ItemType } from "@/types/item";
 import {
-  SIZES_BY_TYPE,
   SIZE_RANGE_TO_SIZES,
   SIZE_RANGE_PIECE_COUNT,
   FrontendSizeRange,
+  getSizesForItemType,
 } from "@/types/item";
 import { useState, useEffect } from "react";
 
@@ -37,7 +37,7 @@ function getAvailableSizeGroups(
   itemType: ItemType,
 ): string[] {
   const variantSizeSet = new Set(variantSizes.map((s) => s.size));
-  return SIZES_BY_TYPE[itemType].filter((range) => {
+  return getSizesForItemType(itemType, "order_creation").filter((range) => {
     const requiredSizes = SIZE_RANGE_TO_SIZES[range];
     return requiredSizes.every((s) => variantSizeSet.has(s));
   });

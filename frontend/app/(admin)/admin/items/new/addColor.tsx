@@ -16,7 +16,7 @@ import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 import CropModal from "./cropModal";
 import CommonDetailsBadge from "./commonDetailsBadge";
 import { ColorVariant, CommonDetails, FrontendSizeRange } from "@/types/item";
-import { SIZES_BY_TYPE } from "@/types/item";
+import { getSizesForItemType } from "@/types/item";
 import imageCompression from "browser-image-compression";
 
 interface Props {
@@ -41,7 +41,7 @@ export default function Step2AddColor({
   const [stockInput, setStockInput] = useState(String(initial.stock));
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const availableSizes = SIZES_BY_TYPE[common.type];
+  const availableSizes = getSizesForItemType(common.type, "item_creation");
 
   const set = <K extends keyof ColorVariant>(key: K, val: ColorVariant[K]) =>
     setVariant((v) => ({ ...v, [key]: val }));

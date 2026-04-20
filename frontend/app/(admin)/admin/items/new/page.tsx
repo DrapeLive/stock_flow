@@ -5,9 +5,9 @@ import { useRouter } from "next/navigation";
 import Step1CommonDetails from "./commonDetails";
 import Step2AddColor from "./addColor";
 import ColorListScreen from "./colorList";
-import { submitItem, parseErrorMessage } from "@/lib/submitItem";
+import { submitItem } from "@/lib/submitItem";
 import type { ColorVariant, CommonDetails, WizardStep } from "@/types/item";
-import { SIZES_BY_TYPE } from "@/types/item";
+import { getSizesForItemType } from "@/types/item";
 import { toastError } from "@/lib/toast";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -17,7 +17,7 @@ const uid = () => Math.random().toString(36).slice(2, 9);
 function blankVariant(common: CommonDetails): ColorVariant {
   return {
     id: uid(),
-    sizeRange: SIZES_BY_TYPE[common.type][0],
+    sizeRange: getSizesForItemType(common.type, "item_creation")[0],
     stock: 0,
     image: null,
     imagePreview: null,
