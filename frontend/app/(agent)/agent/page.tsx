@@ -11,6 +11,7 @@ import OrderCard from "@/components/pages/agent/order/OrderCard";
 import OrderListHeader from "@/components/pages/agent/order/OrderListHeader";
 import EmptyState from "@/components/ui/EmptyState";
 import FilterBar from "@/components/ui/FilterBar";
+import FilterToggle from "@/components/ui/FilterToggle";
 
 export default function Home() {
   const [data, setData] = useState<OrderAllResponse>([]);
@@ -18,6 +19,7 @@ export default function Home() {
   const [loadError, setLoadError] = useState(false);
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
 
   const router = useRouter();
 
@@ -51,17 +53,39 @@ export default function Home() {
   const { pendingPacked } = groupOrders(sortedData);
   const order_len = pendingPacked.length;
 
+  const handleClearFilters = () => {
+    setFromDate("");
+    setToDate("");
+    setShowFilters(false);
+  };
+
+  const handleToggleFilters = () => {
+    if (showFilters) {
+      handleClearFilters();
+    } else {
+      setShowFilters(true);
+    }
+  };
+
   if (loading) return <PageLoading />;
   if (loadError) return null;
 
   return (
     <div className="min-h-screen min-w-full">
-      <OrderListHeader title="Remaining Orders" count={order_len} />
+      <OrderListHeader
+        title="Remaining Orders"
+        count={order_len}
+        showFilters={showFilters}
+        handleToggleFilters={handleToggleFilters}
+      />
+
       <FilterBar
         fromDate={fromDate}
         toDate={toDate}
         onFromDateChange={setFromDate}
         onToDateChange={setToDate}
+        isOpen={showFilters}
+        onClear={handleClearFilters}
       />
 
       {order_len === 0 ? (

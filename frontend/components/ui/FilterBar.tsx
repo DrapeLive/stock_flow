@@ -11,6 +11,8 @@ interface FilterBarProps {
   agents?: { id: number; username: string }[];
   selectedAgent?: string;
   onAgentChange?: (agentId: string) => void;
+  isOpen: boolean;
+  onClear: () => void;
 }
 
 export default function FilterBar({
@@ -21,7 +23,14 @@ export default function FilterBar({
   agents = [],
   selectedAgent = "",
   onAgentChange,
+  isOpen,
+  onClear,
 }: FilterBarProps) {
+  if (!isOpen) return null;
+
+  const hasFilters =
+    fromDate || toDate || (selectedAgent && selectedAgent !== "all");
+
   return (
     <div className="flex flex-wrap gap-2 items-center mb-4 p-2 bg-gray-50 rounded-lg">
       <div className="relative flex-1 min-w-[140px]">
@@ -59,6 +68,14 @@ export default function FilterBar({
             />
           </div>
         </>
+      )}
+      {hasFilters && (
+        <button
+          onClick={onClear}
+          className="text-xs text-red-500 hover:text-red-600 font-medium px-2"
+        >
+          Clear
+        </button>
       )}
     </div>
   );

@@ -7,6 +7,7 @@ import Pending from "@/components/pages/admin/order_components/Pending";
 import Dispatched from "@/components/pages/admin/order_components/Dispatched";
 import All from "@/components/pages/admin/order_components/All";
 import FilterBar from "@/components/ui/FilterBar";
+import FilterToggle from "@/components/ui/FilterToggle";
 import { OrderFilters } from "@/components/pages/admin/order_components/types";
 
 type Tab = "All" | "Packed" | "Pending" | "Dispatched";
@@ -20,6 +21,7 @@ export default function AdminHomePage() {
   const [activeTab, setActiveTab] = useState<Tab>("Pending");
   const [filters, setFilters] = useState<OrderFilters>({});
   const [agents, setAgents] = useState<SimpleAgent[]>([]);
+  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
     agentApi
@@ -45,6 +47,19 @@ export default function AdminHomePage() {
     }));
   };
 
+  const handleClearFilters = () => {
+    setFilters({});
+    setShowFilters(false);
+  };
+
+  const handleToggleFilters = () => {
+    if (showFilters) {
+      handleClearFilters();
+    } else {
+      setShowFilters(true);
+    }
+  };
+
   const renderContent = (): React.ReactNode => {
     const commonProps = { filters };
     switch (activeTab) {
@@ -60,8 +75,8 @@ export default function AdminHomePage() {
   };
 
   return (
-    <div className="min-h-screen min-w-full px-4">
-      <div className="bg-gray-100/50 p-1.5 mt-2 flex items-center justify-between space-x-1 border border-gray-200 rounded-full mb-2">
+    <div className="min-h-screen min-w-full">
+      <div className=" p-1.5 mt-2 flex items-center justify-between space-x-1 border border-gray-200 rounded-full mb-2">
         {(["All", "Pending", "Packed", "Dispatched"] as Tab[]).map((tab) => (
           <button
             key={tab}
@@ -76,6 +91,12 @@ export default function AdminHomePage() {
           </button>
         ))}
       </div>
+      <div className="flex justify-between items-center mb-4">
+        <span className="text-gray-400 text-[10px] font-bold uppercase tracking-wider">
+          Remaining Orders
+        </span>
+        <FilterToggle isOpen={showFilters} onToggle={handleToggleFilters} />
+      </div>
       <FilterBar
         fromDate={filters.from || ""}
         toDate={filters.to || ""}
@@ -84,6 +105,8 @@ export default function AdminHomePage() {
         agents={agents}
         selectedAgent={filters.agent || "all"}
         onAgentChange={handleAgentChange}
+        isOpen={showFilters}
+        onClear={handleClearFilters}
       />
       <div className="pb-10">{renderContent()}</div>
     </div>
