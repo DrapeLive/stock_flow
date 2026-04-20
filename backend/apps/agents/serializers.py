@@ -16,6 +16,7 @@ class VariantColorSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     image = serializers.CharField(allow_null=True)
     size_ranges = VariantSizeRangeSerializer(many=True)
+    qr_code = serializers.CharField(allow_null=True)
 
 
 class AgentItemListSerializer(serializers.Serializer):
@@ -34,7 +35,7 @@ class AgentItemListSerializer(serializers.Serializer):
                 return image_obj.url
             return None
 
-        variants_by_image = defaultdict(lambda: {"id": None, "image_obj": None, "sizes": defaultdict(int)})
+        variants_by_image = defaultdict(lambda: {"id": None, "image_obj": None, "qr_code": None, "sizes": defaultdict(int)})
 
         for variant in item.variants.all():
             image_key = variant.image.url if variant.image else None
@@ -42,6 +43,7 @@ class AgentItemListSerializer(serializers.Serializer):
             if variants_by_image[image_key]["id"] is None:
                 variants_by_image[image_key]["id"] = variant.id
                 variants_by_image[image_key]["image_obj"] = variant.image
+                variants_by_image[image_key]["qr_code"] = variant.qr_code
 
             for size_obj in variant.sizes.all():
                 variants_by_image[image_key]["sizes"][size_obj.size] += size_obj.stock
@@ -64,6 +66,7 @@ class AgentItemListSerializer(serializers.Serializer):
             result.append({
                 "id": first_variant_id,
                 "image": image,
+                "qr_code": data["qr_code"],
                 "size_ranges": size_ranges
             })
 

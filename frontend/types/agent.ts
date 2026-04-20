@@ -15,6 +15,7 @@ export interface SizeRange {
 export interface AgentItemVariant {
   id: number;
   image: string | null;
+  qr_code: string | null;
   size_ranges: SizeRange[];
 }
 

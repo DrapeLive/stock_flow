@@ -18,7 +18,7 @@ function normalizeAgentItem(item: AssignedItem): UIItem {
     variants: item.variants.map((v) => ({
       id: v.id,
       image: v.image,
-      qr_code: null,
+      qr_code: v.qr_code,
       sizes: v.size_ranges.map((sr) => ({
         size: sr.size_range,
         stock: sr.stock,
