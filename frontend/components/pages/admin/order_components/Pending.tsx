@@ -8,18 +8,26 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { OrderCard } from "@/components/order";
+import { OrderFilters } from "./types";
 
-const Pending: React.FC = () => {
+interface Props {
+  filters?: OrderFilters;
+}
+
+const Pending: React.FC<Props> = ({ filters }) => {
   const { isAuthenticated } = useAuth();
+
   const [data, setData] = useState<OrderAllResponse>([]);
   const [loading, setLoading] = useState(true);
+
   const router = useRouter();
 
   useEffect(() => {
     setLoading(true);
+
     const fetchData = async () => {
       try {
-        const response = await orderApi.getAll();
+        const response = await orderApi.getAll(filters);
         setData(response);
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -27,8 +35,9 @@ const Pending: React.FC = () => {
         setLoading(false);
       }
     };
+
     fetchData();
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, router, filters]);
 
   const { pending } = groupOrders(data ?? []);
 

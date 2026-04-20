@@ -8,8 +8,13 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { OrderCard } from "@/components/order";
+import { OrderFilters } from "./types";
 
-const All: React.FC = () => {
+interface Props {
+  filters?: OrderFilters;
+}
+
+const All: React.FC<Props> = ({ filters }) => {
   const { isAuthenticated } = useAuth();
 
   const [data, setData] = useState<OrderAllResponse>([]);
@@ -22,7 +27,7 @@ const All: React.FC = () => {
 
     const fetchData = async () => {
       try {
-        const response = await orderApi.getAll();
+        const response = await orderApi.getAll(filters);
         const sorted = [...response].sort(
           (a, b) =>
             new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
@@ -36,7 +41,7 @@ const All: React.FC = () => {
     };
 
     fetchData();
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, router, filters]);
 
   if (loading)
     return (

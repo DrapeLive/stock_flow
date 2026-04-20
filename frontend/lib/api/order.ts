@@ -18,13 +18,28 @@ export interface OrderLog {
   created_at: string;
 }
 
+export interface OrderFilters {
+  from?: string;
+  to?: string;
+  agent?: string;
+}
+
 export const orderApi = {
-  getAll(): Promise<OrderAllResponse> {
-    return api.get<OrderAllResponse>("/api/orders/").then((r) => r.data);
+  getAll(filters?: OrderFilters): Promise<OrderAllResponse> {
+    const params = new URLSearchParams();
+    if (filters?.from) params.append("from_date", filters.from);
+    if (filters?.to) params.append("to_date", filters.to);
+    if (filters?.agent) params.append("agent", filters.agent);
+    const query = params.toString();
+    return api
+      .get<OrderAllResponse>(`/api/orders/${query ? `?${query}` : ""}`)
+      .then((r) => r.data);
   },
 
   getByCustomer(customerId: number): Promise<OrderAllResponse> {
-    return api.get<OrderAllResponse>(`/api/orders/?customer=${customerId}`).then((r) => r.data);
+    return api
+      .get<OrderAllResponse>(`/api/orders/?customer=${customerId}`)
+      .then((r) => r.data);
   },
 
   getOne(id: number): Promise<OrderResponse> {
@@ -73,7 +88,10 @@ export const orderApi = {
 
   placeOrder(id: number): Promise<{ message: string; order_id: number }> {
     return api
-      .post<{ message: string; order_id: number }>(`/api/orders/${id}/place-order/`)
+      .post<{
+        message: string;
+        order_id: number;
+      }>(`/api/orders/${id}/place-order/`)
       .then((r) => r.data);
   },
 
