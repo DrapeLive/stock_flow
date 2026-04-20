@@ -5,8 +5,8 @@ interface OrderListHeaderProps {
   title: string;
   count: number;
   countColor?: "amber" | "green";
-  showFilters: boolean;
-  handleToggleFilters: () => void;
+  showFilters?: boolean;
+  handleToggleFilters?: () => void;
 }
 
 export default function OrderListHeader({
@@ -33,9 +33,11 @@ export default function OrderListHeader({
           <span className="font-bold text-xs">{count}</span>
         </div>
       </div>
-      <div>
-        <FilterToggle isOpen={showFilters} onToggle={handleToggleFilters} />
-      </div>
+      {showFilters !== undefined && handleToggleFilters && (
+        <div>
+          <FilterToggle isOpen={showFilters} onToggle={handleToggleFilters} />
+        </div>
+      )}
     </div>
   );
 }

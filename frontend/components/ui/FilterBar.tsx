@@ -1,6 +1,6 @@
 "use client";
 
-import { Input } from "./input";
+import DatePicker from "./date-picker";
 import StockFlowSelect from "./custom/stockFlowSelect";
 
 interface FilterBarProps {
@@ -34,19 +34,17 @@ export default function FilterBar({
   return (
     <div className="flex flex-wrap gap-2 items-center mb-4 p-2 bg-gray-50 rounded-lg">
       <div className="relative flex-1 min-w-[140px]">
-        <Input
-          type="date"
+        <DatePicker
           value={fromDate}
-          onChange={(e) => onFromDateChange(e.target.value)}
+          onChange={onFromDateChange}
           placeholder="From date"
         />
       </div>
       <span className="text-gray-400 text-xs">to</span>
       <div className="relative flex-1 min-w-[140px]">
-        <Input
-          type="date"
+        <DatePicker
           value={toDate}
-          onChange={(e) => onToDateChange(e.target.value)}
+          onChange={onToDateChange}
           placeholder="To date"
         />
       </div>
