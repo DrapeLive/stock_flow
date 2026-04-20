@@ -26,7 +26,10 @@ export default function Home() {
 
     const fetchData = async () => {
       try {
-        const response = await orderApi.getAll({ from: fromDate || undefined, to: toDate || undefined });
+        const response = await orderApi.getAll({
+          from: fromDate || undefined,
+          to: toDate || undefined,
+        });
         setData(response);
       } catch (e) {
         console.error("Error fetching orders:", e);
@@ -50,10 +53,9 @@ export default function Home() {
 
   if (loading) return <PageLoading />;
   if (loadError) return null;
-  if (order_len === 0) return <EmptyState title="No Active Orders" />;
 
   return (
-    <div className="min-h-screen min-w-full px-4 bg-gray-50/30">
+    <div className="min-h-screen min-w-full">
       <OrderListHeader title="Remaining Orders" count={order_len} />
       <FilterBar
         fromDate={fromDate}
@@ -62,15 +64,19 @@ export default function Home() {
         onToDateChange={setToDate}
       />
 
-      <div className="space-y-3 pb-32">
-        {pendingPacked?.map((order) => (
-          <OrderCard
-            key={order.id}
-            order={order}
-            onClick={() => router.push(`/agent/order/status/${order.id}`)}
-          />
-        ))}
-      </div>
+      {order_len === 0 ? (
+        <EmptyState title="No Active Orders" />
+      ) : (
+        <div className="space-y-3 pb-32">
+          {pendingPacked?.map((order) => (
+            <OrderCard
+              key={order.id}
+              order={order}
+              onClick={() => router.push(`/agent/order/status/${order.id}`)}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

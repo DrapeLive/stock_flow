@@ -22,9 +22,12 @@ export default function AdminHomePage() {
   const [agents, setAgents] = useState<SimpleAgent[]>([]);
 
   useEffect(() => {
-    agentApi.getAll().then((agents) => {
-      setAgents(agents.map((a) => ({ id: a.id, username: a.user.username })));
-    }).catch(console.error);
+    agentApi
+      .getAll()
+      .then((agents) => {
+        setAgents(agents.map((a) => ({ id: a.id, username: a.user.username })));
+      })
+      .catch(console.error);
   }, []);
 
   const handleFromDateChange = (date: string) => {
@@ -36,7 +39,10 @@ export default function AdminHomePage() {
   };
 
   const handleAgentChange = (agentId: string) => {
-    setFilters((prev) => ({ ...prev, agent: agentId === "all" ? undefined : agentId }));
+    setFilters((prev) => ({
+      ...prev,
+      agent: agentId === "all" ? undefined : agentId,
+    }));
   };
 
   const renderContent = (): React.ReactNode => {
