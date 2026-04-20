@@ -40,7 +40,7 @@ export default function SizeGroupSelector({
       {sizeGroups.length > 0 ? (
         <div className="relative">
           <Select
-            value={selectedSizeGroup || undefined}
+            value={selectedSizeGroup ?? ""}
             onValueChange={onSelect}
           >
             <SelectTrigger className="w-full h-14 border-2 border-gray-100 bg-white px-4 pr-10 flex items-center text-sm font-semibold shadow-sm">
