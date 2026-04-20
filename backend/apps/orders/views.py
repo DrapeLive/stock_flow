@@ -155,6 +155,18 @@ class OrderViewSet(ModelViewSet):
         if customer_id:
             qs = qs.filter(customer_id=customer_id)
 
+        from_date = self.request.query_params.get('from_date')
+        if from_date:
+            qs = qs.filter(created_at__date__gte=from_date)
+
+        to_date = self.request.query_params.get('to_date')
+        if to_date:
+            qs = qs.filter(created_at__date__lte=to_date)
+
+        agent_id = self.request.query_params.get('agent')
+        if agent_id and user.role == "ADMIN":
+            qs = qs.filter(agent_id=agent_id)
+
         if user.role == "ADMIN":
             return qs
 
