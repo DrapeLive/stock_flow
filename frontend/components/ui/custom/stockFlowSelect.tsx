@@ -26,8 +26,10 @@ export default function StockFlowSelect({
   disabled = false,
   className,
 }: StockFlowSelectProps) {
+  const selectValue = value || undefined;
+
   return (
-    <Select value={value} onValueChange={onChange} disabled={disabled}>
+    <Select value={selectValue} onValueChange={onChange} disabled={disabled}>
       <SelectTrigger className={`w-full ${className}`}>
         <SelectValue placeholder={placeholder || "Select"} />
       </SelectTrigger>
