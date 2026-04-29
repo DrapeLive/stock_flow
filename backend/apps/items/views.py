@@ -9,6 +9,32 @@ from django.shortcuts import get_object_or_404
 from rest_framework.decorators import action
 from rest_framework import status
 from apps.orders.models import OrderItem
+from apps.orders.utils import SIZE_MAPPING
+
+
+def get_agent_reservation_boost(user):
+    """Return {(variant_id, size): qty} the agent can additionally see as available
+    because of their currently-EDITING orders."""
+    boost = {}
+    if not hasattr(user, 'role') or user.role != 'AGENT':
+        return boost
+
+    from apps.orders.models import Order
+    editing_orders = Order.objects.filter(agent__user=user, status='EDITING')
+    for order in editing_orders:
+        for snap in order.reservation_snapshot:
+            item_type = snap['item_type']
+            if item_type not in SIZE_MAPPING:
+                continue
+            size_group = snap['size_group']
+            if size_group not in SIZE_MAPPING[item_type]:
+                continue
+            variant_id = snap['variant_id']
+            qty = snap['quantity']
+            for size in SIZE_MAPPING[item_type][size_group]:
+                key = (variant_id, size)
+                boost[key] = boost.get(key, 0) + qty
+    return boost
 
 
 class ItemViewSet(ModelViewSet):
@@ -48,17 +74,19 @@ class ItemViewSet(ModelViewSet):
     def get_stock_list(self, request):
         items = Item.objects.prefetch_related("variants__sizes").filter(is_deleted=False)
 
+        boost = get_agent_reservation_boost(request.user)
+
         result = []
         for item in items:
             variants = []
             for variant in item.variants.all():
-                sizes = [{"size": s.size, "stock": s.stock} for s in variant.sizes.all()]
+                sizes = [{"size": s.size, "stock": s.stock + boost.get((variant.id, s.size), 0)} for s in variant.sizes.all()]
                 variants.append({
                     "id": variant.id,
                     "qr_code": str(variant.qr_code) if variant.qr_code else None,
                     "image": request.build_absolute_uri(variant.image.url) if variant.image else None,
                     "sizes": sizes,
-                    "total_stock": sum(s.stock for s in variant.sizes.all()),
+                    "total_stock": sum(s["stock"] for s in sizes),
                 })
 
             result.append({
@@ -87,6 +115,8 @@ class ItemViewSet(ModelViewSet):
         item = variant.item
         variants = item.variants.prefetch_related('sizes').all()
 
+        boost = get_agent_reservation_boost(request.user)
+
         response_variants = []
         for v in variants:
             variant_data = {
@@ -97,7 +127,7 @@ class ItemViewSet(ModelViewSet):
                     {
                         "id": s.id,
                         "size": s.size,
-                        "stock": s.stock
+                        "stock": s.stock + boost.get((v.id, s.size), 0)
                     }
                     for s in v.sizes.all()
                 ]
@@ -128,10 +158,13 @@ class ItemVariantViewSet(ModelViewSet):
     def get_all_variants(self, request):
         variants = ItemVariant.objects.select_related('item').prefetch_related('sizes').filter(item__is_deleted=False).all()
 
+        boost = get_agent_reservation_boost(request.user)
+
         result = []
         for variant in variants:
-            total_stock = sum(s.stock for s in variant.sizes.all())
-            unique_sizes = list(set(s.size for s in variant.sizes.all()))
+            sizes_with_boost = [{"size": s.size, "stock": s.stock + boost.get((variant.id, s.size), 0)} for s in variant.sizes.all()]
+            total_stock = sum(s["stock"] for s in sizes_with_boost)
+            unique_sizes = list(set(s["size"] for s in sizes_with_boost))
 
             result.append({
                 "id": variant.id,
@@ -141,7 +174,7 @@ class ItemVariantViewSet(ModelViewSet):
                 "item_price": str(variant.item.price),
                 "qr_code": str(variant.qr_code) if variant.qr_code else None,
                 "image": request.build_absolute_uri(variant.image.url) if variant.image else None,
-                "sizes": [{"size": s.size, "stock": s.stock} for s in variant.sizes.all()],
+                "sizes": sizes_with_boost,
                 "total_stock": total_stock,
                 "unique_sizes": unique_sizes,
             })

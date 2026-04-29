@@ -9,7 +9,7 @@ import OrderDetailItems from "@/components/pages/agent/order/OrderDetailItems";
 import OrderLogs from "@/components/pages/order/OrderLogs";
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 import { toastSuccess, toastError } from "@/lib/toast";
-import { Trash2, Package } from "lucide-react";
+import { Trash2, Package, Pencil } from "lucide-react";
 
 export default function Page() {
   const params = useParams();
@@ -20,6 +20,7 @@ export default function Page() {
   const [data, setData] = useState<OrderResponse>();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [startingEdit, setStartingEdit] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
@@ -54,6 +55,21 @@ export default function Page() {
     } finally {
       setDeleting(false);
       setShowDeleteDialog(false);
+    }
+  };
+
+  const handleEditOrder = async () => {
+    if (!id) return;
+    setStartingEdit(true);
+    try {
+      await orderApi.startEdit(Number(id));
+      localStorage.setItem("orderKey", id);
+      router.push(`/agent/order/edit/${id}`);
+    } catch (err) {
+      toastError("Failed to start editing");
+      console.error(err);
+    } finally {
+      setStartingEdit(false);
     }
   };
 
@@ -119,7 +135,15 @@ export default function Page() {
         />
 
         {isDeletable && (
-          <div className="mt-6 pt-4 border-t border-gray-100">
+          <div className="mt-6 pt-4 border-t border-gray-100 space-y-3">
+            <StockFlowButton
+              text="Edit Order"
+              icon={<Pencil size={16} />}
+              onClick={handleEditOrder}
+              variant="outline"
+              className="w-full shadow-lg border-blue-200 text-blue-500 hover:bg-blue-50"
+              disabled={startingEdit}
+            />
             <StockFlowButton
               text="Delete Order"
               icon={<Trash2 />}

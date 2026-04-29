@@ -30,6 +30,11 @@ const statusConfig: Record<
     text: "text-amber-700",
     label: "Pending",
   },
+  EDITING: {
+    bg: "bg-purple-100",
+    text: "text-purple-700",
+    label: "Editing",
+  },
   PACKED: {
     bg: "bg-blue-100",
     text: "text-blue-700",

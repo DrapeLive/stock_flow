@@ -106,4 +106,22 @@ export const orderApi = {
       .get<OrderLog[]>(`/api/orders/${orderId}/logs/`)
       .then((r) => r.data);
   },
+
+  startEdit(id: number): Promise<{ message: string }> {
+    return api
+      .post<{ message: string }>(`/api/orders/${id}/start-edit/`)
+      .then((r) => r.data);
+  },
+
+  saveEdit(id: number): Promise<{ message: string; order_id: number }> {
+    return api
+      .post<{ message: string; order_id: number }>(`/api/orders/${id}/save-edit/`)
+      .then((r) => r.data);
+  },
+
+  cancelEdit(id: number): Promise<{ message: string }> {
+    return api
+      .post<{ message: string }>(`/api/orders/${id}/cancel-edit/`)
+      .then((r) => r.data);
+  },
 };

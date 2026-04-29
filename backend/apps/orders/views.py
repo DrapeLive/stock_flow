@@ -1,6 +1,7 @@
 from django.db import transaction
 from django.shortcuts import get_object_or_404
 from django.db.models import F
+from django.utils import timezone
 
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.views import APIView
@@ -23,6 +24,47 @@ from rest_framework.permissions import IsAuthenticated
 from apps.items.models import ItemVariant, ItemVariantSize
 from apps.agents.models import AgentItem
 from .utils import SIZE_MAPPING
+
+
+def _build_snapshot(order):
+    """Build a list of dicts representing all OrderItems for reservation snapshot."""
+    return [
+        {
+            'item_id': oi.item_id,
+            'variant_id': oi.variant_id,
+            'size_group': oi.size_group,
+            'item_type': oi.item_type,
+            'item_name': oi.item_name,
+            'item_price': str(oi.item_price),
+            'variant_image': oi.variant_image,
+            'size': oi.size,
+            'quantity': oi.quantity,
+        }
+        for oi in order.items.all()
+    ]
+
+
+def _revert_edit(order):
+    """Restore OrderItems from reservation_snapshot and set status back to PENDING."""
+    with transaction.atomic():
+        order.items.all().delete()
+        for snap in order.reservation_snapshot:
+            OrderItem.objects.create(
+                order=order,
+                item_id=snap['item_id'],
+                variant_id=snap['variant_id'],
+                size_group=snap['size_group'],
+                item_type=snap['item_type'],
+                item_name=snap['item_name'],
+                item_price=snap['item_price'],
+                variant_image=snap.get('variant_image'),
+                size=snap.get('size', ''),
+                quantity=snap['quantity'],
+            )
+        order.reservation_snapshot = []
+        order.editing_started_at = None
+        order.status = 'PENDING'
+        order.save()
 
 
 class PlaceOrderView(APIView):
@@ -126,6 +168,136 @@ def return_stock_for_item(order_item):
         ).update(stock=F('stock') + order_item.quantity)
 
 
+class StartEditView(APIView):
+    permission_classes = [IsAgent]
+
+    def post(self, request, order_id):
+        order = get_object_or_404(Order, id=order_id)
+
+        if order.status != 'PENDING':
+            return Response(
+                {"error": "Only PENDING orders can be edited"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if order.agent.user != request.user:
+            return Response({"error": "Unauthorized"}, status=403)
+
+        order.reservation_snapshot = _build_snapshot(order)
+        order.editing_started_at = timezone.now()
+        order.status = 'EDITING'
+        order.save()
+
+        OrderLog.objects.create(
+            order=order,
+            action='EDIT_STARTED',
+            details={'items_count': len(order.reservation_snapshot)},
+            performed_by=request.user,
+        )
+
+        return Response({"message": "Edit started"})
+
+
+class SaveEditView(APIView):
+    permission_classes = [IsAgent]
+
+    def post(self, request, order_id):
+        order = get_object_or_404(Order, id=order_id)
+
+        if order.status != 'EDITING':
+            return Response(
+                {"error": "Order is not in editing mode"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if order.agent.user != request.user:
+            return Response({"error": "Unauthorized"}, status=403)
+
+        with transaction.atomic():
+            for snap in order.reservation_snapshot:
+                item_type = snap['item_type']
+                required_sizes = SIZE_MAPPING[item_type][snap['size_group']]
+                for size in required_sizes:
+                    ItemVariantSize.objects.filter(
+                        item_variant_id=snap['variant_id'],
+                        size=size
+                    ).update(stock=F('stock') + snap['quantity'])
+
+            out_of_stock_items = []
+            for order_item in order.items.select_related('item', 'variant'):
+                if order_item.item is None or order_item.item.is_deleted:
+                    continue
+
+                item_type = order_item.item.type
+                required_sizes = SIZE_MAPPING[item_type][order_item.size_group]
+
+                for size in required_sizes:
+                    try:
+                        size_obj = ItemVariantSize.objects.select_for_update().get(
+                            item_variant=order_item.variant,
+                            size=size
+                        )
+                    except ItemVariantSize.DoesNotExist:
+                        out_of_stock_items.append({
+                            "item_name": order_item.item_name,
+                            "size_group": order_item.size_group,
+                            "size": size,
+                            "required": order_item.quantity,
+                            "available": 0,
+                            "order_item_id": order_item.id
+                        })
+                        continue
+
+                    if size_obj.stock < order_item.quantity:
+                        out_of_stock_items.append({
+                            "item_name": order_item.item_name,
+                            "size_group": order_item.size_group,
+                            "size": size,
+                            "required": order_item.quantity,
+                            "available": size_obj.stock,
+                            "order_item_id": order_item.id
+                        })
+
+            if out_of_stock_items:
+                return Response(
+                    {
+                        "error": "Some items are no longer available. Another agent may have placed an order.",
+                        "out_of_stock_items": out_of_stock_items
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            for order_item in order.items.select_related('item', 'variant'):
+                if order_item.item is None or order_item.item.is_deleted:
+                    continue
+
+                item_type = order_item.item.type
+                required_sizes = SIZE_MAPPING[item_type][order_item.size_group]
+
+                for size in required_sizes:
+                    ItemVariantSize.objects.filter(
+                        item_variant=order_item.variant,
+                        size=size
+                    ).update(stock=F('stock') - order_item.quantity)
+
+            order.reservation_snapshot = []
+            order.editing_started_at = None
+            order.status = 'PENDING'
+            order.save()
+
+        OrderLog.objects.create(
+            order=order,
+            action='EDIT_SAVED',
+            details={'items_count': order.items.count()},
+            performed_by=request.user,
+        )
+
+        return Response({
+            "message": "Order saved successfully",
+            "order_id": order.id
+        })
+
+
 class OrderViewSet(ModelViewSet):
 
     serializer_class = OrderSerializer
@@ -143,6 +315,14 @@ class OrderViewSet(ModelViewSet):
                 agent__user=self.request.user,
                 created_at__lt=cutoff
             ).delete()
+
+            stale_editing = Order.objects.filter(
+                status='EDITING',
+                agent__user=self.request.user,
+                editing_started_at__lt=cutoff,
+            )
+            for o in stale_editing:
+                _revert_edit(o)
 
         user = self.request.user
 
@@ -244,6 +424,30 @@ class OrderViewSet(ModelViewSet):
         
         return Response({"message": "Order dispatched successfully"})
 
+    @action(detail=True, methods=["post"], url_path="cancel-edit")
+    def cancel_edit(self, request, pk=None):
+        order = self.get_object()
+
+        if order.status != 'EDITING':
+            return Response(
+                {"error": "Order is not in editing mode"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if order.agent.user != request.user:
+            return Response({"error": "Unauthorized"}, status=403)
+
+        _revert_edit(order)
+
+        OrderLog.objects.create(
+            order=order,
+            action='EDIT_CANCELLED',
+            details={},
+            performed_by=request.user,
+        )
+
+        return Response({"message": "Edit cancelled"})
+
 
 class AddOrderItemView(APIView):
 
@@ -256,9 +460,9 @@ class AddOrderItemView(APIView):
 
         order = get_object_or_404(Order, id=order_id)
 
-        if order.status != 'DRAFT':
+        if order.status not in ('DRAFT', 'EDITING'):
             return Response(
-                {"error": "Items can only be added to DRAFT orders"},
+                {"error": "Items can only be added to DRAFT or EDITING orders"},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -320,7 +524,7 @@ class DeleteOrderItemView(APIView):
             order=order
         )
 
-        if order.status != 'DRAFT':
+        if order.status not in ('DRAFT', 'EDITING'):
             if order_item.item is not None and not order_item.item.is_deleted:
                 item_type = order_item.item.type
                 required_sizes = SIZE_MAPPING[item_type][order_item.size_group]
@@ -435,7 +639,7 @@ class OrderItemViewSet(ModelViewSet):
         order_item = self.get_object()
         order = order_item.order
 
-        if order.status not in ['DRAFT', 'PENDING', 'PACKED']:
+        if order.status not in ['DRAFT', 'EDITING', 'PENDING', 'PACKED']:
             return Response(
                 {"error": "Cannot edit items in this order status"},
                 status=status.HTTP_400_BAD_REQUEST
@@ -446,6 +650,12 @@ class OrderItemViewSet(ModelViewSet):
 
         new_quantity = request.data.get('quantity', old_quantity)
         new_size_group = request.data.get('size_group', old_size_group)
+
+        if order.status == 'EDITING':
+            order_item.quantity = new_quantity
+            order_item.size_group = new_size_group
+            order_item.save()
+            return super().update(request, *args, **kwargs)
 
         if order.status != 'DRAFT':
             with transaction.atomic():

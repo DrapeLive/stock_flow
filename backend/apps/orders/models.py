@@ -10,6 +10,7 @@ class Order(models.Model):
     STATUS_CHOICES = (
         ('DRAFT', 'Draft'),
         ('PENDING', 'Pending'),
+        ('EDITING', 'Editing'),
         ('PACKED', 'Packed'),
         ('DISPATCHED', 'Dispatched')
     )
@@ -22,6 +23,9 @@ class Order(models.Model):
         choices=STATUS_CHOICES,
         default='DRAFT'
     )
+
+    reservation_snapshot = models.JSONField(default=list, blank=True)
+    editing_started_at = models.DateTimeField(null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -36,6 +40,9 @@ class OrderLog(models.Model):
         ('ORDER_DELETED', 'Order Deleted'),
         ('ORDER_EDITED', 'Order Edited'),
         ('DISPATCHED', 'Dispatched'),
+        ('EDIT_STARTED', 'Edit Started'),
+        ('EDIT_SAVED', 'Edit Saved'),
+        ('EDIT_CANCELLED', 'Edit Cancelled'),
     )
 
     order = models.ForeignKey(

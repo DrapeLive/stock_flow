@@ -1,6 +1,6 @@
 import type { Item } from "./item";
 
-export type OrderStatus = "DRAFT" | "PENDING" | "PACKED" | "DISPATCHED";
+export type OrderStatus = "DRAFT" | "PENDING" | "EDITING" | "PACKED" | "DISPATCHED";
 
 export interface OutOfStockItem {
   item_name: string;
