@@ -16,11 +16,13 @@ import { PageLoading } from "@/components/ui/Loading";
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 import { AxiosError } from "axios";
 import { OrderTotals } from "@/components/order";
+import { useEditGuard } from "@/lib/useEditGuard";
 
 export default function EditOrderPage() {
   const params = useParams();
   const id = params.id as string;
   const router = useRouter();
+  const { handleBack } = useEditGuard(id);
 
   const [loading, setLoading] = useState(true);
   const [placingOrder, setPlacingOrder] = useState(false);
@@ -103,7 +105,7 @@ export default function EditOrderPage() {
         <div className="max-w-md mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button
-              onClick={() => router.push(`/agent/order/status/${id}`)}
+              onClick={handleBack}
               className="p-2 rounded-xl hover:bg-gray-50 text-gray-400 transition-colors"
             >
               <ChevronLeft size={20} />

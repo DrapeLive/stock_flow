@@ -6,9 +6,10 @@ import { useRouter } from "next/navigation";
 
 interface ScannerPageProps {
   id: string;
+  basePath?: string;
 }
 
-const ScannerPage: React.FC<ScannerPageProps> = ({ id }) => {
+const ScannerPage: React.FC<ScannerPageProps> = ({ id, basePath = "/agent/order/new" }) => {
   const router = useRouter();
 
   return (
@@ -30,7 +31,7 @@ const ScannerPage: React.FC<ScannerPageProps> = ({ id }) => {
             }}
             onScan={(data) => {
               if (data[0]?.rawValue) {
-                router.push(`/agent/order/new/${id}/${data[0]["rawValue"]}`);
+                router.push(`${basePath}/${id}/${data[0]["rawValue"]}`);
               }
             }}
             onError={(err) => console.error(err)}

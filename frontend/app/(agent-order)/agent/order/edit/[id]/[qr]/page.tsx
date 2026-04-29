@@ -8,6 +8,7 @@ import { orderApi } from "@/lib/api/order";
 import { PageLoading } from "@/components/ui/Loading";
 import { toastSuccess, toastError } from "@/lib/toast";
 import type { ItemQRResponse, ItemVariant } from "@/types/item";
+import { useEditGuard } from "@/lib/useEditGuard";
 
 import {
   getStockForSizeGroup,
@@ -27,6 +28,7 @@ export default function EditProductDetailPage() {
   const params = useParams<{ id: string; qr: string }>();
   const id = params.id as string;
   const router = useRouter();
+  const { handleBack } = useEditGuard(id);
 
   const [data, setData] = useState<ItemQRResponse | null>(null);
   const [quantity, setQuantity] = useState<number>(1);
@@ -253,7 +255,7 @@ export default function EditProductDetailPage() {
 
   return (
     <div className="min-h-screen bg-gray-50/50 pb-32">
-      <ProductHeader isEditMode={isEditMode} onBack={() => router.back()} />
+      <ProductHeader isEditMode={isEditMode} onBack={handleBack} />
 
       <div className="max-w-md mx-auto px-6 pt-6">
         <ProductImage
