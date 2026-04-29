@@ -1,7 +1,7 @@
 [project]
-name = "backend"
-version = "0.1.0"
-description = "Add your description here"
+name = "stock_flow_backend"
+version = "1.0.0"
+description = "Comprehensive B2B order management platform designed specifically for apparel and textile businesses"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
