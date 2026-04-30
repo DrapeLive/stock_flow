@@ -5,11 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { adminApi } from "@/lib/api/admin";
 import { toastSuccess, toastError } from "@/lib/toast";
 import { AdminResponse, AdminRequest } from "@/types/admin";
-import {
-  Field,
-  FieldGroup,
-  FieldLabel,
-} from "@/components/ui/field";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 import { Trash2, ArrowLeft, ShieldAlert, Pencil, Eye } from "lucide-react";
@@ -53,8 +49,8 @@ export default function AdminDetailPage() {
   }, [id]);
 
   const handleChange = (key: string, value: string) => {
-    setFormData(prev => ({ ...prev, [key]: value }));
-    if (errors[key]) setErrors(prev => ({ ...prev, [key]: "" }));
+    setFormData((prev) => ({ ...prev, [key]: value }));
+    if (errors[key]) setErrors((prev) => ({ ...prev, [key]: "" }));
   };
 
   const handleUpdate = async () => {
@@ -77,7 +73,11 @@ export default function AdminDetailPage() {
   };
 
   const handleDelete = async () => {
-    if (confirm("Are you sure you want to delete this administrator? This action is irreversible.")) {
+    if (
+      confirm(
+        "Are you sure you want to delete this administrator? This action is irreversible.",
+      )
+    ) {
       try {
         const numericId = parseInt(id as string, 10);
         await adminApi.delete(numericId);
@@ -90,23 +90,34 @@ export default function AdminDetailPage() {
     }
   };
 
-  if (loading) return <div className="p-8 text-center text-gray-400">Loading details...</div>;
-  if (!admin) return <div className="p-8 text-center text-red-400">Admin not found.</div>;
+  if (loading)
+    return (
+      <div className="p-8 text-center text-gray-400">Loading details...</div>
+    );
+  if (!admin)
+    return <div className="p-8 text-center text-red-400">Admin not found.</div>;
 
   return (
     <div className="w-full px-4 py-8 flex flex-col min-h-screen bg-white">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <button onClick={() => router.back()} className="p-2 -ml-2 rounded-full hover:bg-gray-50 transition-colors">
+        <button
+          onClick={() => router.back()}
+          className="p-2 -ml-2 rounded-full hover:bg-gray-50 transition-colors"
+        >
           <ArrowLeft size={24} className="text-gray-900" />
         </button>
         <div className="text-center flex-1">
-          <h1 className="text-xl font-black text-gray-900 tracking-tight">Admin Profile</h1>
-          <p className="text-[10px] text-gray-400 font-black uppercase tracking-[0.2em]">Master Control</p>
+          <h1 className="text-xl font-black text-gray-900 tracking-tight">
+            Admin Profile
+          </h1>
+          <p className="text-[10px] text-gray-400 font-black uppercase tracking-[0.2em]">
+            Master Control
+          </p>
         </div>
         <div className="flex items-center gap-1">
-          <button 
-            onClick={() => setIsEditing(!isEditing)} 
+          <button
+            onClick={() => setIsEditing(!isEditing)}
             className="p-2 rounded-xl hover:bg-gray-50 transition-colors"
             title={isEditing ? "View details" : "Edit details"}
           >
@@ -116,7 +127,10 @@ export default function AdminDetailPage() {
               <Pencil size={20} className="text-gray-700" />
             )}
           </button>
-          <button onClick={handleDelete} className="p-2 rounded-xl text-red-500 hover:bg-red-50 transition-colors">
+          <button
+            onClick={handleDelete}
+            className="p-2 rounded-xl text-red-500 hover:bg-red-50 transition-colors"
+          >
             <Trash2 size={20} />
           </button>
         </div>
@@ -124,14 +138,21 @@ export default function AdminDetailPage() {
 
       {/* Avatar Section */}
       <div className="flex flex-col items-center mb-6">
-        <div 
+        <div
           className="w-20 h-20 rounded-3xl flex items-center justify-center mb-4 shadow-sm"
-          style={{ backgroundColor: isEditing ? "#fef3c7" : getColorFromId(admin.id) }}
+          style={{
+            backgroundColor: isEditing ? "#fef3c7" : getColorFromId(admin.id),
+          }}
         >
-          <ShieldAlert size={40} className={isEditing ? "text-amber-500" : "text-gray-600"} />
+          <ShieldAlert
+            size={40}
+            className={isEditing ? "text-amber-500" : "text-gray-600"}
+          />
         </div>
         <h2 className="text-2xl font-black text-gray-900">{admin.username}</h2>
-        <span className="text-xs font-bold text-gray-400 mt-1 font-mono tracking-tighter">ADMINISTRATOR</span>
+        <span className="text-xs font-bold text-gray-400 mt-1 font-mono tracking-tighter">
+          ADMINISTRATOR
+        </span>
       </div>
 
       {/* User Details Section */}
@@ -140,7 +161,9 @@ export default function AdminDetailPage() {
           <div className="bg-gray-50/50 border border-gray-100 rounded-[2rem] p-6 space-y-6 mb-6">
             <FieldGroup className="space-y-6">
               <Field>
-                <FieldLabel className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 block">System username</FieldLabel>
+                <FieldLabel className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 block">
+                  System username
+                </FieldLabel>
                 <Input
                   value={formData.username}
                   onChange={(e) => handleChange("username", e.target.value)}
@@ -149,7 +172,9 @@ export default function AdminDetailPage() {
               </Field>
 
               <Field>
-                <FieldLabel className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 block">Recovery Email</FieldLabel>
+                <FieldLabel className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 block">
+                  Recovery Email
+                </FieldLabel>
                 <Input
                   value={formData.email}
                   onChange={(e) => handleChange("email", e.target.value)}
@@ -175,12 +200,29 @@ export default function AdminDetailPage() {
           <div className="bg-gray-50 border border-gray-100 rounded-2xl p-4 mb-6 w-full">
             <div className="space-y-3">
               <div className="flex justify-between items-center">
-                <span className="text-xs font-bold text-gray-400 uppercase">Username</span>
-                <span className="text-sm font-medium text-gray-900">{admin.username}</span>
+                <span className="text-xs font-bold text-gray-400 uppercase">
+                  Username
+                </span>
+                <span className="text-sm font-medium text-gray-900">
+                  {admin.username}
+                </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-xs font-bold text-gray-400 uppercase">Recovery Email</span>
-                <span className="text-sm font-medium text-gray-900">{admin.email || "—"}</span>
+                <span className="text-xs font-bold text-gray-400 uppercase">
+                  Recovery Email
+                </span>
+                <span className="text-sm font-medium text-gray-900">
+                  {admin.email || "—"}
+                </span>
+              </div>
+
+              <div className="flex justify-between items-center">
+                <span className="text-xs font-bold text-gray-400 uppercase">
+                  {admin.business ? "Business" : "Admin Type"}
+                </span>
+                <span className="text-sm font-medium text-gray-900">
+                  {admin.business ? admin.business : "Super user"}
+                </span>
               </div>
             </div>
           </div>

@@ -18,6 +18,7 @@ export interface AdminUpdateRequest {
   username?: string;
   email?: string;
   password?: string;
+  business?: Business | null;
 }
 
 export type AdminAllResponse = Admin[];
