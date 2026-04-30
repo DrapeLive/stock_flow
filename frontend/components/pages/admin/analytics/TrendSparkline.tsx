@@ -1,6 +1,14 @@
 "use client";
 
 import type { TrendPoint } from "@/types/dashboard";
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 
 interface TrendSparklineProps {
   data: TrendPoint[];
@@ -39,58 +47,63 @@ export default function TrendSparkline({ data, from, to }: TrendSparklineProps) 
   };
 
   const filled = mapDates();
-  const maxCount = Math.max(...filled.map((d) => d.count), 1);
 
-  const width = 300;
-  const height = 80;
-  const padding = { top: 10, right: 10, bottom: 20, left: 30 };
-  const chartW = width - padding.left - padding.right;
-  const chartH = height - padding.top - padding.bottom;
+  const CustomXAxisTick = (props: any) => {
+    const { x, y, payload } = props;
+    const dayValue = payload?.value as string;
+    const index = filled.findIndex((d) => d.day === dayValue);
+    const total = filled.length;
+    const mid = Math.floor(total / 2);
 
-  const points = filled.map((d, i) => {
-    const x = padding.left + (i / (filled.length - 1 || 1)) * chartW;
-    const y = padding.top + chartH - (d.count / maxCount) * chartH;
-    return `${x},${y}`;
-  });
+    if (index !== 0 && index !== mid && index !== total - 1) {
+      return null;
+    }
 
-  const tickDates = filled.filter(
-    (_, i) => i === 0 || i === filled.length - 1 || i === Math.floor(filled.length / 2)
-  );
+    return (
+      <text x={x} y={y + 10} textAnchor="middle" fontSize="8" fill="#9ca3af">
+        {new Date(dayValue + "T00:00:00").toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+        })}
+      </text>
+    );
+  };
 
   return (
     <div className="bg-white rounded-xl border p-4 shadow-sm mb-4">
       <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2">
         Orders Trend
       </div>
-      <svg viewBox={`0 0 ${width} ${height}`} className="w-full" preserveAspectRatio="none">
-        <polyline
-          points={points.join(" ")}
-          fill="none"
-          stroke="#3b82f6"
-          strokeWidth="2"
-          strokeLinejoin="round"
-        />
-        {tickDates.map((d, i) => {
-          const x =
-            padding.left +
-            (filled.indexOf(d) / (filled.length - 1 || 1)) * chartW;
-          return (
-            <text
-              key={i}
-              x={x}
-              y={height - 5}
-              textAnchor="middle"
-              fontSize="8"
-              fill="#9ca3af"
-            >
-              {new Date(d.day + "T00:00:00").toLocaleDateString("en-US", {
+      <ResponsiveContainer width="100%" height={80}>
+        <AreaChart data={filled}>
+          <XAxis
+            dataKey="day"
+            tick={CustomXAxisTick}
+            axisLine={false}
+            tickLine={false}
+          />
+          <YAxis hide />
+          <Tooltip
+            formatter={(value) => [Number(value), "Orders"]}
+            labelFormatter={(label) => {
+              const day = String(label);
+              return new Date(day + "T00:00:00").toLocaleDateString("en-US", {
                 month: "short",
                 day: "numeric",
-              })}
-            </text>
-          );
-        })}
-      </svg>
+                year: "numeric",
+              });
+            }}
+          />
+          <Area
+            type="monotone"
+            dataKey="count"
+            stroke="#3b82f6"
+            strokeWidth={2}
+            fill="#3b82f6"
+            fillOpacity={0.1}
+          />
+        </AreaChart>
+      </ResponsiveContainer>
     </div>
   );
 }

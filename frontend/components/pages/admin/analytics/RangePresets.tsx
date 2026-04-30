@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import DatePicker from "@/components/ui/date-picker";
+import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 
 interface RangePresetsProps {
   onRangeChange: (from: string, to: string) => void;
@@ -44,7 +45,7 @@ export default function RangePresets({ onRangeChange }: RangePresetsProps) {
   };
 
   return (
-    <div className="sticky top-0 z-10 bg-white/90 backdrop-blur py-2 -mx-1.5 px-1.5">
+    <div className="sticky flex flex-col top-0 z-10 bg-white/90 backdrop-blur py-2 -mx-1.5 px-1.5">
       <div className="flex gap-2 mb-2">
         {[
           { key: "today" as Preset, label: "Today" },
@@ -72,24 +73,28 @@ export default function RangePresets({ onRangeChange }: RangePresetsProps) {
         ))}
       </div>
       {activePreset === "custom" && (
-        <div className="flex gap-2 items-center">
-          <DatePicker
-            value={customFrom}
-            onChange={setCustomFrom}
-            placeholder="From"
-          />
+        <div className="relative flex gap-2 items-center">
+          <div className="relative flex-1 min-w-[140px]">
+            <DatePicker
+              value={customFrom}
+              onChange={setCustomFrom}
+              placeholder="From"
+            />
+          </div>
           <span className="text-gray-400 text-xs">to</span>
-          <DatePicker
-            value={customTo}
-            onChange={setCustomTo}
-            placeholder="To"
-          />
-          <button
+          <div className="relative flex-1 min-w-[140px]">
+            <DatePicker
+              value={customTo}
+              onChange={setCustomTo}
+              placeholder="To"
+            />
+          </div>
+          <StockFlowButton
+            disabled={!customFrom && !customTo}
+            text="Apply"
+            variant="outline"
             onClick={handleCustomApply}
-            className="text-xs font-bold text-primary"
-          >
-            Apply
-          </button>
+          />
         </div>
       )}
     </div>

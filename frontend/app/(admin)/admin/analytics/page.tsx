@@ -85,8 +85,8 @@ export default function AdminAnalyticsPage() {
 
           <Leaderboard
             title="Top Items"
-            items={data.top_items.map((i) => ({
-              id: 0,
+            items={data.top_items.map((i, idx) => ({
+              id: idx,
               name: i.name,
               count: i.qty,
             }))}

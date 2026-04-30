@@ -30,7 +30,9 @@ export default function Leaderboard({
     count: item.count,
   }));
 
-  const visible = showAll ? displayItems : displayItems.slice(0, showAllInitial);
+  const visible = showAll
+    ? displayItems
+    : displayItems.slice(0, showAllInitial);
 
   return (
     <div className="bg-white rounded-xl border p-4 shadow-sm mb-4">
