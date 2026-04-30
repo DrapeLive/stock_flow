@@ -2,6 +2,7 @@
 import { OrderAllResponse } from "@/types/order";
 import StatusBadge from "@/components/ui/custom/StatusBadge";
 import { Info, User } from "lucide-react";
+import { getColorFromId } from "@/util/getColorFromId";
 
 interface OrderCardProps {
   order: OrderAllResponse[number];
@@ -15,13 +16,6 @@ const formatDate = (dateStr: string) => {
     month: "short",
   });
 };
-
-function getColorFromId(id: number) {
-  if (!id) return "hsl(0, 0%, 85%)"; // fallback
-
-  const hue = (id * 137.508) % 360;
-  return `hsl(${hue}, 65%, 85%)`; // lighter for background
-}
 
 export default function OrderCard({ order, onClick }: OrderCardProps) {
   if (order.items.length === 0) return null;

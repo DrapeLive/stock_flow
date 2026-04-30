@@ -1,19 +1,14 @@
 "use client";
 
 import { Order, OrderStatus } from "@/types/order";
+import { getColorFromId } from "@/util/getColorFromId";
 import { User } from "lucide-react";
 import { useRouter } from "next/navigation";
+import StockflowAvatar from "../ui/custom/stockflowAvatar";
 
 interface OrderCardProps {
   order: Order;
   onClick?: () => void;
-}
-
-function getColorFromId(id: number) {
-  if (!id) return "hsl(0, 0%, 85%)"; // fallback
-
-  const hue = (id * 137.508) % 360;
-  return `hsl(${hue}, 65%, 85%)`; // lighter for background
 }
 
 const statusConfig: Record<
@@ -78,14 +73,7 @@ export default function OrderCard({ order, onClick }: OrderCardProps) {
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
-          <div
-            className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-            style={{
-              backgroundColor: getColorFromId(order.customer_details?.id),
-            }}
-          >
-            <User size={18} color="white" className="text-primary" />
-          </div>
+          <StockflowAvatar user={order.customer_details} />
           <div className="min-w-0">
             <h6 className="font-bold text-gray-900 text-sm truncate leading-tight">
               {order.customer_details?.name || "Unknown Customer"}

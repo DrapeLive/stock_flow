@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { Truck, Users, Archive } from "lucide-react";
+import { Truck, Users, Archive, BarChart3 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import React from "react";
 
@@ -23,6 +23,12 @@ const AdminNavBar: React.FC = () => {
       size: 22,
     },
     {
+      label: "Stats",
+      icon: BarChart3,
+      path: "/admin/analytics",
+      size: 20,
+    },
+    {
       label: "Stock",
       icon: Archive,
       path: "/admin/items",
@@ -32,7 +38,7 @@ const AdminNavBar: React.FC = () => {
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center pointer-events-none pb-[env(safe-area-inset-bottom,1.5rem)] mb-4">
-      <div className="bg-white/70 backdrop-blur-2xl border border-white/40 w-[calc(100%-2rem)] max-w-md pointer-events-auto py-2.5 px-6 flex items-center justify-between shadow-[0_20px_50px_-12px_rgba(0,0,0,0.2)] rounded-[2rem] mx-auto transition-all duration-500">
+      <div className="bg-white/70 backdrop-blur-2xl border border-white/40 w-[calc(100%-2rem)] max-w-md pointer-events-auto py-2.5 px-4 flex items-center justify-between shadow-[0_20px_50px_-12px_rgba(0,0,0,0.2)] rounded-[2rem] mx-auto transition-all duration-500">
         {navItems.map((item) => {
           const isActive =
             pathname === item.path ||

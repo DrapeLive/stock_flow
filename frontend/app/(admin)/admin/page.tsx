@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { agentApi } from "@/lib/api/agents";
 import Packed from "@/components/pages/admin/order_components/Packed";
 import Pending from "@/components/pages/admin/order_components/Pending";
@@ -17,7 +18,8 @@ interface SimpleAgent {
   username: string;
 }
 
-export default function AdminHomePage() {
+function AdminHomePageContent() {
+  const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<Tab>("Pending");
   const [filters, setFilters] = useState<OrderFilters>({});
   const [agents, setAgents] = useState<SimpleAgent[]>([]);
@@ -31,6 +33,25 @@ export default function AdminHomePage() {
       })
       .catch(console.error);
   }, []);
+
+  useEffect(() => {
+    const customerId = searchParams.get("customer");
+    const agentId = searchParams.get("agent");
+    const from = searchParams.get("from");
+    const to = searchParams.get("to");
+
+    const newFilters: OrderFilters = {};
+    if (customerId) newFilters.customer = customerId;
+    if (agentId) newFilters.agent = agentId;
+    if (from) newFilters.from = from;
+    if (to) newFilters.to = to;
+
+    if (Object.keys(newFilters).length > 0) {
+      setFilters(newFilters);
+      setShowFilters(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   const handleFromDateChange = (date: string) => {
     setFilters((prev) => ({ ...prev, from: date || undefined }));
@@ -110,5 +131,13 @@ export default function AdminHomePage() {
       />
       <div className="pb-10">{renderContent()}</div>
     </div>
+  );
+}
+
+export default function AdminHomePage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <AdminHomePageContent />
+    </Suspense>
   );
 }

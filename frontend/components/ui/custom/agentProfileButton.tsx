@@ -1,10 +1,12 @@
 "use client";
 
-import { Avatar, AvatarFallback } from "../avatar";
 import { useRouter } from "next/navigation";
+import StockflowAvatar from "./stockflowAvatar";
+import { useAuth } from "@/context/AuthContext";
 
 const AgentProfileButton: React.FC = () => {
   const router = useRouter();
+  const { user } = useAuth();
 
   return (
     <div
@@ -12,9 +14,7 @@ const AgentProfileButton: React.FC = () => {
       onClick={() => router.push("/agent/profile")}
       title="View Profile"
     >
-      <Avatar>
-        <AvatarFallback>A</AvatarFallback>
-      </Avatar>
+      <StockflowAvatar user={user} />
     </div>
   );
 };

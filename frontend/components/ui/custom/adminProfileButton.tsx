@@ -1,12 +1,12 @@
 "use client";
 
 import { useAuth } from "@/context/AuthContext";
-import { Avatar, AvatarFallback } from "../avatar";
 import { useRouter } from "next/navigation";
+import StockflowAvatar from "./stockflowAvatar";
 
 const AdminProfileButton: React.FC = () => {
   const router = useRouter();
-  const { business, isSuperuser } = useAuth();
+  const { business, isSuperuser, user } = useAuth();
 
   const businessLabel = business
     ? business.charAt(0).toUpperCase() + business.slice(1)
@@ -17,19 +17,10 @@ const AdminProfileButton: React.FC = () => {
       className="flex relative w-full justify-between cursor-pointer"
       onClick={() => router.push("/admin/profile")}
     >
-      {businessLabel && (
-        <div className="flex items-center px-2 py-1 text-primary text-md font-black uppercase tracking-wider">
-          {businessLabel}
-        </div>
-      )}
-      {isSuperuser && (
-        <div className="flex items-center px-2 py-1 text-primary text-md font-black uppercase tracking-wider">
-          Superuser
-        </div>
-      )}
-      <Avatar>
-        <AvatarFallback>A</AvatarFallback>
-      </Avatar>
+      <div className="flex items-center px-2 py-1 text-primary text-md font-black tracking-wider">
+        {businessLabel ? businessLabel : isSuperuser ? "Superuser" : ""}
+      </div>
+      <StockflowAvatar user={user} />
     </div>
   );
 };
