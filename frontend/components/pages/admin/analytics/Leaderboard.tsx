@@ -36,7 +36,7 @@ export default function Leaderboard({
 
   return (
     <div className="bg-white rounded-xl border p-4 shadow-sm mb-4">
-      <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-3">
+      <div className="text-sm font-bold uppercase tracking-wider text-gray-400 mb-3">
         {title}
       </div>
       {displayItems.length === 0 ? (

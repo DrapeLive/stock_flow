@@ -22,7 +22,7 @@ export default function KpiTiles({ kpis }: KpiTilesProps) {
           className="bg-white rounded-xl border p-4 text-center shadow-sm"
         >
           <div className={`text-2xl font-black ${color}`}>{value}</div>
-          <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mt-1">
+          <div className="text-sm font-bold uppercase tracking-wider text-gray-400 mt-1">
             {label}
           </div>
         </div>

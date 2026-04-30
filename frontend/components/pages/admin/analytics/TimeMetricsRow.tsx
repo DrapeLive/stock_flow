@@ -46,7 +46,7 @@ export default function TimeMetricsRow({ metrics }: TimeMetricsRowProps) {
             {value}
             {unit && <span className="text-xs ml-0.5">{unit}</span>}
           </div>
-          <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mt-0.5">
+          <div className="text-sm font-bold uppercase tracking-wider text-gray-400 mt-0.5">
             {label}
           </div>
         </div>

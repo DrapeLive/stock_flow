@@ -16,11 +16,15 @@ interface TrendSparklineProps {
   to: string;
 }
 
-export default function TrendSparkline({ data, from, to }: TrendSparklineProps) {
+export default function TrendSparkline({
+  data,
+  from,
+  to,
+}: TrendSparklineProps) {
   if (data.length === 0) {
     return (
       <div className="bg-white rounded-xl border p-4 shadow-sm mb-4">
-        <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2">
+        <div className="text-sm font-bold uppercase tracking-wider text-gray-400 mb-2">
           Orders Trend
         </div>
         <div className="h-24 flex items-center justify-center text-gray-400 text-xs">
@@ -71,7 +75,7 @@ export default function TrendSparkline({ data, from, to }: TrendSparklineProps) 
 
   return (
     <div className="bg-white rounded-xl border p-4 shadow-sm mb-4">
-      <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2">
+      <div className="text-sm font-bold uppercase tracking-wider text-gray-400 mb-2">
         Orders Trend
       </div>
       <ResponsiveContainer width="100%" height={80}>

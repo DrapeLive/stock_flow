@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { CustomerAllResponse } from "@/types/customer";
 import { customerApi } from "@/lib/api/customer";
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
+import StockflowAvatar from "@/components/ui/custom/stockflowAvatar";
 
 const CustomerList: React.FC = () => {
   const { isAuthenticated, business } = useAuth();
@@ -64,9 +65,15 @@ const CustomerList: React.FC = () => {
     );
   }
 
-  const businessLabel = business ? business.charAt(0).toUpperCase() + business.slice(1) : "";
+  const businessLabel = business
+    ? business.charAt(0).toUpperCase() + business.slice(1)
+    : "";
 
-  const renderSection = (customers: typeof filteredData, header: string, count: number) => {
+  const renderSection = (
+    customers: typeof filteredData,
+    header: string,
+    count: number,
+  ) => {
     if (customers.length === 0) return null;
     return (
       <>
@@ -103,11 +110,7 @@ const CustomerList: React.FC = () => {
               onClick={() => router.push(`/admin/users/customers/${item.id}/`)}
               className="flex items-center gap-4 bg-white border border-gray-100 p-4 hover:border-primary/30 hover:shadow-md transition-all rounded-2xl group cursor-pointer active:scale-[0.98]"
             >
-              <div className="w-12 h-12 rounded-xl bg-gray-50 flex items-center justify-center border border-gray-100 shadow-sm flex-shrink-0">
-                <span className="text-xl font-black text-gray-400 opacity-30">
-                  {item.name.charAt(0).toUpperCase()}
-                </span>
-              </div>
+              <StockflowAvatar user={item} />
 
               <div className="flex-1 min-w-0">
                 <h6 className="font-bold text-gray-900 text-[16px] truncate leading-tight">
@@ -176,21 +179,21 @@ const CustomerList: React.FC = () => {
 
         {filteredData.length === 0 ? (
           <div className="flex justify-center mt-10">
-            <h2 className="text-gray-400 font-semibold">No matching customers</h2>
+            <h2 className="text-gray-400 font-semibold">
+              No matching customers
+            </h2>
           </div>
         ) : (
           <div className="px-0 space-y-3 pb-20">
             {filteredData.map((item) => (
               <div
                 key={item.id}
-                onClick={() => router.push(`/admin/users/customers/${item.id}/`)}
+                onClick={() =>
+                  router.push(`/admin/users/customers/${item.id}/`)
+                }
                 className="flex items-center gap-4 bg-white border border-gray-100 p-4 hover:border-primary/30 hover:shadow-md transition-all rounded-2xl group cursor-pointer active:scale-[0.98]"
               >
-                <div className="w-12 h-12 rounded-xl bg-gray-50 flex items-center justify-center border border-gray-100 shadow-sm flex-shrink-0">
-                  <span className="text-xl font-black text-gray-400 opacity-30">
-                    {item.name.charAt(0).toUpperCase()}
-                  </span>
-                </div>
+                <StockflowAvatar user={item} />
 
                 <div className="flex-1 min-w-0">
                   <h6 className="font-bold text-gray-900 text-[16px] truncate leading-tight">
@@ -257,7 +260,11 @@ const CustomerList: React.FC = () => {
         />
       </div>
 
-      {renderSection(businessCustomers, `Customers — ${businessLabel}`, businessCustomers.length)}
+      {renderSection(
+        businessCustomers,
+        `Customers — ${businessLabel}`,
+        businessCustomers.length,
+      )}
       {renderSection(otherCustomers, "Other customers", otherCustomers.length)}
 
       {businessCustomers.length === 0 && otherCustomers.length === 0 && (

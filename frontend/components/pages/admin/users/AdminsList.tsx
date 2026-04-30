@@ -1,4 +1,5 @@
 "use client";
+import StockflowAvatar from "@/components/ui/custom/stockflowAvatar";
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 import { useAuth } from "@/context/AuthContext";
 import { adminApi } from "@/lib/api/admin";
@@ -53,9 +54,13 @@ const AdminsList: React.FC = () => {
     <>
       <div className="pt-2 flex justify-between items-center px-4 mb-6">
         <div className="flex flex-col">
-          <h2 className="text-xl font-extrabold text-gray-900 leading-tight">Admins</h2>
+          <h2 className="text-xl font-extrabold text-gray-900 leading-tight">
+            Admins
+          </h2>
           <div className="flex gap-2 items-center mt-1">
-            <span className="text-gray-400 text-[10px] font-bold uppercase tracking-wider">Total Admins</span>
+            <span className="text-gray-400 text-[10px] font-bold uppercase tracking-wider">
+              Total Admins
+            </span>
             <div className="bg-primary/10 text-primary rounded-full py-0.5 px-3 border border-primary/20">
               <span className="font-bold text-xs">{data.length}</span>
             </div>
@@ -76,11 +81,7 @@ const AdminsList: React.FC = () => {
             onClick={() => router.push(`/admin/users/admins/${item.id}/`)}
             className="flex items-center gap-4 bg-white border border-gray-100 p-4 hover:border-primary/30 hover:shadow-md transition-all rounded-2xl group cursor-pointer active:scale-[0.98]"
           >
-            <div className="w-12 h-12 rounded-xl bg-gray-50 flex items-center justify-center border border-gray-100 shadow-sm flex-shrink-0">
-              <span className="text-xl font-black text-gray-400 opacity-30">
-                {item.username.charAt(0).toUpperCase()}
-              </span>
-            </div>
+            <StockflowAvatar user={item} />
 
             <div className="flex-1 min-w-0 px-2">
               <h6 className="font-bold text-gray-900 text-base truncate leading-tight">

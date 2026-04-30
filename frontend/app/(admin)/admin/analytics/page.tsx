@@ -4,10 +4,12 @@ import { useEffect, useState } from "react";
 import { dashboardApi } from "@/lib/api/dashboard";
 import type { AnalyticsResponse } from "@/types/dashboard";
 import RangePresets from "@/components/pages/admin/analytics/RangePresets";
-import KpiTiles from "@/components/pages/admin/analytics/KpiTiles";
 import TrendSparkline from "@/components/pages/admin/analytics/TrendSparkline";
 import TimeMetricsRow from "@/components/pages/admin/analytics/TimeMetricsRow";
-import Leaderboard from "@/components/pages/admin/analytics/Leaderboard";
+import StatusDonutChart from "@/components/pages/admin/analytics/StatusDonutChart";
+import AgentHorizontalBarChart from "@/components/pages/admin/analytics/AgentHorizontalBarChart";
+import ItemBarChart from "@/components/pages/admin/analytics/ItemBarChart";
+import CustomerBarChart from "@/components/pages/admin/analytics/CustomerBarChart";
 import { Spinner } from "@/components/ui/spinner";
 
 export default function AdminAnalyticsPage() {
@@ -59,38 +61,21 @@ export default function AdminAnalyticsPage() {
 
       {data && (
         <>
-          <KpiTiles kpis={data.kpis} />
+          <StatusDonutChart kpis={data.kpis} />
           <TrendSparkline data={data.trend} from={from} to={to} />
           <TimeMetricsRow metrics={data.time_metrics} />
 
-          <Leaderboard
-            title="Top Customers"
-            items={data.top_customers.map((c) => ({
+          <CustomerBarChart
+            customers={data.top_customers.map((c) => ({
               id: c.id,
               name: c.name,
               count: c.count,
             }))}
-            linkBase="/admin"
           />
 
-          <Leaderboard
-            title="Top Agents"
-            items={data.top_agents.map((a) => ({
-              id: a.id,
-              name: a.username,
-              count: a.count,
-            }))}
-            linkBase="/admin"
-          />
+          <AgentHorizontalBarChart agents={data.top_agents} />
 
-          <Leaderboard
-            title="Top Items"
-            items={data.top_items.map((i, idx) => ({
-              id: idx,
-              name: i.name,
-              count: i.qty,
-            }))}
-          />
+          <ItemBarChart items={data.top_items} />
         </>
       )}
     </div>

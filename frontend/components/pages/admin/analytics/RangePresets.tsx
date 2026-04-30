@@ -38,10 +38,25 @@ export default function RangePresets({ onRangeChange }: RangePresetsProps) {
     onRangeChange(from, to);
   };
 
+  const handleClear = () => {
+    setCustomFrom("");
+    setCustomTo("");
+  };
+
   const handleCustomApply = () => {
-    if (customFrom && customTo) {
-      onRangeChange(customFrom, customTo);
-    }
+    if (!customFrom && !customTo) return;
+
+    const today = new Date();
+    const todayStr = today.toISOString().split("T")[0];
+
+    const threeMonthsAgo = new Date(today);
+    threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+    const threeMonthsAgoStr = threeMonthsAgo.toISOString().split("T")[0];
+
+    const finalFrom = customFrom || threeMonthsAgoStr;
+    const finalTo = customTo || todayStr;
+
+    onRangeChange(finalFrom, finalTo);
   };
 
   return (
@@ -89,12 +104,20 @@ export default function RangePresets({ onRangeChange }: RangePresetsProps) {
               placeholder="To"
             />
           </div>
-          <StockFlowButton
-            disabled={!customFrom && !customTo}
-            text="Apply"
-            variant="outline"
-            onClick={handleCustomApply}
-          />
+          <div className="flex gap-1">
+            <StockFlowButton
+              disabled={!customFrom && !customTo}
+              text="Apply"
+              variant="outline"
+              onClick={handleCustomApply}
+            />
+            <StockFlowButton
+              disabled={!customFrom && !customTo}
+              text="Clear"
+              variant="outline"
+              onClick={handleClear}
+            />
+          </div>
         </div>
       )}
     </div>
