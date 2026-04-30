@@ -7,6 +7,7 @@ class IsAgent(BasePermission):
 class IsAdmin(BasePermission):
     def has_permission(self, request, view):
         return request.user.is_authenticated and request.user.role == 'ADMIN'
+
 class IsAdminOrSelfAgent(BasePermission):
 
     def has_permission(self, request, view):
@@ -17,3 +18,8 @@ class IsAdminOrSelfAgent(BasePermission):
             return True
 
         return obj.user == request.user
+
+
+def admin_business(user):
+    """Return the business string for an admin user, or None for non-admins."""
+    return user.business if getattr(user, 'role', None) == 'ADMIN' else None

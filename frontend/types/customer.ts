@@ -6,6 +6,7 @@ export interface Customer {
   address: string;
   contact: string;
   agent: number;
+  has_business_orders?: boolean | null;
 }
 
 export interface CustomerCreateRequest {

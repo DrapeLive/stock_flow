@@ -9,8 +9,7 @@ import { submitItem } from "@/lib/submitItem";
 import type { ColorVariant, CommonDetails, WizardStep } from "@/types/item";
 import { getSizesForItemType } from "@/types/item";
 import { toastError } from "@/lib/toast";
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+import { useAuth } from "@/context/AuthContext";
 
 const uid = () => Math.random().toString(36).slice(2, 9);
 
@@ -24,16 +23,15 @@ function blankVariant(common: CommonDetails): ColorVariant {
   };
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
-
 export default function NewItemPage() {
   const router = useRouter();
+  const { business } = useAuth();
 
   const [common, setCommon] = useState<CommonDetails>({
     name: "",
     description: "",
     price: "",
-    type: "gents",
+    type: (business as CommonDetails["type"]) || "gents",
   });
 
   const [variants, setVariants] = useState<ColorVariant[]>([]);
@@ -111,6 +109,7 @@ export default function NewItemPage() {
         onChange={setCommon}
         onNext={goCommonNext}
         onBack={() => router.back()}
+        lockType
       />
     );
   }

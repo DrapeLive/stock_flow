@@ -10,15 +10,26 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
+import type { Business } from "@/types/auth";
 
 export default function NewAdminPage() {
   const router = useRouter();
+  const { business, isSuperuser } = useAuth();
   const [formData, setFormData] = useState({
     adminName: "",
     email: "",
     password: "",
+    business: isSuperuser ? "" : (business ?? ""),
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -50,19 +61,23 @@ export default function NewAdminPage() {
     } else if (formData.password.length < 6) {
       newErrors.password = "Minimum 6 characters required";
     }
+    if (isSuperuser && !formData.business) {
+      newErrors.business = "Business is required";
+    }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async () => {
     if (!validate()) return;
-    
+
     setIsSubmitting(true);
     try {
       await adminApi.create({
         username: formData.adminName,
         email: formData.email,
         password: formData.password,
+        business: isSuperuser ? (formData.business as Business) : null,
       });
       toastSuccess("Admin created successfully");
       router.push("/admin/users/");
@@ -80,6 +95,20 @@ export default function NewAdminPage() {
         <h1 className="text-2xl font-black text-gray-900 tracking-tight">New Admin</h1>
         <p className="text-sm text-gray-400 font-medium">Create a new system administrator</p>
       </div>
+
+      {isSuperuser ? (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 mb-6 flex items-center gap-3">
+          <span className="text-xs font-bold text-amber-600 uppercase tracking-wider">Superuser:</span>
+          <span className="text-sm font-medium text-gray-700">Select a business below to create an admin for that catalog</span>
+        </div>
+      ) : (
+        business && (
+          <div className="bg-primary/5 border border-primary/20 rounded-2xl px-4 py-3 mb-6 flex items-center gap-3">
+            <span className="text-xs font-bold text-primary uppercase tracking-wider">Business:</span>
+            <span className="text-sm font-black text-gray-800 capitalize">{business}</span>
+          </div>
+        )
+      )}
 
       <div className="bg-gray-50/50 border border-gray-100 rounded-3xl p-6 mb-8">
         <FieldGroup className="space-y-6 flex-1">
@@ -123,6 +152,27 @@ export default function NewAdminPage() {
               className={`bg-white border-gray-100 rounded-xl h-12 focus:ring-primary/10 ${errors.password ? "border-red-200 focus:border-red-300" : "focus:border-primary"}`}
             />
           </Field>
+
+          {isSuperuser && (
+            <Field>
+              <div className="flex justify-between items-center mb-1.5">
+                <FieldLabel className="text-xs font-bold uppercase tracking-widest text-gray-400">Business</FieldLabel>
+                {errors.business && <span className="text-[10px] text-red-500 font-bold">{errors.business}</span>}
+              </div>
+              <Select
+                value={formData.business}
+                onValueChange={(v) => handleChange("business", v)}
+              >
+                <SelectTrigger className={`bg-white h-12 ${errors.business ? "border-red-200 focus:border-red-300" : "focus:border-primary"}`}>
+                  <SelectValue placeholder="Select business" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="gents">Gents</SelectItem>
+                  <SelectItem value="kids">Kids</SelectItem>
+                </SelectContent>
+              </Select>
+            </Field>
+          )}
         </FieldGroup>
       </div>
 

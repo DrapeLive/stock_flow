@@ -5,7 +5,7 @@ from rest_framework.viewsets import ModelViewSet
 from rest_framework.permissions import IsAuthenticated
 from .models import Agent, AgentItem
 from .serializers import AgentSerializer, AgentItemListSerializer
-from apps.accounts.permissions import IsAdminOrSelfAgent
+from apps.accounts.permissions import IsAdminOrSelfAgent, admin_business
 from django.shortcuts import get_object_or_404
 from apps.items.models import Item
 
@@ -35,7 +35,11 @@ class AgentItemsView(APIView):
 
     def get(self, request, agent_id):
         agent = get_object_or_404(Agent, id=agent_id)
-        items = [ai.item for ai in agent.assigned_items.select_related('item').prefetch_related('item__variants__sizes').all()]
+        biz = admin_business(request.user)
+        qs = agent.assigned_items.select_related('item').prefetch_related('item__variants__sizes')
+        if biz:
+            qs = qs.filter(item__type=biz)
+        items = [ai.item for ai in qs.all()]
         result = [
             AgentItemListSerializer.from_item(item, request)
             for item in items
@@ -52,11 +56,18 @@ class AgentItemsView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        agent.assigned_items.all().delete()
+        biz = admin_business(request.user)
+        if biz:
+            agent.assigned_items.filter(item__type=biz).delete()
+        else:
+            agent.assigned_items.all().delete()
 
         for item_id in item_ids:
             try:
-                item = Item.objects.get(id=item_id)
+                if biz:
+                    item = Item.objects.get(id=item_id, type=biz)
+                else:
+                    item = Item.objects.get(id=item_id)
                 AgentItem.objects.create(agent=agent, item=item)
             except Item.DoesNotExist:
                 pass
@@ -75,5 +86,10 @@ class AgentItemDetailView(APIView):
     def delete(self, request, agent_id, item_id):
         agent = get_object_or_404(Agent, id=agent_id)
         agent_item = get_object_or_404(AgentItem, agent=agent, item_id=item_id)
+
+        biz = admin_business(request.user)
+        if biz and agent_item.item.type != biz:
+            return Response({"error": "Not found"}, status=404)
+
         agent_item.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)

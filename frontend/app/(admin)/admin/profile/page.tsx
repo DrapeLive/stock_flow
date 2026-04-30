@@ -1,6 +1,6 @@
 "use client";
 import { useAuth } from "@/context/AuthContext";
-import { LogOut, User, Mail, ShieldCheck, UserCircle } from "lucide-react";
+import { LogOut, User, Mail, ShieldCheck, UserCircle, Building2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { authApi } from "@/lib/api/auth";
@@ -96,6 +96,22 @@ export default function Profile() {
               </h3>
             </div>
           </div>
+
+          {profile?.business && (
+            <div className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm flex items-center gap-4">
+              <div className="w-10 h-10 rounded-2xl bg-amber-50 text-amber-500 flex items-center justify-center">
+                <Building2 size={20} />
+              </div>
+              <div>
+                <p className="text-[10px] text-gray-400 uppercase font-black tracking-wider leading-none mb-1">
+                  Business
+                </p>
+                <h3 className="text-base font-bold text-gray-800 capitalize">
+                  {profile.business}
+                </h3>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="mt-12 px-4">

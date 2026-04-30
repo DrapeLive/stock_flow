@@ -10,6 +10,7 @@ from rest_framework.decorators import action
 from rest_framework import status
 from apps.orders.models import OrderItem
 from apps.orders.utils import SIZE_MAPPING
+from apps.accounts.permissions import admin_business
 
 
 def get_agent_reservation_boost(user):
@@ -37,6 +38,11 @@ def get_agent_reservation_boost(user):
     return boost
 
 
+def filter_items_by_business(qs, user):
+    biz = admin_business(user)
+    return qs.filter(type=biz) if biz else qs
+
+
 class ItemViewSet(ModelViewSet):
     queryset = Item.objects.prefetch_related("variants__sizes").all()
     serializer_class = ItemSerializer
@@ -47,7 +53,10 @@ class ItemViewSet(ModelViewSet):
         return [IsAuthenticated()]
 
     def get_queryset(self):
-        return Item.objects.prefetch_related("variants__sizes").filter(is_deleted=False)
+        return filter_items_by_business(
+            Item.objects.prefetch_related("variants__sizes"),
+            self.request.user,
+        ).filter(is_deleted=False)
 
     def get_serializer_class(self):
         if self.action == 'create':
@@ -72,7 +81,10 @@ class ItemViewSet(ModelViewSet):
 
     @action(detail=False, methods=["get"], url_path="stock-list")
     def get_stock_list(self, request):
-        items = Item.objects.prefetch_related("variants__sizes").filter(is_deleted=False)
+        items = filter_items_by_business(
+            Item.objects.prefetch_related("variants__sizes"),
+            request.user,
+        ).filter(is_deleted=False)
 
         boost = get_agent_reservation_boost(request.user)
 
@@ -111,6 +123,10 @@ class ItemViewSet(ModelViewSet):
             variant = ItemVariant.objects.select_related('item').prefetch_related('sizes').get(qr_code=qr_code, item__is_deleted=False)
         except ItemVariant.DoesNotExist:
             return Response({"error": "Variant not found"}, status=404)
+
+        biz = admin_business(request.user)
+        if biz and variant.item.type != biz:
+            return Response({"error": "Not found"}, status=404)
 
         item = variant.item
         variants = item.variants.prefetch_related('sizes').all()
@@ -156,7 +172,10 @@ class ItemVariantViewSet(ModelViewSet):
 
     @action(detail=False, methods=["get"], url_path="all")
     def get_all_variants(self, request):
-        variants = ItemVariant.objects.select_related('item').prefetch_related('sizes').filter(item__is_deleted=False).all()
+        variants = filter_items_by_business(
+            ItemVariant.objects.select_related('item').prefetch_related('sizes'),
+            request.user,
+        ).filter(item__is_deleted=False)
 
         boost = get_agent_reservation_boost(request.user)
 

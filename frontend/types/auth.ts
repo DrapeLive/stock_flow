@@ -1,4 +1,5 @@
 export type Role = "ADMIN" | "AGENT";
+export type Business = "gents" | "kids";
 
 export interface LoginRequest {
   username?: string;
@@ -11,6 +12,8 @@ export interface LoginResponse {
   refresh: string;
   role: Role;
   user_id: number;
+  business?: Business | null;
+  is_superuser: boolean;
 }
 
 export interface AuthUser {
@@ -18,6 +21,8 @@ export interface AuthUser {
   role: Role;
   username?: string;
   email?: string;
+  business?: Business | null;
+  is_superuser: boolean;
 }
 
 export interface UserProfile {
@@ -25,4 +30,6 @@ export interface UserProfile {
   username: string;
   email: string;
   role: Role;
+  business?: Business | null;
+  is_superuser: boolean;
 }

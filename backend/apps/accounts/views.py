@@ -33,6 +33,8 @@ class LoginView(APIView):
             "refresh": str(refresh),
             "role": user.role,
             "user_id": user.id,
+            "business": user.business or None,
+            "is_superuser": user.is_superuser,
         }
 
         return Response(response_data, status=status.HTTP_200_OK)

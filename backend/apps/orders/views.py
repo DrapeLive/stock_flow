@@ -19,6 +19,7 @@ from .serializers import (
 )
 
 from apps.accounts.permissions import IsAgent
+from apps.accounts.permissions import admin_business
 from rest_framework.permissions import IsAuthenticated
 
 from apps.items.models import ItemVariant, ItemVariantSize
@@ -348,6 +349,9 @@ class OrderViewSet(ModelViewSet):
             qs = qs.filter(agent_id=agent_id)
 
         if user.role == "ADMIN":
+            biz = admin_business(user)
+            if biz:
+                qs = qs.filter(items__item_type=biz).distinct()
             return qs
 
         return qs.filter(agent__user=user)
@@ -479,6 +483,13 @@ class AddOrderItemView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        existing = order.items.first()
+        if existing and existing.item_type != item.type:
+            return Response(
+                {"error": "Order can only contain items of one type"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         item_type = item.type
 
         if size_group not in SIZE_MAPPING[item_type]:
@@ -573,13 +584,16 @@ class InvoiceView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, order_id):
-
         order = get_object_or_404(
             Order.objects.prefetch_related(
                 "items__item"
             ),
             id=order_id
         )
+
+        biz = admin_business(request.user)
+        if biz and not order.items.filter(item_type=biz).exists():
+            return Response({"error": "Not found"}, status=404)
 
         serializer = InvoiceSerializer(order)
 
@@ -593,7 +607,11 @@ class OrderLogsView(APIView):
     def get(self, request, order_id):
         order = get_object_or_404(Order, id=order_id)
 
-        if request.user.role != 'ADMIN' and order.agent.user != request.user:
+        if request.user.role == 'ADMIN':
+            biz = admin_business(request.user)
+            if biz and not order.items.filter(item_type=biz).exists():
+                return Response({"error": "Not found"}, status=404)
+        elif order.agent.user != request.user:
             return Response({"error": "Unauthorized"}, status=403)
 
         logs = order.logs.all().order_by('-created_at')
@@ -628,10 +646,14 @@ class OrderItemViewSet(ModelViewSet):
 
         user = self.request.user
 
+        qs = OrderItem.objects.all()
         if user.role == "ADMIN":
-            return OrderItem.objects.all()
+            biz = admin_business(user)
+            if biz:
+                qs = qs.filter(item_type=biz)
+            return qs
 
-        return OrderItem.objects.filter(
+        return qs.filter(
             order__agent__user=user
         )
 
@@ -650,6 +672,13 @@ class OrderItemViewSet(ModelViewSet):
 
         new_quantity = request.data.get('quantity', old_quantity)
         new_size_group = request.data.get('size_group', old_size_group)
+
+        item_type = order_item.item_type
+        if new_size_group not in SIZE_MAPPING.get(item_type, {}):
+            return Response(
+                {"error": "Invalid size group for this item type"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         if order.status == 'EDITING':
             order_item.quantity = new_quantity

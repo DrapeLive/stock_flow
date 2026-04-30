@@ -1,6 +1,6 @@
 "use client";
 
-import { AuthUser, LoginResponse } from "@/types/auth";
+import { AuthUser, LoginResponse, Business } from "@/types/auth";
 import {
   createContext,
   useContext,
@@ -16,7 +16,9 @@ type AuthContextType = {
   user: AuthUser | null;
   accessToken: string | null;
   refreshToken: string | null;
-  role: string | null; // Add role to the context type
+  role: string | null;
+  business: Business | null;
+  isSuperuser: boolean;
   isAuthenticated: boolean;
 
   login: (data: LoginResponse) => void;
@@ -30,6 +32,8 @@ const COOKIE_KEYS = {
   access: "token",
   refresh: "auth_refresh",
   role: "role",
+  business: "business",
+  isSuperuser: "is_superuser",
 };
 
 const getStoredUser = (): AuthUser | null => {
@@ -55,6 +59,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [role, setRole] = useState<string | null>(() =>
     getStoredToken(COOKIE_KEYS.role),
   );
+  const [business, setBusiness] = useState<Business | null>(() => {
+    if (typeof window === "undefined") return null;
+    const val = Cookies.get(COOKIE_KEYS.business);
+    return (val as Business | null) || null;
+  });
+  const [isSuperuser, setIsSuperuser] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return Cookies.get(COOKIE_KEYS.isSuperuser) === "true";
+  });
 
   const login = (data: LoginResponse) => {
     const authUser: AuthUser = {
@@ -62,17 +75,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       role: data.role,
       username: (data as any).username,
       email: (data as any).email,
+      business: data.business || null,
+      is_superuser: data.is_superuser,
     };
 
     setUser(authUser);
     setAccessToken(data.access);
     setRefreshToken(data.refresh);
     setRole(data.role);
+    setBusiness(data.business || null);
+    setIsSuperuser(data.is_superuser);
 
     Cookies.set(COOKIE_KEYS.user, JSON.stringify(authUser));
     Cookies.set(COOKIE_KEYS.access, data.access);
     Cookies.set(COOKIE_KEYS.refresh, data.refresh);
     Cookies.set(COOKIE_KEYS.role, data.role);
+    if (data.business) {
+      Cookies.set(COOKIE_KEYS.business, data.business);
+    }
+    Cookies.set(COOKIE_KEYS.isSuperuser, String(data.is_superuser));
   };
 
   const logout = useCallback(() => {
@@ -80,11 +101,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setAccessToken(null);
     setRefreshToken(null);
     setRole(null);
+    setBusiness(null);
+    setIsSuperuser(false);
 
     Cookies.remove(COOKIE_KEYS.user);
     Cookies.remove(COOKIE_KEYS.access);
     Cookies.remove(COOKIE_KEYS.refresh);
     Cookies.remove(COOKIE_KEYS.role);
+    Cookies.remove(COOKIE_KEYS.business);
+    Cookies.remove(COOKIE_KEYS.isSuperuser);
 
     router.push("/");
   }, [router]);
@@ -139,7 +164,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         accessToken,
         refreshToken,
-        role, // Include role in the context value
+        role,
+        business,
+        isSuperuser,
         isAuthenticated: !!accessToken,
         login,
         logout,

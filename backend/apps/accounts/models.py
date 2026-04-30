@@ -8,9 +8,14 @@ class User(AbstractUser):
         ('ADMIN', 'Admin'),
         ('AGENT', 'Agent')
     )
+    BUSINESS_CHOICES = (
+        ('gents', 'Gents'),
+        ('kids', 'Kids'),
+    )
 
     email = models.EmailField(unique=True)
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, blank=True)
+    business = models.CharField(max_length=10, choices=BUSINESS_CHOICES, blank=True)
 
     def save(self, *args, **kwargs):
         if self.is_superuser:

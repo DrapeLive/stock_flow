@@ -38,11 +38,13 @@ class LoginResponseSerializer(serializers.Serializer):
     refresh = serializers.CharField()
     role = serializers.ChoiceField(choices=User.ROLE_CHOICES)
     user_id = serializers.IntegerField()
+    business = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    is_superuser = serializers.BooleanField()
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ('id', 'username', 'email', 'role')
+        fields = ('id', 'username', 'email', 'role', 'business', 'is_superuser')
 
 class UserCreateSerializer(serializers.ModelSerializer):
     class Meta:

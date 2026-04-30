@@ -19,6 +19,7 @@ interface Props {
   onChange: (v: CommonDetails) => void;
   onNext: () => void;
   onBack: () => void;
+  lockType?: boolean;
 }
 
 export default function Step1CommonDetails({
@@ -26,6 +27,7 @@ export default function Step1CommonDetails({
   onChange,
   onNext,
   onBack,
+  lockType,
 }: Props) {
   const set = (key: keyof CommonDetails, val: string) =>
     onChange({ ...value, [key]: val });
@@ -89,18 +91,24 @@ export default function Step1CommonDetails({
 
           <Field>
             <FieldLabel>Type *</FieldLabel>
-            <Select
-              value={value.type}
-              onValueChange={(v: ItemType) => set("type", v)}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="gents">Gents</SelectItem>
-                <SelectItem value="kids">Kids</SelectItem>
-              </SelectContent>
-            </Select>
+            {lockType ? (
+              <div className="h-12 px-3 flex items-center bg-gray-50 border border-gray-100 rounded-xl text-sm font-medium text-gray-500 capitalize">
+                {value.type}
+              </div>
+            ) : (
+              <Select
+                value={value.type}
+                onValueChange={(v: ItemType) => set("type", v)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="gents">Gents</SelectItem>
+                  <SelectItem value="kids">Kids</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
           </Field>
         </div>
       </div>

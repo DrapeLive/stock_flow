@@ -8,20 +8,12 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import Image from "next/image";
 import { ImagePreview } from "@/components/pages/ImagePreview";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 import { itemApi } from "@/lib/api/item";
 import { updateItem, parseErrorMessage } from "@/lib/updateItem";
 import { toastError } from "@/lib/toast";
 import EditVariantRow from "./editVariantRow";
-import type { EditCommonDetails, EditableVariant } from "@/types/item";
-import type { ItemType } from "@/types/item";
+import type { EditCommonDetails, EditableVariant, ItemType } from "@/types/item";
 
 const uid = () => Math.random().toString(36).slice(2, 9);
 
@@ -207,20 +199,9 @@ export default function ItemEditPage() {
 
             <Field>
               <FieldLabel>Type</FieldLabel>
-              <Select
-                value={common.type}
-                onValueChange={(v: ItemType) =>
-                  setCommon((p) => ({ ...p, type: v }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="gents">Gents</SelectItem>
-                  <SelectItem value="kids">Kids</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="h-12 px-3 flex items-center bg-gray-50 border border-gray-100 rounded-xl text-sm font-medium text-gray-500 capitalize">
+                {common.type}
+              </div>
             </Field>
           </div>
         </div>
