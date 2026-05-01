@@ -7,7 +7,19 @@ import { useState } from "react";
 type Tab = "Customers" | "Agents" | "Admins";
 
 export default function CustomersPage() {
-  const [activeTab, setActiveTab] = useState<Tab>("Customers");
+  const [activeTab, setActiveTab] = useState<Tab>(() => {
+    if (typeof window !== "undefined") {
+      return (
+        (sessionStorage.getItem("adminUsersActiveTab") as Tab) || "Customers"
+      );
+    }
+    return "Customers";
+  });
+
+  const handleTabChange = (tab: Tab) => {
+    setActiveTab(tab);
+    sessionStorage.setItem("adminUsersActiveTab", tab);
+  };
 
   const renderContent = (): React.ReactNode => {
     if (activeTab == "Agents") {
@@ -24,7 +36,7 @@ export default function CustomersPage() {
         {(["Customers", "Agents", "Admins"] as Tab[]).map((tab) => (
           <button
             key={tab}
-            onClick={() => setActiveTab(tab)}
+            onClick={() => handleTabChange(tab)}
             className={`flex-1 rounded-full py-2 font-bold text-xs transition-all duration-300 ${
               activeTab === tab
                 ? "bg-primary text-white shadow-lg shadow-primary/20 ring-1 ring-primary/10"

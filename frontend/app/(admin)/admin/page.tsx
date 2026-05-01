@@ -21,6 +21,17 @@ interface SimpleAgent {
 function AdminHomePageContent() {
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<Tab>("Pending");
+
+  useEffect(() => {
+    const saved = sessionStorage.getItem("adminOrdersActiveTab") as Tab | null;
+    if (saved) setActiveTab(saved);
+  }, []);
+
+  const handleTabChange = (tab: Tab) => {
+    setActiveTab(tab);
+    sessionStorage.setItem("adminOrdersActiveTab", tab);
+  };
+
   const [filters, setFilters] = useState<OrderFilters>({});
   const [agents, setAgents] = useState<SimpleAgent[]>([]);
   const [showFilters, setShowFilters] = useState(false);
@@ -101,7 +112,7 @@ function AdminHomePageContent() {
         {(["All", "Pending", "Packed", "Dispatched"] as Tab[]).map((tab) => (
           <button
             key={tab}
-            onClick={() => setActiveTab(tab)}
+            onClick={() => handleTabChange(tab)}
             className={`flex-1 rounded-full py-2 font-bold text-xs transition-all duration-300 ${
               activeTab === tab
                 ? "bg-primary text-white shadow-lg shadow-primary/20 ring-1 ring-primary/10"

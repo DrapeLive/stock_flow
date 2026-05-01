@@ -79,50 +79,39 @@ const CustomerList: React.FC = () => {
       <>
         <div className="pt-2 flex justify-between items-center px-2 mb-4">
           <div className="flex flex-col">
-            <h2 className="text-xl font-extrabold text-gray-900 leading-tight">
-              {header}
-            </h2>
             <div className="flex gap-2 items-center mt-1">
               <span className="text-gray-400 text-[10px] font-bold uppercase tracking-wider">
-                Total Active
+                {header}
               </span>
-              <div className="bg-primary/10 text-primary rounded-full py-0.5 px-3 border border-primary/20">
+              <div className="bg-primary/10 text-primary rounded-full w-6 h-6 flex items-center justify-center border border-primary/20">
                 <span className="font-bold text-xs">{count}</span>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="px-2 mb-4">
-          <input
-            type="text"
-            placeholder="Search customers..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/30 text-sm"
-          />
-        </div>
-
         <div className="px-0 space-y-3 pb-20">
-          {customers.map((item) => (
+          {customers.map((customer) => (
             <div
-              key={item.id}
-              onClick={() => router.push(`/admin/users/customers/${item.id}/`)}
+              key={customer.id}
+              onClick={() =>
+                router.push(`/admin/users/customers/${customer.id}/`)
+              }
               className="flex items-center gap-4 bg-white border border-gray-100 p-4 hover:border-primary/30 hover:shadow-md transition-all rounded-2xl group cursor-pointer active:scale-[0.98]"
             >
-              <StockflowAvatar user={item} />
+              <StockflowAvatar user={customer} />
 
               <div className="flex-1 min-w-0">
                 <h6 className="font-bold text-gray-900 text-[16px] truncate leading-tight">
-                  {item.name}
+                  {customer.name}
                 </h6>
                 <p className="text-xs text-gray-400 truncate mt-1 leading-tight font-medium">
-                  {item.address || "No address provided"}
+                  {customer.address || "No address provided"}
                 </p>
 
                 <div className="flex items-center gap-2 mt-2">
                   <span className="text-[9px] bg-gray-50 text-gray-500 px-1.5 py-0.5 rounded-md uppercase font-bold tracking-tighter border border-gray-100">
-                    {item.agent_name}
+                    {customer.agent_name}
                   </span>
                   <span className="text-[9px] text-gray-300 font-bold uppercase tracking-widest">
                     Agent
@@ -228,17 +217,9 @@ const CustomerList: React.FC = () => {
     <>
       <div className="pt-2 flex justify-between items-center px-2 mb-4">
         <div className="flex flex-col">
-          <h2 className="text-xl font-extrabold text-gray-900 leading-tight">
+          <h2 className="text-xl font-extrabold items-center text-gray-900 leading-tight">
             Customers
           </h2>
-          <div className="flex gap-2 items-center mt-1">
-            <span className="text-gray-400 text-[10px] font-bold uppercase tracking-wider">
-              Total Active
-            </span>
-            <div className="bg-primary/10 text-primary rounded-full py-0.5 px-3 border border-primary/20">
-              <span className="font-bold text-xs">{data.length}</span>
-            </div>
-          </div>
         </div>
 
         <StockFlowButton
@@ -262,10 +243,10 @@ const CustomerList: React.FC = () => {
 
       {renderSection(
         businessCustomers,
-        `Customers — ${businessLabel}`,
+        `Our customers`,
         businessCustomers.length,
       )}
-      {renderSection(otherCustomers, "Other customers", otherCustomers.length)}
+      {renderSection(otherCustomers, "Others", otherCustomers.length)}
 
       {businessCustomers.length === 0 && otherCustomers.length === 0 && (
         <div className="flex justify-center mt-10">
