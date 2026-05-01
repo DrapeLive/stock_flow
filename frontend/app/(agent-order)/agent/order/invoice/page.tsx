@@ -9,6 +9,18 @@ import { pdf, PDFDownloadLink } from "@react-pdf/renderer";
 import { InvoicePDF } from "@/components/pages/InvoicePdf";
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 
+const formatDate = (iso: string) =>
+  new Date(iso).toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+const formatTime = (iso: string) =>
+  new Date(iso).toLocaleTimeString("en-IN", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
 // ── Page Component ─────────────────────────────────────────────────────────────
 export default function InvoicePage() {
   const router = useRouter();
@@ -19,6 +31,9 @@ export default function InvoicePage() {
   const [fetchError, setFetchError] = useState(false);
   const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
   const [pdfGenerating, setPdfGenerating] = useState(true);
+
+  const isMobile =
+    typeof window !== "undefined" && /Mobi|Android/i.test(navigator.userAgent);
 
   // ── Fetch invoice on mount ──
   useEffect(() => {
@@ -144,8 +159,117 @@ export default function InvoicePage() {
       </header>
 
       {/* ── PDF Preview ── */}
-      <div className="w-full max-w-4xl bg-white rounded-2xl shadow-xl shadow-slate-200/70 overflow-hidden border border-slate-100">
-        {pdfGenerating ? (
+      <div className="w-full max-w-4xl">
+        {isMobile ? (
+          <div className="flex flex-col w-full gap-4">
+            <div
+              ref={invoiceRef}
+              className="bg-white rounded-2xl shadow-xl shadow-slate-200/70 overflow-hidden border border-slate-100"
+            >
+              {/* Top accent bar */}
+              <div className="h-1.5 w-full bg-primary" />
+
+              {/* Header */}
+              <div className="px-4 pt-6 pb-5 border-b border-slate-100">
+                <p className="text-xs font-semibold tracking-widest text-indigo-500 uppercase mb-1">
+                  Invoice
+                </p>
+                <h1 className="text-2xl font-bold text-slate-800">
+                  #{invoice.id.toString().padStart(4, "0")}
+                </h1>
+                <p className="text-xs text-slate-400 mt-1">
+                  {formatDate(invoice.created_at)} ·{" "}
+                  {formatTime(invoice.created_at)}
+                </p>
+
+                <p className="text-xs text-slate-400 mt-2">Agent</p>
+                <p className="text-sm font-medium text-slate-700">
+                  @{invoice.agent.username}
+                </p>
+              </div>
+
+              {/* Bill To */}
+              <div className="px-4 py-4 bg-slate-50 border-b border-slate-100">
+                <p className="text-xs text-slate-400 uppercase">Bill To</p>
+                <p className="text-base font-semibold text-slate-800">
+                  {invoice.customer.name}
+                </p>
+                <p className="text-xs text-slate-400">
+                  Customer ID: #{invoice.customer.id}
+                </p>
+              </div>
+
+              {/* Items */}
+              <div className="px-4 py-4 space-y-3">
+                {invoice.items.map((oi) => {
+                  const pieceCount = oi.piece_count || 1;
+                  const totalPieces = oi.quantity * pieceCount;
+                  const amount =
+                    (oi.item_price || 0) * oi.quantity * pieceCount;
+
+                  return (
+                    <div
+                      key={oi.id}
+                      className="border border-slate-100 rounded-lg p-3 bg-white"
+                    >
+                      <div className="flex justify-between">
+                        <p className="font-medium text-slate-800">
+                          {oi.item_name}
+                        </p>
+                        <span className="font-semibold text-slate-800">
+                          Rs. {amount.toLocaleString("en-IN")}
+                        </span>
+                      </div>
+
+                      <div className="flex justify-between text-xs text-slate-500 mt-1">
+                        <span className="bg-slate-100 px-1.5 py-0.5 rounded">
+                          {oi.size_group}
+                        </span>
+                        <span>
+                          {oi.quantity} × {pieceCount} = {totalPieces}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Totals */}
+              <div className="px-4 pb-6">
+                <div className="rounded-xl bg-slate-50 border border-slate-100">
+                  <div className="flex justify-between px-4 py-2 text-sm">
+                    <span>Subtotal</span>
+                    <span>
+                      Rs. {invoice.total_price.toLocaleString("en-IN")}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between px-4 py-3 bg-slate-800 text-white font-semibold">
+                    <span>Total</span>
+                    <span>
+                      Rs. {invoice.total_price.toLocaleString("en-IN")}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Open PDF */}
+            {pdfBlobUrl && (
+              <div className="flex justify-center w-full">
+                <StockFlowButton
+                  text="Open PDF Preview"
+                  variant="outline"
+                  onClick={() => {
+                    if (pdfBlobUrl) {
+                      window.open(pdfBlobUrl, "_blank");
+                    }
+                  }}
+                />
+              </div>
+            )}
+          </div>
+        ) : pdfGenerating ? (
           <div className="flex flex-col items-center justify-center h-96 gap-3">
             <div className="w-10 h-10 rounded-full border-4 border-indigo-200 border-t-indigo-500 animate-spin" />
             <p className="text-sm text-slate-400">Generating preview…</p>
