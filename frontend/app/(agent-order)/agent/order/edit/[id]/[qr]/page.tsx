@@ -11,9 +11,9 @@ import type { ItemQRResponse, ItemVariant } from "@/types/item";
 import { useEditGuard } from "@/lib/useEditGuard";
 
 import {
-  getStockForSizeGroup,
   getAvailableSizeRanges,
   getMaxSizeGroup,
+  getAvailableStockForSizeGroup,
 } from "../../../new/[id]/[qr]/utils";
 
 import ProductHeader from "../../../new/[id]/[qr]/components/ProductHeader";
@@ -41,8 +41,6 @@ export default function EditProductDetailPage() {
   const [existingOrderItems, setExistingOrderItems] = useState<
     Array<{ id: number; variant_id: number; size_group: string; quantity: number }>
   >([]);
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [editingItemId, setEditingItemId] = useState<number | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -97,18 +95,25 @@ export default function EditProductDetailPage() {
 
   const availableStock = (() => {
     if (!selectedVariant || !selectedSizeGroup) return 0;
-    const total = getStockForSizeGroup(selectedVariant, selectedSizeGroup);
 
-    const reservedInOrder = existingOrderItems
-      .filter(
-        (item) =>
-          item.variant_id === selectedVariant.id &&
-          item.size_group === (selectedSizeGroup || "") &&
-          (isEditMode ? item.id !== editingItemId : true),
-      )
-      .reduce((sum, item) => sum + item.quantity, 0);
+    const reservedItems = existingOrderItems
+      .filter((item) => item.variant_id === selectedVariant.id)
+      .map((item) => ({ size_group: item.size_group, quantity: item.quantity }));
 
-    return Math.max(0, total - reservedInOrder);
+    return getAvailableStockForSizeGroup(
+      selectedVariant,
+      selectedSizeGroup,
+      reservedItems,
+    );
+  })();
+
+  const existingSameVariantAndSize = (() => {
+    if (!selectedVariant || !selectedSizeGroup) return null;
+    return existingOrderItems.find(
+      (item) =>
+        item.variant_id === selectedVariant.id &&
+        item.size_group === selectedSizeGroup,
+    );
   })();
 
   useEffect(() => {
@@ -122,40 +127,14 @@ export default function EditProductDetailPage() {
   }, [quantity, availableStock]);
 
   const handleVariantSelect = (variant: ItemVariant) => {
-    const existingForThisVariant = existingOrderItems.find(
-      (item) => item.variant_id === variant.id,
-    );
-
-    if (
-      existingForThisVariant &&
-      selectedSizeGroup === existingForThisVariant.size_group &&
-      selectedSizeGroup !== null
-    ) {
-      setIsEditMode(true);
-      setEditingItemId(existingForThisVariant.id);
-      setQuantity(existingForThisVariant.quantity);
-    } else {
-      setIsEditMode(false);
-      setEditingItemId(null);
-      setQuantity(1);
-    }
     setSelectedVariant(variant);
+    setQuantity(1);
     setValidationError(null);
   };
 
   const handleSizeGroupSelect = (value: string) => {
-    const existingForSize = existingOrderItems.find(
-      (item) =>
-        selectedVariant &&
-        item.variant_id === selectedVariant.id &&
-        item.size_group === value,
-    );
-    if (existingForSize && !isEditMode) {
-      setIsEditMode(true);
-      setEditingItemId(existingForSize.id);
-      setQuantity(existingForSize.quantity);
-    }
     setSelectedSizeGroup(value);
+    setQuantity(1);
     setValidationError(null);
   };
 
@@ -189,56 +168,21 @@ export default function EditProductDetailPage() {
         const orderId = parseInt(orderKey, 10);
         const qrCode = selectedVariant.qr_code;
 
-        const existingSameVariant = existingOrderItems.find(
-          (item) =>
-            item.variant_id === selectedVariant.id &&
-            item.size_group === selectedSizeGroup,
-        );
-
-        if (existingSameVariant && !isEditMode) {
-          const newQty = existingSameVariant.quantity + quantity;
-          await orderApi.updateItem(existingSameVariant.id, { quantity: newQty });
-          setExistingOrderItems((prev) =>
-            prev.map((item) =>
-              item.id === existingSameVariant.id
-                ? { ...item, quantity: newQty }
-                : item,
-            ),
-          );
-          toastSuccess("Quantity Updated");
-        } else if (isEditMode && editingItemId) {
-          await orderApi.updateItem(editingItemId, { quantity });
-          setExistingOrderItems((prev) =>
-            prev.map((item) =>
-              item.id === editingItemId ? { ...item, quantity } : item,
-            ),
-          );
-          toastSuccess("Item Updated");
-        } else {
-          await orderApi.addItem(orderId, {
-            qr_code: qrCode,
-            quantity,
+        await orderApi.addItem(orderId, {
+          qr_code: qrCode,
+          quantity,
+          size_group: selectedSizeGroup,
+        });
+        setExistingOrderItems((prev) => [
+          ...prev,
+          {
+            id: Date.now(),
+            variant_id: selectedVariant.id,
             size_group: selectedSizeGroup,
-          });
-          const order = await orderApi.getOne(orderId);
-          const newItem = order.items.find(
-            (i) =>
-              (i.variant || 0) === selectedVariant.id &&
-              (i.size_group || "") === selectedSizeGroup,
-          );
-          if (newItem) {
-            setExistingOrderItems((prev) => [
-              ...prev,
-              {
-                id: newItem.id,
-                variant_id: newItem.variant || 0,
-                size_group: newItem.size_group || "",
-                quantity: newItem.quantity,
-              },
-            ]);
-          }
-          toastSuccess("Item Added Successfully");
-        }
+            quantity,
+          },
+        ]);
+        toastSuccess("Item Added Successfully");
         router.push(`/agent/order/edit/${id}`);
       } else {
         setValidationError("Order session not found. Please restart the order.");
@@ -255,7 +199,7 @@ export default function EditProductDetailPage() {
 
   return (
     <div className="min-h-screen bg-gray-50/50 pb-32">
-      <ProductHeader isEditMode={isEditMode} onBack={handleBack} />
+      <ProductHeader isEditMode={false} onBack={handleBack} />
 
       <div className="max-w-md mx-auto px-6 pt-6">
         <ProductImage
@@ -286,6 +230,15 @@ export default function EditProductDetailPage() {
           onChange={setQuantity}
         />
 
+        {existingSameVariantAndSize && (
+          <div className="mb-6 p-4 bg-amber-50 border border-amber-100 rounded-2xl flex items-start gap-3">
+            <Info size={18} className="text-amber-500 mt-0.5 shrink-0" />
+            <p className="text-sm text-amber-800 font-medium">
+              You already added {existingSameVariantAndSize.quantity} sets of this color and size range. Submitting will add a new separate item.
+            </p>
+          </div>
+        )}
+
         {validationError && (
           <div className="mb-6 p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-3 text-rose-500 animate-in fade-in slide-in-from-top-2">
             <Info size={18} />
@@ -296,7 +249,7 @@ export default function EditProductDetailPage() {
         )}
 
         <SubmitButton
-          isEditMode={isEditMode}
+          isEditMode={false}
           loading={loading}
           disabled={availableStock === 0 || !!validationError}
           onClick={handleSubmit}

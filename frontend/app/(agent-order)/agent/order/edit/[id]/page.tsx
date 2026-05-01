@@ -30,6 +30,44 @@ export default function EditOrderPage() {
   const [loadError, setLoadError] = useState(false);
   const [showOutOfStockModal, setShowOutOfStockModal] = useState(false);
   const [outOfStockItems, setOutOfStockItems] = useState<OutOfStockItem[]>([]);
+  const [showMergeWarning, setShowMergeWarning] = useState(false);
+
+  interface MergeGroup {
+    item_name: string;
+    size_group: string;
+    items: Array<{ id: number; quantity: number }>;
+    total: number;
+  }
+
+  const duplicateGroups = (() => {
+    if (!orders?.items.length) return [];
+
+    const map = new Map<string, Array<{ id: number; quantity: number; item_name: string }>>();
+    for (const item of orders.items) {
+      const key = `${item.item?.id ?? "unknown"}-${item.variant ?? "none"}-${item.size_group ?? "none"}`;
+      const group = map.get(key) || [];
+      group.push({
+        id: item.id,
+        quantity: item.quantity,
+        item_name: item.item?.name || item.item_name || "Unknown Item",
+      });
+      map.set(key, group);
+    }
+
+    const groups: MergeGroup[] = [];
+    for (const [, items] of map) {
+      if (items.length > 1) {
+        const total = items.reduce((sum, i) => sum + i.quantity, 0);
+        groups.push({
+          item_name: items[0].item_name,
+          size_group: items[0].quantity > 0 ? (orders.items.find(o => o.id === items[0].id)?.size_group || "") : "",
+          items: items.map(i => ({ id: i.id, quantity: i.quantity })),
+          total,
+        });
+      }
+    }
+    return groups;
+  })();
 
   const outOfStockItemIds = outOfStockItems.map((item) => item.order_item_id);
 
@@ -53,8 +91,44 @@ export default function EditOrderPage() {
     ) || 0;
 
   const handleSaveChanges = async () => {
+    if (duplicateGroups.length > 0) {
+      setShowMergeWarning(true);
+      return;
+    }
+
     setPlacingOrder(true);
     try {
+      await orderApi.saveEdit(Number(id));
+      toastSuccess("Order saved successfully!");
+      router.push(`/agent/order/status/${id}`);
+    } catch (error) {
+      const axiosError = error as AxiosError<PlaceOrderError>;
+      if (axiosError.response?.data?.out_of_stock_items) {
+        setOutOfStockItems(axiosError.response.data.out_of_stock_items);
+        setShowOutOfStockModal(true);
+      } else {
+        toastError(axiosError.response?.data?.error || "Failed to save order");
+      }
+    } finally {
+      setPlacingOrder(false);
+    }
+  };
+
+  const handleProceedWithSave = async () => {
+    setShowMergeWarning(false);
+
+    setPlacingOrder(true);
+    try {
+      for (const group of duplicateGroups) {
+        const firstItemId = group.items[0].id;
+        await orderApi.updateItem(firstItemId, { quantity: group.total });
+        for (let i = 1; i < group.items.length; i++) {
+          await orderApi.deleteItem(Number(id), group.items[i].id);
+        }
+      }
+      const res = await orderApi.getOne(Number(id));
+      setOrders(res);
+
       await orderApi.saveEdit(Number(id));
       toastSuccess("Order saved successfully!");
       router.push(`/agent/order/status/${id}`);
@@ -293,6 +367,70 @@ export default function EditOrderPage() {
                   className="flex-1 py-3 rounded-xl bg-primary text-white font-bold text-sm hover:opacity-90 transition-opacity"
                 >
                   Remove Items
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Merge Warning Modal */}
+        {showMergeWarning && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center">
+                    <AlertTriangle className="text-amber-500" size={20} />
+                  </div>
+                  <h3 className="text-lg font-black text-gray-900">
+                    Duplicate Items
+                  </h3>
+                </div>
+                <button
+                  onClick={() => setShowMergeWarning(false)}
+                  className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
+                >
+                  <X size={20} className="text-gray-400" />
+                </button>
+              </div>
+              <p className="text-sm text-gray-500 mb-4">
+                Some items have the same color and size range. They will be combined into one item with the total quantity.
+              </p>
+              <div className="space-y-3 mb-6 max-h-48 overflow-y-auto">
+                {duplicateGroups.map((group, idx) => (
+                  <div
+                    key={idx}
+                    className="bg-amber-50 rounded-xl p-3 border border-amber-200"
+                  >
+                    <p className="font-bold text-gray-900 text-sm">
+                      {group.item_name} — {group.size_group}
+                    </p>
+                    <p className="text-xs mt-1">
+                      {group.items.map((item, i) => (
+                        <span key={item.id}>
+                          <span className="font-semibold text-gray-700">{item.quantity}</span>
+                          {i < group.items.length - 1 && <span className="text-gray-400"> + </span>}
+                        </span>
+                      ))}
+                      <span className="text-gray-400"> = </span>
+                      <span className="font-bold text-amber-600">{group.total} sets</span>
+                    </p>
+                  </div>
+                ))}
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowMergeWarning(false)}
+                  className="flex-1 py-3 rounded-xl border border-gray-200 text-gray-600 font-bold text-sm hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleProceedWithSave}
+                  disabled={placingOrder}
+                  className="flex-1 py-3 rounded-xl bg-primary text-white font-bold text-sm hover:opacity-90 transition-opacity disabled:opacity-50"
+                >
+                  {placingOrder ? "Merging..." : "Proceed"}
                 </button>
               </div>
             </div>
