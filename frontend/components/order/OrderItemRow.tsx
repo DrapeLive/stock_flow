@@ -41,7 +41,7 @@ export default function OrderItemRow({
       {showDelete && onDelete && (
         <button
           onClick={() => onDelete(item.id)}
-          className="flex items-center justify-center p-2 flex-shrink-0"
+          className="flex items-center justify-center p-2 flex-shrink-0 hover:cursor-pointer"
         >
           <Trash2 className="text-red-500 w-4 h-4" />
         </button>

@@ -306,7 +306,7 @@ const OrderItem: React.FC<Props> = ({
                 showPackedToggle={isPacking}
                 isPacked={isFullyPacked}
                 isOutOfStock={outOfStockItemIds.includes(item.id)}
-                onDelete={() => onDeleteItem?.(item.id)}
+                onDelete={(deleteItemID) => onDelete(deleteItemID, orderId)}
                 onEdit={isEditable ? handleEditItem : undefined}
                 onTogglePacked={(id, packed) => {
                   const newPacked = packed ? totalPieces : 0;

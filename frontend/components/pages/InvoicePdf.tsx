@@ -121,9 +121,6 @@ export const InvoicePDF = ({ invoice }: { invoice: InvoiceResponse }) => (
     <Page size="A4" style={styles.page}>
       {/* Header */}
       <View style={styles.section}>
-        <Text style={styles.header}>
-          Invoice #{invoice.id.toString().padStart(4, "0")}
-        </Text>
         <Text style={styles.subText}>
           {formatDate(invoice.created_at)} · {formatTime(invoice.created_at)}
         </Text>
@@ -134,14 +131,12 @@ export const InvoicePDF = ({ invoice }: { invoice: InvoiceResponse }) => (
         <View>
           <Text style={styles.subText}>Bill To</Text>
           <Text style={{ fontWeight: "bold" }}>{invoice.customer.name}</Text>
-          <Text style={styles.subText}>
-            Customer ID: #{invoice.customer.id}
-          </Text>
+          <Text style={styles.subText}>Customer ID: {invoice.customer.id}</Text>
         </View>
 
         <View style={{ alignItems: "flex-end" }}>
           <Text style={styles.subText}>Agent</Text>
-          <Text>@{invoice.agent.username}</Text>
+          <Text>{invoice.agent.username}</Text>
         </View>
       </View>
 
