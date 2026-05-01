@@ -35,8 +35,8 @@ export default function Login() {
       } else {
         router.replace("/agent");
       }
-    } catch (err) {
-      toastError("Invalid email or password", err);
+    } catch (err: any) {
+      toastError(err.response?.data?.error || "Invalid email or password", err);
     } finally {
       setLoading(false);
     }

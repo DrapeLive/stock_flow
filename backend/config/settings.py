@@ -180,6 +180,8 @@ CORS_ALLOWED_ORIGINS = [
     o.strip() for o in config('CORS_ALLOWED_ORIGINS', default=_default_cors).split(',') if o.strip()
 ]
 
+CORS_ALLOW_ALL_ORIGINS = config('CORS_ALLOW_ALL_ORIGINS', default=False, cast=bool)
+
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
