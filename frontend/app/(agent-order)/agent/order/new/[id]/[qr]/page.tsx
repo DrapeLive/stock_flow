@@ -13,6 +13,7 @@ import {
   getStockForSizeGroup,
   getAvailableSizeRanges,
   getMaxSizeGroup,
+  getAvailableStockForSizeGroup,
 } from "./utils";
 
 import ProductHeader from "./components/ProductHeader";
@@ -95,18 +96,20 @@ export default function ProductDetailPage() {
 
   const availableStock = (() => {
     if (!selectedVariant || !selectedSizeGroup) return 0;
-    const total = getStockForSizeGroup(selectedVariant, selectedSizeGroup);
 
-    const reservedInOrder = existingOrderItems
+    const reservedItems = existingOrderItems
       .filter(
         (item) =>
           item.variant_id === selectedVariant.id &&
-          item.size_group === (selectedSizeGroup || "") &&
           (isEditMode ? item.id !== editingItemId : true),
       )
-      .reduce((sum, item) => sum + item.quantity, 0);
+      .map((item) => ({ size_group: item.size_group, quantity: item.quantity }));
 
-    return Math.max(0, total - reservedInOrder);
+    return getAvailableStockForSizeGroup(
+      selectedVariant,
+      selectedSizeGroup,
+      reservedItems,
+    );
   })();
 
   useEffect(() => {

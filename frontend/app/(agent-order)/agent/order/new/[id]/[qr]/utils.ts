@@ -26,6 +26,33 @@ export function getStockForSizeGroup(
   return Math.min(...relevantStocks);
 }
 
+export function getAvailableStockForSizeGroup(
+  variant: { sizes: { size: string; stock: number }[] } | null,
+  sizeGroup: string | null,
+  reservedItems: Array<{ size_group: string; quantity: number }>,
+): number {
+  if (!variant || !sizeGroup) return 0;
+
+  const selectedSizes = SIZE_RANGE_TO_SIZES[sizeGroup as FrontendSizeRange] || [];
+  if (selectedSizes.length === 0) return 0;
+
+  const remainingStocks = selectedSizes.map((selectedSize) => {
+    const baseStock = variant.sizes.find((s) => s.size === selectedSize)?.stock || 0;
+
+    const reservedForThisSize = reservedItems.reduce((sum, item) => {
+      const itemSizes = SIZE_RANGE_TO_SIZES[item.size_group as FrontendSizeRange] || [];
+      if (itemSizes.includes(selectedSize)) {
+        return sum + item.quantity;
+      }
+      return sum;
+    }, 0);
+
+    return baseStock - reservedForThisSize;
+  });
+
+  return Math.max(0, Math.min(...remainingStocks));
+}
+
 export function getPiecesForGroup(sizeGroup: string | null): number {
   if (!sizeGroup) return 0;
   return SIZE_RANGE_PIECE_COUNT[sizeGroup] || 0;

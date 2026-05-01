@@ -141,7 +141,7 @@ export default function Page() {
               icon={<Pencil size={16} />}
               onClick={handleEditOrder}
               variant="outline"
-              className="w-full shadow-lg border-blue-200 text-blue-500 hover:bg-blue-50"
+              className="w-full shadow-lg border-blue-200 text-blue-500 hover:bg-blue-500 hover:text-white transition duration-300"
               disabled={startingEdit}
             />
             <StockFlowButton
@@ -149,7 +149,7 @@ export default function Page() {
               icon={<Trash2 />}
               onClick={() => setShowDeleteDialog(true)}
               variant="outline"
-              className="w-full shadow-lg border-red-200 text-red-500 hover:bg-red-50"
+              className="w-full shadow-lg border-red-200 text-red-500 hover:bg-red-500 hover:text-white transition duration-300"
             />
           </div>
         )}
