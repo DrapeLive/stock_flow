@@ -22,7 +22,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     width: "100%",
     justifyContent: "space-between",
-    marginBottom: 16,
+    marginBottom: 4,
   },
 
   logoBox: {
@@ -115,7 +115,7 @@ const styles = StyleSheet.create({
 
   partyBox: {
     flex: 1,
-    padding: 10,
+    padding: 4,
   },
 
   partyDivider: {
@@ -128,7 +128,6 @@ const styles = StyleSheet.create({
     color: "#ffffff",
     fontSize: 8,
     fontFamily: "Helvetica-Bold",
-    paddingVertical: 2,
     paddingHorizontal: 6,
     marginBottom: 6,
     alignSelf: "flex-start",
@@ -136,14 +135,14 @@ const styles = StyleSheet.create({
   },
 
   partyName: {
-    fontSize: 10,
+    fontSize: 12,
     fontFamily: "Helvetica-Bold",
     color: "#0f1f3d",
     marginBottom: 2,
   },
 
   partyDetail: {
-    fontSize: 9,
+    fontSize: 10,
     color: "#555",
     marginBottom: 1,
   },
@@ -280,7 +279,7 @@ const formatTime = (iso: string) =>
 
 // ── Component ─────────────────────────────────────
 export const InvoicePDF = ({ invoice }: { invoice: InvoiceResponse }) => {
-  const brandName = invoice.brand?.name ?? invoice.items[0]?.item_type;
+  const brandName = invoice.brand?.name ?? invoice.items[0].item_type!;
   const address1 = invoice.brand?.address_line1 ?? "";
   const address2 = invoice.brand?.address_line2 ?? "";
   const phone = invoice.brand?.phone ?? "";
@@ -337,8 +336,6 @@ export const InvoicePDF = ({ invoice }: { invoice: InvoiceResponse }) => {
             </Text>
           </View>
         </View>
-
-        <View style={styles.titleDivider} />
 
         {/* ── Customer & Agent ── */}
         <View style={styles.partiesRow}>
