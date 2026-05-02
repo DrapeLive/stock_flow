@@ -1,6 +1,5 @@
 from rest_framework import serializers
 from django.contrib.auth import authenticate
-from rest_framework_simplejwt.tokens import RefreshToken
 from .models import User
 
 
@@ -15,19 +14,30 @@ class LoginRequestSerializer(serializers.Serializer):
         password = data.get('password')
 
         if not (username or email):
-            raise serializers.ValidationError("Username or email is required")
+            raise serializers.ValidationError(
+                {"error": "Username or email is required"}
+            )
 
         if email:
             try:
-                user_obj = User.objects.get(email=email)
+                user_obj = User.objects.get(email__iexact=email)
                 username = user_obj.username
             except User.DoesNotExist:
-                raise serializers.ValidationError("Invalid email")
+                raise serializers.ValidationError(
+                    {"error": "No account found for this email"}
+                )
 
         user = authenticate(username=username, password=password)
 
-        if not user:
-            raise serializers.ValidationError("Invalid password")
+        if user is None:
+            raise serializers.ValidationError(
+                {"error": "Invalid password"}
+            )
+
+        if not user.is_active:
+            raise serializers.ValidationError(
+                {"error": "This account has been deactivated"}
+            )
 
         data['user'] = user
         return data
@@ -41,10 +51,12 @@ class LoginResponseSerializer(serializers.Serializer):
     business = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     is_superuser = serializers.BooleanField()
 
+
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ('id', 'username', 'email', 'role', 'business', 'is_superuser')
+
 
 class UserCreateSerializer(serializers.ModelSerializer):
     class Meta:
@@ -55,6 +67,6 @@ class UserCreateSerializer(serializers.ModelSerializer):
         }
 
     def validate_email(self, value):
-        if User.objects.filter(email=value).exists():
+        if User.objects.filter(email__iexact=value).exists():
             raise serializers.ValidationError("Email already exists")
         return value
