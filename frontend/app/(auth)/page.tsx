@@ -14,6 +14,7 @@ import {
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useRef, KeyboardEvent } from "react";
 import { cn } from "@/lib/utils"; // adjust to your cn utility path
+import Link from "next/link";
 
 type ErrorType =
   | "network"
@@ -259,6 +260,14 @@ export default function Login() {
               </p>
             )}
           </Field>
+          <div className="flex justify-end -mt-2">
+            <Link
+              href="/forgot-password"
+              className="text-xs text-[var(--color-primary)] hover:opacity-70 transition-opacity"
+            >
+              Forgot password?
+            </Link>
+          </div>
 
           <button
             type="button"

@@ -15,7 +15,7 @@ export default function NewOrder() {
         <div className="max-w-md mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button
-              onClick={() => router.back()}
+              onClick={() => router.push("/agent")}
               className="p-2 rounded-xl hover:bg-gray-50 text-gray-400 transition-colors"
             >
               <ArrowLeft size={20} />

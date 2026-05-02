@@ -1,13 +1,7 @@
 "use client";
 import OrderItem from "@/components/pages/admin/order-item/OrderItem";
 import { toastError, toastSuccess } from "@/lib/toast";
-import {
-  ChevronLeft,
-  Plus,
-  ShoppingBag,
-  AlertTriangle,
-  X,
-} from "lucide-react";
+import { ChevronLeft, Plus, ShoppingBag, AlertTriangle, X } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { orderApi } from "@/lib/api/order";
@@ -42,7 +36,10 @@ export default function EditOrderPage() {
   const duplicateGroups = (() => {
     if (!orders?.items.length) return [];
 
-    const map = new Map<string, Array<{ id: number; quantity: number; item_name: string }>>();
+    const map = new Map<
+      string,
+      Array<{ id: number; quantity: number; item_name: string }>
+    >();
     for (const item of orders.items) {
       const key = `${item.item?.id ?? "unknown"}-${item.variant ?? "none"}-${item.size_group ?? "none"}`;
       const group = map.get(key) || [];
@@ -60,8 +57,11 @@ export default function EditOrderPage() {
         const total = items.reduce((sum, i) => sum + i.quantity, 0);
         groups.push({
           item_name: items[0].item_name,
-          size_group: items[0].quantity > 0 ? (orders.items.find(o => o.id === items[0].id)?.size_group || "") : "",
-          items: items.map(i => ({ id: i.id, quantity: i.quantity })),
+          size_group:
+            items[0].quantity > 0
+              ? orders.items.find((o) => o.id === items[0].id)?.size_group || ""
+              : "",
+          items: items.map((i) => ({ id: i.id, quantity: i.quantity })),
           total,
         });
       }
@@ -175,7 +175,7 @@ export default function EditOrderPage() {
   return (
     <div className="min-h-screen bg-gray-50/50 pb-32">
       {/* Header */}
-      <div className="bg-white border-b border-gray-100 px-6 py-6 sticky top-0 z-10">
+      <div className="bg-white border-b border-gray-100 py-6 sticky top-0 z-10">
         <div className="max-w-md mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button
@@ -196,7 +196,7 @@ export default function EditOrderPage() {
         </div>
       </div>
 
-      <div className="max-w-md mx-auto px-6 pt-8">
+      <div className="max-w-md mx-auto px-0 pt-8">
         {/* Customer Card */}
         {orders && (
           <div className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm flex items-center gap-4 mb-8">
@@ -277,7 +277,7 @@ export default function EditOrderPage() {
 
         {/* Out of Stock Modal */}
         {showOutOfStockModal && (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-0">
             <div className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
@@ -394,7 +394,8 @@ export default function EditOrderPage() {
                 </button>
               </div>
               <p className="text-sm text-gray-500 mb-4">
-                Some items have the same color and size range. They will be combined into one item with the total quantity.
+                Some items have the same color and size range. They will be
+                combined into one item with the total quantity.
               </p>
               <div className="space-y-3 mb-6 max-h-48 overflow-y-auto">
                 {duplicateGroups.map((group, idx) => (
@@ -408,12 +409,18 @@ export default function EditOrderPage() {
                     <p className="text-xs mt-1">
                       {group.items.map((item, i) => (
                         <span key={item.id}>
-                          <span className="font-semibold text-gray-700">{item.quantity}</span>
-                          {i < group.items.length - 1 && <span className="text-gray-400"> + </span>}
+                          <span className="font-semibold text-gray-700">
+                            {item.quantity}
+                          </span>
+                          {i < group.items.length - 1 && (
+                            <span className="text-gray-400"> + </span>
+                          )}
                         </span>
                       ))}
                       <span className="text-gray-400"> = </span>
-                      <span className="font-bold text-amber-600">{group.total} sets</span>
+                      <span className="font-bold text-amber-600">
+                        {group.total} sets
+                      </span>
                     </p>
                   </div>
                 ))}

@@ -74,8 +74,11 @@ export default function NewAgentPage() {
       toastSuccess("Agent created successfully");
       router.push(`/admin/users/agents/${newAgent.id}`);
     } catch (error: any) {
-      console.error("Error creating agent:", error);
-      toastError("Failed to create agent", error);
+      const message = error?.toString().includes("500")
+        ? "Agent already registered"
+        : "Failed to create agent";
+
+      toastError(message);
     } finally {
       setIsSubmitting(false);
     }
@@ -84,16 +87,26 @@ export default function NewAgentPage() {
   return (
     <div className="w-full px-4 py-8 flex flex-col min-h-screen bg-white">
       <div className="mb-8">
-        <h1 className="text-2xl font-black text-gray-900 tracking-tight">New Agent</h1>
-        <p className="text-sm text-gray-400 font-medium">Create a new field agent account</p>
+        <h1 className="text-2xl font-black text-gray-900 tracking-tight">
+          New Agent
+        </h1>
+        <p className="text-sm text-gray-400 font-medium">
+          Create a new field agent account
+        </p>
       </div>
 
       <div className="bg-gray-50/50 border border-gray-100 rounded-3xl p-6 mb-8">
         <FieldGroup className="space-y-6 flex-1">
           <Field>
             <div className="flex justify-between items-center mb-1.5">
-              <FieldLabel className="text-xs font-bold uppercase tracking-widest text-gray-400">Agent Name</FieldLabel>
-              {errors.agentName && <span className="text-[10px] text-red-500 font-bold">{errors.agentName}</span>}
+              <FieldLabel className="text-xs font-bold uppercase tracking-widest text-gray-400">
+                Agent Name
+              </FieldLabel>
+              {errors.agentName && (
+                <span className="text-[10px] text-red-500 font-bold">
+                  {errors.agentName}
+                </span>
+              )}
             </div>
             <Input
               placeholder="e.g. John Doe"
@@ -105,8 +118,14 @@ export default function NewAgentPage() {
 
           <Field>
             <div className="flex justify-between items-center mb-1.5">
-              <FieldLabel className="text-xs font-bold uppercase tracking-widest text-gray-400">Email Address</FieldLabel>
-              {errors.email && <span className="text-[10px] text-red-500 font-bold">{errors.email}</span>}
+              <FieldLabel className="text-xs font-bold uppercase tracking-widest text-gray-400">
+                Email Address
+              </FieldLabel>
+              {errors.email && (
+                <span className="text-[10px] text-red-500 font-bold">
+                  {errors.email}
+                </span>
+              )}
             </div>
             <Input
               type="email"
@@ -119,8 +138,14 @@ export default function NewAgentPage() {
 
           <Field>
             <div className="flex justify-between items-center mb-1.5">
-              <FieldLabel className="text-xs font-bold uppercase tracking-widest text-gray-400">Secure Password</FieldLabel>
-              {errors.password && <span className="text-[10px] text-red-500 font-bold">{errors.password}</span>}
+              <FieldLabel className="text-xs font-bold uppercase tracking-widest text-gray-400">
+                Secure Password
+              </FieldLabel>
+              {errors.password && (
+                <span className="text-[10px] text-red-500 font-bold">
+                  {errors.password}
+                </span>
+              )}
             </div>
             <Input
               type="password"
@@ -133,8 +158,14 @@ export default function NewAgentPage() {
 
           <Field>
             <div className="flex justify-between items-center mb-1.5">
-              <FieldLabel className="text-xs font-bold uppercase tracking-widest text-gray-400">Contact detail</FieldLabel>
-              {errors.contactNumber && <span className="text-[10px] text-red-500 font-bold">{errors.contactNumber}</span>}
+              <FieldLabel className="text-xs font-bold uppercase tracking-widest text-gray-400">
+                Contact detail
+              </FieldLabel>
+              {errors.contactNumber && (
+                <span className="text-[10px] text-red-500 font-bold">
+                  {errors.contactNumber}
+                </span>
+              )}
             </div>
             <Input
               placeholder="+91 xxxxx xxxxx"
