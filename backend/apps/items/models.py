@@ -24,6 +24,14 @@ class Item(models.Model):
         default="NONE"
     )
 
+    brand = models.ForeignKey(
+        'business.Brand',
+        related_name='items',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
+
     is_deleted = models.BooleanField(default=False)
 
     def __str__(self):

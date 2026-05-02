@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { adminApi } from "@/lib/api/admin";
+import { brandApi } from "@/lib/api/brand";
 import { toastSuccess, toastError } from "@/lib/toast";
 import {
   Field,
@@ -21,18 +22,27 @@ import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import type { Business } from "@/types/auth";
+import type { Brand } from "@/types/brand";
 
 export default function NewAdminPage() {
   const router = useRouter();
   const { business, isSuperuser } = useAuth();
+  const [brands, setBrands] = useState<Brand[]>([]);
   const [formData, setFormData] = useState({
     adminName: "",
     email: "",
     password: "",
     business: isSuperuser ? "" : (business ?? ""),
+    brand_id: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (isSuperuser) {
+      brandApi.getAll().then(setBrands).catch(() => setBrands([]));
+    }
+  }, [isSuperuser]);
 
   const handleChange = (key: string, value: string) => {
     setFormData((prev) => ({
@@ -64,6 +74,9 @@ export default function NewAdminPage() {
     if (isSuperuser && !formData.business) {
       newErrors.business = "Business is required";
     }
+    if (isSuperuser && !formData.brand_id) {
+      newErrors.brand_id = "Brand is required";
+    }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -78,6 +91,7 @@ export default function NewAdminPage() {
         email: formData.email,
         password: formData.password,
         business: isSuperuser ? (formData.business as Business) : null,
+        brand_id: parseInt(formData.brand_id),
       });
       toastSuccess("Admin created successfully");
       router.push("/admin/users/");
@@ -169,6 +183,30 @@ export default function NewAdminPage() {
                 <SelectContent>
                   <SelectItem value="gents">Gents</SelectItem>
                   <SelectItem value="kids">Kids</SelectItem>
+                </SelectContent>
+              </Select>
+            </Field>
+          )}
+
+          {isSuperuser && (
+            <Field>
+              <div className="flex justify-between items-center mb-1.5">
+                <FieldLabel className="text-xs font-bold uppercase tracking-widest text-gray-400">Brand *</FieldLabel>
+                {errors.brand_id && <span className="text-[10px] text-red-500 font-bold">{errors.brand_id}</span>}
+              </div>
+              <Select
+                value={formData.brand_id}
+                onValueChange={(v) => handleChange("brand_id", v)}
+              >
+                <SelectTrigger className={`bg-white h-12 ${errors.brand_id ? "border-red-200 focus:border-red-300" : "focus:border-primary"}`}>
+                  <SelectValue placeholder="Select brand" />
+                </SelectTrigger>
+                <SelectContent>
+                  {brands.map((brand) => (
+                    <SelectItem key={brand.id} value={String(brand.id)}>
+                      {brand.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </Field>

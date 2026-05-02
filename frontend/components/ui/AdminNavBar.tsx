@@ -1,13 +1,14 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { Truck, Users, Archive, BarChart3 } from "lucide-react";
+import { Truck, Users, Archive, BarChart3, Store } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import React from "react";
 
 const AdminNavBar: React.FC = () => {
   const pathname = usePathname();
   const router = useRouter();
+  const { isSuperuser } = useAuth();
 
   const navItems = [
     {
@@ -35,6 +36,15 @@ const AdminNavBar: React.FC = () => {
       size: 22,
     },
   ];
+
+  if (isSuperuser) {
+    navItems.splice(2, 0, {
+      label: "Brands",
+      icon: Store,
+      path: "/admin/brands",
+      size: 18,
+    });
+  }
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center pointer-events-none pb-[env(safe-area-inset-bottom,1.5rem)] mb-4">

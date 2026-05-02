@@ -5,6 +5,7 @@ export interface Admin {
   username: string;
   email: string;
   business?: Business | null;
+  brand_id?: number | null;
 }
 
 export interface AdminRequest {
@@ -12,6 +13,7 @@ export interface AdminRequest {
   email: string;
   password: string;
   business?: Business | null;
+  brand_id?: number | null;
 }
 
 export interface AdminUpdateRequest {
@@ -19,6 +21,7 @@ export interface AdminUpdateRequest {
   email?: string;
   password?: string;
   business?: Business | null;
+  brand_id?: number | null;
 }
 
 export type AdminAllResponse = Admin[];

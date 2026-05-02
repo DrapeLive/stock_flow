@@ -3,12 +3,22 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { adminApi } from "@/lib/api/admin";
+import { brandApi } from "@/lib/api/brand";
 import { toastSuccess, toastError } from "@/lib/toast";
 import { AdminResponse, AdminRequest } from "@/types/admin";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 import { Trash2, ArrowLeft, ShieldAlert, Pencil, Eye } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
+import type { Brand } from "@/types/brand";
 
 function getColorFromId(id: number): string {
   if (!id) return "hsl(0, 0%, 85%)";
@@ -19,10 +29,13 @@ function getColorFromId(id: number): string {
 export default function AdminDetailPage() {
   const { id } = useParams();
   const router = useRouter();
+  const { isSuperuser } = useAuth();
   const [admin, setAdmin] = useState<AdminResponse | null>(null);
+  const [brands, setBrands] = useState<Brand[]>([]);
   const [formData, setFormData] = useState({
     username: "",
     email: "",
+    brand_id: "",
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -38,6 +51,7 @@ export default function AdminDetailPage() {
         setFormData({
           username: data.username,
           email: data.email,
+          brand_id: data.brand_id ? String(data.brand_id) : "",
         });
       } catch (error) {
         console.error("Error fetching admin:", error);
@@ -47,6 +61,12 @@ export default function AdminDetailPage() {
     };
     fetchData();
   }, [id]);
+
+  useEffect(() => {
+    if (isSuperuser) {
+      brandApi.getAll().then(setBrands).catch(() => setBrands([]));
+    }
+  }, [isSuperuser]);
 
   const handleChange = (key: string, value: string) => {
     setFormData((prev) => ({ ...prev, [key]: value }));
@@ -60,6 +80,7 @@ export default function AdminDetailPage() {
       await adminApi.update(numericId, {
         username: formData.username,
         email: formData.email,
+        brand_id: formData.brand_id ? parseInt(formData.brand_id) : undefined,
       });
       toastSuccess("Admin updated successfully");
       setIsEditing(false);
@@ -96,6 +117,12 @@ export default function AdminDetailPage() {
     );
   if (!admin)
     return <div className="p-8 text-center text-red-400">Admin not found.</div>;
+
+  const getBrandName = () => {
+    if (!admin.brand_id) return null;
+    const brand = brands.find((b) => b.id === admin.brand_id);
+    return brand?.name || `Brand #${admin.brand_id}`;
+  };
 
   return (
     <div className="w-full px-4 py-8 flex flex-col min-h-screen bg-white">
@@ -181,6 +208,34 @@ export default function AdminDetailPage() {
                   className="bg-white border-gray-100 rounded-xl h-12 font-bold"
                 />
               </Field>
+
+              {isSuperuser && (
+                <Field>
+                  <div className="flex justify-between items-center mb-1.5">
+                    <FieldLabel className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+                      Brand *
+                    </FieldLabel>
+                    {errors.brand_id && (
+                      <span className="text-[10px] text-red-500 font-bold">{errors.brand_id}</span>
+                    )}
+                  </div>
+                  <Select
+                    value={formData.brand_id}
+                    onValueChange={(v) => handleChange("brand_id", v)}
+                  >
+                    <SelectTrigger className="bg-white h-12 focus:border-primary">
+                      <SelectValue placeholder="Select brand" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {brands.map((brand) => (
+                        <SelectItem key={brand.id} value={String(brand.id)}>
+                          {brand.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </Field>
+              )}
             </FieldGroup>
           </div>
 
@@ -224,6 +279,17 @@ export default function AdminDetailPage() {
                   {admin.business ? admin.business : "Super user"}
                 </span>
               </div>
+
+              {getBrandName() && (
+                <div className="flex justify-between items-center">
+                  <span className="text-xs font-bold text-gray-400 uppercase">
+                    Brand
+                  </span>
+                  <span className="text-sm font-medium text-gray-900">
+                    {getBrandName()}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         </>

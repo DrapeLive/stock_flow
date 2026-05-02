@@ -1,6 +1,11 @@
 import type { Item } from "./item";
 
-export type OrderStatus = "DRAFT" | "PENDING" | "EDITING" | "PACKED" | "DISPATCHED";
+export type OrderStatus =
+  | "DRAFT"
+  | "PENDING"
+  | "EDITING"
+  | "PACKED"
+  | "DISPATCHED";
 
 export interface OutOfStockItem {
   item_name: string;
@@ -98,6 +103,7 @@ export interface InvoiceCustomer {
   id: number;
   name: string;
   contact: string;
+  address: string;
 }
 
 export interface InvoiceAgent {
@@ -106,10 +112,22 @@ export interface InvoiceAgent {
   contact: string;
 }
 
+export interface InvoiceBrand {
+  id: number;
+  name: string;
+  phone: string;
+  email: string;
+  address_line1: string;
+  address_line2: string | null;
+  logo_url: string | null;
+  gst: string | null;
+}
+
 export interface InvoiceResponse {
   id: number;
   customer: InvoiceCustomer;
   agent: InvoiceAgent;
+  brand?: InvoiceBrand;
   created_at: string;
   status: OrderStatus;
   items: OrderItem[];

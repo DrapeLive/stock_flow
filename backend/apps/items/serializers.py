@@ -40,10 +40,12 @@ class ItemVariantSerializer(serializers.ModelSerializer):
 
 class ItemSerializer(serializers.ModelSerializer):
     variants = ItemVariantSerializer(many=True, read_only=True)
+    brand_id = serializers.IntegerField(source='brand.id', read_only=True)
+    brand_name = serializers.CharField(source='brand.name', read_only=True)
 
     class Meta:
         model = Item
-        fields = ['id', 'name', 'type', 'price', 'description', 'variants']
+        fields = ['id', 'name', 'type', 'price', 'description', 'brand_id', 'brand_name', 'variants']
 
 
 class ItemVariantSizeRequestSerializer(serializers.Serializer):
@@ -82,12 +84,17 @@ class CreateItemSerializer(serializers.Serializer):
 
     def create(self, validated_data):
         variants_data = validated_data.pop('variants', [])
+        request_user = self.context['request'].user
+        brand = None
+        if hasattr(request_user, 'brand') and request_user.brand:
+            brand = request_user.brand
 
         item = Item.objects.create(
             name=validated_data['name'],
             description=validated_data.get('description', ''),
             price=validated_data['price'],
-            type=validated_data['type']
+            type=validated_data['type'],
+            brand=brand,
         )
 
         for variant_data in variants_data:
@@ -141,6 +148,9 @@ class CreateItemSerializer(serializers.Serializer):
 
     def update(self, instance, validated_data):
         variants_data = validated_data.pop('variants', [])
+        request_user = self.context['request'].user
+        if hasattr(request_user, 'brand') and request_user.brand:
+            instance.brand = request_user.brand
 
         instance.name = validated_data.get('name', instance.name)
         instance.description = validated_data.get('description', instance.description)

@@ -158,10 +158,10 @@ def return_stock_for_item(order_item):
     """Return stock to warehouse for an order item."""
     if order_item.item is None or order_item.item.is_deleted:
         return
-    
+
     item_type = order_item.item.type
     required_sizes = SIZE_MAPPING[item_type][order_item.size_group]
-    
+
     for size in required_sizes:
         ItemVariantSize.objects.filter(
             item_variant=order_item.variant,
@@ -364,12 +364,12 @@ class OrderViewSet(ModelViewSet):
 
     def destroy(self, request, pk=None):
         order = self.get_object()
-        
+
         if order.status != 'DRAFT':
             with transaction.atomic():
                 for order_item in order.items.select_related('item', 'variant'):
                     return_stock_for_item(order_item)
-                
+
                 OrderLog.objects.create(
                     order=order,
                     action='ORDER_DELETED',
@@ -380,30 +380,30 @@ class OrderViewSet(ModelViewSet):
                     },
                     performed_by=request.user
                 )
-        
+
         order.delete()
-        
+
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=True, methods=["post"], url_path="dispatch")
     def dispatch_order(self, request, pk=None):
         order = self.get_object()
-        
+
         if order.status not in ['PENDING', 'PACKED']:
             return Response(
                 {"error": "Only PENDING or PACKED orders can be dispatched"},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
         with transaction.atomic():
             for order_item in order.items.select_related('item', 'variant'):
                 if order_item.item is None or order_item.item.is_deleted:
                     continue
-                
+
                 piece_count = get_piece_count(order_item.size_group, order_item.item_type or 'gents')
                 packed_sets = (order_item.packed_quantity or 0) // piece_count if piece_count > 0 else 0
                 unpacked_sets = order_item.quantity - packed_sets
-                
+
                 if unpacked_sets > 0:
                     item_type = order_item.item.type
                     required_sizes = SIZE_MAPPING[item_type][order_item.size_group]
@@ -412,7 +412,7 @@ class OrderViewSet(ModelViewSet):
                             item_variant=order_item.variant,
                             size=size
                         ).update(stock=F('stock') + unpacked_sets)
-            
+
             OrderLog.objects.create(
                 order=order,
                 action='DISPATCHED',
@@ -422,10 +422,10 @@ class OrderViewSet(ModelViewSet):
                 },
                 performed_by=request.user
             )
-            
+
             order.status = 'DISPATCHED'
             order.save()
-        
+
         return Response({"message": "Order dispatched successfully"})
 
     @action(detail=True, methods=["post"], url_path="cancel-edit")
@@ -547,7 +547,7 @@ class DeleteOrderItemView(APIView):
                             item_variant=order_item.variant,
                             size=size
                         ).update(stock=F('stock') + order_item.quantity)
-                
+
                 OrderLog.objects.create(
                     order=order,
                     action='ITEM_DELETED',
@@ -586,7 +586,7 @@ class InvoiceView(APIView):
     def get(self, request, order_id):
         order = get_object_or_404(
             Order.objects.prefetch_related(
-                "items__item"
+                "items__item__brand"
             ),
             id=order_id
         )
@@ -595,7 +595,7 @@ class InvoiceView(APIView):
         if biz and not order.items.filter(item_type=biz).exists():
             return Response({"error": "Not found"}, status=404)
 
-        serializer = InvoiceSerializer(order)
+        serializer = InvoiceSerializer(order,context={'request': request})
 
         return Response(serializer.data)
 
@@ -624,7 +624,7 @@ class OrderLogsView(APIView):
             user_name = None
             if log.performed_by:
                 user_name = log.performed_by.username
-            
+
             result.append({
                 'id': log.id,
                 'action': log.action,
@@ -694,7 +694,7 @@ class OrderItemViewSet(ModelViewSet):
                     if order_item.item:
                         item_type = order_item.item.type
                         required_sizes = SIZE_MAPPING[item_type][new_size_group]
-                        
+
                         for size in required_sizes:
                             try:
                                 size_obj = ItemVariantSize.objects.select_for_update().get(

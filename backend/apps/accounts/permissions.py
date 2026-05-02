@@ -8,6 +8,10 @@ class IsAdmin(BasePermission):
     def has_permission(self, request, view):
         return request.user.is_authenticated and request.user.role == 'ADMIN'
 
+class IsSuperuser(BasePermission):
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and request.user.is_superuser
+
 class IsAdminOrSelfAgent(BasePermission):
 
     def has_permission(self, request, view):

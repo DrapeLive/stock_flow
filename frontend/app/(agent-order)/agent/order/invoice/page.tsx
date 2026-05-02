@@ -11,14 +11,16 @@ import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 
 const formatDate = (iso: string) =>
   new Date(iso).toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "short",
+    day: "numeric",
+    month: "numeric",
     year: "numeric",
   });
 const formatTime = (iso: string) =>
   new Date(iso).toLocaleTimeString("en-IN", {
     hour: "2-digit",
     minute: "2-digit",
+    second: "2-digit",
+    hour12: true,
   });
 
 // ── Page Component ─────────────────────────────────────────────────────────────
@@ -159,98 +161,182 @@ export default function InvoicePage() {
       </header>
 
       {/* ── PDF Preview ── */}
-      <div className="w-full max-w-4xl">
+      <div className={isMobile ? "w-full" : "w-full max-w-4xl"}>
         {isMobile ? (
           <div className="flex flex-col w-full gap-4">
-            <div
-              ref={invoiceRef}
-              className="bg-white rounded-2xl shadow-xl shadow-slate-200/70 overflow-hidden border border-slate-100"
-            >
-              {/* Top accent bar */}
-              <div className="h-1.5 w-full bg-primary" />
-
-              {/* Header */}
-              <div className="px-4 pt-6 pb-5 border-b border-slate-100">
-                <p className="text-xs font-semibold tracking-widest text-indigo-500 uppercase mb-1">
-                  Invoice
-                </p>
-                <h1 className="text-2xl font-bold text-slate-800">
-                  #{invoice.id.toString().padStart(4, "0")}
-                </h1>
-                <p className="text-xs text-slate-400 mt-1">
-                  {formatDate(invoice.created_at)} ·{" "}
-                  {formatTime(invoice.created_at)}
-                </p>
-
-                <p className="text-xs text-slate-400 mt-2">Agent</p>
-                <p className="text-sm font-medium text-slate-700">
-                  @{invoice.agent.username}
-                </p>
+            <div ref={invoiceRef} className="bg-white w-full">
+              {/* ── Brand Header ── */}
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-12 h-12 rounded overflow-hidden flex items-center justify-center bg-gray-100">
+                  {invoice.brand?.logo_url ? (
+                    <img
+                      src={invoice.brand.logo_url}
+                      alt="Brand Logo"
+                      className="w-12 h-12 object-cover rounded"
+                    />
+                  ) : (
+                    <span className="text-[#0f1f3d] text-lg font-bold">
+                      {(invoice.brand?.name ?? invoice.items[0]?.item_type ?? "BR").slice(0, 2).toUpperCase()}
+                    </span>
+                  )}
+                </div>
+                <div className="text-right">
+                  <p className="text-[#0f1f3d] font-bold text-base">
+                    {invoice.brand?.name ?? invoice.items[0]?.item_type}
+                  </p>
+                  {invoice.brand?.address_line1 && (
+                    <p className="text-xs text-gray-600">{invoice.brand.address_line1}</p>
+                  )}
+                  {invoice.brand?.address_line2 && (
+                    <p className="text-xs text-gray-600">{invoice.brand.address_line2}</p>
+                  )}
+                  {invoice.brand?.phone && (
+                    <p className="text-xs text-gray-600">{invoice.brand.phone}</p>
+                  )}
+                  {invoice.brand?.email && (
+                    <p className="text-xs text-gray-600">{invoice.brand.email}</p>
+                  )}
+                  {invoice.brand?.gst && (
+                    <p className="text-xs text-gray-600">GST : {invoice.brand.gst}</p>
+                  )}
+                </div>
               </div>
 
-              {/* Bill To */}
-              <div className="px-4 py-4 bg-slate-50 border-b border-slate-100">
-                <p className="text-xs text-slate-400 uppercase">Bill To</p>
-                <p className="text-base font-semibold text-slate-800">
-                  {invoice.customer.name}
+              <div className="border-b-2 border-[#0f1f3d] mb-4" />
+
+              {/* ── ORDER FORM Title ── */}
+              <div className="flex justify-between items-start mb-4">
+                <p className="text-[#0f1f3d] text-xl font-bold tracking-wider">
+                  ORDER FORM
                 </p>
-                <p className="text-xs text-slate-400">
-                  Customer ID: #{invoice.customer.id}
-                </p>
+                <div className="text-right text-xs text-gray-700">
+                  <p>
+                    Order Form{" "}
+                    <span className="font-bold">#{String(invoice.id)}</span>
+                  </p>
+                  <p>
+                    Date :{" "}
+                    <span className="font-bold">
+                      {formatDate(invoice.created_at)}
+                    </span>
+                  </p>
+                  <p>
+                    Time :{" "}
+                    <span className="font-bold">
+                      {formatTime(invoice.created_at)}
+                    </span>
+                  </p>
+                </div>
               </div>
 
-              {/* Items */}
-              <div className="px-4 py-4">
-                {invoice.items.map((oi) => {
-                  const pieceCount = oi.piece_count || 1;
-                  const totalPieces = oi.quantity * pieceCount;
-                  const amount =
-                    (oi.item_price || 0) * oi.quantity * pieceCount;
+              <div className="border-b border-gray-300 mb-4" />
+
+              {/* ── Customer & Agent ── */}
+              <div className="flex mb-4">
+                <div className="flex-1 pr-4 border-r border-gray-300">
+                  <span className="bg-[#0f1f3d] text-white text-[10px] font-bold uppercase px-1.5 py-0.5">
+                    Customer:
+                  </span>
+                  <p className="text-[#0f1f3d] font-bold text-sm mt-1">
+                    {invoice.customer.name}
+                  </p>
+                  {invoice.customer.address && (
+                    <p className="text-xs text-gray-600">{invoice.customer.address}</p>
+                  )}
+                  {invoice.customer.contact && (
+                    <p className="text-xs text-gray-600">{invoice.customer.contact}</p>
+                  )}
+                </div>
+                <div className="flex-1 pl-4">
+                  <span className="bg-[#0f1f3d] text-white text-[10px] font-bold uppercase px-1.5 py-0.5">
+                    Agent:
+                  </span>
+                  <p className="text-[#0f1f3d] font-bold text-sm mt-1">
+                    {invoice.agent.username}
+                  </p>
+                  {invoice.agent.contact && (
+                    <p className="text-xs text-gray-600">{invoice.agent.contact}</p>
+                  )}
+                </div>
+              </div>
+
+              {/* ── Items Table ── */}
+              <div className="border border-[#0f1f3d] mb-4 overflow-x-auto">
+                <div className="flex bg-[#0f1f3d] py-2 px-1">
+                  <p className="w-[30%] text-center text-white text-[10px] font-bold">
+                    Item
+                  </p>
+                  <p className="w-[22%] text-center text-white text-[10px] font-bold">
+                    Size
+                  </p>
+                  <p className="w-[18%] text-center text-white text-[10px] font-bold">
+                    Price
+                  </p>
+                  <p className="w-[12%] text-center text-white text-[10px] font-bold">
+                    Qty
+                  </p>
+                  <p className="w-[18%] text-center text-white text-[10px] font-bold">
+                    Amount
+                  </p>
+                </div>
+
+                {invoice.items.map((item, idx) => {
+                  const pieceCount = item.piece_count || 1;
+                  const totalPieces = item.quantity * pieceCount;
+                  const itemPrice = parseFloat(String(item.item_price)) || 0;
+                  const amount = itemPrice * item.quantity * pieceCount;
 
                   return (
                     <div
-                      key={oi.id}
-                      className="border border-slate-100 p-3 bg-white"
+                      key={item.id}
+                      className={`flex border-b border-dashed border-gray-300 py-2 px-1 items-center ${
+                        idx % 2 === 1 ? "bg-gray-50" : ""
+                      }`}
                     >
-                      <div className="flex justify-between">
-                        <p className="font-medium text-[16px] text-black">
-                          {oi.item_name}
-                        </p>
-                        <span className="font-semibold text-black">
-                          Rs. {amount.toLocaleString("en-IN")}
-                        </span>
+                      <div className="w-[30%] text-center">
+                        <p className="text-[10px] text-gray-800">{item.item_name}</p>
                       </div>
-
-                      <div className="flex justify-between text-xs text-black mt-1">
-                        <span className="bg-slate-100 px-1.5 py-0.5 rounded">
-                          {oi.size_group}
-                        </span>
-                        <span>
-                          {oi.quantity} × {pieceCount} = {totalPieces}
-                        </span>
+                      <p className="w-[22%] text-center text-[10px] text-gray-800">
+                        {item.size_group}
+                      </p>
+                      <p className="w-[18%] text-center text-[10px] text-gray-800">
+                        Rs. {itemPrice.toFixed(2)}/pc
+                      </p>
+                      <div className="w-[12%] text-center">
+                        <p className="text-[10px] text-gray-800">{item.quantity}</p>
+                        {pieceCount > 1 && (
+                          <p className="text-[9px] text-gray-500">
+                            ×{pieceCount}={totalPieces}pc
+                          </p>
+                        )}
                       </div>
+                      <p className="w-[18%] text-center text-[10px] text-gray-800">
+                        Rs. {amount.toLocaleString("en-IN")}
+                      </p>
                     </div>
                   );
                 })}
               </div>
 
-              {/* Totals */}
-              <div className="px-4 pb-6">
-                <div className=" bg-slate-50 border border-slate-100">
-                  <div className="flex justify-between px-4 py-2 text-sm">
-                    <span>Subtotal</span>
-                    <span>
-                      Rs. {invoice.total_price.toLocaleString("en-IN")}
-                    </span>
-                  </div>
-
-                  <div className="flex justify-between px-4 py-3 bg-slate-800 text-white font-semibold">
-                    <span>Total</span>
-                    <span>
-                      Rs. {invoice.total_price.toLocaleString("en-IN")}
-                    </span>
-                  </div>
+              {/* ── Total ── */}
+              <div className="flex justify-end mt-4">
+                <span className="bg-[#0f1f3d] text-white text-sm font-bold px-4 py-2">
+                  TOTAL:
+                </span>
+                <div className="border border-[#0f1f3d] px-6 py-2">
+                  <p className="text-[#0f1f3d] font-bold">
+                    Rs. {invoice.total_price.toLocaleString("en-IN")}
+                  </p>
                 </div>
+              </div>
+
+              {/* ── Footer ── */}
+              <div className="flex justify-center items-center mt-8">
+                <div className="flex-1 border-b border-gray-400 mb-1" />
+                <p className="text-sm text-gray-600 italic px-4">
+                  Thank you for your business!
+                </p>
+                <div className="flex-1 border-b border-gray-400 mb-1" />
               </div>
             </div>
 

@@ -4,6 +4,7 @@ from apps.items.models import Item
 from apps.items.models import ItemVariant
 from apps.customers.models import Customer
 from apps.agents.models import Agent
+from apps.business.models import Brand
 from apps.items.serializers import ItemSerializer
 
 
@@ -34,14 +35,7 @@ class SimpleCustomerSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Customer
-        fields = ["id", "name","contact"]
-
-
-# class SimpleItemSerializer(serializers.ModelSerializer):
-#
-#     class Meta:
-#         model = Item
-#         fields = ["id", "name", "price"]
+        fields = ["id", "name","contact", "address"]
 
 
 class SimpleAgentSerializer(serializers.ModelSerializer):
@@ -51,6 +45,20 @@ class SimpleAgentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Agent
         fields = ["id", "username","contact"]
+
+
+class SimpleBrandSerializer(serializers.ModelSerializer):
+    logo_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Brand
+        fields = ["id", "name", "phone", "email", "address_line1", "address_line2", "gst", "logo_url"]
+
+    def get_logo_url(self, obj):
+        request = self.context.get('request')
+        if obj.logo and request:
+            return request.build_absolute_uri(obj.logo.url)
+        return None
 
 
 class OrderItemSerializer(serializers.ModelSerializer):
@@ -89,16 +97,16 @@ class OrderItemSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         data = super().to_representation(instance)
         request = self.context.get('request')
-        
+
         variant_image = data.get('variant_image')
-        
+
         if not variant_image and request:
             if instance.variant and instance.variant.image:
                 variant_image = request.build_absolute_uri(instance.variant.image.url)
                 data['variant_image'] = variant_image
         elif variant_image and request and not variant_image.startswith('http'):
             data['variant_image'] = request.build_absolute_uri(variant_image)
-        
+
         return data
 
 
@@ -176,9 +184,8 @@ class InvoiceSerializer(serializers.ModelSerializer):
 
     customer = SimpleCustomerSerializer()
     agent = SimpleAgentSerializer()
-
     items = OrderItemSerializer(many=True)
-
+    brand = serializers.SerializerMethodField()
     total_price = serializers.SerializerMethodField()
 
     class Meta:
@@ -187,11 +194,22 @@ class InvoiceSerializer(serializers.ModelSerializer):
             "id",
             "customer",
             "agent",
+            "brand",
             "created_at",
             "status",
             "items",
             "total_price"
         ]
+
+    def get_brand(self, obj):
+        first_item = obj.items.first()
+        if first_item and first_item.item and first_item.item.brand:
+            serializer = SimpleBrandSerializer(
+                first_item.item.brand,
+                context=self.context
+            )
+            return serializer.data
+        return None
 
     def get_total_price(self, obj):
 
