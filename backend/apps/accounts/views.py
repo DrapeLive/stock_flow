@@ -1,6 +1,7 @@
 import uuid
 from datetime import timedelta
 
+from decouple import config
 from django.contrib.auth import get_user_model
 from django.core.mail import send_mail
 from django.utils import timezone
@@ -94,8 +95,8 @@ class ForgotPasswordView(APIView):
             user = User.objects.get(email__iexact=email)
         except User.DoesNotExist:
             return Response(
-                {"message": "If that email exists, a reset link has been sent."},
-                status=status.HTTP_200_OK,
+                {"error": "No account found with that email address."},
+                status=status.HTTP_404_NOT_FOUND,
             )
 
         PasswordResetToken.objects.filter(user=user, used=False).update(used=True)
@@ -106,7 +107,8 @@ class ForgotPasswordView(APIView):
             expires_at=timezone.now() + timedelta(minutes=30),
         )
 
-        reset_link = f"http://localhost:3000/reset-password?token={token.token}"
+        base_url = request.build_absolute_uri('/').rstrip('/')
+        reset_link = f"{base_url}/reset-password?token={token.token}"
 
         send_mail(
             subject="Reset your password",
@@ -132,7 +134,7 @@ class ForgotPasswordView(APIView):
                 </div>
                 """
             ),
-            from_email="a9f664001@smtp-brevo.com",
+            from_email=None,
             recipient_list=[user.email],
             fail_silently=False,
         )

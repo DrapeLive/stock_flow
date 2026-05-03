@@ -1,20 +1,17 @@
 "use client";
-// app/forgot-password/page.tsx
-// Place at:  src/app/forgot-password/page.tsx
 
 import { Input } from "@/components/ui/input";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { authApi } from "@/lib/api";
-import {
-  AlertCircle,
-  ArrowLeft,
-  CheckCircle2,
-  Package,
-  Send,
-} from "lucide-react";
+import { Send, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import { KeyboardEvent, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
+import { AuthCard } from "@/components/pages/auth/AuthCard";
+import { AuthBranding } from "@/components/pages/auth/AuthBranding";
+import { AuthAlert } from "@/components/pages/auth/AuthAlert";
+import { AuthSubmitButton } from "@/components/pages/auth/AuthSubmitButton";
+import { AuthBackLink } from "@/components/pages/auth/AuthBackLink";
 
 type Status = "idle" | "loading" | "success" | "error";
 
@@ -41,16 +38,15 @@ export default function ForgotPassword() {
       triggerShake();
       return;
     }
-
     setStatus("loading");
     try {
       await authApi.forgotPassword({ email: email.trim().toLowerCase() });
       setStatus("success");
     } catch (err: any) {
       setStatus("error");
-      const msg =
-        err?.response?.data?.error ?? "Something went wrong. Please try again.";
-      setErrorMsg(msg);
+      setErrorMsg(
+        err?.response?.data?.error ?? "Something went wrong. Please try again.",
+      );
       triggerShake();
     }
   };
@@ -61,30 +57,10 @@ export default function ForgotPassword() {
 
   return (
     <div className="flex min-h-screen min-w-full bg-gray-50 justify-center items-center px-6 py-10">
-      <div
-        className={cn(
-          "w-full max-w-sm bg-white shadow-xl rounded-3xl px-8 py-10 flex flex-col gap-8",
-          shake && "animate-shake",
-        )}
-        onAnimationEnd={() => setShake(false)}
-      >
-        {/* Branding */}
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-14 h-14 rounded-2xl bg-[var(--color-primary)] flex items-center justify-center shadow-lg">
-            <Package size={28} className="text-white" />
-          </div>
-          <div className="text-center">
-            <h1 className="text-2xl font-bold text-[var(--color-heading)] mb-0">
-              StockFlow
-            </h1>
-            <p className="text-[11px] text-[var(--color-text)] uppercase tracking-widest font-medium">
-              Order Management
-            </p>
-          </div>
-        </div>
+      <AuthCard shake={shake} onShakeEnd={() => setShake(false)}>
+        <AuthBranding />
 
         {status === "success" ? (
-          /* ── Success state ── */
           <div className="flex flex-col items-center gap-4 text-center">
             <div className="w-14 h-14 rounded-full bg-green-50 flex items-center justify-center">
               <CheckCircle2 size={30} className="text-green-500" />
@@ -116,7 +92,6 @@ export default function ForgotPassword() {
             </p>
           </div>
         ) : (
-          /* ── Form state ── */
           <>
             <div className="flex flex-col gap-1">
               <h2 className="text-lg font-semibold text-[var(--color-heading)]">
@@ -127,20 +102,7 @@ export default function ForgotPassword() {
               </p>
             </div>
 
-            {/* Error alert */}
-            {errorMsg && (
-              <div
-                role="alert"
-                aria-live="assertive"
-                className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm border bg-red-50 border-red-200 text-red-700"
-              >
-                <AlertCircle
-                  size={16}
-                  className="mt-0.5 shrink-0 text-red-400"
-                />
-                <p className="font-medium leading-snug">{errorMsg}</p>
-              </div>
-            )}
+            <AuthAlert message={errorMsg} />
 
             <div className="flex flex-col gap-5">
               <Field>
@@ -161,41 +123,19 @@ export default function ForgotPassword() {
                 />
               </Field>
 
-              <button
-                type="button"
-                disabled={status === "loading"}
+              <AuthSubmitButton
+                loading={status === "loading"}
+                icon={<Send size={16} />}
+                label="Send reset link"
+                loadingLabel="Sending…"
                 onClick={handleSubmit}
-                className={cn(
-                  "w-full flex items-center justify-center gap-2 py-3.5 rounded-xl text-base font-medium text-white transition-all",
-                  "bg-[var(--color-primary)] hover:opacity-90 active:scale-[0.98]",
-                  "disabled:opacity-60 disabled:cursor-not-allowed",
-                )}
-              >
-                {status === "loading" ? (
-                  <>
-                    <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                    Sending…
-                  </>
-                ) : (
-                  <>
-                    <Send size={16} />
-                    Send reset link
-                  </>
-                )}
-              </button>
+              />
             </div>
           </>
         )}
 
-        {/* Back to login */}
-        <Link
-          href="/"
-          className="flex items-center justify-center gap-1.5 text-sm text-[var(--color-text)] hover:text-[var(--color-primary)] transition-colors"
-        >
-          <ArrowLeft size={14} />
-          Back to sign in
-        </Link>
-      </div>
+        <AuthBackLink href="/" />
+      </AuthCard>
     </div>
   );
 }
