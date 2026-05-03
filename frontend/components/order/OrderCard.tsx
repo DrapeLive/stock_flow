@@ -5,6 +5,7 @@ import { getColorFromId } from "@/util/getColorFromId";
 import { User } from "lucide-react";
 import { useRouter } from "next/navigation";
 import StockflowAvatar from "../ui/custom/stockflowAvatar";
+import { isOrderViewed, markOrderAsViewed } from "@/lib/viewedOrders";
 
 interface OrderCardProps {
   order: Order;
@@ -45,6 +46,7 @@ const statusConfig: Record<
 export default function OrderCard({ order, onClick }: OrderCardProps) {
   const router = useRouter();
   const status = statusConfig[order.status || "PENDING"];
+  const viewed = isOrderViewed(order.id);
 
   const totalSets = order.total_sets || 0;
   const totalPieces = order.total_pieces || 0;
@@ -59,6 +61,7 @@ export default function OrderCard({ order, onClick }: OrderCardProps) {
   };
 
   const handleClick = () => {
+    markOrderAsViewed(order.id);
     if (onClick) {
       onClick();
     } else {
@@ -69,13 +72,22 @@ export default function OrderCard({ order, onClick }: OrderCardProps) {
   return (
     <div
       onClick={handleClick}
-      className="bg-white border border-gray-100 p-4 rounded-2xl hover:border-primary/30 hover:shadow-md transition-all cursor-pointer active:scale-[0.99]"
+      className={` border ${
+        viewed
+          ? "border-gray-100 bg-white"
+          : "border-gray-300 bg-gray-50 shadow-sm"
+      } p-4 rounded-2xl hover:border-primary/30 hover:shadow-md transition-all cursor-pointer active:scale-[0.99] relative`}
     >
+      {!viewed && (
+        <div className="absolute top-3 right-3 w-2.5 h-2.5 bg-primary rounded-full" />
+      )}
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
           <StockflowAvatar user={order.customer_details} />
           <div className="min-w-0">
-            <h6 className="font-bold text-gray-900 text-sm truncate leading-tight">
+            <h6
+              className={`font-bold text-sm truncate leading-tight ${!viewed ? "text-gray-900" : "text-gray-700"}`}
+            >
               {order.customer_details?.name || "Unknown Customer"}
             </h6>
             <p className="text-xs text-gray-400 mt-0.5">

@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { orderApi } from "@/lib/api/order";
+import { customerApi } from "@/lib/api/customer";
 import { toastError } from "@/lib/toast";
 import { OrderAllResponse } from "@/types/order";
+import { CustomerAllResponse } from "@/types/customer";
 import groupOrders from "@/util/groupOrders";
 import { PageLoading } from "@/components/ui/Loading";
 import { useRouter } from "next/navigation";
@@ -12,6 +14,7 @@ import OrderListHeader from "@/components/pages/agent/order/OrderListHeader";
 import EmptyState from "@/components/ui/EmptyState";
 import FilterBar from "@/components/ui/FilterBar";
 import FilterToggle from "@/components/ui/FilterToggle";
+import SearchBar from "@/components/ui/SearchBar";
 
 export default function Home() {
   const [data, setData] = useState<OrderAllResponse>([]);
@@ -20,6 +23,9 @@ export default function Home() {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [showFilters, setShowFilters] = useState(false);
+  const [search, setSearch] = useState("");
+  const [customers, setCustomers] = useState<CustomerAllResponse>([]);
+  const [selectedCustomer, setSelectedCustomer] = useState("all");
 
   const router = useRouter();
 
@@ -45,17 +51,44 @@ export default function Home() {
     fetchData();
   }, [fromDate, toDate]);
 
+  useEffect(() => {
+    customerApi
+      .getAll()
+      .then((customers) => {
+        setCustomers(customers);
+      })
+      .catch(console.error);
+  }, []);
+
   const sortedData = [...data].sort(
     (a, b) =>
       new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
   );
 
   const { pendingPacked } = groupOrders(sortedData);
-  const order_len = pendingPacked.length;
+
+  const filteredOrders = pendingPacked.filter((order) => {
+    if (selectedCustomer !== "all" && order.customer_details?.id !== Number(selectedCustomer)) {
+      return false;
+    }
+    if (search) {
+      const s = search.toLowerCase();
+      return (
+        order.customer_details?.name?.toLowerCase().includes(s) ||
+        order.agent_details?.username?.toLowerCase().includes(s) ||
+        order.id.toString().includes(s)
+      );
+    }
+    return true;
+  });
+
+  const order_len = filteredOrders.length;
 
   const handleClearFilters = () => {
     setFromDate("");
     setToDate("");
+    setSelectedCustomer("all");
+    setSearch("");
     setShowFilters(false);
   };
 
@@ -79,20 +112,31 @@ export default function Home() {
         handleToggleFilters={handleToggleFilters}
       />
 
+      <div className="mb-4">
+        <SearchBar
+          value={search}
+          onChange={setSearch}
+          placeholder="Search by customer or order ID..."
+        />
+      </div>
+
       <FilterBar
         fromDate={fromDate}
         toDate={toDate}
         onFromDateChange={setFromDate}
         onToDateChange={setToDate}
+        customers={customers.map((c) => ({ id: c.id, name: c.name }))}
+        selectedCustomer={selectedCustomer}
+        onCustomerChange={setSelectedCustomer}
         isOpen={showFilters}
         onClear={handleClearFilters}
       />
 
       {order_len === 0 ? (
-        <EmptyState title="No Active Orders" />
+        <EmptyState title={search || selectedCustomer !== "all" ? "No matching orders" : "No Active Orders"} />
       ) : (
         <div className="space-y-3 pb-32">
-          {pendingPacked?.map((order) => (
+          {filteredOrders.map((order) => (
             <OrderCard
               key={order.id}
               order={order}
