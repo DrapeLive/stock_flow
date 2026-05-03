@@ -34,27 +34,28 @@ export default function OrderItemRow({
 
   return (
     <div
-      className={`flex items-center gap-3  border-b border-gray-50 py-4 px-2 ${
+      className={`flex items-center gap-3  border-b border-gray-50 py-4 px-1 ${
         isPacked ? "bg-green-50" : isOutOfStock ? "bg-red-50" : "bg-white"
       }`}
     >
-      {showDelete && onDelete && (
-        <button
-          onClick={() => onDelete(item.id)}
-          className="flex items-center justify-center p-2 flex-shrink-0 hover:cursor-pointer"
-        >
-          <Trash2 className="text-red-500 w-4 h-4" />
-        </button>
-      )}
-
-      {showEdit && onEdit && (
-        <button
-          onClick={() => onEdit(item)}
-          className="flex items-center justify-center p-2 flex-shrink-0"
-        >
-          <Pencil className="text-primary w-4 h-4" />
-        </button>
-      )}
+      <div>
+        {showEdit && onEdit && (
+          <button
+            onClick={() => onEdit(item)}
+            className="flex items-center justify-center p-2 flex-shrink-0"
+          >
+            <Pencil className="text-primary w-4 h-4" />
+          </button>
+        )}
+        {showDelete && onDelete && (
+          <button
+            onClick={() => onDelete(item.id)}
+            className="flex items-center justify-center p-2 flex-shrink-0 hover:cursor-pointer"
+          >
+            <Trash2 className="text-red-500 w-4 h-4" />
+          </button>
+        )}
+      </div>
 
       {showPackedToggle && onTogglePacked && (
         <button

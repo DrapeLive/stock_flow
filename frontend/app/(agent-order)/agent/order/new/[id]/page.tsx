@@ -45,7 +45,10 @@ export default function OrderDetailsPage() {
   const duplicateGroups = (() => {
     if (!orders?.items.length) return [];
 
-    const map = new Map<string, Array<{ id: number; quantity: number; item_name: string }>>();
+    const map = new Map<
+      string,
+      Array<{ id: number; quantity: number; item_name: string }>
+    >();
     for (const item of orders.items) {
       const key = `${item.item?.id ?? "unknown"}-${item.variant ?? "none"}-${item.size_group ?? "none"}`;
       const group = map.get(key) || [];
@@ -63,8 +66,11 @@ export default function OrderDetailsPage() {
         const total = items.reduce((sum, i) => sum + i.quantity, 0);
         groups.push({
           item_name: items[0].item_name,
-          size_group: items[0].quantity > 0 ? (orders.items.find(o => o.id === items[0].id)?.size_group || "") : "",
-          items: items.map(i => ({ id: i.id, quantity: i.quantity })),
+          size_group:
+            items[0].quantity > 0
+              ? orders.items.find((o) => o.id === items[0].id)?.size_group || ""
+              : "",
+          items: items.map((i) => ({ id: i.id, quantity: i.quantity })),
           total,
         });
       }
@@ -177,6 +183,16 @@ export default function OrderDetailsPage() {
     fetchData();
   }, [id]);
 
+  const handleDeleteItem = (itemId: number) => {
+    setOrders((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        items: prev.items.filter((item) => item.id !== itemId),
+      };
+    });
+  };
+
   useEffect(() => {
     if (loadError) {
       toastError("Server Error");
@@ -210,7 +226,7 @@ export default function OrderDetailsPage() {
         </div>
       </div>
 
-      <div className="max-w-md mx-auto px-6 pt-8">
+      <div className="max-w-md px-2 pt-8">
         {/* Customer Card */}
         <div className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm flex items-center gap-4 mb-8">
           <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center border border-primary/5">
@@ -271,6 +287,7 @@ export default function OrderDetailsPage() {
                 isDeletable={true}
                 isEditable={true}
                 outOfStockItemIds={outOfStockItemIds}
+                onDeleteItem={handleDeleteItem}
               />
             </div>
           )}
@@ -409,7 +426,8 @@ export default function OrderDetailsPage() {
                 </button>
               </div>
               <p className="text-sm text-gray-500 mb-4">
-                Some items have the same color and size range. They will be combined into one item with the total quantity.
+                Some items have the same color and size range. They will be
+                combined into one item with the total quantity.
               </p>
               <div className="space-y-3 mb-6 max-h-48 overflow-y-auto">
                 {duplicateGroups.map((group, idx) => (
@@ -423,12 +441,18 @@ export default function OrderDetailsPage() {
                     <p className="text-xs mt-1">
                       {group.items.map((item, i) => (
                         <span key={item.id}>
-                          <span className="font-semibold text-gray-700">{item.quantity}</span>
-                          {i < group.items.length - 1 && <span className="text-gray-400"> + </span>}
+                          <span className="font-semibold text-gray-700">
+                            {item.quantity}
+                          </span>
+                          {i < group.items.length - 1 && (
+                            <span className="text-gray-400"> + </span>
+                          )}
                         </span>
                       ))}
                       <span className="text-gray-400"> = </span>
-                      <span className="font-bold text-amber-600">{group.total} sets</span>
+                      <span className="font-bold text-amber-600">
+                        {group.total} sets
+                      </span>
                     </p>
                   </div>
                 ))}

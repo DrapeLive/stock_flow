@@ -20,14 +20,17 @@ function getAvailableStockForSizeGroup(
   sizeGroup: string,
   reservedItems: Array<{ size_group: string; quantity: number }>,
 ): number {
-  const selectedSizes = SIZE_RANGE_TO_SIZES[sizeGroup as FrontendSizeRange] || [];
+  const selectedSizes =
+    SIZE_RANGE_TO_SIZES[sizeGroup as FrontendSizeRange] || [];
   if (selectedSizes.length === 0) return 0;
 
   const remainingStocks = selectedSizes.map((selectedSize) => {
-    const baseStock = variantSizes.find((s) => s.size === selectedSize)?.stock || 0;
+    const baseStock =
+      variantSizes.find((s) => s.size === selectedSize)?.stock || 0;
 
     const reservedForThisSize = reservedItems.reduce((sum, item) => {
-      const itemSizes = SIZE_RANGE_TO_SIZES[item.size_group as FrontendSizeRange] || [];
+      const itemSizes =
+        SIZE_RANGE_TO_SIZES[item.size_group as FrontendSizeRange] || [];
       if (itemSizes.includes(selectedSize)) {
         return sum + item.quantity;
       }
@@ -180,6 +183,7 @@ const OrderItem: React.FC<Props> = ({
 
   const onDelete = async (itemId: number, orderId?: number) => {
     if (onDeleteItem) {
+      await orderApi.deleteItem(orderId!, itemId);
       onDeleteItem(itemId);
       return;
     }
@@ -250,11 +254,19 @@ const OrderItem: React.FC<Props> = ({
       return;
     }
 
-    const reservedItems = orderItems
-      ?.filter((item) => item.id !== editingItem.id)
-      .map((item) => ({ size_group: item.size_group || "", quantity: item.quantity })) || [];
+    const reservedItems =
+      orderItems
+        ?.filter((item) => item.id !== editingItem.id)
+        .map((item) => ({
+          size_group: item.size_group || "",
+          quantity: item.quantity,
+        })) || [];
 
-    const maxAvailable = getAvailableStockForSizeGroup(variantSizes, editSizeGroup, reservedItems);
+    const maxAvailable = getAvailableStockForSizeGroup(
+      variantSizes,
+      editSizeGroup,
+      reservedItems,
+    );
     if (editQuantity > maxAvailable) {
       setQuantityError(
         `Only ${maxAvailable} sets available for this size group`,
@@ -301,7 +313,7 @@ const OrderItem: React.FC<Props> = ({
 
   return (
     <>
-      <div className="pt-3 space-y-1">
+      <div className="pt-0 space-y-1">
         {orderItems
           ?.filter((item) => {
             if (!isDispatching) return true;
@@ -424,19 +436,26 @@ const OrderItem: React.FC<Props> = ({
                       {sizeGroupError}
                     </p>
                   )}
-                    {editSizeGroup &&
+                  {editSizeGroup &&
                     !sizeGroupError &&
-                    variantSizes.length > 0 && (() => {
-                      const reservedItems = orderItems
-                        ?.filter((item) => item.id !== editingItem.id)
-                        .map((item) => ({ size_group: item.size_group || "", quantity: item.quantity })) || [];
-                      const available = getAvailableStockForSizeGroup(variantSizes, editSizeGroup, reservedItems);
+                    variantSizes.length > 0 &&
+                    (() => {
+                      const reservedItems =
+                        orderItems
+                          ?.filter((item) => item.id !== editingItem.id)
+                          .map((item) => ({
+                            size_group: item.size_group || "",
+                            quantity: item.quantity,
+                          })) || [];
+                      const available = getAvailableStockForSizeGroup(
+                        variantSizes,
+                        editSizeGroup,
+                        reservedItems,
+                      );
                       return (
                         <div className="flex w-full justify-between mt-1">
                           <p className="text-xs text-gray-500">
-                            Available:{" "}
-                            {available}{" "}
-                            sets
+                            Available: {available} sets
                           </p>
                           <p className="text-xs text-gray-500">
                             {editPieceCount} pcs/set
@@ -469,15 +488,23 @@ const OrderItem: React.FC<Props> = ({
                   )}
                   {editSizeGroup &&
                     !quantityError &&
-                    variantSizes.length > 0 && (() => {
-                      const reservedItems = orderItems
-                        ?.filter((item) => item.id !== editingItem.id)
-                        .map((item) => ({ size_group: item.size_group || "", quantity: item.quantity })) || [];
-                      const available = getAvailableStockForSizeGroup(variantSizes, editSizeGroup, reservedItems);
+                    variantSizes.length > 0 &&
+                    (() => {
+                      const reservedItems =
+                        orderItems
+                          ?.filter((item) => item.id !== editingItem.id)
+                          .map((item) => ({
+                            size_group: item.size_group || "",
+                            quantity: item.quantity,
+                          })) || [];
+                      const available = getAvailableStockForSizeGroup(
+                        variantSizes,
+                        editSizeGroup,
+                        reservedItems,
+                      );
                       return (
                         <p className="text-xs text-gray-500 mt-1">
-                          Max available:{" "}
-                          {available} sets
+                          Max available: {available} sets
                         </p>
                       );
                     })()}
