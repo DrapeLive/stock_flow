@@ -13,5 +13,15 @@ export const authApi = {
     return res.data;
   },
 
+  forgotPassword: async (data: { email: string }) => {
+    const res = await api.post("/api/auth/forgot-password/", data);
+    return res.data;
+  },
+
+  resetPassword: async (data: { token: string; password: string }) => {
+    const res = await api.post("/api/auth/reset-password/", data);
+    return res.data;
+  },
+
   logout() {},
 };
