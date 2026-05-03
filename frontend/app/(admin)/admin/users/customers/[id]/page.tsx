@@ -47,8 +47,11 @@ export default function CustomerDetailPage() {
           agentApi.getAll(),
           orderApi.getByCustomer(numericId),
         ]);
+        const filteredOrders = ordersData.filter(
+          (eachOrder) => eachOrder.status != "DRAFT",
+        );
         setCustomer(customerData);
-        setOrders(ordersData);
+        setOrders(filteredOrders);
         setFormData({
           name: customerData.name,
           address: customerData.address,

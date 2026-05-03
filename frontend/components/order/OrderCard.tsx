@@ -79,7 +79,7 @@ export default function OrderCard({ order, onClick }: OrderCardProps) {
               {order.customer_details?.name || "Unknown Customer"}
             </h6>
             <p className="text-xs text-gray-400 mt-0.5">
-              {order.items.map((item) => item.item_name).join(", ")}
+              {order.agent_details.username}
             </p>
             <p className="text-xs text-gray-400 mt-0.5">
               {formatDate(order.created_at)}
