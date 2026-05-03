@@ -8,7 +8,7 @@ export function AuthBranding() {
       </div>
       <div className="text-center">
         <h1 className="text-2xl font-bold text-[var(--color-heading)] mb-0">
-          StockFlow
+          XL Apparals
         </h1>
         <p className="text-[11px] text-[var(--color-text)] uppercase tracking-widest font-medium">
           Order Management

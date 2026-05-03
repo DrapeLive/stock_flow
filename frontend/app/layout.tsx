@@ -12,7 +12,7 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: "Stock Flow",
+  title: "XL Apparals",
   description: "Control your stock seamlessly.",
   appleWebApp: {
     capable: true,
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
     title: "StockFlow",
     description: "Control your stock seamlessly",
     url: "https://stockflow-sigma.vercel.app",
-    siteName: "Stock Flow",
+    siteName: "XL Apparals",
     images: [
       {
         url: "/opengraph.jpg",

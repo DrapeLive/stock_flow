@@ -4,7 +4,6 @@ import { Input } from "@/components/ui/input";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { authApi } from "@/lib/api";
 import { Send, CheckCircle2 } from "lucide-react";
-import Link from "next/link";
 import { KeyboardEvent, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { AuthCard } from "@/components/pages/auth/AuthCard";
