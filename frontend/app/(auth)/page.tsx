@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { AuthCard } from "@/components/pages/auth/AuthCard";
 import { AuthBranding } from "@/components/pages/auth/AuthBranding";
-import { AuthAlert } from "@/components/pages/auth/AuthAlert";
+import { AuthAlert } from "@/components/pages/auth/authAlert";
 import { AuthSubmitButton } from "@/components/pages/auth/AuthSubmitButton";
 import { PasswordInput } from "@/components/pages/auth/PasswordInput";
 import { Input } from "@/components/ui/input";
