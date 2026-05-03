@@ -486,7 +486,7 @@ class AddOrderItemView(APIView):
         existing = order.items.first()
         if existing and existing.item_type != item.type:
             return Response(
-                {"error": "Order can only contain items of one type"},
+                {"error": f"Order can only contain items of {existing.item_type} type"},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
