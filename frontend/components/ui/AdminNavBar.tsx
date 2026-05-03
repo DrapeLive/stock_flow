@@ -48,7 +48,7 @@ const AdminNavBar: React.FC = () => {
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center pointer-events-none pb-[env(safe-area-inset-bottom,1.5rem)] mb-4">
-      <div className="bg-white/70 backdrop-blur-2xl border border-white/40 w-[calc(100%-2rem)] max-w-md pointer-events-auto py-2.5 px-4 flex items-center justify-between shadow-[0_20px_50px_-12px_rgba(0,0,0,0.2)] rounded-[2rem] mx-auto transition-all duration-500">
+      <div className="bg-white/70 backdrop-blur-2xl border border-white/40 w-[calc(100%-2rem)] max-w-md pointer-events-auto py-2.5 px-4 flex items-center justify-between shadow-[0_20px_50px_-12px_rgba(0,0,0,0.2)] rounded-xl mx-auto transition-all duration-500">
         {navItems.map((item) => {
           const isActive =
             pathname === item.path ||
@@ -58,7 +58,7 @@ const AdminNavBar: React.FC = () => {
             <button
               key={item.path}
               onClick={() => router.push(item.path)}
-              className={`flex flex-col items-center justify-center flex-1 h-14 relative group active:scale-90 ${isActive ? "bg-primary text-white shadow-lg rounded-[2rem]" : "text-gray-400 hover:text-gray-600"}`}
+              className={`flex flex-col items-center justify-center flex-1 h-14 relative group active:scale-90 ${isActive ? "bg-primary text-white shadow-lg rounded-xl" : "text-gray-400 hover:text-gray-600"}`}
             >
               <div
                 className={`
@@ -73,7 +73,7 @@ const AdminNavBar: React.FC = () => {
               </div>
               <span
                 className={`
-                text-[8px] font-black uppercase tracking-[0.15em] transition-all duration-300 mt-1
+                text-[8px] font-semibold uppercase transition-all duration-300 mt-1
                 ${isActive ? "opacity-100" : "opacity-60"}
               `}
               >

@@ -21,7 +21,7 @@ const formatDate = (dateStr: string) => {
 export default function OrderCard({ order, onClick }: OrderCardProps) {
   if (order.items.length === 0) return null;
 
-  const viewed = isOrderViewed(order.id);
+  const viewed = true; // Temporary removal
 
   const handleClick = () => {
     markOrderAsViewed(order.id);
@@ -57,7 +57,9 @@ export default function OrderCard({ order, onClick }: OrderCardProps) {
             <User size={18} color="white" className="text-primary" />
           </div>
           <div className="min-w-0">
-            <h6 className={`font-bold text-sm truncate leading-tight ${!viewed ? "text-gray-900" : "text-gray-700"}`}>
+            <h6
+              className={`font-bold text-sm truncate leading-tight ${!viewed ? "text-gray-900" : "text-gray-700"}`}
+            >
               {order.customer_details?.name || "Unknown Customer"}
             </h6>
             <p className="text-xs text-gray-400 mt-0.5">
