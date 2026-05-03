@@ -21,6 +21,7 @@ import {
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { deriveUsername } from "@/lib/utils/deriveUsername";
 import type { Business } from "@/types/auth";
 import type { Brand } from "@/types/brand";
 
@@ -28,8 +29,9 @@ export default function NewAdminPage() {
   const router = useRouter();
   const { business, isSuperuser } = useAuth();
   const [brands, setBrands] = useState<Brand[]>([]);
+  const [existingUsernames, setExistingUsernames] = useState<Set<string>>(new Set());
   const [formData, setFormData] = useState({
-    adminName: "",
+    displayName: "",
     email: "",
     password: "",
     business: isSuperuser ? "" : (business ?? ""),
@@ -42,6 +44,9 @@ export default function NewAdminPage() {
     if (isSuperuser) {
       brandApi.getAll().then(setBrands).catch(() => setBrands([]));
     }
+    adminApi.getAll().then((admins) => {
+      setExistingUsernames(new Set(admins.map((a) => a.username)));
+    }).catch(() => {});
   }, [isSuperuser]);
 
   const handleChange = (key: string, value: string) => {
@@ -60,7 +65,7 @@ export default function NewAdminPage() {
 
   const validate = () => {
     const newErrors: Record<string, string> = {};
-    if (!formData.adminName.trim()) newErrors.adminName = "Name is required";
+    if (!formData.displayName.trim()) newErrors.displayName = "Name is required";
     if (!formData.email.trim()) {
       newErrors.email = "Email is required";
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
@@ -86,8 +91,10 @@ export default function NewAdminPage() {
 
     setIsSubmitting(true);
     try {
+      const username = deriveUsername(formData.displayName, existingUsernames);
       await adminApi.create({
-        username: formData.adminName,
+        username,
+        display_name: formData.displayName,
         email: formData.email,
         password: formData.password,
         business: isSuperuser ? (formData.business as Business) : null,
@@ -128,15 +135,20 @@ export default function NewAdminPage() {
         <FieldGroup className="space-y-6 flex-1">
           <Field>
             <div className="flex justify-between items-center mb-1.5">
-              <FieldLabel className="text-xs font-bold uppercase tracking-widest text-gray-400">Admin Username</FieldLabel>
-              {errors.adminName && <span className="text-[10px] text-red-500 font-bold">{errors.adminName}</span>}
+              <FieldLabel className="text-xs font-bold uppercase tracking-widest text-gray-400">Display Name</FieldLabel>
+              {errors.displayName && <span className="text-[10px] text-red-500 font-bold">{errors.displayName}</span>}
             </div>
             <Input
-              placeholder="e.g. admin_jane"
-              value={formData.adminName}
-              onChange={(e) => handleChange("adminName", e.target.value)}
-              className={`bg-white border-gray-100 rounded-xl h-12 focus:ring-primary/10 ${errors.adminName ? "border-red-200 focus:border-red-300" : "focus:border-primary"}`}
+              placeholder="e.g. Jane Smith"
+              value={formData.displayName}
+              onChange={(e) => handleChange("displayName", e.target.value)}
+              className={`bg-white border-gray-100 rounded-xl h-12 focus:ring-primary/10 ${errors.displayName ? "border-red-200 focus:border-red-300" : "focus:border-primary"}`}
             />
+            {formData.displayName.trim() && (
+              <p className="mt-1.5 text-[11px] text-gray-400">
+                Username: <span className="font-mono font-medium text-gray-600">{deriveUsername(formData.displayName, existingUsernames)}</span>
+              </p>
+            )}
           </Field>
 
           <Field>

@@ -64,7 +64,7 @@ export default function Profile() {
                 Username
               </p>
               <h3 className="text-base font-bold text-gray-800">
-                {profile?.username || "N/A"}
+                {profile?.display_name || profile?.username || "N/A"}
               </h3>
             </div>
           </div>

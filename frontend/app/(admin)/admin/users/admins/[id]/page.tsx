@@ -18,6 +18,7 @@ import {
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 import { Trash2, ArrowLeft, ShieldAlert, Pencil, Eye } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { deriveUsername } from "@/lib/utils/deriveUsername";
 import type { Brand } from "@/types/brand";
 
 function getColorFromId(id: number): string {
@@ -34,6 +35,7 @@ export default function AdminDetailPage() {
   const [brands, setBrands] = useState<Brand[]>([]);
   const [formData, setFormData] = useState({
     username: "",
+    display_name: "",
     email: "",
     brand_id: "",
   });
@@ -50,6 +52,7 @@ export default function AdminDetailPage() {
         setAdmin(data);
         setFormData({
           username: data.username,
+          display_name: data.display_name || "",
           email: data.email,
           brand_id: data.brand_id ? String(data.brand_id) : "",
         });
@@ -77,8 +80,10 @@ export default function AdminDetailPage() {
     setSaving(true);
     try {
       const numericId = parseInt(id as string, 10);
+      const username = deriveUsername(formData.display_name || formData.username);
       await adminApi.update(numericId, {
-        username: formData.username,
+        username,
+        display_name: formData.display_name,
         email: formData.email,
         brand_id: formData.brand_id ? parseInt(formData.brand_id) : undefined,
       });
@@ -176,7 +181,7 @@ export default function AdminDetailPage() {
             className={isEditing ? "text-amber-500" : "text-gray-600"}
           />
         </div>
-        <h2 className="text-2xl font-black text-gray-900">{admin.username}</h2>
+        <h2 className="text-2xl font-black text-gray-900">{admin.display_name || admin.username}</h2>
         <span className="text-xs font-bold text-gray-400 mt-1 font-mono tracking-tighter">
           ADMINISTRATOR
         </span>
@@ -189,12 +194,28 @@ export default function AdminDetailPage() {
             <FieldGroup className="space-y-6">
               <Field>
                 <FieldLabel className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 block">
-                  System username
+                  Display Name
                 </FieldLabel>
                 <Input
-                  value={formData.username}
-                  onChange={(e) => handleChange("username", e.target.value)}
+                  value={formData.display_name}
+                  onChange={(e) => handleChange("display_name", e.target.value)}
                   className="bg-white border-gray-100 rounded-xl h-12 font-bold"
+                />
+                {formData.display_name.trim() && (
+                  <p className="mt-1.5 text-[11px] text-gray-400">
+                    Username: <span className="font-mono font-medium text-gray-600">{deriveUsername(formData.display_name)}</span>
+                  </p>
+                )}
+              </Field>
+
+              <Field>
+                <FieldLabel className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 block">
+                  System Username (auto-derived)
+                </FieldLabel>
+                <Input
+                  value={deriveUsername(formData.display_name || formData.username)}
+                  disabled
+                  className="bg-gray-50 border-gray-100 rounded-xl h-12 font-mono text-sm"
                 />
               </Field>
 
@@ -254,6 +275,14 @@ export default function AdminDetailPage() {
           {/* View Mode - Compact Details */}
           <div className="bg-gray-50 border border-gray-100 rounded-2xl p-4 mb-6 w-full">
             <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-xs font-bold text-gray-400 uppercase">
+                  Display Name
+                </span>
+                <span className="text-sm font-medium text-gray-900">
+                  {admin.display_name || "—"}
+                </span>
+              </div>
               <div className="flex justify-between items-center">
                 <span className="text-xs font-bold text-gray-400 uppercase">
                   Username

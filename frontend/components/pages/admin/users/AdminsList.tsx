@@ -85,7 +85,7 @@ const AdminsList: React.FC = () => {
 
             <div className="flex-1 min-w-0 px-2">
               <h6 className="font-bold text-gray-900 text-base truncate leading-tight">
-                {item.username}
+                {item.display_name || item.username}
               </h6>
               <p className="text-xs text-gray-400 truncate mt-1 leading-tight font-medium">
                 {item.email}

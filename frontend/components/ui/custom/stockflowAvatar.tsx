@@ -11,11 +11,13 @@ interface stockflowAvatarProps {
 
 const StockflowAvatar: React.FC<stockflowAvatarProps> = ({ user }) => {
   const username =
-    user && "username" in user && user.username
-      ? user.username
-      : user && "name" in user && user.name
-        ? user.name
-        : "";
+    user && "display_name" in user && (user as any).display_name
+      ? (user as any).display_name
+      : user && "username" in user && user.username
+        ? user.username
+        : user && "name" in user && user.name
+          ? user.name
+          : "";
   return (
     <div
       className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 border border-gray-100 shadow-sm"

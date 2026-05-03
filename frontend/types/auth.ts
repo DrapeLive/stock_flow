@@ -28,6 +28,7 @@ export interface AuthUser {
 export interface UserProfile {
   id: number;
   username: string;
+  display_name?: string;
   email: string;
   role: Role;
   business?: Business | null;

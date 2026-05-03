@@ -98,7 +98,7 @@ class AgentItemSerializer(serializers.ModelSerializer):
 class AgentUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields=('id', 'username','email', 'role')
+        fields=('id', 'username','email', 'role', 'display_name')
 
 
 class AgentSerializer(serializers.ModelSerializer):
@@ -106,13 +106,19 @@ class AgentSerializer(serializers.ModelSerializer):
     username = serializers.CharField(write_only=True)
     password = serializers.CharField(write_only=True)
     email = serializers.EmailField(write_only=True)
+    display_name = serializers.CharField(write_only=True, required=False, allow_blank=True)
 
     total_customers = serializers.SerializerMethodField()
     assigned_items = serializers.SerializerMethodField()
 
     class Meta:
         model = Agent
-        fields = ('id', 'username', 'user', 'email', 'password', 'contact', 'total_customers', 'assigned_items')
+        fields = ('id', 'username', 'user', 'email', 'password', 'contact', 'total_customers', 'assigned_items', 'display_name')
+
+    def validate_username(self, value):
+        if User.objects.filter(username=value).exists():
+            raise serializers.ValidationError(f'Username "{value}" is already taken.')
+        return value
 
     def get_total_customers(self, obj):
         return obj.customers.count()
@@ -125,11 +131,13 @@ class AgentSerializer(serializers.ModelSerializer):
         ]
 
     def create(self, validated_data):
+        display_name = validated_data.pop('display_name', '')
         user = User.objects.create(
             username=validated_data["username"],
             email=validated_data["email"],
             password=make_password(validated_data["password"]),
-            role="AGENT"
+            role="AGENT",
+            display_name=display_name
         )
 
         agent = Agent.objects.create(
@@ -150,6 +158,9 @@ class AgentSerializer(serializers.ModelSerializer):
 
         if 'password' in validated_data:
             user.password = make_password(validated_data['password'])
+
+        if 'display_name' in validated_data:
+            user.display_name = validated_data['display_name']
 
         user.save()
 

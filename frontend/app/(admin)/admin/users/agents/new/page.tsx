@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Field,
   FieldContent,
@@ -11,17 +11,25 @@ import { Input } from "@/components/ui/input";
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 import { agentApi } from "@/lib/api/agents";
 import { toastSuccess, toastError } from "@/lib/toast";
+import { deriveUsername } from "@/lib/utils/deriveUsername";
 import { useRouter } from "next/navigation";
 
 export default function NewAgentPage() {
   const [formData, setFormData] = useState({
-    agentName: "",
+    displayName: "",
     email: "",
     contactNumber: "",
     password: "",
   });
+  const [existingUsernames, setExistingUsernames] = useState<Set<string>>(new Set());
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    agentApi.getAll().then((agents) => {
+      setExistingUsernames(new Set(agents.map((a) => a.user.username)));
+    }).catch(() => {});
+  }, []);
 
   const router = useRouter();
 
@@ -41,7 +49,7 @@ export default function NewAgentPage() {
 
   const validate = () => {
     const newErrors: Record<string, string> = {};
-    if (!formData.agentName.trim()) newErrors.agentName = "Name is required";
+    if (!formData.displayName.trim()) newErrors.displayName = "Name is required";
     if (!formData.email.trim()) {
       newErrors.email = "Email is required";
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
@@ -64,8 +72,10 @@ export default function NewAgentPage() {
 
     setIsSubmitting(true);
     try {
+      const username = deriveUsername(formData.displayName, existingUsernames);
       const payload = {
-        username: formData.agentName,
+        username,
+        display_name: formData.displayName,
         email: formData.email,
         contact: formData.contactNumber,
         password: formData.password,
@@ -100,20 +110,25 @@ export default function NewAgentPage() {
           <Field>
             <div className="flex justify-between items-center mb-1.5">
               <FieldLabel className="text-xs font-bold uppercase tracking-widest text-gray-400">
-                Agent Name
+                Display Name
               </FieldLabel>
-              {errors.agentName && (
+              {errors.displayName && (
                 <span className="text-[10px] text-red-500 font-bold">
-                  {errors.agentName}
+                  {errors.displayName}
                 </span>
               )}
             </div>
             <Input
               placeholder="e.g. John Doe"
-              value={formData.agentName}
-              onChange={(e) => handleChange("agentName", e.target.value)}
-              className={`bg-white border-gray-100 rounded-xl h-12 focus:ring-primary/10 ${errors.agentName ? "border-red-200 focus:border-red-300" : "focus:border-primary"}`}
+              value={formData.displayName}
+              onChange={(e) => handleChange("displayName", e.target.value)}
+              className={`bg-white border-gray-100 rounded-xl h-12 focus:ring-primary/10 ${errors.displayName ? "border-red-200 focus:border-red-300" : "focus:border-primary"}`}
             />
+            {formData.displayName.trim() && (
+              <p className="mt-1.5 text-[11px] text-gray-400">
+                Username: <span className="font-mono font-medium text-gray-600">{deriveUsername(formData.displayName, existingUsernames)}</span>
+              </p>
+            )}
           </Field>
 
           <Field>

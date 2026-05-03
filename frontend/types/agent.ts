@@ -5,6 +5,7 @@ export interface AgentUser {
   username: string;
   email: string;
   role?: Role;
+  display_name?: string;
 }
 
 export interface SizeRange {
@@ -39,6 +40,7 @@ export interface AgentRequest {
   username: string;
   email: string;
   password: string;
+  display_name?: string;
   contact: string;
 }
 
@@ -46,6 +48,7 @@ export interface AgentUpdateRequest {
   username?: string;
   email?: string;
   password?: string;
+  display_name?: string;
   contact?: string;
 }
 
