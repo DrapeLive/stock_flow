@@ -17,6 +17,8 @@ import SearchBar from "@/components/ui/SearchBar";
 import Pagination from "@/components/ui/Pagination";
 import useSessionStorage from "@/hooks/useSessionStorage";
 
+type ItemTypeTab = "gents" | "kids";
+
 interface AgentOrderListProps {
   pageOrderStatus?: "PROCESSING" | "COMPLETED";
 }
@@ -45,14 +47,17 @@ export default function AgentOrderList({
   const [debouncedSearch, setDebouncedSearch] = useState(search);
   const [loading, setLoading] = useState(true);
   const [isFetching, setIsFetching] = useState(false);
+  const [activeTab, setActiveTab] = useSessionStorage<ItemTypeTab>(
+    "agent_itemTypeTab",
+    "gents",
+  );
 
   const router = useRouter();
 
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(search);
-    }, 400); // 300–500ms sweet spot
-
+    }, 400);
     return () => clearTimeout(timer);
   }, [search]);
 
@@ -68,7 +73,7 @@ export default function AgentOrderList({
             page_size: pageSize,
             search: debouncedSearch,
             status:
-              pageOrderStatus == "PROCESSING"
+              pageOrderStatus === "PROCESSING"
                 ? ["PENDING", "PACKED"]
                 : ["DISPATCHED"],
             customer: selectedCustomer !== "all" ? selectedCustomer : undefined,
@@ -85,7 +90,6 @@ export default function AgentOrderList({
         setLoading(false);
       }
     };
-
     fetchData();
   }, [
     fromDate,
@@ -100,9 +104,7 @@ export default function AgentOrderList({
   useEffect(() => {
     customerApi
       .getAll()
-      .then((customers) => {
-        setCustomers(customers);
-      })
+      .then((customers) => setCustomers(customers))
       .catch(console.error);
   }, []);
 
@@ -111,7 +113,12 @@ export default function AgentOrderList({
       new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
   );
 
-  const order_len = sortedData.length;
+  // Client-side filter by active tab — same logic as Home page
+  const filteredData = sortedData.filter((order) =>
+    order.items.some((item) => item.item_type === activeTab),
+  );
+
+  const order_len = filteredData.length;
 
   const handleClearFilters = () => {
     setFromDate("");
@@ -130,6 +137,12 @@ export default function AgentOrderList({
     }
   };
 
+  const handleTabChange = (tab: ItemTypeTab) => {
+    setActiveTab(tab);
+    sessionStorage.removeItem("agent_scrollY");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -140,7 +153,6 @@ export default function AgentOrderList({
     setCurrentPage(1);
   };
 
-  // Restore and save scroll position
   useEffect(() => {
     const saved = sessionStorage.getItem("agent_scrollY");
     if (saved) setTimeout(() => window.scrollTo(0, parseInt(saved)), 0);
@@ -192,6 +204,23 @@ export default function AgentOrderList({
         }
       />
 
+      {/* Item-type tab bar */}
+      <div className="flex gap-2 bg-white px-4 py-3 sticky top-0 z-10">
+        {(["gents", "kids"] as ItemTypeTab[]).map((tab) => (
+          <button
+            key={tab}
+            onClick={() => handleTabChange(tab)}
+            className={`px-5 py-1.5 rounded-full text-sm font-semibold capitalize transition-colors ${
+              activeTab === tab
+                ? "bg-black text-white"
+                : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            {tab.charAt(0).toUpperCase() + tab.slice(1)}
+          </button>
+        ))}
+      </div>
+
       <div className="flex gap-4 mb-4">
         <SearchBar
           value={search}
@@ -238,7 +267,7 @@ export default function AgentOrderList({
         />
       ) : (
         <div className="space-y-3 pb-32">
-          {sortedData.map((order) => (
+          {filteredData.map((order) => (
             <OrderCard
               key={order.id}
               order={order}
