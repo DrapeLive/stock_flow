@@ -47,7 +47,7 @@ export default function Pagination({
   return (
     <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-4">
       <div className="flex items-center gap-2 text-sm text-gray-600">
-        <span>
+        <span className="whitespace-nowrap">
           Showing {start}-{end} of {totalCount}
         </span>
         <select
@@ -56,18 +56,16 @@ export default function Pagination({
           className="px-2 py-1 border border-gray-300 rounded-md text-sm"
         >
           {PAGE_SIZE_OPTIONS.map((size) => (
-            <option key={size} value={size}>
-              {size} per page
-            </option>
+            <option key={size} value={size}>{size} per page</option>
           ))}
         </select>
       </div>
 
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1 overflow-x-auto pb-2">
         <button
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage <= 1}
-          className="px-3 py-1 text-sm border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+          className="min-w-[40px] min-h-[40px] px-3 py-1 text-sm border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
         >
           Previous
         </button>
@@ -81,7 +79,7 @@ export default function Pagination({
             <button
               key={page}
               onClick={() => onPageChange(page)}
-              className={`px-3 py-1 text-sm border rounded-md ${
+              className={`min-w-[40px] min-h-[40px] px-3 py-1 text-sm border rounded-md ${
                 currentPage === page
                   ? "bg-primary text-white border-primary"
                   : "border-gray-300 hover:bg-gray-50"
@@ -95,7 +93,7 @@ export default function Pagination({
         <button
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage >= totalPages}
-          className="px-3 py-1 text-sm border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+          className="min-w-[40px] min-h-[40px] px-3 py-1 text-sm border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
         >
           Next
         </button>

@@ -27,6 +27,7 @@ export interface OrderFilters {
   page_size?: number;
   search?: string;
   customer?: string;
+  status?: string;
 }
 
 export const orderApi = {
@@ -39,6 +40,7 @@ export const orderApi = {
     if (filters?.page_size) params.append("page_size", filters.page_size.toString());
     if (filters?.search) params.append("search", filters.search);
     if (filters?.customer) params.append("customer", filters.customer);
+    if (filters?.status) params.append("status", filters.status);
     const query = params.toString();
     return api
       .get<PaginatedResponse<OrderAllResponse[number]>>(`/api/orders/${query ? `?${query}` : ""}`)

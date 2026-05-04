@@ -15,6 +15,7 @@ import FilterToggle from "@/components/ui/FilterToggle";
 import SearchBar from "@/components/ui/SearchBar";
 import { OrderFilters } from "@/components/pages/admin/order_components/types";
 import { getViewedOrdersCount, markAllAsRead } from "@/lib/viewedOrders";
+import useSessionStorage from "@/hooks/useSessionStorage";
 
 type Tab = "All" | "Packed" | "Pending" | "Dispatched";
 
@@ -31,6 +32,7 @@ interface SimpleCustomer {
 function AdminHomePageContent() {
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<Tab>("Pending");
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     const saved = sessionStorage.getItem("adminOrdersActiveTab") as Tab | null;
@@ -40,17 +42,29 @@ function AdminHomePageContent() {
   const handleTabChange = (tab: Tab) => {
     setActiveTab(tab);
     sessionStorage.setItem("adminOrdersActiveTab", tab);
+    // Reset page to 1 when switching tabs
+    setTabPages((prev) => ({ ...prev, [tab]: 1 }));
+    setCurrentPage(tabPages[tab] || 1);
+    // Reset scroll position for the tab
+    sessionStorage.removeItem(`admin_${tab}_scrollY`);
   };
 
-  const [filters, setFilters] = useState<OrderFilters>({});
+  const [filters, setFilters] = useSessionStorage<OrderFilters>(
+    "admin_filters",
+    {},
+  );
   const [agents, setAgents] = useState<SimpleAgent[]>([]);
   const [customers, setCustomers] = useState<SimpleCustomer[]>([]);
   const [showFilters, setShowFilters] = useState(false);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useSessionStorage("admin_search", "");
   const [orderCounts, setOrderCounts] = useState<Record<string, number>>({});
-  const [showUnreadOnly, setShowUnreadOnly] = useState(false);
+  const [showUnreadOnly, setShowUnreadOnly] = useSessionStorage(
+    "admin_showUnreadOnly",
+    false,
+  );
   const [allOrderIds, setAllOrderIds] = useState<number[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [activeTabTotalCount, setActiveTabTotalCount] = useState(0);
 
   useEffect(() => {
     agentApi
@@ -150,8 +164,22 @@ function AdminHomePageContent() {
     }
   };
 
+  const [tabPages, setTabPages] = useState<Record<string, number>>({});
+
+  const handleTabPageChange = (tab: string, page: number) => {
+    setTabPages((prev) => ({ ...prev, [tab]: page }));
+    setCurrentPage(page || 1);
+  };
+
   const renderContent = (): React.ReactNode => {
-    const commonProps = { filters, search, showUnreadOnly, refreshKey };
+    const commonProps = {
+      filters,
+      search,
+      showUnreadOnly,
+      refreshKey,
+      onTotalCountChange: setActiveTabTotalCount,
+      onPageChange: (page: number) => handleTabPageChange(activeTab, page),
+    };
     switch (activeTab) {
       case "Packed":
         return <Packed {...commonProps} />;
@@ -193,13 +221,7 @@ function AdminHomePageContent() {
   };
 
   const getActiveTabCount = () => {
-    const statusMap: Record<Tab, string> = {
-      All: "all",
-      Pending: "pending",
-      Packed: "packed",
-      Dispatched: "dispatched",
-    };
-    return orderCounts[statusMap[activeTab]] || 0;
+    return activeTabTotalCount;
   };
 
   return (
@@ -264,7 +286,7 @@ function AdminHomePageContent() {
         />
         <FilterToggle isOpen={showFilters} onToggle={handleToggleFilters} />
       </div>
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto mb-4">
         <FilterBar
           fromDate={filters.from || ""}
           toDate={filters.to || ""}
@@ -279,6 +301,28 @@ function AdminHomePageContent() {
           isOpen={showFilters}
           onClear={handleClearFilters}
         />
+        {currentPage > 1 && (
+          <div className="flex items-center gap-2 mt-2">
+            <p className="text-gray-400 font-medium text-xs">
+              Viewing page {currentPage}
+            </p>
+            <button
+              onClick={() => {
+                setCurrentPage(1);
+                setTabPages({});
+                sessionStorage.removeItem("admin_All_scrollY");
+                sessionStorage.removeItem("admin_Pending_scrollY");
+                sessionStorage.removeItem("admin_Packed_scrollY");
+                sessionStorage.removeItem("admin_Dispatched_scrollY");
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
+              className="px-2 py-0.5 bg-primary/10 text-gray-400 font-medium text-xs rounded-full hover:bg-primary/20 transition-colors"
+              title="Go to first page"
+            >
+              Reset to page 1
+            </button>
+          </div>
+        )}
       </div>
       <div className="pb-10">{renderContent()}</div>
     </div>

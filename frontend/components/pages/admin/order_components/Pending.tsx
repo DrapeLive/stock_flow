@@ -11,25 +11,30 @@ import { OrderCard } from "@/components/order";
 import { OrderFilters } from "./types";
 import { isOrderViewed } from "@/lib/viewedOrders";
 import Pagination from "@/components/ui/Pagination";
+import useSessionStorage from "@/hooks/useSessionStorage";
 
 interface Props {
   filters?: OrderFilters;
   search?: string;
   showUnreadOnly?: boolean;
   refreshKey?: number;
+  onTotalCountChange?: (total: number) => void;
+  onPageChange?: (page: number) => void;
 }
 
-const Pending: React.FC<Props> = ({ filters, search, showUnreadOnly, refreshKey }) => {
+  const Pending: React.FC<Props> = ({ filters, search, showUnreadOnly, refreshKey, onTotalCountChange, onPageChange }) => {
   const { isAuthenticated } = useAuth();
 
   const [data, setData] = useState<OrderAllResponse>([]);
   const [loading, setLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useSessionStorage("admin_Pending_currentPage", 1);
   const [totalCount, setTotalCount] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
-  const [pageSize, setPageSize] = useState(50);
+  const [pageSize, setPageSize] = useSessionStorage("admin_Pending_pageSize", 50);
 
   const router = useRouter();
+
+  const { pending } = groupOrders(data ?? []);
 
   useEffect(() => {
     setLoading(true);
@@ -41,10 +46,16 @@ const Pending: React.FC<Props> = ({ filters, search, showUnreadOnly, refreshKey 
           page: currentPage,
           page_size: pageSize,
           search,
+          status: "PENDING",
         });
         setData(response.results);
         setTotalCount(response.count);
         setTotalPages(Math.ceil(response.count / pageSize));
+        // Report total count (or filtered count if unread only)
+        const countToReport = showUnreadOnly
+          ? pending.filter((order) => !isOrderViewed(order.id)).length
+          : response.count;
+        onTotalCountChange?.(countToReport);
       } catch (error) {
         console.error("Error fetching data:", error);
       } finally {
@@ -53,9 +64,7 @@ const Pending: React.FC<Props> = ({ filters, search, showUnreadOnly, refreshKey 
     };
 
     fetchData();
-  }, [isAuthenticated, router, filters, search, currentPage, pageSize, refreshKey]);
-
-  const { pending } = groupOrders(data ?? []);
+  }, [isAuthenticated, router, filters, search, currentPage, pageSize, refreshKey, showUnreadOnly]);
 
   const filteredPending = showUnreadOnly
     ? pending.filter((order) => !isOrderViewed(order.id))
@@ -64,12 +73,33 @@ const Pending: React.FC<Props> = ({ filters, search, showUnreadOnly, refreshKey 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
     window.scrollTo({ top: 0, behavior: "smooth" });
+    onPageChange?.(page);
   };
 
   const handlePageSizeChange = (size: number) => {
     setPageSize(size);
     setCurrentPage(1);
   };
+
+  // Restore and save scroll position
+  useEffect(() => {
+    const saved = sessionStorage.getItem("admin_Pending_scrollY");
+    if (saved) setTimeout(() => window.scrollTo(0, parseInt(saved)), 0);
+
+    let timeout: NodeJS.Timeout;
+    const saveScroll = () => {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => {
+        sessionStorage.setItem("admin_Pending_scrollY", window.scrollY.toString());
+      }, 100);
+    };
+
+    window.addEventListener("scroll", saveScroll);
+    return () => {
+      window.removeEventListener("scroll", saveScroll);
+      clearTimeout(timeout);
+    };
+  }, []);
 
   if (loading)
     return (

@@ -344,6 +344,10 @@ class OrderViewSet(ModelViewSet):
         if agent_id and user.role == "ADMIN":
             qs = qs.filter(agent_id=agent_id)
 
+        status = self.request.query_params.get('status')
+        if status:
+            qs = qs.filter(status=status.upper())
+
         if user.role == "ADMIN":
             biz = admin_business(user)
             if biz:

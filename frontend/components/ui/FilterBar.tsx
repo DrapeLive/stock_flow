@@ -41,7 +41,7 @@ export default function FilterBar({
     (selectedCustomer && selectedCustomer !== "all");
 
   return (
-    <div className="flex flex-wrap gap-2 items-center mb-4 p-2 bg-gray-50 rounded-lg">
+    <div className="relative flex flex-wrap gap-2 items-center p-2 bg-gray-50 rounded-lg">
       <div className="relative flex-1 min-w-[140px]">
         <DatePicker
           value={fromDate}
