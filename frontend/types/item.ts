@@ -86,6 +86,7 @@ export interface CommonDetails {
   description: string;
   price: string;
   type: ItemType;
+  brand_id: number | undefined;
 }
 
 export interface EditCommonDetails {

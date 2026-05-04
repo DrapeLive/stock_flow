@@ -11,7 +11,7 @@ export async function submitItem(
 
   for (const variant of variants) {
     const sizes = SIZE_RANGE_TO_SIZES[variant.sizeRange] || [];
-    
+
     const sizesData = sizes.map((size) => ({
       size,
       stock: variant.stock,
@@ -25,11 +25,14 @@ export async function submitItem(
 
   const payload = {
     name: common.name,
-    price: common.price,
+    price: Number(common.price),
     description: common.description || "",
     type: common.type,
+    brand_id: common.brand_id,
     variants: variantPayload,
   };
+
+  console.log(payload);
 
   const fd = itemToFormData(payload);
   await itemApi.create(fd);

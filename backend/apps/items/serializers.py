@@ -5,6 +5,7 @@ import uuid
 from rest_framework import serializers
 from .models import Item, ItemVariant, ItemVariantSize
 from apps.orders.utils import SIZE_MAPPING
+from apps.business.models import Brand
 
 KIDS_SIZES = set()
 for sizes in SIZE_MAPPING.get("kids", {}).values():
@@ -64,6 +65,7 @@ class CreateItemSerializer(serializers.Serializer):
     description = serializers.CharField(required=False, default='')
     price = serializers.DecimalField(max_digits=10, decimal_places=2)
     type = serializers.ChoiceField(choices=Item.TYPE_CHOICES)
+    brand_id = serializers.IntegerField(required=False)
     variants = ItemVariantRequestSerializer(many=True)
 
     def validate_variants(self, variants):
@@ -84,9 +86,22 @@ class CreateItemSerializer(serializers.Serializer):
 
     def create(self, validated_data):
         variants_data = validated_data.pop('variants', [])
+        brand_id = validated_data.pop('brand_id', None)
+
         request_user = self.context['request'].user
-        brand = None
-        if hasattr(request_user, 'brand') and request_user.brand:
+
+        if request_user.is_superuser:
+            if not brand_id:
+                raise serializers.ValidationError("brand_id is required for superuser")
+
+            try:
+                brand = Brand.objects.get(id=brand_id)
+            except Brand.DoesNotExist:
+                raise serializers.ValidationError("Invalid brand_id")
+        else:
+            if not hasattr(request_user, 'brand') or not request_user.brand:
+                raise serializers.ValidationError("User has no brand assigned, please contact your superuser.")
+
             brand = request_user.brand
 
         item = Item.objects.create(
@@ -149,8 +164,15 @@ class CreateItemSerializer(serializers.Serializer):
     def update(self, instance, validated_data):
         variants_data = validated_data.pop('variants', [])
         request_user = self.context['request'].user
-        if hasattr(request_user, 'brand') and request_user.brand:
-            instance.brand = request_user.brand
+        brand_id = self.initial_data.get('brand_id')
+
+        if request_user.is_superuser:
+            if brand_id:
+                from apps.brands.models import Brand
+                instance.brand = Brand.objects.get(id=brand_id)
+        else:
+            if hasattr(request_user, 'brand') and request_user.brand:
+                instance.brand = request_user.brand
 
         instance.name = validated_data.get('name', instance.name)
         instance.description = validated_data.get('description', instance.description)

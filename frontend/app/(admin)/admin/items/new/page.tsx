@@ -25,13 +25,14 @@ function blankVariant(common: CommonDetails): ColorVariant {
 
 export default function NewItemPage() {
   const router = useRouter();
-  const { business } = useAuth();
+  const { business, isSuperuser } = useAuth();
 
   const [common, setCommon] = useState<CommonDetails>({
     name: "",
     description: "",
     price: "",
     type: (business as CommonDetails["type"]) || "gents",
+    brand_id: undefined,
   });
 
   const [variants, setVariants] = useState<ColorVariant[]>([]);
@@ -109,7 +110,7 @@ export default function NewItemPage() {
         onChange={setCommon}
         onNext={goCommonNext}
         onBack={() => router.back()}
-        lockType
+        isSuperuser={isSuperuser}
       />
     );
   }

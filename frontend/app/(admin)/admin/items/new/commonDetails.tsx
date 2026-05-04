@@ -13,13 +13,16 @@ import {
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 import { ArrowLeft } from "lucide-react";
 import type { CommonDetails, ItemType } from "@/types/item";
+import { useEffect, useState } from "react";
+import { brandApi } from "@/lib/api/brand";
+import { Brand } from "@/types/brand";
 
 interface Props {
   value: CommonDetails;
   onChange: (v: CommonDetails) => void;
   onNext: () => void;
   onBack: () => void;
-  lockType?: boolean;
+  isSuperuser?: boolean;
 }
 
 export default function Step1CommonDetails({
@@ -27,12 +30,32 @@ export default function Step1CommonDetails({
   onChange,
   onNext,
   onBack,
-  lockType,
+  isSuperuser = false,
 }: Props) {
-  const set = (key: keyof CommonDetails, val: string) =>
+  const [brandData, setBrandData] = useState<Brand[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const set = <K extends keyof CommonDetails>(key: K, val: CommonDetails[K]) =>
     onChange({ ...value, [key]: val });
 
-  const isValid = value.name.trim() !== "" && value.price.trim() !== "";
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await brandApi.getAll();
+        setBrandData(response);
+      } catch (error) {
+        console.error("Error fetching brands:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const isValid =
+    value.name.trim() !== "" &&
+    value.price.trim() !== "" &&
+    (!isSuperuser || value.brand_id);
 
   return (
     <div className="flex flex-col min-h-screen bg-white px-4 py-8">
@@ -91,7 +114,7 @@ export default function Step1CommonDetails({
 
           <Field>
             <FieldLabel>Type *</FieldLabel>
-            {lockType ? (
+            {!isSuperuser ? (
               <div className="h-12 px-3 flex items-center bg-gray-50 border border-gray-100 rounded-xl text-sm font-medium text-gray-500 capitalize">
                 {value.type}
               </div>
@@ -110,6 +133,27 @@ export default function Step1CommonDetails({
               </Select>
             )}
           </Field>
+
+          {isSuperuser && (
+            <Field>
+              <FieldLabel>Brand *</FieldLabel>
+              <Select
+                value={value.brand_id?.toString()}
+                onValueChange={(v) => set("brand_id", Number(v))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select brand" />
+                </SelectTrigger>
+                <SelectContent>
+                  {brandData.map((brand) => (
+                    <SelectItem key={brand.id} value={brand.id.toString()}>
+                      {brand.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+          )}
         </div>
       </div>
 
