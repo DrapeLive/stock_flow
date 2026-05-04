@@ -209,7 +209,6 @@ const OrderItem: React.FC<Props> = ({
 
     try {
       const variants = await itemApi.getAllVariants();
-      setAvailableVariants(variants);
 
       const variantId = item.variant;
       const variant = variants.find((v) => v.id === variantId);
@@ -298,7 +297,10 @@ const OrderItem: React.FC<Props> = ({
       toastSuccess("Item updated successfully");
     } catch (err: unknown) {
       console.error("Error updating item:", err);
-      toastError((err as { response?: { data?: { error?: string } } })?.response?.data?.error || "Failed to update item");
+      toastError(
+        (err as { response?: { data?: { error?: string } } })?.response?.data
+          ?.error || "Failed to update item",
+      );
     } finally {
       setLoading(false);
       setShowEditDialog(false);
@@ -403,10 +405,19 @@ const OrderItem: React.FC<Props> = ({
             ) : (
               <>
                 <div className="mb-4">
-                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                    Size Group
-                  </label>
+                  <div className="flex justify-between">
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                      Size Group
+                    </label>
+                    {editingItem.item_type == "gents" && (
+                      <p className="text-[10px] text-red-800">
+                        Cannot edit size group for gents items
+                      </p>
+                    )}
+                  </div>
+
                   <select
+                    disabled={editingItem.item_type == "gents"}
                     value={editSizeGroup}
                     onChange={(e) => {
                       const newGroup = e.target.value;
@@ -417,9 +428,10 @@ const OrderItem: React.FC<Props> = ({
                         setEditPieceCount(getPiecesForGroup(newGroup));
                       }
                     }}
-                    className={`w-full mt-1 px-4 py-3 rounded-xl border text-lg font-bold focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white ${
+                    className={`w-full mt-1 px-4 py-3 rounded-xl border text-lg font-bold focus:outline-none focus:ring-2 focus:ring-primary/50 ${
                       sizeGroupError ? "border-red-300" : "border-gray-200"
-                    }`}
+                    } ${editingItem.item_type == "gents" ? "bg-gray-100" : " bg-white"}
+                    `}
                   >
                     <option value="">Select Size Group</option>
                     {sizeGroupOptions.map((group) => (
@@ -433,6 +445,7 @@ const OrderItem: React.FC<Props> = ({
                       {sizeGroupError}
                     </p>
                   )}
+
                   {editSizeGroup &&
                     !sizeGroupError &&
                     variantSizes.length > 0 &&
