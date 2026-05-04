@@ -55,7 +55,7 @@ export default function Step1CommonDetails({
 
       {/* Hint */}
       <p className="text-sm text-gray-400 mb-6 leading-relaxed">
-        These details are shared across all color variants you'll add next.
+        These details are shared across all color variants you&apos;ll add next.
       </p>
 
       <div className="space-y-5 flex-1">

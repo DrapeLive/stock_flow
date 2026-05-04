@@ -36,48 +36,46 @@ const COOKIE_KEYS = {
   isSuperuser: "is_superuser",
 };
 
-const getStoredUser = (): AuthUser | null => {
-  if (typeof window === "undefined") return null;
-  const user = Cookies.get(COOKIE_KEYS.user);
-  return user ? JSON.parse(user) : null;
-};
+function initializeAuth() {
+  const storedUser = Cookies.get(COOKIE_KEYS.user);
+  const storedAccess = Cookies.get(COOKIE_KEYS.access);
+  const storedRefresh = Cookies.get(COOKIE_KEYS.refresh);
+  const storedRole = Cookies.get(COOKIE_KEYS.role);
+  const storedBusiness = Cookies.get(COOKIE_KEYS.business);
+  const storedSuperuser = Cookies.get(COOKIE_KEYS.isSuperuser);
 
-const getStoredToken = (key: string): string | null => {
-  if (typeof window === "undefined") return null;
-  return Cookies.get(key) || null;
-};
+  return {
+    user: storedUser ? (JSON.parse(storedUser) as AuthUser) : null,
+    access: storedAccess || null,
+    refresh: storedRefresh || null,
+    role: storedRole || null,
+    business: (storedBusiness as Business) || null,
+    isSuperuser: storedSuperuser === "true",
+  };
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [accessToken, setAccessToken] = useState<string | null>(null);
-  const [refreshToken, setRefreshToken] = useState<string | null>(null);
-  const [role, setRole] = useState<string | null>(null);
-  const [business, setBusiness] = useState<Business | null>(null);
-  const [isSuperuser, setIsSuperuser] = useState(false);
-
-  useEffect(() => {
-    const storedUser = Cookies.get(COOKIE_KEYS.user);
-    const storedAccess = Cookies.get(COOKIE_KEYS.access);
-    const storedRefresh = Cookies.get(COOKIE_KEYS.refresh);
-    const storedRole = Cookies.get(COOKIE_KEYS.role);
-    const storedBusiness = Cookies.get(COOKIE_KEYS.business);
-    const storedSuperuser = Cookies.get(COOKIE_KEYS.isSuperuser);
-
-    if (storedUser) setUser(JSON.parse(storedUser));
-    if (storedAccess) setAccessToken(storedAccess);
-    if (storedRefresh) setRefreshToken(storedRefresh);
-    if (storedRole) setRole(storedRole);
-    if (storedBusiness) setBusiness(storedBusiness as Business);
-    if (storedSuperuser) setIsSuperuser(storedSuperuser === "true");
-  }, []);
+  const initialAuth = initializeAuth();
+  const [user, setUser] = useState<AuthUser | null>(initialAuth.user);
+  const [accessToken, setAccessToken] = useState<string | null>(
+    initialAuth.access,
+  );
+  const [refreshToken, setRefreshToken] = useState<string | null>(
+    initialAuth.refresh,
+  );
+  const [role, setRole] = useState<string | null>(initialAuth.role);
+  const [business, setBusiness] = useState<Business | null>(
+    initialAuth.business,
+  );
+  const [isSuperuser, setIsSuperuser] = useState(initialAuth.isSuperuser);
 
   const login = (data: LoginResponse) => {
     const authUser: AuthUser = {
       id: data.user_id,
       role: data.role,
-      username: (data as any).username,
-      email: (data as any).email,
+      username: data.username,
+      email: data.email,
       business: data.business || null,
       is_superuser: data.is_superuser,
     };

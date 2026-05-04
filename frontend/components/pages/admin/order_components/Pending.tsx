@@ -87,6 +87,8 @@ const Pending: React.FC<Props> = ({
     pageSize,
     refreshKey,
     showUnreadOnly,
+    pending,
+    onTotalCountChange,
   ]);
 
   const filteredPending = showUnreadOnly

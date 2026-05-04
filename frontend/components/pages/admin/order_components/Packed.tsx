@@ -87,6 +87,8 @@ const Packed: React.FC<Props> = ({
     pageSize,
     refreshKey,
     showUnreadOnly,
+    packed,
+    onTotalCountChange,
   ]);
 
   const filteredPacked = showUnreadOnly

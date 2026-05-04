@@ -86,6 +86,7 @@ const All: React.FC<Props> = ({
     pageSize,
     refreshKey,
     showUnreadOnly,
+    onTotalCountChange,
   ]);
 
   const filteredData = showUnreadOnly

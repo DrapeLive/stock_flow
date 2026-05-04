@@ -2,7 +2,7 @@ export function deriveUsername(
   displayName: string,
   existingUsernames?: Set<string>
 ): string {
-  let base = displayName
+  const base = displayName
     .trim()
     .toLowerCase()
     .replace(/\s+/g, '_')

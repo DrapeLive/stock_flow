@@ -87,6 +87,8 @@ const Dispatched: React.FC<Props> = ({
     pageSize,
     refreshKey,
     showUnreadOnly,
+    dispatched,
+    onTotalCountChange,
   ]);
 
   const filteredDispatched = showUnreadOnly

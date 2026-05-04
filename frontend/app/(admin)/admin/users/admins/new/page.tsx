@@ -6,7 +6,6 @@ import { brandApi } from "@/lib/api/brand";
 import { toastSuccess, toastError } from "@/lib/toast";
 import {
   Field,
-  FieldContent,
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field";
@@ -111,7 +110,7 @@ export default function NewAdminPage() {
       });
       toastSuccess("Admin created successfully");
       router.push("/admin/users/");
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error creating admin:", error);
       toastError("Failed to create admin", error);
     } finally {

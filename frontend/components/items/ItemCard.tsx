@@ -1,10 +1,8 @@
 "use client";
 
-import Image from "next/image";
 import { ChevronDown, ChevronUp, Eye, Printer, Info } from "lucide-react";
 import { ImagePreview } from "@/components/pages/ImagePreview";
-import { ItemStockEntry, ItemType, UIItem } from "@/types/item";
-import { AssignedItem } from "@/types/agent";
+import { ItemType, UIItem } from "@/types/item";
 import VariantCard from "./VariantCard";
 
 interface ItemCardProps {

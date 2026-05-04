@@ -1,12 +1,12 @@
 import type { Metadata, Viewport } from "next";
-import { Poppins } from "next/font/google";
+import { Plus_Jakarta_Sans } from "next/font/google";
 import { Toaster } from "sonner";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 
-const poppins = Poppins({
-  variable: "--font-poppins",
+const jakartha = Plus_Jakarta_Sans({
+  variable: "--font-jakartha",
   subsets: ["latin"],
   weight: ["300", "400", "500", "600", "700"],
 });
@@ -47,7 +47,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${poppins.variable} antialiased  py-4 px-5 `}>
+      <body className={`${jakartha.className} antialiased py-4 px-5`}>
         <AuthProvider>
           <ServiceWorkerRegister />
           {children}

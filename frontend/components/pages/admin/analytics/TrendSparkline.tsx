@@ -52,7 +52,7 @@ export default function TrendSparkline({
 
   const filled = mapDates();
 
-  const CustomXAxisTick = (props: any) => {
+  const CustomXAxisTick = (props: { x: number; y: number; payload: { value: string } }) => {
     const { x, y, payload } = props;
     const dayValue = payload?.value as string;
     const index = filled.findIndex((d) => d.day === dayValue);

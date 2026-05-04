@@ -6,7 +6,6 @@ import { customerApi } from "@/lib/api/customer";
 import { toastError } from "@/lib/toast";
 import { OrderAllResponse, PaginatedResponse } from "@/types/order";
 import { CustomerAllResponse } from "@/types/customer";
-import groupOrders from "@/util/groupOrders";
 import { PageLoading } from "@/components/ui/Loading";
 import { useRouter } from "next/navigation";
 import OrderCard from "@/components/pages/agent/order/OrderCard";

@@ -101,7 +101,7 @@ export default function BrandDetailPage() {
       setIsEditing(false);
       setLogoFile(null);
       router.refresh();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error updating brand:", error);
       toastError("Failed to update brand", error);
     } finally {

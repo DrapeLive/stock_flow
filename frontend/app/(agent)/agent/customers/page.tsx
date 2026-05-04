@@ -10,7 +10,7 @@ import { PageLoading } from "@/components/ui/Loading";
 import StockflowAvatar from "@/components/ui/custom/stockflowAvatar";
 
 export default function AgentCustomersPage() {
-  const { user, isAuthenticated } = useAuth();
+  const { isAuthenticated } = useAuth();
   const [data, setData] = useState<CustomerAllResponse>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
@@ -69,7 +69,7 @@ export default function AgentCustomersPage() {
             <Info size={40} className="mb-4 opacity-20" />
             <h2 className="text-xl font-bold">No Customers Found</h2>
             <p className="text-sm text-gray-400 mt-1">
-              You haven't been assigned any customers yet.
+              You haven&apos;t been assigned any customers yet.
             </p>
           </div>
         ) : (

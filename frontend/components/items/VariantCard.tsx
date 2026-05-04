@@ -4,7 +4,6 @@ import { Printer } from "lucide-react";
 import { ImagePreview } from "@/components/pages/ImagePreview";
 import {
   SIZE_RANGE_TO_SIZES,
-  SIZE_RANGE_PIECE_COUNT,
   ItemType,
   UIVariant,
   FrontendSizeRange,

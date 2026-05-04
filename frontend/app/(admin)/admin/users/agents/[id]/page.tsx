@@ -101,7 +101,7 @@ export default function AgentDetailPage() {
       toastSuccess("Agent details updated");
       setIsEditing(false);
       router.refresh();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error updating agent:", error);
       toastError("Failed to update agent details", error);
     } finally {

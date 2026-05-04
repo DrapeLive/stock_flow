@@ -1,7 +1,5 @@
 "use client";
 
-import { Input } from "@/components/ui/input";
-import { Field, FieldLabel } from "@/components/ui/field";
 import { authApi } from "@/lib/api";
 import { CheckCircle2, KeyRound } from "lucide-react";
 import Link from "next/link";
@@ -29,12 +27,18 @@ function ResetPasswordForm() {
   const [fieldErrors, setFieldErrors] = useState({ password: "", confirm: "" });
   const [shake, setShake] = useState(false);
   const passwordRef = useRef<HTMLInputElement>(null);
+  const hasInitialized = useRef<boolean | undefined>(undefined);
 
-  useEffect(() => {
+  if (hasInitialized.current == null) {
+    hasInitialized.current = true;
     if (!token) {
       setErrorMsg("Invalid or missing reset link. Please request a new one.");
       setStatus("error");
-    } else {
+    }
+  }
+
+  useEffect(() => {
+    if (token) {
       passwordRef.current?.focus();
     }
   }, [token]);
@@ -67,9 +71,9 @@ function ResetPasswordForm() {
     try {
       await authApi.resetPassword({ token, password });
       setStatus("success");
-    } catch (err: any) {
+    } catch (err: unknown) {
       const msg =
-        err?.response?.data?.error ?? "Something went wrong. Please try again.";
+        (err as { response?: { data?: { error?: string } } })?.response?.data?.error ?? "Something went wrong. Please try again.";
       setErrorMsg(msg);
       triggerShake();
       setStatus("idle");

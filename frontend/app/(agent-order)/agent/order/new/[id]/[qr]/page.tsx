@@ -10,7 +10,6 @@ import { toastSuccess, toastError } from "@/lib/toast";
 import type { ItemQRResponse, ItemVariant } from "@/types/item";
 
 import {
-  getStockForSizeGroup,
   getAvailableSizeRanges,
   getMaxSizeGroup,
   getAvailableStockForSizeGroup,

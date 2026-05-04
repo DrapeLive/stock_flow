@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { Printer } from "lucide-react";
 import { ImagePreview } from "@/components/pages/ImagePreview";
 import { ItemVariantQR, SIZE_RANGE_TO_SIZES } from "@/types/item";

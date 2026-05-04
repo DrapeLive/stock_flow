@@ -1,7 +1,7 @@
 "use client";
 
 import ScannerPage from "@/components/pages/ScannerPage";
-import { ArrowLeft, X } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 
 export default function OrderScannerPage() {

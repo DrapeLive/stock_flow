@@ -1,9 +1,10 @@
 "use client";
 import { OrderAllResponse } from "@/types/order";
 import StatusBadge from "@/components/ui/custom/StatusBadge";
-import { Info, User } from "lucide-react";
+import { User } from "lucide-react";
 import { getColorFromId } from "@/util/getColorFromId";
-import { isOrderViewed, markOrderAsViewed } from "@/lib/viewedOrders";
+import { markOrderAsViewed } from "@/lib/viewedOrders";
+import StockflowAvatar from "@/components/ui/custom/stockflowAvatar";
 
 interface OrderCardProps {
   order: OrderAllResponse[number];
@@ -48,14 +49,7 @@ export default function OrderCard({ order, onClick }: OrderCardProps) {
       )}
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
-          <div
-            className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-            style={{
-              backgroundColor: getColorFromId(order.customer_details?.id),
-            }}
-          >
-            <User size={18} color="white" className="text-primary" />
-          </div>
+          <StockflowAvatar user={order.customer_details} />
           <div className="min-w-0">
             <h6
               className={`font-bold text-sm truncate leading-tight ${!viewed ? "text-gray-900" : "text-gray-700"}`}

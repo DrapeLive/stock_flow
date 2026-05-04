@@ -65,10 +65,6 @@ const CustomerList: React.FC = () => {
     );
   }
 
-  const businessLabel = business
-    ? business.charAt(0).toUpperCase() + business.slice(1)
-    : "";
-
   const renderSection = (
     customers: typeof filteredData,
     header: string,

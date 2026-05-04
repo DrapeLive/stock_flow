@@ -6,14 +6,13 @@ import { brandApi } from "@/lib/api/brand";
 import { toastSuccess, toastError } from "@/lib/toast";
 import {
   Field,
-  FieldContent,
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
-import { ArrowLeft, Upload, X, Camera } from "lucide-react";
+import { ArrowLeft, X, Camera } from "lucide-react";
 import CropModal from "@/app/(admin)/admin/items/new/cropModal";
 
 export default function NewBrandPage() {
@@ -93,7 +92,7 @@ export default function NewBrandPage() {
       });
       toastSuccess("Brand created successfully");
       router.push("/admin/brands/");
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error creating brand:", error);
       toastError("Failed to create brand", error);
     } finally {

@@ -6,7 +6,8 @@ import type { EditableVariant } from "@/types/item";
 
 interface Props {
   variant: EditableVariant;
-  index: number;
+  /** @deprecated Not used but kept for API compatibility */
+  _index?: number;
   isOnly: boolean;
   onChange: (updated: EditableVariant) => void;
   onDelete: () => void;
@@ -14,7 +15,6 @@ interface Props {
 
 export default function EditVariantRow({
   variant,
-  index,
   isOnly,
   onChange,
   onDelete,

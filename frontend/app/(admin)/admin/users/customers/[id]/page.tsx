@@ -109,7 +109,7 @@ export default function CustomerDetailPage() {
       toastSuccess("Customer updated successfully");
       setIsEditing(false);
       router.refresh();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error updating customer:", error);
       toastError("Failed to update customer", error);
     } finally {
@@ -136,6 +136,7 @@ export default function CustomerDetailPage() {
   };
 
   const handlePageSizeChange = (size: number) => {
+    void size;
     setCurrentPage(1);
   };
 

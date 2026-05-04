@@ -12,6 +12,8 @@ export interface LoginResponse {
   refresh: string;
   role: Role;
   user_id: number;
+  username?: string;
+  email?: string;
   business?: Business | null;
   is_superuser: boolean;
 }

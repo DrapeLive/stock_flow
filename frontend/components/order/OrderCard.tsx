@@ -1,8 +1,6 @@
 "use client";
 
 import { Order, OrderStatus } from "@/types/order";
-import { getColorFromId } from "@/util/getColorFromId";
-import { User } from "lucide-react";
 import { useRouter } from "next/navigation";
 import StockflowAvatar from "../ui/custom/stockflowAvatar";
 import { isOrderViewed, markOrderAsViewed } from "@/lib/viewedOrders";
@@ -50,7 +48,6 @@ export default function OrderCard({ order, onClick }: OrderCardProps) {
 
   const totalSets = order.total_sets || 0;
   const totalPieces = order.total_pieces || 0;
-  const piecesPerSet = totalSets > 0 ? totalPieces / totalSets : 0;
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);

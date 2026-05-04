@@ -170,13 +170,6 @@
     --sidebar-ring: oklch(0.556 0 0);
 }
 
-.font-poppins {
-    font-family: var(--font-poppins), sans-serif;
-}
-
-/* ---break---
-  */
-
 @layer base {
     * {
         @apply border-border outline-ring/50;

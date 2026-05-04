@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { adminApi } from "@/lib/api/admin";
 import { brandApi } from "@/lib/api/brand";
 import { toastSuccess, toastError } from "@/lib/toast";
-import { AdminResponse, AdminRequest } from "@/types/admin";
+import { AdminResponse } from "@/types/admin";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
@@ -90,7 +90,7 @@ export default function AdminDetailPage() {
       toastSuccess("Admin updated successfully");
       setIsEditing(false);
       router.refresh();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error updating admin:", error);
       toastError("Failed to update admin", error);
     } finally {

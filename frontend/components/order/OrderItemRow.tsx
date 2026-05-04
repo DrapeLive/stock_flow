@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { Trash2, CheckCircle2, Circle, Pencil } from "lucide-react";
 import { ImagePreview } from "@/components/pages/ImagePreview";
 import { OrderItem } from "@/types/order";

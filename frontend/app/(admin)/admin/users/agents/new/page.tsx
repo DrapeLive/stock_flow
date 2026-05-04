@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import {
   Field,
-  FieldContent,
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field";
@@ -83,7 +82,7 @@ export default function NewAgentPage() {
       const newAgent = await agentApi.create(payload);
       toastSuccess("Agent created successfully");
       router.push(`/admin/users/agents/${newAgent.id}`);
-    } catch (error: any) {
+    } catch (error: unknown) {
       const message = error?.toString().includes("500")
         ? "Agent already registered"
         : "Failed to create agent";
