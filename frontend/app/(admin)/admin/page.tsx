@@ -241,7 +241,7 @@ function AdminHomePageContent() {
             >
               {tab}
               {count > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[7px] font-bold rounded-full w-4.5 h-4.5 flex items-center justify-center">
                   {count > 99 ? "99+" : count}
                 </span>
               )}
@@ -252,9 +252,9 @@ function AdminHomePageContent() {
       <div className="flex flex-row justify-between items-start sm:items-center gap-2 mt-4 mb-2">
         <div className="flex items-center gap-1">
           <span className="text-gray-400 text-[10px] font-bold uppercase">
-            Total Orders
+            {activeTab} {showUnreadOnly && "unread"} Orders
           </span>
-          <div className="bg-amber-100 text-amber-600 border border-amber-200 rounded-full w-6 h-6 flex justify-center items-center">
+          <div className=" text-amber-600 flex justify-center items-center">
             <span className="font-bold text-xs">{getActiveTabCount()}</span>
           </div>
         </div>

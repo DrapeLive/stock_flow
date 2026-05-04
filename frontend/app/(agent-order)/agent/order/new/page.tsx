@@ -29,12 +29,6 @@ export default function NewOrder() {
               </p>
             </div>
           </div>
-          <button
-            onClick={() => router.push("/agent")}
-            className="p-2 rounded-xl hover:bg-rose-50 text-rose-500 transition-colors border border-transparent hover:border-rose-100"
-          >
-            <X size={20} />
-          </button>
         </div>
       </div>
 

@@ -1,24 +1,31 @@
 "use client";
 
 import { Search, X } from "lucide-react";
+import { Spinner } from "./spinner";
 
 interface SearchBarProps {
   value: string;
   onChange: (value: string) => void;
+  isLoading?: boolean;
   placeholder?: string;
 }
 
 export default function SearchBar({
   value,
   onChange,
+  isLoading = false,
   placeholder = "Search...",
 }: SearchBarProps) {
   return (
     <div className="relative flex-1">
-      <Search
-        className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-        size={16}
-      />
+      {isLoading ? (
+        <Spinner className="absolute left-3 top-1/2 -translate-y-1/2" />
+      ) : (
+        <Search
+          className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+          size={16}
+        />
+      )}
       <input
         type="text"
         placeholder={placeholder}

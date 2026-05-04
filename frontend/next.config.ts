@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  allowedDevOrigins: ["192.168.1.5", "localhost"],
+  allowedDevOrigins: ["192.168.1.4", "localhost"],
   images: {
     remotePatterns: [
       ...(process.env.NEXT_PUBLIC_MEDIA_DOMAIN
