@@ -55,13 +55,13 @@ class LoginResponseSerializer(serializers.Serializer):
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ('id', 'username', 'email', 'role', 'business', 'is_superuser')
+        fields = ('id', 'username', 'email', 'role', 'business', 'is_superuser', 'display_name')
 
 
 class UserCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ('username', 'email', 'password', 'role')
+        fields = ('username', 'email', 'password', 'role', 'display_name')
         extra_kwargs = {
             'password': {'write_only': True}
         }

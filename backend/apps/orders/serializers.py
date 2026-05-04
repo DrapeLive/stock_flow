@@ -1,11 +1,9 @@
 from rest_framework import serializers
 from .models import Order, OrderItem
-from apps.items.models import Item
 from apps.items.models import ItemVariant
 from apps.customers.models import Customer
 from apps.agents.models import Agent
 from apps.business.models import Brand
-from apps.items.serializers import ItemSerializer
 
 
 def get_piece_count(size_group, item_type='gents'):

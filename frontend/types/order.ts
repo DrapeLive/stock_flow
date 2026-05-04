@@ -96,6 +96,14 @@ export interface UpdateOrderRequest {
 }
 
 export type OrderAllResponse = Order[];
+
+export interface PaginatedResponse<T> {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: T[];
+}
+
 export type OrderResponse = Order;
 export type OrderItems = Order["items"];
 

@@ -8,7 +8,6 @@ import { toastSuccess, toastError } from "@/lib/toast";
 import { CustomerCreateRequest } from "@/types/customer";
 import {
   Field,
-  FieldContent,
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field";
@@ -95,7 +94,7 @@ export default function NewCustomerPage() {
       await customerApi.create(payload);
       toastSuccess("Customer created successfully");
       router.push("/admin/users/");
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error creating customer:", error);
       toastError("Failed to create customer", error);
     } finally {

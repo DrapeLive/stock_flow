@@ -12,6 +12,8 @@ export interface LoginResponse {
   refresh: string;
   role: Role;
   user_id: number;
+  username?: string;
+  email?: string;
   business?: Business | null;
   is_superuser: boolean;
 }
@@ -28,6 +30,7 @@ export interface AuthUser {
 export interface UserProfile {
   id: number;
   username: string;
+  display_name?: string;
   email: string;
   role: Role;
   business?: Business | null;

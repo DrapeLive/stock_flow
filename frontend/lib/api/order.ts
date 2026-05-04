@@ -7,6 +7,7 @@ import type {
   UpdateOrderRequest,
   UpdateOrderItemRequest,
   InvoiceResponse,
+  PaginatedResponse,
 } from "@/types/order";
 import { api } from "./axios";
 
@@ -22,23 +23,55 @@ export interface OrderFilters {
   from?: string;
   to?: string;
   agent?: string;
+  page?: number;
+  page_size?: number;
+  search?: string;
+  customer?: string;
+  status?: string[];
 }
 
 export const orderApi = {
-  getAll(filters?: OrderFilters): Promise<OrderAllResponse> {
+  getAll(
+    filters?: OrderFilters,
+  ): Promise<PaginatedResponse<OrderAllResponse[number]>> {
     const params = new URLSearchParams();
     if (filters?.from) params.append("from_date", filters.from);
     if (filters?.to) params.append("to_date", filters.to);
     if (filters?.agent) params.append("agent", filters.agent);
+    if (filters?.page) params.append("page", filters.page.toString());
+    if (filters?.page_size)
+      params.append("page_size", filters.page_size.toString());
+    if (filters?.search) params.append("search", filters.search);
+    if (filters?.customer) params.append("customer", filters.customer);
+    if (filters?.status?.length) {
+      filters.status.forEach((s) => {
+        params.append("status", s);
+      });
+    }
     const query = params.toString();
     return api
-      .get<OrderAllResponse>(`/api/orders/${query ? `?${query}` : ""}`)
+      .get<
+        PaginatedResponse<OrderAllResponse[number]>
+      >(`/api/orders/${query ? `?${query}` : ""}`)
       .then((r) => r.data);
   },
 
-  getByCustomer(customerId: number): Promise<OrderAllResponse> {
+  getAllIds(): Promise<{ id: number; status: string }[]> {
     return api
-      .get<OrderAllResponse>(`/api/orders/?customer=${customerId}`)
+      .get<{ id: number; status: string }[]>("/api/orders/order-ids/")
+      .then((r) => r.data);
+  },
+
+  getByCustomer(
+    customerId: number,
+    params?: { page?: number; page_size?: number },
+  ): Promise<PaginatedResponse<OrderAllResponse[number]>> {
+    const query = new URLSearchParams();
+    query.append("customer", customerId.toString());
+    if (params?.page) query.append("page", params.page.toString());
+    if (params?.page_size) query.append("page_size", params.page_size.toString());
+    return api
+      .get<PaginatedResponse<OrderAllResponse[number]>>(`/api/orders/?${query.toString()}`)
       .then((r) => r.data);
   },
 
@@ -115,7 +148,10 @@ export const orderApi = {
 
   saveEdit(id: number): Promise<{ message: string; order_id: number }> {
     return api
-      .post<{ message: string; order_id: number }>(`/api/orders/${id}/save-edit/`)
+      .post<{
+        message: string;
+        order_id: number;
+      }>(`/api/orders/${id}/save-edit/`)
       .then((r) => r.data);
   },
 

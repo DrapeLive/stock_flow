@@ -36,7 +36,7 @@ const AgentsList: React.FC = () => {
   }, [isAuthenticated]);
 
   const filteredData = data.filter((item) =>
-    item.user.username.toLowerCase().includes(search.toLowerCase()),
+    (item.user.display_name || item.user.username).toLowerCase().includes(search.toLowerCase()),
   );
 
   if (loading) {
@@ -110,7 +110,7 @@ const AgentsList: React.FC = () => {
 
               <div className="flex-1 min-w-0 px-0">
                 <h6 className="font-bold text-gray-900 text-base truncate leading-tight">
-                  {item.user.username}
+                  {item.user.display_name || item.user.username}
                 </h6>
                 <p className="text-xs text-gray-400 truncate mt-1 leading-tight font-medium">
                   {item.user.email}

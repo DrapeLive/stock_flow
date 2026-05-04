@@ -86,7 +86,7 @@ export default function BrandsPage() {
             onClick={() => router.push(`/admin/brands/${brand.id}`)}
             className="flex items-center gap-4 bg-white border border-gray-100 p-4 hover:border-primary/30 hover:shadow-md transition-all rounded-2xl group cursor-pointer active:scale-[0.98]"
           >
-            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0 overflow-hidden">
+            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 overflow-hidden">
               {brand.logo_url ? (
                 <img
                   src={brand.logo_url}

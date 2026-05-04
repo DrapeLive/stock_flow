@@ -3,4 +3,5 @@ export interface OrderFilters {
   to?: string;
   agent?: string;
   customer?: string;
+  search?: string;
 }

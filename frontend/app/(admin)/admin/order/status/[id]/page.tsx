@@ -141,7 +141,7 @@ export default function Page() {
               icon={<Trash2 />}
               onClick={() => setShowDeleteDialog(true)}
               variant="outline"
-              className="w-full shadow-lg border-red-200 text-red-500 hover:bg-red-50"
+              className="w-full shadow-lg border-red-200 text-red-500 hover:bg-red-500 hover:text-white"
             />
           </div>
         )}

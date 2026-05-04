@@ -1,7 +1,7 @@
 "use client";
 import { useAuth } from "@/context/AuthContext";
 import { orderApi } from "@/lib/api/order";
-import { OrderAllResponse } from "@/types/order";
+import { OrderAllResponse, PaginatedResponse } from "@/types/order";
 import groupOrders from "@/util/groupOrders";
 import { Info } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -9,16 +9,41 @@ import { useEffect, useState } from "react";
 
 import { OrderCard } from "@/components/order";
 import { OrderFilters } from "./types";
+import { isOrderViewed } from "@/lib/viewedOrders";
+import Pagination from "@/components/ui/Pagination";
+import useSessionStorage from "@/hooks/useSessionStorage";
 
 interface Props {
   filters?: OrderFilters;
+  search?: string;
+  showUnreadOnly?: boolean;
+  refreshKey?: number;
+  onTotalCountChange?: (total: number) => void;
+  onPageChange?: (page: number) => void;
 }
 
-const Pending: React.FC<Props> = ({ filters }) => {
+const Pending: React.FC<Props> = ({
+  filters,
+  search,
+  showUnreadOnly,
+  refreshKey,
+  onTotalCountChange,
+  onPageChange,
+}) => {
   const { isAuthenticated } = useAuth();
 
   const [data, setData] = useState<OrderAllResponse>([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useSessionStorage(
+    "admin_Pending_currentPage",
+    1,
+  );
+  const [totalCount, setTotalCount] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [pageSize, setPageSize] = useSessionStorage(
+    "admin_Pending_pageSize",
+    50,
+  );
 
   const router = useRouter();
 
@@ -27,8 +52,22 @@ const Pending: React.FC<Props> = ({ filters }) => {
 
     const fetchData = async () => {
       try {
-        const response = await orderApi.getAll(filters);
-        setData(response);
+        const response: PaginatedResponse<OrderAllResponse[number]> =
+          await orderApi.getAll({
+            ...filters,
+            page: currentPage,
+            page_size: pageSize,
+            search,
+            status: ["PENDING"],
+          });
+        setData(response.results);
+        setTotalCount(response.count);
+        setTotalPages(Math.ceil(response.count / pageSize));
+        // Report total count (or filtered count if unread only)
+        const countToReport = showUnreadOnly
+          ? response.results.filter((order) => !isOrderViewed(order.id)).length
+          : response.count;
+        onTotalCountChange?.(countToReport);
       } catch (error) {
         console.error("Error fetching data:", error);
       } finally {
@@ -37,9 +76,55 @@ const Pending: React.FC<Props> = ({ filters }) => {
     };
 
     fetchData();
-  }, [isAuthenticated, router, filters]);
+  }, [
+    isAuthenticated,
+    router,
+    filters,
+    search,
+    currentPage,
+    pageSize,
+    refreshKey,
+    showUnreadOnly,
+    onTotalCountChange,
+  ]);
 
-  const { pending } = groupOrders(data ?? []);
+  const filteredPending = showUnreadOnly
+    ? data.filter((order) => !isOrderViewed(order.id))
+    : data;
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    onPageChange?.(page);
+  };
+
+  const handlePageSizeChange = (size: number) => {
+    setPageSize(size);
+    setCurrentPage(1);
+  };
+
+  // Restore and save scroll position
+  useEffect(() => {
+    const saved = sessionStorage.getItem("admin_Pending_scrollY");
+    if (saved) setTimeout(() => window.scrollTo(0, parseInt(saved)), 0);
+
+    let timeout: NodeJS.Timeout;
+    const saveScroll = () => {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => {
+        sessionStorage.setItem(
+          "admin_Pending_scrollY",
+          window.scrollY.toString(),
+        );
+      }, 100);
+    };
+
+    window.addEventListener("scroll", saveScroll);
+    return () => {
+      window.removeEventListener("scroll", saveScroll);
+      clearTimeout(timeout);
+    };
+  }, []);
 
   if (loading)
     return (
@@ -47,19 +132,33 @@ const Pending: React.FC<Props> = ({ filters }) => {
         Loading pending orders...
       </p>
     );
-  if (pending.length == 0)
+  if (filteredPending.length == 0)
     return (
       <div className="flex flex-col items-center justify-center py-20 text-gray-300">
         <Info size={40} className="mb-4 opacity-20" />
-        <h2 className="text-xl font-bold">No Pending Orders</h2>
+        <h2 className="text-xl font-bold">
+          {showUnreadOnly
+            ? "No unread orders"
+            : search
+              ? "No matching orders"
+              : "No Pending Orders"}
+        </h2>
       </div>
     );
 
   return (
     <div className="space-y-3 pb-20">
-      {pending?.map((order) => (
-        <OrderCard key={order.id} order={order} />
+      {filteredPending?.map((order) => (
+        <OrderCard key={`${order.id}-${refreshKey}`} order={order} />
       ))}
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalCount={totalCount}
+        pageSize={pageSize}
+        onPageChange={handlePageChange}
+        onPageSizeChange={handlePageSizeChange}
+      />
     </div>
   );
 };

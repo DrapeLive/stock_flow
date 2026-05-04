@@ -11,6 +11,7 @@ import {
   Package,
   AlertTriangle,
   X,
+  MapPin,
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -44,7 +45,6 @@ export default function OrderDetailsPage() {
 
   const duplicateGroups = (() => {
     if (!orders?.items.length) return [];
-
     const map = new Map<
       string,
       Array<{ id: number; quantity: number; item_name: string }>
@@ -59,7 +59,6 @@ export default function OrderDetailsPage() {
       });
       map.set(key, group);
     }
-
     const groups: MergeGroup[] = [];
     for (const [, items] of map) {
       if (items.length > 1) {
@@ -79,16 +78,13 @@ export default function OrderDetailsPage() {
   })();
 
   const outOfStockItemIds = outOfStockItems.map((item) => item.order_item_id);
-
   const totalSets =
     orders?.items.reduce((sum, item) => sum + item.quantity, 0) || 0;
-
   const totalPieces =
     orders?.items.reduce(
       (sum, item) => sum + item.quantity * (item.piece_count || 1),
       0,
     ) || 0;
-
   const totalMoney =
     orders?.items.reduce(
       (sum, item) =>
@@ -102,12 +98,10 @@ export default function OrderDetailsPage() {
   const handlePlaceOrder = async () => {
     const orderKey = localStorage.getItem("orderKey");
     if (!orderKey) return;
-
     if (duplicateGroups.length > 0) {
       setShowMergeWarning(true);
       return;
     }
-
     setPlacingOrder(true);
     try {
       await orderApi.placeOrder(Number(orderKey));
@@ -130,7 +124,6 @@ export default function OrderDetailsPage() {
     setShowMergeWarning(false);
     const orderKey = localStorage.getItem("orderKey");
     if (!orderKey) return;
-
     setPlacingOrder(true);
     try {
       for (const group of duplicateGroups) {
@@ -142,7 +135,6 @@ export default function OrderDetailsPage() {
       }
       const res = await orderApi.getOne(Number(orderKey));
       setOrders(res);
-
       await orderApi.placeOrder(Number(orderKey));
       toastSuccess("Order placed successfully!");
       router.push("/agent/order/invoice");
@@ -161,7 +153,6 @@ export default function OrderDetailsPage() {
 
   useEffect(() => {
     setLoading(true);
-
     const fetchData = async () => {
       try {
         const numericId = parseInt(id, 10);
@@ -179,7 +170,6 @@ export default function OrderDetailsPage() {
         setLoading(false);
       }
     };
-
     fetchData();
   }, [id]);
 
@@ -203,84 +193,109 @@ export default function OrderDetailsPage() {
   if (loading) return <PageLoading />;
 
   return (
-    <div className="min-h-screen bg-gray-50/50 pb-32">
+    <div className="min-h-screen bg-gray-50 pb-36">
       {/* Header */}
-      <div className="bg-white border-b border-gray-100 px-6 py-6 sticky top-0 z-10">
-        <div className="max-w-md mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => router.push("/agent/order/new")}
-              className="p-2 rounded-xl hover:bg-gray-50 text-gray-400 transition-colors"
-            >
-              <ChevronLeft size={20} />
-            </button>
-            <div className="flex flex-col">
-              <h1 className="text-xl font-black text-gray-900 leading-tight">
-                Order Details
-              </h1>
-              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
-                Step 2: Add Items
-              </p>
-            </div>
+      <div className="bg-white border-b border-gray-100 px-4 py-4 sticky top-0 z-20">
+        <div className="max-w-lg mx-auto flex items-center gap-3">
+          <button
+            onClick={() => router.push("/agent/order/new")}
+            className="p-2 -ml-1 rounded-xl hover:bg-gray-50 text-gray-400 transition-colors"
+          >
+            <ChevronLeft size={22} />
+          </button>
+          <div className="flex-1">
+            <h1 className="text-lg font-black text-gray-900 leading-none">
+              Order Details
+            </h1>
+            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-0.5">
+              Step 2 — Add Items
+            </p>
           </div>
+          {/* Item count pill in header */}
+          {orders && orders.items.length > 0 && (
+            <div className="flex items-center gap-1.5 bg-primary/8 border border-primary/15 rounded-full px-3 py-1">
+              <Package size={12} className="text-primary" />
+              <span className="text-xs font-black text-primary">
+                {orders.items.length}
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
-      <div className="max-w-md px-2 pt-8">
+      <div className="max-w-lg mx-auto px-4 pt-6 space-y-6">
         {/* Customer Card */}
-        <div className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm flex items-center gap-4 mb-8">
-          <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center border border-primary/5">
-            <User size={24} />
-          </div>
-          <div>
-            <p className="text-[10px] text-gray-400 uppercase font-black tracking-wider leading-none mb-1">
-              Customer
-            </p>
-            <h3 className="text-lg font-bold text-gray-900 leading-tight">
-              {data?.name}
-            </h3>
-            {data?.address && (
-              <p className="text-xs text-gray-400 mt-0.5">{data.address}</p>
-            )}
-          </div>
-        </div>
-
-        {/* Items Section Header */}
-        <div className="flex justify-between items-end mb-6">
-          <div className="flex flex-col">
-            <h2 className="text-xl font-black text-gray-900">Order Items</h2>
-            <div className="flex gap-2 items-center mt-1">
-              <span className="text-gray-400 text-[10px] font-bold uppercase tracking-wider">
-                Selected
-              </span>
-              <div className="bg-amber-100 text-amber-600 rounded-full py-0.5 px-3 border border-amber-200">
-                <span className="font-bold text-xs">
-                  {orders?.items.length || 0}
-                </span>
-              </div>
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="flex items-center gap-4 p-4">
+            <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <User size={20} className="text-primary" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 leading-none mb-1">
+                Customer
+              </p>
+              <h3 className="text-base font-black text-gray-900 truncate">
+                {data?.name}
+              </h3>
             </div>
           </div>
-          <StockFlowButton
-            text="Add Item"
-            variant="filled"
-            icon={<Plus className="size-4" />}
-            onClick={() => router.push(`/agent/order/new/${id}/scanner`)}
-            className="shadow-lg shadow-primary/20 ring-1 ring-primary/10 transition-all active:scale-95"
-          />
+          {data?.address && (
+            <div className="flex items-start gap-2 px-4 py-2.5 bg-gray-50 border-t border-gray-100">
+              <MapPin
+                size={12}
+                className="text-gray-400 mt-0.5 flex-shrink-0"
+              />
+              <p className="text-xs text-gray-500 leading-relaxed">
+                {data.address}
+              </p>
+            </div>
+          )}
         </div>
 
-        {/* Items List */}
-        <div className="space-y-4">
+        {/* Items Section */}
+        <div>
+          {/* Section header */}
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h2 className="text-base font-black text-gray-900">
+                Order Items
+              </h2>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mt-0.5">
+                {orders?.items.length
+                  ? `${orders.items.length} item${orders.items.length !== 1 ? "s" : ""} added`
+                  : "No items yet"}
+              </p>
+            </div>
+            <StockFlowButton
+              text="Add Item"
+              variant="filled"
+              icon={<Plus className="size-4" />}
+              onClick={() => router.push(`/agent/order/new/${id}/scanner`)}
+              className="shadow-md shadow-primary/20 active:scale-95 transition-all text-sm h-10 px-4 rounded-xl"
+            />
+          </div>
+
+          {/* Empty state */}
           {!orders || orders.items.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 bg-white rounded-3xl border border-dashed border-gray-200">
-              <ShoppingBag size={48} className="text-gray-200 mb-4" />
-              <p className="text-gray-400 font-bold">No items added yet</p>
-              <p className="text-[10px] text-gray-300 uppercase tracking-widest mt-1">
-                Scan QR codes to add products
+            <div
+              onClick={() => router.push(`/agent/order/new/${id}/scanner`)}
+              className="flex flex-col items-center justify-center py-14 bg-white rounded-2xl border-2 border-dashed border-gray-200 cursor-pointer hover:border-primary/30 hover:bg-primary/2 transition-all group"
+            >
+              <div className="w-14 h-14 rounded-2xl bg-gray-100 group-hover:bg-primary/10 flex items-center justify-center mb-3 transition-colors">
+                <ShoppingBag
+                  size={26}
+                  className="text-gray-300 group-hover:text-primary transition-colors"
+                />
+              </div>
+              <p className="text-gray-500 text-sm font-bold">
+                No items added yet
+              </p>
+              <p className="text-xs text-gray-400 mt-1">
+                Tap to scan or search items
               </p>
             </div>
           ) : (
-            <div className="bg-white rounded-3xl border border-gray-100 overflow-hidden shadow-sm">
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
               <OrderItem
                 orderId={orders.id}
                 items={orders.items}
@@ -295,187 +310,244 @@ export default function OrderDetailsPage() {
 
         {/* Order Totals */}
         {orders && orders.items.length > 0 && (
-          <div className="mt-8">
-            <OrderTotals
-              totalSets={totalSets}
-              totalPieces={totalPieces}
-              totalPrice={totalMoney}
-              onPlaceOrder={handlePlaceOrder}
-              isLoading={placingOrder}
-              buttonText="Place Order"
-            />
-          </div>
-        )}
-
-        {/* Out of Stock Modal */}
-        {showOutOfStockModal && (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center">
-                    <AlertTriangle className="text-red-500" size={20} />
-                  </div>
-                  <h3 className="text-lg font-black text-gray-900">
-                    Out of Stock
-                  </h3>
-                </div>
-                <button
-                  onClick={() => setShowOutOfStockModal(false)}
-                  className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
-                >
-                  <X size={20} className="text-gray-400" />
-                </button>
-              </div>
-              <p className="text-sm text-gray-500 mb-4">
-                Some items are no longer available. Stock may have been taken by
-                another agent.
-              </p>
-              <div className="space-y-3 mb-6 max-h-48 overflow-y-auto">
-                {(() => {
-                  const grouped = outOfStockItems.reduce(
-                    (acc, item) => {
-                      const key = item.order_item_id;
-                      if (!acc[key]) {
-                        acc[key] = {
-                          item_name: item.item_name,
-                          size_group: item.size_group,
-                          required: item.required,
-                          available: item.available,
-                          order_item_id: item.order_item_id,
-                        };
-                      } else {
-                        acc[key].available = Math.min(
-                          acc[key].available,
-                          item.available,
-                        );
-                      }
-                      return acc;
-                    },
-                    {} as Record<
-                      number,
-                      {
-                        item_name: string;
-                        size_group: string;
-                        required: number;
-                        available: number;
-                        order_item_id: number;
-                      }
-                    >,
-                  );
-
-                  return Object.values(grouped).map((item, idx) => (
-                    <div
-                      key={idx}
-                      className="bg-red-50 rounded-xl p-3 border border-red-200"
-                    >
-                      <p className="font-bold text-gray-900 text-sm">
-                        {item.item_name}, {item.size_group}
-                      </p>
-                      <p className="text-xs mt-1">
-                        <span className="text-gray-500">Requested: </span>
-                        <span className="font-semibold text-gray-900">
-                          {item.required}
-                        </span>
-                        <span className="text-gray-400"> | </span>
-                        <span className="text-gray-500">Available: </span>
-                        <span className="font-semibold text-red-600">
-                          {item.available}
-                        </span>
-                      </p>
-                    </div>
-                  ));
-                })()}
-              </div>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowOutOfStockModal(false)}
-                  className="flex-1 py-3 rounded-xl border border-gray-200 text-gray-600 font-bold text-sm hover:bg-gray-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => setShowOutOfStockModal(false)}
-                  className="flex-1 py-3 rounded-xl bg-primary text-white font-bold text-sm hover:opacity-90 transition-opacity"
-                >
-                  Remove Items
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Merge Warning Modal */}
-        {showMergeWarning && (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center">
-                    <AlertTriangle className="text-amber-500" size={20} />
-                  </div>
-                  <h3 className="text-lg font-black text-gray-900">
-                    Duplicate Items
-                  </h3>
-                </div>
-                <button
-                  onClick={() => setShowMergeWarning(false)}
-                  className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
-                >
-                  <X size={20} className="text-gray-400" />
-                </button>
-              </div>
-              <p className="text-sm text-gray-500 mb-4">
-                Some items have the same color and size range. They will be
-                combined into one item with the total quantity.
-              </p>
-              <div className="space-y-3 mb-6 max-h-48 overflow-y-auto">
-                {duplicateGroups.map((group, idx) => (
-                  <div
-                    key={idx}
-                    className="bg-amber-50 rounded-xl p-3 border border-amber-200"
-                  >
-                    <p className="font-bold text-gray-900 text-sm">
-                      {group.item_name} — {group.size_group}
-                    </p>
-                    <p className="text-xs mt-1">
-                      {group.items.map((item, i) => (
-                        <span key={item.id}>
-                          <span className="font-semibold text-gray-700">
-                            {item.quantity}
-                          </span>
-                          {i < group.items.length - 1 && (
-                            <span className="text-gray-400"> + </span>
-                          )}
-                        </span>
-                      ))}
-                      <span className="text-gray-400"> = </span>
-                      <span className="font-bold text-amber-600">
-                        {group.total} sets
-                      </span>
-                    </p>
-                  </div>
-                ))}
-              </div>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowMergeWarning(false)}
-                  className="flex-1 py-3 rounded-xl border border-gray-200 text-gray-600 font-bold text-sm hover:bg-gray-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleProceedWithPlaceOrder}
-                  disabled={placingOrder}
-                  className="flex-1 py-3 rounded-xl bg-primary text-white font-bold text-sm hover:opacity-90 transition-opacity disabled:opacity-50"
-                >
-                  {placingOrder ? "Merging..." : "Proceed"}
-                </button>
-              </div>
-            </div>
-          </div>
+          <OrderTotals
+            totalSets={totalSets}
+            totalPieces={totalPieces}
+            totalPrice={totalMoney}
+            onPlaceOrder={handlePlaceOrder}
+            isLoading={placingOrder}
+            buttonText="Place Order"
+          />
         )}
       </div>
+
+      {/* ── Modals ── */}
+
+      {/* Out of Stock Modal */}
+      {showOutOfStockModal && (
+        <Modal
+          icon={<AlertTriangle size={18} className="text-red-500" />}
+          iconBg="bg-red-100"
+          title="Out of Stock"
+          description="Some items are unavailable. Stock may have been taken by another agent."
+          onClose={() => setShowOutOfStockModal(false)}
+          actions={
+            <>
+              <ModalButton
+                variant="ghost"
+                onClick={() => setShowOutOfStockModal(false)}
+              >
+                Cancel
+              </ModalButton>
+              <ModalButton
+                variant="primary"
+                onClick={() => setShowOutOfStockModal(false)}
+              >
+                Remove Items
+              </ModalButton>
+            </>
+          }
+        >
+          {(() => {
+            const grouped = outOfStockItems.reduce(
+              (acc, item) => {
+                const key = item.order_item_id;
+                if (!acc[key]) {
+                  acc[key] = {
+                    item_name: item.item_name,
+                    size_group: item.size_group,
+                    required: item.required,
+                    available: item.available,
+                    order_item_id: item.order_item_id,
+                  };
+                } else {
+                  acc[key].available = Math.min(
+                    acc[key].available,
+                    item.available,
+                  );
+                }
+                return acc;
+              },
+              {} as Record<
+                number,
+                {
+                  item_name: string;
+                  size_group: string;
+                  required: number;
+                  available: number;
+                  order_item_id: number;
+                }
+              >,
+            );
+
+            return Object.values(grouped).map((item, idx) => (
+              <div
+                key={idx}
+                className="bg-red-50 rounded-xl p-3 border border-red-100"
+              >
+                <p className="font-bold text-gray-900 text-sm">
+                  {item.item_name}
+                </p>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  {item.size_group}
+                </p>
+                <div className="flex gap-4 mt-2">
+                  <span className="text-xs text-gray-500">
+                    Requested:{" "}
+                    <span className="font-bold text-gray-800">
+                      {item.required}
+                    </span>
+                  </span>
+                  <span className="text-xs text-gray-500">
+                    Available:{" "}
+                    <span className="font-bold text-red-600">
+                      {item.available}
+                    </span>
+                  </span>
+                </div>
+              </div>
+            ));
+          })()}
+        </Modal>
+      )}
+
+      {/* Merge Warning Modal */}
+      {showMergeWarning && (
+        <Modal
+          icon={<AlertTriangle size={18} className="text-amber-500" />}
+          iconBg="bg-amber-100"
+          title="Duplicate Items"
+          description="Some items share the same colour and size range. They'll be combined into one entry with the total quantity."
+          onClose={() => setShowMergeWarning(false)}
+          actions={
+            <>
+              <ModalButton
+                variant="ghost"
+                onClick={() => setShowMergeWarning(false)}
+              >
+                Cancel
+              </ModalButton>
+              <ModalButton
+                variant="primary"
+                onClick={handleProceedWithPlaceOrder}
+                disabled={placingOrder}
+              >
+                {placingOrder ? "Merging…" : "Proceed"}
+              </ModalButton>
+            </>
+          }
+        >
+          {duplicateGroups.map((group, idx) => (
+            <div
+              key={idx}
+              className="bg-amber-50 rounded-xl p-3 border border-amber-100"
+            >
+              <p className="font-bold text-gray-900 text-sm">
+                {group.item_name}
+              </p>
+              <p className="text-xs text-gray-500 mt-0.5">{group.size_group}</p>
+              <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                {group.items.map((item, i) => (
+                  <span key={item.id} className="flex items-center gap-1.5">
+                    <span className="text-xs font-bold bg-white border border-amber-200 text-amber-700 rounded-lg px-2 py-0.5">
+                      {item.quantity} sets
+                    </span>
+                    {i < group.items.length - 1 && (
+                      <span className="text-gray-400 text-xs">+</span>
+                    )}
+                  </span>
+                ))}
+                <span className="text-gray-400 text-xs mx-0.5">=</span>
+                <span className="text-xs font-black text-amber-600 bg-amber-100 border border-amber-200 rounded-lg px-2 py-0.5">
+                  {group.total} sets
+                </span>
+              </div>
+            </div>
+          ))}
+        </Modal>
+      )}
     </div>
+  );
+}
+
+/* ── Shared modal primitives ── */
+
+function Modal({
+  icon,
+  iconBg,
+  title,
+  description,
+  onClose,
+  actions,
+  children,
+}: {
+  icon: React.ReactNode;
+  iconBg: string;
+  title: string;
+  description: string;
+  onClose: () => void;
+  actions: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4">
+      <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl">
+        {/* Modal header */}
+        <div className="flex items-center justify-between p-5 pb-0">
+          <div className="flex items-center gap-3">
+            <div
+              className={`w-9 h-9 rounded-xl ${iconBg} flex items-center justify-center`}
+            >
+              {icon}
+            </div>
+            <h3 className="text-base font-black text-gray-900">{title}</h3>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 hover:bg-gray-100 rounded-xl transition-colors"
+          >
+            <X size={18} className="text-gray-400" />
+          </button>
+        </div>
+
+        <p className="text-sm text-gray-500 px-5 pt-3 pb-4 leading-relaxed">
+          {description}
+        </p>
+
+        {/* Scrollable content */}
+        <div className="px-5 space-y-2 max-h-52 overflow-y-auto">
+          {children}
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-2.5 p-5">{actions}</div>
+      </div>
+    </div>
+  );
+}
+
+function ModalButton({
+  variant,
+  onClick,
+  disabled,
+  children,
+}: {
+  variant: "ghost" | "primary";
+  onClick: () => void;
+  disabled?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all active:scale-95 disabled:opacity-50 ${
+        variant === "ghost"
+          ? "border border-gray-200 text-gray-600 hover:bg-gray-50"
+          : "bg-primary text-white shadow-md shadow-primary/20 hover:opacity-90"
+      }`}
+    >
+      {children}
+    </button>
   );
 }

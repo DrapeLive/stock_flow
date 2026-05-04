@@ -1,6 +1,6 @@
 from django.db import transaction
 from django.shortcuts import get_object_or_404
-from django.db.models import F
+from django.db.models import F, Q
 from django.utils import timezone
 
 from rest_framework.viewsets import ModelViewSet
@@ -8,23 +8,21 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.decorators import action
-
-from .models import Order, OrderItem, OrderLog
-from .serializers import (
-    OrderSerializer,
-    AddOrderItemSerializer,
-    OrderItemSerializer,
-    InvoiceSerializer,
-    get_piece_count
-)
-
-from apps.accounts.permissions import IsAgent
-from apps.accounts.permissions import admin_business
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 
-from apps.items.models import ItemVariant, ItemVariantSize
+from apps.accounts.permissions import IsAgent, admin_business
 from apps.agents.models import AgentItem
-from .utils import SIZE_MAPPING
+from apps.items.models import ItemVariantSize
+from apps.orders.models import Order, OrderItem, OrderLog
+from apps.orders.serializers import AddOrderItemSerializer, InvoiceSerializer, OrderItemSerializer, OrderSerializer, get_piece_count
+from apps.orders.utils import SIZE_MAPPING
+
+
+class OrderPagination(PageNumberPagination):
+    page_size = 50
+    page_size_query_param = 'page_size'
+    max_page_size = 200
 
 
 def _build_snapshot(order):
@@ -303,6 +301,7 @@ class OrderViewSet(ModelViewSet):
 
     serializer_class = OrderSerializer
     permission_classes = [IsAuthenticated]
+    pagination_class = OrderPagination
 
     def get_queryset(self):
 
@@ -348,11 +347,32 @@ class OrderViewSet(ModelViewSet):
         if agent_id and user.role == "ADMIN":
             qs = qs.filter(agent_id=agent_id)
 
+        statuses = self.request.query_params.getlist('status')
+
+        if statuses:
+            qs = qs.filter(status__in=[s.upper() for s in statuses])
         if user.role == "ADMIN":
             biz = admin_business(user)
             if biz:
                 qs = qs.filter(items__item_type=biz).distinct()
+
+            search = self.request.query_params.get('search')
+            if search:
+                qs = qs.filter(
+                    Q(customer__name__icontains=search) |
+                    Q(agent__user__username__icontains=search) |
+                    Q(id__icontains=search)
+                ).distinct()
+
             return qs
+
+        search = self.request.query_params.get('search')
+        if search:
+            qs = qs.filter(
+                Q(customer__name__icontains=search) |
+                Q(agent__user__username__icontains=search) |
+                Q(id__icontains=search)
+            ).distinct()
 
         return qs.filter(agent__user=user)
 
@@ -452,6 +472,22 @@ class OrderViewSet(ModelViewSet):
 
         return Response({"message": "Edit cancelled"})
 
+    @action(detail=False, methods=["get"], url_path="order-ids")
+    def order_ids(self, request):
+        """Return lightweight list of {id, status} for all orders (for unread count)."""
+        user = request.user
+        qs = Order.objects.all()
+
+        if user.role == "ADMIN":
+            biz = admin_business(user)
+            if biz:
+                qs = qs.filter(items__item_type=biz).distinct()
+        else:
+            qs = qs.filter(agent__user=user)
+
+        qs = qs.values_list('id', 'status')
+        return Response([{"id": oid, "status": stat} for oid, stat in qs])
+
 
 class AddOrderItemView(APIView):
 
@@ -486,7 +522,7 @@ class AddOrderItemView(APIView):
         existing = order.items.first()
         if existing and existing.item_type != item.type:
             return Response(
-                {"error": "Order can only contain items of one type"},
+                {"error": f"Order can only contain items of {existing.item_type} type"},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -498,7 +534,6 @@ class AddOrderItemView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        required_sizes = SIZE_MAPPING[item_type][size_group]
 
         with transaction.atomic():
 
@@ -616,8 +651,6 @@ class OrderLogsView(APIView):
 
         logs = order.logs.all().order_by('-created_at')
 
-        from django.contrib.auth import get_user_model
-        User = get_user_model()
 
         result = []
         for log in logs:

@@ -30,7 +30,7 @@ export default function InvoicePage() {
 
   const [invoice, setInvoice] = useState<InvoiceResponse | null>(null);
   const [loading, setLoading] = useState(true);
-  const [fetchError, setFetchError] = useState(false);
+  const [, setFetchError] = useState(false);
   const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
   const [pdfGenerating, setPdfGenerating] = useState(true);
 

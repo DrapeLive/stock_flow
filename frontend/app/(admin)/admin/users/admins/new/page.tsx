@@ -6,7 +6,6 @@ import { brandApi } from "@/lib/api/brand";
 import { toastSuccess, toastError } from "@/lib/toast";
 import {
   Field,
-  FieldContent,
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field";
@@ -21,6 +20,7 @@ import {
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { deriveUsername } from "@/lib/utils/deriveUsername";
 import type { Business } from "@/types/auth";
 import type { Brand } from "@/types/brand";
 
@@ -28,8 +28,11 @@ export default function NewAdminPage() {
   const router = useRouter();
   const { business, isSuperuser } = useAuth();
   const [brands, setBrands] = useState<Brand[]>([]);
+  const [existingUsernames, setExistingUsernames] = useState<Set<string>>(
+    new Set(),
+  );
   const [formData, setFormData] = useState({
-    adminName: "",
+    displayName: "",
     email: "",
     password: "",
     business: isSuperuser ? "" : (business ?? ""),
@@ -40,8 +43,17 @@ export default function NewAdminPage() {
 
   useEffect(() => {
     if (isSuperuser) {
-      brandApi.getAll().then(setBrands).catch(() => setBrands([]));
+      brandApi
+        .getAll()
+        .then(setBrands)
+        .catch(() => setBrands([]));
     }
+    adminApi
+      .getAll()
+      .then((admins) => {
+        setExistingUsernames(new Set(admins.map((a) => a.username)));
+      })
+      .catch(() => {});
   }, [isSuperuser]);
 
   const handleChange = (key: string, value: string) => {
@@ -60,7 +72,8 @@ export default function NewAdminPage() {
 
   const validate = () => {
     const newErrors: Record<string, string> = {};
-    if (!formData.adminName.trim()) newErrors.adminName = "Name is required";
+    if (!formData.displayName.trim())
+      newErrors.displayName = "Name is required";
     if (!formData.email.trim()) {
       newErrors.email = "Email is required";
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
@@ -86,8 +99,10 @@ export default function NewAdminPage() {
 
     setIsSubmitting(true);
     try {
+      const username = deriveUsername(formData.displayName, existingUsernames);
       await adminApi.create({
-        username: formData.adminName,
+        username,
+        display_name: formData.displayName,
         email: formData.email,
         password: formData.password,
         business: isSuperuser ? (formData.business as Business) : null,
@@ -95,7 +110,7 @@ export default function NewAdminPage() {
       });
       toastSuccess("Admin created successfully");
       router.push("/admin/users/");
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error creating admin:", error);
       toastError("Failed to create admin", error);
     } finally {
@@ -106,20 +121,32 @@ export default function NewAdminPage() {
   return (
     <div className="w-full px-4 py-8 flex flex-col min-h-screen bg-white">
       <div className="mb-8">
-        <h1 className="text-2xl font-black text-gray-900 tracking-tight">New Admin</h1>
-        <p className="text-sm text-gray-400 font-medium">Create a new system administrator</p>
+        <h1 className="text-2xl font-black text-gray-900 tracking-tight">
+          New Admin
+        </h1>
+        <p className="text-sm text-gray-400 font-medium">
+          Create a new system administrator
+        </p>
       </div>
 
       {isSuperuser ? (
         <div className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 mb-6 flex items-center gap-3">
-          <span className="text-xs font-bold text-amber-600 uppercase tracking-wider">Superuser:</span>
-          <span className="text-sm font-medium text-gray-700">Select a business below to create an admin for that catalog</span>
+          <span className="text-xs font-bold text-amber-600 uppercase tracking-wider">
+            Superuser:
+          </span>
+          <span className="text-sm font-medium text-gray-700">
+            Select a business below to create an admin for that catalog
+          </span>
         </div>
       ) : (
         business && (
           <div className="bg-primary/5 border border-primary/20 rounded-2xl px-4 py-3 mb-6 flex items-center gap-3">
-            <span className="text-xs font-bold text-primary uppercase tracking-wider">Business:</span>
-            <span className="text-sm font-black text-gray-800 capitalize">{business}</span>
+            <span className="text-xs font-bold text-primary uppercase tracking-wider">
+              Business:
+            </span>
+            <span className="text-sm font-black text-gray-800 capitalize">
+              {business}
+            </span>
           </div>
         )
       )}
@@ -128,21 +155,41 @@ export default function NewAdminPage() {
         <FieldGroup className="space-y-6 flex-1">
           <Field>
             <div className="flex justify-between items-center mb-1.5">
-              <FieldLabel className="text-xs font-bold uppercase tracking-widest text-gray-400">Admin Username</FieldLabel>
-              {errors.adminName && <span className="text-[10px] text-red-500 font-bold">{errors.adminName}</span>}
+              <FieldLabel className="text-xs font-bold uppercase tracking-widest text-gray-400">
+                Display Name
+              </FieldLabel>
+              {errors.displayName && (
+                <span className="text-[10px] text-red-500 font-bold">
+                  {errors.displayName}
+                </span>
+              )}
             </div>
             <Input
-              placeholder="e.g. admin_jane"
-              value={formData.adminName}
-              onChange={(e) => handleChange("adminName", e.target.value)}
-              className={`bg-white border-gray-100 rounded-xl h-12 focus:ring-primary/10 ${errors.adminName ? "border-red-200 focus:border-red-300" : "focus:border-primary"}`}
+              placeholder="e.g. Jane Smith"
+              value={formData.displayName}
+              onChange={(e) => handleChange("displayName", e.target.value)}
+              className={`bg-white border-gray-100 rounded-xl h-12 focus:ring-primary/10 ${errors.displayName ? "border-red-200 focus:border-red-300" : "focus:border-primary"}`}
             />
+            {formData.displayName.trim() && (
+              <p className="mt-1.5 text-[11px] text-gray-400">
+                Username:{" "}
+                <span className="font-mono font-medium text-gray-600">
+                  {deriveUsername(formData.displayName, existingUsernames)}
+                </span>
+              </p>
+            )}
           </Field>
 
           <Field>
             <div className="flex justify-between items-center mb-1.5">
-              <FieldLabel className="text-xs font-bold uppercase tracking-widest text-gray-400">Email Address</FieldLabel>
-              {errors.email && <span className="text-[10px] text-red-500 font-bold">{errors.email}</span>}
+              <FieldLabel className="text-xs font-bold uppercase tracking-widest text-gray-400">
+                Email Address
+              </FieldLabel>
+              {errors.email && (
+                <span className="text-[10px] text-red-500 font-bold">
+                  {errors.email}
+                </span>
+              )}
             </div>
             <Input
               type="email"
@@ -155,8 +202,14 @@ export default function NewAdminPage() {
 
           <Field>
             <div className="flex justify-between items-center mb-1.5">
-              <FieldLabel className="text-xs font-bold uppercase tracking-widest text-gray-400">Secure Password</FieldLabel>
-              {errors.password && <span className="text-[10px] text-red-500 font-bold">{errors.password}</span>}
+              <FieldLabel className="text-xs font-bold uppercase tracking-widest text-gray-400">
+                Secure Password
+              </FieldLabel>
+              {errors.password && (
+                <span className="text-[10px] text-red-500 font-bold">
+                  {errors.password}
+                </span>
+              )}
             </div>
             <Input
               type="password"
@@ -170,14 +223,22 @@ export default function NewAdminPage() {
           {isSuperuser && (
             <Field>
               <div className="flex justify-between items-center mb-1.5">
-                <FieldLabel className="text-xs font-bold uppercase tracking-widest text-gray-400">Business</FieldLabel>
-                {errors.business && <span className="text-[10px] text-red-500 font-bold">{errors.business}</span>}
+                <FieldLabel className="text-xs font-bold uppercase tracking-widest text-gray-400">
+                  Business
+                </FieldLabel>
+                {errors.business && (
+                  <span className="text-[10px] text-red-500 font-bold">
+                    {errors.business}
+                  </span>
+                )}
               </div>
               <Select
                 value={formData.business}
                 onValueChange={(v) => handleChange("business", v)}
               >
-                <SelectTrigger className={`bg-white h-12 ${errors.business ? "border-red-200 focus:border-red-300" : "focus:border-primary"}`}>
+                <SelectTrigger
+                  className={`bg-white h-12 ${errors.business ? "border-red-200 focus:border-red-300" : "focus:border-primary"}`}
+                >
                   <SelectValue placeholder="Select business" />
                 </SelectTrigger>
                 <SelectContent>
@@ -191,14 +252,22 @@ export default function NewAdminPage() {
           {isSuperuser && (
             <Field>
               <div className="flex justify-between items-center mb-1.5">
-                <FieldLabel className="text-xs font-bold uppercase tracking-widest text-gray-400">Brand *</FieldLabel>
-                {errors.brand_id && <span className="text-[10px] text-red-500 font-bold">{errors.brand_id}</span>}
+                <FieldLabel className="text-xs font-bold uppercase tracking-widest text-gray-400">
+                  Brand *
+                </FieldLabel>
+                {errors.brand_id && (
+                  <span className="text-[10px] text-red-500 font-bold">
+                    {errors.brand_id}
+                  </span>
+                )}
               </div>
               <Select
                 value={formData.brand_id}
                 onValueChange={(v) => handleChange("brand_id", v)}
               >
-                <SelectTrigger className={`bg-white h-12 ${errors.brand_id ? "border-red-200 focus:border-red-300" : "focus:border-primary"}`}>
+                <SelectTrigger
+                  className={`bg-white h-12 ${errors.brand_id ? "border-red-200 focus:border-red-300" : "focus:border-primary"}`}
+                >
                   <SelectValue placeholder="Select brand" />
                 </SelectTrigger>
                 <SelectContent>
@@ -227,7 +296,7 @@ export default function NewAdminPage() {
           text={isSubmitting ? "Creating..." : "Create Admin"}
           onClick={handleSubmit}
           disabled={isSubmitting}
-          className="flex-[2] h-14 rounded-2xl bg-primary shadow-lg shadow-primary/20 font-bold text-white active:scale-95 transition-all text-sm"
+          className="flex-2 h-14 rounded-2xl bg-primary shadow-lg shadow-primary/20 font-bold text-white active:scale-95 transition-all text-sm"
         />
       </div>
     </div>

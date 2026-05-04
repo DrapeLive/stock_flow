@@ -4,7 +4,6 @@ import { Input } from "@/components/ui/input";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { authApi } from "@/lib/api";
 import { Send, CheckCircle2 } from "lucide-react";
-import Link from "next/link";
 import { KeyboardEvent, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { AuthCard } from "@/components/pages/auth/AuthCard";
@@ -42,7 +41,7 @@ export default function ForgotPassword() {
     try {
       await authApi.forgotPassword({ email: email.trim().toLowerCase() });
       setStatus("success");
-    } catch (err: any) {
+    } catch (err: unknown) {
       setStatus("error");
       setErrorMsg(
         err?.response?.data?.error ?? "Something went wrong. Please try again.",
@@ -74,11 +73,11 @@ export default function ForgotPassword() {
                 <span className="font-medium text-[var(--color-heading)]">
                   {email}
                 </span>{" "}
-                is linked to an account, you'll receive a reset link shortly.
+                is linked to an account, you&apos;ll receive a reset link shortly.
               </p>
             </div>
             <p className="text-xs text-gray-400">
-              Didn't get it? Check your spam folder or{" "}
+              Didn&apos;t get it? Check your spam folder or{" "}
               <button
                 className="underline text-[var(--color-primary)] hover:opacity-70 transition-opacity"
                 onClick={() => {
@@ -98,7 +97,7 @@ export default function ForgotPassword() {
                 Forgot your password?
               </h2>
               <p className="text-sm text-[var(--color-text)]">
-                Enter your email and we'll send you a reset link.
+                Enter your email and we&apos;ll send you a reset link.
               </p>
             </div>
 

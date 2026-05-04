@@ -11,6 +11,9 @@ interface FilterBarProps {
   agents?: { id: number; username: string }[];
   selectedAgent?: string;
   onAgentChange?: (agentId: string) => void;
+  customers?: { id: number; name: string }[];
+  selectedCustomer?: string;
+  onCustomerChange?: (customerId: string) => void;
   isOpen: boolean;
   onClear: () => void;
 }
@@ -23,16 +26,22 @@ export default function FilterBar({
   agents = [],
   selectedAgent = "",
   onAgentChange,
+  customers = [],
+  selectedCustomer = "",
+  onCustomerChange,
   isOpen,
   onClear,
 }: FilterBarProps) {
   if (!isOpen) return null;
 
   const hasFilters =
-    fromDate || toDate || (selectedAgent && selectedAgent !== "all");
+    fromDate ||
+    toDate ||
+    (selectedAgent && selectedAgent !== "all") ||
+    (selectedCustomer && selectedCustomer !== "all");
 
   return (
-    <div className="flex flex-wrap gap-2 items-center mb-4 p-2 bg-gray-50 rounded-lg">
+    <div className="relative flex flex-wrap gap-2 items-center p-2 bg-gray-50 rounded-lg">
       <div className="relative flex-1 min-w-[140px]">
         <DatePicker
           value={fromDate}
@@ -61,6 +70,25 @@ export default function FilterBar({
                 ...agents.map((a) => ({
                   value: String(a.id),
                   label: a.username,
+                })),
+              ]}
+            />
+          </div>
+        </>
+      )}
+      {customers.length > 0 && onCustomerChange && (
+        <>
+          <span className="text-gray-400 text-xs">Customer</span>
+          <div className="flex-1 min-w-[140px]">
+            <StockFlowSelect
+              value={selectedCustomer}
+              onChange={onCustomerChange}
+              placeholder="All Customers"
+              options={[
+                { value: "all", label: "All Customers" },
+                ...customers.map((c) => ({
+                  value: String(c.id),
+                  label: c.name,
                 })),
               ]}
             />

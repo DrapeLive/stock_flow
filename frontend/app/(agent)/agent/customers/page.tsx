@@ -7,9 +7,10 @@ import { useEffect, useState } from "react";
 import { CustomerAllResponse } from "@/types/customer";
 import { customerApi } from "@/lib/api/customer";
 import { PageLoading } from "@/components/ui/Loading";
+import StockflowAvatar from "@/components/ui/custom/stockflowAvatar";
 
 export default function AgentCustomersPage() {
-  const { user, isAuthenticated } = useAuth();
+  const { isAuthenticated } = useAuth();
   const [data, setData] = useState<CustomerAllResponse>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
@@ -68,7 +69,7 @@ export default function AgentCustomersPage() {
             <Info size={40} className="mb-4 opacity-20" />
             <h2 className="text-xl font-bold">No Customers Found</h2>
             <p className="text-sm text-gray-400 mt-1">
-              You haven't been assigned any customers yet.
+              You haven&apos;t been assigned any customers yet.
             </p>
           </div>
         ) : (
@@ -76,13 +77,10 @@ export default function AgentCustomersPage() {
             {data.map((item) => (
               <div
                 key={item.id}
+                onClick={() => router.push(`/agent/customers/${item.id}`)}
                 className="flex items-center gap-4 bg-white border border-gray-100 p-4 hover:border-primary/30 hover:shadow-md transition-all rounded-2xl group active:scale-[0.98]"
               >
-                <div className="w-12 h-12 rounded-xl bg-gray-50 flex items-center justify-center border border-gray-100 shadow-sm flex-shrink-0">
-                  <span className="text-xl font-black text-gray-400 opacity-30">
-                    {item.name.charAt(0).toUpperCase()}
-                  </span>
-                </div>
+                <StockflowAvatar user={item} />
 
                 <div className="flex-1 min-w-0">
                   <h6 className="font-bold text-gray-900 text-base truncate leading-tight">

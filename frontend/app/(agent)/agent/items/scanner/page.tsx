@@ -23,7 +23,7 @@ import {
   SIZE_RANGE_PIECE_COUNT,
   getSizesForItemType,
 } from "@/types/item";
-import type { Customer, CustomerAllResponse } from "@/types/customer";
+import type { CustomerAllResponse } from "@/types/customer";
 
 function getAvailableSizeRanges(
   variant: ItemVariant | null,
@@ -111,7 +111,7 @@ export default function PriceCheckScannerPage() {
       } else {
         setSelectedVariant(result.variants[0] || null);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error fetching item:", err);
       toastError(err.response?.data?.error || "Item not found", err);
       setScanned(false);
@@ -410,7 +410,7 @@ export default function PriceCheckScannerPage() {
           </div>
           <h2 className="text-lg font-bold text-gray-800">Scan Item QR</h2>
           <p className="text-sm text-gray-400 mt-2 max-w-[200px] mx-auto leading-relaxed font-medium">
-            Scan an item's QR code to view price and details
+            Scan an item&apos;s QR code to view price and details
           </p>
         </div>
       </div>

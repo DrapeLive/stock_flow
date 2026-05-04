@@ -4,7 +4,7 @@ import { orderApi } from "@/lib/api/order";
 import { itemApi } from "@/lib/api/item";
 import { toastError, toastSuccess } from "@/lib/toast";
 import { OrderItem as OrderItemType, OrderItems } from "@/types/order";
-import { VariantAllItem, VariantSize, ItemType } from "@/types/item";
+import { VariantSize, ItemType } from "@/types/item";
 import {
   SIZE_RANGE_TO_SIZES,
   SIZE_RANGE_PIECE_COUNT,
@@ -96,9 +96,6 @@ const OrderItem: React.FC<Props> = ({
   const [editPieceCount, setEditPieceCount] = useState(1);
   const [editPackedQty, setEditPackedQty] = useState(0);
   const [showEditDialog, setShowEditDialog] = useState(false);
-  const [availableVariants, setAvailableVariants] = useState<VariantAllItem[]>(
-    [],
-  );
   const [sizeGroupOptions, setSizeGroupOptions] = useState<string[]>([]);
   const [variantSizes, setVariantSizes] = useState<VariantSize[]>([]);
   const [variantsLoading, setVariantsLoading] = useState(false);
@@ -299,9 +296,9 @@ const OrderItem: React.FC<Props> = ({
         ),
       );
       toastSuccess("Item updated successfully");
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error updating item:", err);
-      toastError(err.response?.data?.error || "Failed to update item");
+      toastError((err as { response?: { data?: { error?: string } } })?.response?.data?.error || "Failed to update item");
     } finally {
       setLoading(false);
       setShowEditDialog(false);
@@ -337,7 +334,7 @@ const OrderItem: React.FC<Props> = ({
                 onDelete={(deleteItemID) => onDelete(deleteItemID, orderId)}
                 onEdit={isEditable ? handleEditItem : undefined}
                 onTogglePacked={(id, packed) => {
-                  const newPacked = packed ? totalPieces : 0;
+                  void packed;
                   togglePacked(id, item.packed_quantity ?? 0, totalPieces);
                 }}
               />

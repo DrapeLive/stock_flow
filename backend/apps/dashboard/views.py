@@ -1,9 +1,9 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from django.db.models import Count, Sum, Avg, F, ExpressionWrapper, DurationField
+from django.db.models import Count, Sum
 from django.db.models.functions import TruncDate
 from django.utils import timezone
-from datetime import timedelta, datetime
+from datetime import timedelta
 from apps.orders.models import Order, OrderItem, OrderLog
 from apps.agents.models import Agent
 from apps.accounts.permissions import IsAdmin, admin_business

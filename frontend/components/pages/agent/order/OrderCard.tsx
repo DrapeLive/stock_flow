@@ -1,8 +1,10 @@
 "use client";
 import { OrderAllResponse } from "@/types/order";
 import StatusBadge from "@/components/ui/custom/StatusBadge";
-import { Info, User } from "lucide-react";
+import { User } from "lucide-react";
 import { getColorFromId } from "@/util/getColorFromId";
+import { markOrderAsViewed } from "@/lib/viewedOrders";
+import StockflowAvatar from "@/components/ui/custom/stockflowAvatar";
 
 interface OrderCardProps {
   order: OrderAllResponse[number];
@@ -20,6 +22,13 @@ const formatDate = (dateStr: string) => {
 export default function OrderCard({ order, onClick }: OrderCardProps) {
   if (order.items.length === 0) return null;
 
+  const viewed = true; // Temporary removal
+
+  const handleClick = () => {
+    markOrderAsViewed(order.id);
+    onClick();
+  };
+
   const totalSets =
     order.total_sets ||
     order.items.reduce((sum, item) => sum + item.quantity, 0);
@@ -32,21 +41,19 @@ export default function OrderCard({ order, onClick }: OrderCardProps) {
 
   return (
     <div
-      onClick={onClick}
-      className="bg-white border border-gray-100 p-4 rounded-2xl hover:border-primary/30 hover:shadow-md transition-all cursor-pointer active:scale-[0.99]"
+      onClick={handleClick}
+      className="bg-white border border-gray-100 p-4 rounded-2xl hover:border-primary/30 hover:shadow-md transition-all cursor-pointer active:scale-[0.99] relative"
     >
+      {!viewed && (
+        <div className="absolute top-3 right-3 w-2.5 h-2.5 bg-primary rounded-full" />
+      )}
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
-          <div
-            className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-            style={{
-              backgroundColor: getColorFromId(order.customer_details?.id),
-            }}
-          >
-            <User size={18} color="white" className="text-primary" />
-          </div>
+          <StockflowAvatar user={order.customer_details} />
           <div className="min-w-0">
-            <h6 className="font-bold text-gray-900 text-sm truncate leading-tight">
+            <h6
+              className={`font-bold text-sm truncate leading-tight ${!viewed ? "text-gray-900" : "text-gray-700"}`}
+            >
               {order.customer_details?.name || "Unknown Customer"}
             </h6>
             <p className="text-xs text-gray-400 mt-0.5">

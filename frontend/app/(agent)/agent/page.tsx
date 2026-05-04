@@ -11,6 +11,7 @@ import OrderListHeader from "@/components/pages/agent/order/OrderListHeader";
 import EmptyState from "@/components/ui/EmptyState";
 import FilterBar from "@/components/ui/FilterBar";
 import FilterToggle from "@/components/ui/FilterToggle";
+import AgentOrderList from "@/components/pages/agent/orderList/OrderList";
 
 type ItemTypeTab = "gents" | "kids";
 
@@ -121,6 +122,9 @@ export default function Home() {
           ))}
         </div>
       )}
+  return (
+    <div className="min-h-screen min-w-full">
+      <AgentOrderList />
     </div>
   );
 }

@@ -1,15 +1,20 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, Suspense, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { agentApi } from "@/lib/api/agents";
+import { customerApi } from "@/lib/api/customer";
+import { orderApi } from "@/lib/api/order";
 import Packed from "@/components/pages/admin/order_components/Packed";
 import Pending from "@/components/pages/admin/order_components/Pending";
 import Dispatched from "@/components/pages/admin/order_components/Dispatched";
 import All from "@/components/pages/admin/order_components/All";
 import FilterBar from "@/components/ui/FilterBar";
 import FilterToggle from "@/components/ui/FilterToggle";
+import SearchBar from "@/components/ui/SearchBar";
 import { OrderFilters } from "@/components/pages/admin/order_components/types";
+import { getViewedOrdersCount, markAllAsRead } from "@/lib/viewedOrders";
+import useSessionStorage from "@/hooks/useSessionStorage";
 
 type Tab = "All" | "Packed" | "Pending" | "Dispatched";
 
@@ -18,9 +23,15 @@ interface SimpleAgent {
   username: string;
 }
 
+interface SimpleCustomer {
+  id: number;
+  name: string;
+}
+
 function AdminHomePageContent() {
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<Tab>("Pending");
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     const saved = sessionStorage.getItem("adminOrdersActiveTab") as Tab | null;
@@ -30,17 +41,80 @@ function AdminHomePageContent() {
   const handleTabChange = (tab: Tab) => {
     setActiveTab(tab);
     sessionStorage.setItem("adminOrdersActiveTab", tab);
+    // Reset page to 1 when switching tabs
+    setTabPages((prev) => ({ ...prev, [tab]: 1 }));
+    setCurrentPage(tabPages[tab] || 1);
+    // Reset scroll position for the tab
+    sessionStorage.removeItem(`admin_${tab}_scrollY`);
   };
 
-  const [filters, setFilters] = useState<OrderFilters>({});
+  const [filters, setFilters] = useSessionStorage<OrderFilters>(
+    "admin_filters",
+    {},
+  );
   const [agents, setAgents] = useState<SimpleAgent[]>([]);
+  const [customers, setCustomers] = useState<SimpleCustomer[]>([]);
   const [showFilters, setShowFilters] = useState(false);
+  const [search, setSearch] = useSessionStorage("admin_search", "");
+  const [orderCounts, setOrderCounts] = useState<Record<string, number>>({});
+  const [showUnreadOnly, setShowUnreadOnly] = useSessionStorage(
+    "admin_showUnreadOnly",
+    false,
+  );
+  const [allOrderIds, setAllOrderIds] = useState<number[]>([]);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [activeTabTotalCount, setActiveTabTotalCount] = useState(0);
+
+  const memoFilters = useMemo(() => filters, [JSON.stringify(filters)]);
+  const [debouncedSearch, setDebouncedSearch] = useState(search);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [search]);
 
   useEffect(() => {
     agentApi
       .getAll()
       .then((agents) => {
         setAgents(agents.map((a) => ({ id: a.id, username: a.user.username })));
+      })
+      .catch(console.error);
+  }, []);
+
+  useEffect(() => {
+    customerApi
+      .getAll()
+      .then((customers) => {
+        setCustomers(customers.map((c) => ({ id: c.id, name: c.name })));
+      })
+      .catch(console.error);
+  }, []);
+
+  useEffect(() => {
+    orderApi
+      .getAllIds()
+      .then((orderIds) => {
+        setAllOrderIds(orderIds.map((o) => o.id));
+        const allIds = orderIds.map((o) => o.id);
+        const pendingIds = orderIds
+          .filter((o) => o.status === "PENDING")
+          .map((o) => o.id);
+        const packedIds = orderIds
+          .filter((o) => o.status === "PACKED")
+          .map((o) => o.id);
+        const dispatchedIds = orderIds
+          .filter((o) => o.status === "DISPATCHED")
+          .map((o) => o.id);
+        setOrderCounts({
+          all: getViewedOrdersCount(allIds),
+          pending: getViewedOrdersCount(pendingIds),
+          packed: getViewedOrdersCount(packedIds),
+          dispatched: getViewedOrdersCount(dispatchedIds),
+        });
       })
       .catch(console.error);
   }, []);
@@ -79,8 +153,16 @@ function AdminHomePageContent() {
     }));
   };
 
+  const handleCustomerChange = (customerId: string) => {
+    setFilters((prev) => ({
+      ...prev,
+      customer: customerId === "all" ? undefined : customerId,
+    }));
+  };
+
   const handleClearFilters = () => {
     setFilters({});
+    setSearch("");
     setShowFilters(false);
   };
 
@@ -92,8 +174,22 @@ function AdminHomePageContent() {
     }
   };
 
+  const [tabPages, setTabPages] = useState<Record<string, number>>({});
+
+  const handleTabPageChange = (tab: string, page: number) => {
+    setTabPages((prev) => ({ ...prev, [tab]: page }));
+    setCurrentPage(page || 1);
+  };
+
   const renderContent = (): React.ReactNode => {
-    const commonProps = { filters };
+    const commonProps = {
+      filters: memoFilters,
+      search: debouncedSearch,
+      showUnreadOnly,
+      refreshKey,
+      onTotalCountChange: setActiveTabTotalCount,
+      onPageChange: (page: number) => handleTabPageChange(activeTab, page),
+    };
     switch (activeTab) {
       case "Packed":
         return <Packed {...commonProps} />;
@@ -106,40 +202,138 @@ function AdminHomePageContent() {
     }
   };
 
+  const handleMarkAllRead = () => {
+    markAllAsRead(allOrderIds);
+    setRefreshKey((prev) => prev + 1);
+    // Refresh counts
+    orderApi
+      .getAllIds()
+      .then((orderIds) => {
+        setAllOrderIds(orderIds.map((o) => o.id));
+        const allIds = orderIds.map((o) => o.id);
+        const pendingIds = orderIds
+          .filter((o) => o.status === "PENDING")
+          .map((o) => o.id);
+        const packedIds = orderIds
+          .filter((o) => o.status === "PACKED")
+          .map((o) => o.id);
+        const dispatchedIds = orderIds
+          .filter((o) => o.status === "DISPATCHED")
+          .map((o) => o.id);
+        setOrderCounts({
+          all: getViewedOrdersCount(allIds),
+          pending: getViewedOrdersCount(pendingIds),
+          packed: getViewedOrdersCount(packedIds),
+          dispatched: getViewedOrdersCount(dispatchedIds),
+        });
+      })
+      .catch(console.error);
+  };
+
+  const getActiveTabCount = () => {
+    return activeTabTotalCount;
+  };
+
   return (
     <div className="min-h-screen min-w-full">
-      <div className=" p-1.5 mt-2 flex items-center justify-between space-x-1 border border-gray-200 rounded-full mb-2">
-        {(["All", "Pending", "Packed", "Dispatched"] as Tab[]).map((tab) => (
+      <div className="p-1.5 mt-2 flex items-center space-x-1 border border-gray-200 rounded-md mb-2 overflow-x-auto">
+        {(["All", "Pending", "Packed", "Dispatched"] as Tab[]).map((tab) => {
+          const count = orderCounts[tab.toLowerCase()];
+          return (
+            <button
+              key={tab}
+              onClick={() => handleTabChange(tab)}
+              className={`shrink-0 rounded-md flex-1 min-w-fit px-3 py-2 font-bold text-xs transition-all duration-300 relative ${
+                activeTab === tab
+                  ? "bg-primary text-white ring-1 ring-primary/10"
+                  : "text-gray-500 hover:text-gray-700 hover:bg-gray-100/80"
+              }`}
+            >
+              {tab}
+              {count > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[7px] font-bold rounded-full w-4.5 h-4.5 flex items-center justify-center">
+                  {count > 99 ? "99+" : count}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+      <div className="flex flex-row justify-between items-start sm:items-center gap-2 mt-4 mb-2">
+        <div className="flex items-center gap-1">
+          <span className="text-gray-400 text-[10px] font-bold uppercase">
+            {activeTab} {showUnreadOnly && "unread"} Orders
+          </span>
+          <div className=" text-amber-600 flex justify-center items-center">
+            <span className="font-bold text-xs">{getActiveTabCount()}</span>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
           <button
-            key={tab}
-            onClick={() => handleTabChange(tab)}
-            className={`flex-1 rounded-full py-2 font-bold text-xs transition-all duration-300 ${
-              activeTab === tab
-                ? "bg-primary text-white shadow-lg shadow-primary/20 ring-1 ring-primary/10"
-                : "text-gray-500 hover:text-gray-700 hover:bg-gray-100/80"
+            onClick={() => setShowUnreadOnly(!showUnreadOnly)}
+            className={`text-xs px-3 py-1.5 rounded-full border transition-all ${
+              showUnreadOnly
+                ? "bg-primary text-white border-primary shadow-lg shadow-primary/20"
+                : "text-gray-500 border-gray-200 hover:bg-gray-100"
             }`}
           >
-            {tab}
+            Unread Only
           </button>
-        ))}
+          <button
+            onClick={handleMarkAllRead}
+            className="text-xs px-3 py-1.5 rounded-full border transition-all p-1.5 text-gray-500 border-gray-200 hover:bg-gray-100"
+            title="Mark all as read"
+          >
+            Mark All as Read
+          </button>
+        </div>
       </div>
-      <div className="flex justify-between items-center mb-4">
-        <span className="text-gray-400 text-[10px] font-bold uppercase tracking-wider">
-          Remaining Orders
-        </span>
+      <div className="flex items-center justify-between gap-2 mb-4">
+        <SearchBar
+          value={search}
+          onChange={(val) => setSearch(val)}
+          placeholder="Search by customer, agent, or order ID..."
+        />
         <FilterToggle isOpen={showFilters} onToggle={handleToggleFilters} />
       </div>
-      <FilterBar
-        fromDate={filters.from || ""}
-        toDate={filters.to || ""}
-        onFromDateChange={handleFromDateChange}
-        onToDateChange={handleToDateChange}
-        agents={agents}
-        selectedAgent={filters.agent || "all"}
-        onAgentChange={handleAgentChange}
-        isOpen={showFilters}
-        onClear={handleClearFilters}
-      />
+      <div className="overflow-x-auto mb-4">
+        <FilterBar
+          fromDate={filters.from || ""}
+          toDate={filters.to || ""}
+          onFromDateChange={handleFromDateChange}
+          onToDateChange={handleToDateChange}
+          agents={agents}
+          selectedAgent={filters.agent || "all"}
+          onAgentChange={handleAgentChange}
+          customers={customers}
+          selectedCustomer={filters.customer || "all"}
+          onCustomerChange={handleCustomerChange}
+          isOpen={showFilters}
+          onClear={handleClearFilters}
+        />
+        {currentPage > 1 && (
+          <div className="flex items-center gap-2 mt-2">
+            <p className="text-gray-400 font-medium text-xs">
+              Viewing page {currentPage}
+            </p>
+            <button
+              onClick={() => {
+                setCurrentPage(1);
+                setTabPages({});
+                sessionStorage.removeItem("admin_All_scrollY");
+                sessionStorage.removeItem("admin_Pending_scrollY");
+                sessionStorage.removeItem("admin_Packed_scrollY");
+                sessionStorage.removeItem("admin_Dispatched_scrollY");
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
+              className="px-2 py-0.5 bg-primary/10 text-gray-400 font-medium text-xs rounded-full hover:bg-primary/20 transition-colors"
+              title="Go to first page"
+            >
+              Reset to page 1
+            </button>
+          </div>
+        )}
+      </div>
       <div className="pb-10">{renderContent()}</div>
     </div>
   );

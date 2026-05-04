@@ -28,7 +28,7 @@ export function AuthAlert({ message, sub, warn, suffix }: Props) {
         <AlertCircle size={16} className="mt-0.5 shrink-0 text-red-400" />
       )}
       <div>
-        <p className="font-medium leading-snug">{message}</p>
+        <p className="font-medium text-sm leading-snug">{message}</p>
         {sub && <p className="text-xs mt-0.5 opacity-80">{sub}</p>}
         {suffix}
       </div>

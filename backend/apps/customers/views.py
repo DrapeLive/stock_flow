@@ -1,7 +1,6 @@
 from rest_framework.viewsets import ModelViewSet
 from .models import Customer
 from .serializers import CustomerSerializer
-from apps.accounts.permissions import IsAdmin, IsAgent
 from rest_framework.permissions import IsAuthenticated
 
 class CustomerViewSet(ModelViewSet):

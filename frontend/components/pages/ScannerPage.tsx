@@ -52,7 +52,7 @@ const ScannerPage: React.FC<ScannerPageProps> = ({ id, basePath = "/agent/order/
         </div>
         <h2 className="text-lg font-bold text-gray-800">Align QR Code</h2>
         <p className="text-sm text-gray-400 mt-2 max-w-[200px] mx-auto leading-relaxed font-medium">
-          Position the item's QR code within the frame to add it to the order
+          Position the item&apos;s QR code within the frame to add it to the order
         </p>
       </div>
 

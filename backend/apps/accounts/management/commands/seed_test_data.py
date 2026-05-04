@@ -9,6 +9,9 @@ from apps.items.models import Item, ItemVariant, ItemVariantSize
 from apps.orders.models import Order, OrderItem
 import random
 
+from apps.orders.utils import SIZE_MAPPING
+from apps.orders.serializers import get_piece_count
+
 User = get_user_model()
 
 
@@ -145,26 +148,29 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.SUCCESS(f"Created customer: {name}"))
 
         # ---- Items with Variants and Sizes ----
-        items_data = [
-            {
-                "name": "Gents Premium Suit",
-                "description": "High-quality gents suit with premium fabric",
-                "price": 2500.00,
+        items_data = []
+
+        for i in range(20):  # create 20 unique items
+            items_data.append({
+                "name": f"Gents Item {i}",
+                "description": "Auto generated",
+                "price": random.randint(500, 3000),
                 "type": "gents",
                 "brand": brands["BN CLOTHING"],
-                "num_variants": 3,
+                "num_variants": random.randint(2, 4),
                 "image_paths": ["seed_data/test_data/green-shirt.jpg", "seed_data/test_data/pink-shirt.jpg", "seed_data/test_data/white-shirt.jpg"],
-            },
-            {
-                "name": "Kids Designer Wear",
-                "description": "Stylish and comfortable kids clothing",
-                "price": 1200.00,
+            })
+
+        for i in range(20):
+            items_data.append({
+                "name": f"Kids Item {i}",
+                "description": "Auto generated",
+                "price": random.randint(300, 2000),
                 "type": "kids",
                 "brand": brands["XL TOWER"],
-                "num_variants": 2,
-                "image_paths": [ "seed_data/test_data/white-shirt.jpg", "seed_data/test_data/pink-shirt.jpg"],
-            },
-        ]
+                "num_variants": random.randint(2, 3),
+                "image_paths": ["seed_data/test_data/white-shirt.jpg", "seed_data/test_data/green-shirt.jpg", "seed_data/test_data/pink-shirt.jpg" ],
+            })
 
         items = []
         for item_data in items_data:
@@ -189,12 +195,13 @@ class Command(BaseCommand):
                             variant.image.save(full_path.name, File(f), save=False)
                             variant.save()
 
-                if item.type == "gents":
-                    sizes = ["S", "M,L,XL", "XXL"]
-                else:
-                    sizes = ["20-24", "26-30", "32-36", "38"]
+                # Get all individual sizes from SIZE_MAPPING for this item type
+                size_groups = SIZE_MAPPING.get(item.type, {})
+                individual_sizes = set()
+                for size_list in size_groups.values():
+                    individual_sizes.update(size_list)
 
-                for size in sizes:
+                for size in individual_sizes:
                     ItemVariantSize.objects.create(
                         item_variant=variant,
                         size=size,
@@ -202,11 +209,14 @@ class Command(BaseCommand):
                     )
 
                 self.stdout.write(
-                    self.style.SUCCESS(f"  Created variant {i+1} for {name} with {len(sizes)} sizes")
+                    self.style.SUCCESS(f"  Created variant {i+1} for {name} with {len(individual_sizes)} sizes")
                 )
 
         # ---- Assign Items to Agent ----
+        # Only assign gents items since agent's business is "gents"
         for item in items:
+            if item.type != "gents":
+                continue
             if not AgentItem.objects.filter(agent=agent, item=item).exists():
                 AgentItem.objects.create(agent=agent, item=item)
                 self.stdout.write(self.style.SUCCESS(f"Assigned item '{item.name}' to agent"))
@@ -217,51 +227,94 @@ class Command(BaseCommand):
         if Order.objects.filter(agent=agent).exists():
             self.stdout.write(self.style.WARNING("Orders already exist for agent, skipping order creation"))
         else:
-            order_statuses = ["PENDING"] * 5 + ["DISPATCHED"] * 3 + ["PACKED"] * 2
-            random.shuffle(order_statuses)
+            gents_size_groups = list(SIZE_MAPPING["gents"].keys())
 
-            gents_sizes = ["S", "M,L,XL", "XXL"]
-            kids_sizes = ["20-24", "26-30", "32-36", "38"]
+            # Preload everything (IMPORTANT)
+            items = list(Item.objects.prefetch_related("variants"))
+            customers = list(Customer.objects.filter(agent=agent))
 
-            for i, status in enumerate(order_statuses, 1):
-                customer = random.choice(customers)
-                order = Order.objects.create(
-                    customer=customer,
-                    agent=agent,
-                    status=status,
+            gents_items = [item for item in items if item.type == "gents"]
+
+            # Cache variants to avoid repeated queries
+            item_variants_map = {
+                item.id: list(item.variants.all())
+                for item in items
+            }
+
+            # ---- Create Orders in Bulk ----
+            NUM_ORDERS = 1000  # keep small here (you said 1000 elsewhere)
+
+            # Only create orders for gents items (agent's business type)
+            orders_to_create = []
+            for _ in range(NUM_ORDERS):
+                orders_to_create.append(
+                    Order(
+                        customer=random.choice(customers),
+                        agent=agent,
+                        status=random.choices(
+                            ["PENDING", "PACKED", "DISPATCHED"],
+                            weights=[60, 25, 15]
+                        )[0],
+                    )
                 )
 
-                num_items = random.randint(1, 2)
-                order_items = random.sample(items, min(num_items, len(items)))
+            orders = Order.objects.bulk_create(orders_to_create)
 
-                for item in order_items:
-                    variant = random.choice(item.variants.all())
-                    if item.type == "gents":
-                        size_str = random.choice(gents_sizes)
-                    else:
-                        size_str = random.choice(kids_sizes)
+            # ---- Create OrderItems in Bulk ----
+            order_items_to_create = []
+
+            for order in orders:
+                num_items = random.randint(20, 25)
+
+                # Only use gents items since agent is gents business
+                selected_items = random.choices(gents_items, k=num_items)
+
+                for item in selected_items:
+                    variants = item_variants_map[item.id]
+                    if not variants:
+                        continue
+
+                    variant = random.choice(variants)
+
+                    size_group = random.choice(gents_size_groups)
+                    available_sizes = SIZE_MAPPING["gents"][size_group]
+                    size = random.choice(available_sizes)
 
                     quantity = random.randint(1, 5)
-                    packed_quantity = quantity if status in ["PACKED", "DISPATCHED"] else 0
+                    # packed_quantity should be in pieces (sets * piece_count)
+                    piece_count = get_piece_count(size_group, item.type)
 
-                    OrderItem.objects.create(
-                        order=order,
-                        item=item,
-                        variant=variant,
-                        size_group=size_str,
-                        item_type=item.type,
-                        item_name=item.name,
-                        item_price=item.price,
-                        variant_image=variant.image.url if variant.image else "",
-                        size=size_str,
-                        quantity=quantity,
-                        packed_quantity=packed_quantity,
+                    if order.status in ["PACKED", "DISPATCHED"]:
+                        packed_quantity = quantity * piece_count
+                    else:
+                        packed_quantity = 0
+
+                    order_items_to_create.append(
+                        OrderItem(
+                            order=order,
+                            item=item,
+                            variant=variant,
+                            item_type=item.type,
+                            item_name=item.name,
+                            item_price=item.price,
+                            variant_image=variant.image.url if variant.image else "",
+                            size_group=size_group,
+                            size=size,
+                            quantity=quantity,
+                            packed_quantity=packed_quantity,
+                        )
                     )
 
-                self.stdout.write(
-                    self.style.SUCCESS(f"Created order #{order.id} ({status}) for {customer.name}")
-                )
+            # ---- Bulk Insert in Chunks (VERY IMPORTANT) ----
+            BATCH_SIZE = 2000
 
+            for i in range(0, len(order_items_to_create), BATCH_SIZE):
+                OrderItem.objects.bulk_create(order_items_to_create[i:i + BATCH_SIZE])
+
+
+            self.stdout.write(
+                self.style.SUCCESS(f"Created {len(orders)} orders with {len(order_items_to_create)} items")
+            )
         self.stdout.write(self.style.SUCCESS("\n" + "=" * 50))
         self.stdout.write(self.style.SUCCESS("Seed data creation complete!"))
         self.stdout.write(self.style.SUCCESS("=" * 50))

@@ -1,7 +1,6 @@
 import uuid
 from datetime import timedelta
 
-from decouple import config
 from django.contrib.auth import get_user_model
 from django.core.mail import send_mail
 from django.utils import timezone
@@ -118,14 +117,14 @@ class ForgotPasswordView(APIView):
                 f"This link expires in 30 minutes.\n\n"
                 f"{reset_link}\n\n"
                 f"If you didn't request this, you can safely ignore this email.\n\n"
-                f"— The StockFlow Team"
+                f"— The XL Apparals Team"
             ),
             html_message=(
                 f"""
                 <div style="font-family:sans-serif;max-width:480px;margin:auto;padding:32px;background:#fff;border-radius:12px;">
                   <h2 style="color:#111;margin-bottom:8px;">Reset your password</h2>
                   <p style="color:#555;">Hi {user.first_name or user.email},</p>
-                  <p style="color:#555;">Click the button below to reset your StockFlow password. This link expires in <strong>30 minutes</strong>.</p>
+                  <p style="color:#555;">Click the button below to reset your XL Apparals password. This link expires in <strong>30 minutes</strong>.</p>
                   <a href="{reset_link}"
                      style="display:inline-block;margin:24px 0;padding:14px 28px;background:#111;color:#fff;border-radius:8px;text-decoration:none;font-weight:600;">
                     Reset Password

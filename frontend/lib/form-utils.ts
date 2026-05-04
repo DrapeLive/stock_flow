@@ -3,13 +3,13 @@
  * Handles nested arrays and objects like `variants[0]image` or `sizes[0]size`.
  */
 export function objectToFormData(
-    obj: any,
+    obj: Record<string, unknown>,
     rootName?: string,
     ignoreList?: string[]
 ): FormData {
     const formData = new FormData();
 
-    function appendFormData(data: any, root: string) {
+    function appendFormData(data: unknown, root: string) {
         if (!data) return;
 
         if (ignoreList && ignoreList.indexOf(root) !== -1) return;
@@ -42,18 +42,18 @@ export function objectToFormData(
 /**
  * Specifically tailored for ItemRequest structure in Django
  */
-export function itemToFormData(data: any): FormData {
+export function itemToFormData(data: Record<string, unknown>): FormData {
     const formData = new FormData();
-    formData.append("name", data.name);
-    formData.append("description", data.description || "");
-    formData.append("price", data.price);
-    formData.append("type", data.type);
+    formData.append("name", data.name as string);
+    formData.append("description", (data.description as string) || "");
+    formData.append("price", data.price as string);
+    formData.append("type", data.type as string);
 
-    data.variants.forEach((variant: any, index: number) => {
+    (data.variants as Array<{ image?: File; sizes: Array<{ size: string; stock: number }> }>).forEach((variant, index: number) => {
         if (variant.image) {
             formData.append(`variants[${index}]image`, variant.image);
         }
-        variant.sizes.forEach((size: any, sizeIndex: number) => {
+        variant.sizes.forEach((size, sizeIndex: number) => {
             formData.append(`variants[${index}]sizes[${sizeIndex}]size`, size.size);
             formData.append(`variants[${index}]sizes[${sizeIndex}]stock`, size.stock.toString());
         });

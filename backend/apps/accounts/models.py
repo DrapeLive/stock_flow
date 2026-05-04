@@ -22,6 +22,7 @@ class User(AbstractUser):
         null=True,
         blank=True,
     )
+    display_name = models.CharField(max_length=255, blank=True, default='')
 
     def save(self, *args, **kwargs):
         if self.is_superuser:

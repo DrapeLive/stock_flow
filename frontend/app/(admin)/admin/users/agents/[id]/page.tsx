@@ -11,6 +11,7 @@ import { ImagePreview } from "@/components/pages/ImagePreview";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
+import { deriveUsername } from "@/lib/utils/deriveUsername";
 import {
   Trash2,
   ArrowLeft,
@@ -37,6 +38,7 @@ export default function AgentDetailPage() {
   const [agent, setAgent] = useState<AgentResponse | null>(null);
   const [formData, setFormData] = useState({
     username: "",
+    display_name: "",
     email: "",
     contact: "",
   });
@@ -66,6 +68,7 @@ export default function AgentDetailPage() {
         );
         setFormData({
           username: agentData.user.username,
+          display_name: agentData.user.display_name || "",
           email: agentData.user.email,
           contact: agentData.contact,
         });
@@ -87,8 +90,10 @@ export default function AgentDetailPage() {
     setSaving(true);
     try {
       const numericId = parseInt(id as string, 10);
+      const username = deriveUsername(formData.display_name || formData.username);
       const payload: AgentUpdateRequest = {
-        username: formData.username,
+        username,
+        display_name: formData.display_name,
         email: formData.email,
         contact: formData.contact,
       };
@@ -96,7 +101,7 @@ export default function AgentDetailPage() {
       toastSuccess("Agent details updated");
       setIsEditing(false);
       router.refresh();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error updating agent:", error);
       toastError("Failed to update agent details", error);
     } finally {
@@ -233,7 +238,7 @@ export default function AgentDetailPage() {
           />
         </div>
         <h2 className="text-2xl font-black text-gray-900">
-          {agent.user.username}
+          {agent.user.display_name || agent.user.username}
         </h2>
         <span className="text-xs font-bold text-gray-400 mt-1">
           FIELD AGENT
@@ -247,12 +252,28 @@ export default function AgentDetailPage() {
             <FieldGroup className="space-y-6">
               <Field>
                 <FieldLabel className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 block">
-                  Full username
+                  Display Name
                 </FieldLabel>
                 <Input
-                  value={formData.username}
-                  onChange={(e) => handleChange("username", e.target.value)}
+                  value={formData.display_name}
+                  onChange={(e) => handleChange("display_name", e.target.value)}
                   className="bg-white border-gray-100 rounded-xl h-12 font-bold"
+                />
+                {formData.display_name.trim() && (
+                  <p className="mt-1.5 text-[11px] text-gray-400">
+                    Username: <span className="font-mono font-medium text-gray-600">{deriveUsername(formData.display_name)}</span>
+                  </p>
+                )}
+              </Field>
+
+              <Field>
+                <FieldLabel className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 block">
+                  System Username (auto-derived)
+                </FieldLabel>
+                <Input
+                  value={deriveUsername(formData.display_name || formData.username)}
+                  disabled
+                  className="bg-gray-50 border-gray-100 rounded-xl h-12 font-mono text-sm"
                 />
               </Field>
 
@@ -295,6 +316,22 @@ export default function AgentDetailPage() {
           {/* View Mode - Compact Details */}
           <div className="bg-gray-50 border border-gray-100 rounded-2xl p-4 mb-6 w-full">
             <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-xs font-bold text-gray-400 uppercase">
+                  Display Name
+                </span>
+                <span className="text-sm font-medium text-gray-900">
+                  {agent.user.display_name || "—"}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-xs font-bold text-gray-400 uppercase">
+                  Username
+                </span>
+                <span className="text-sm font-medium text-gray-900">
+                  {agent.user.username}
+                </span>
+              </div>
               <div className="flex justify-between items-center">
                 <span className="text-xs font-bold text-gray-400 uppercase">
                   Email
