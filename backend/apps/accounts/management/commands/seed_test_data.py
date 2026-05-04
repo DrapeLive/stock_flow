@@ -2,7 +2,6 @@ from pathlib import Path
 from django.core.management.base import BaseCommand
 from django.core.files import File
 from django.contrib.auth import get_user_model
-from django.db.models import F
 from apps.business.models import Brand
 from apps.agents.models import Agent, AgentItem
 from apps.customers.models import Customer
@@ -159,7 +158,7 @@ class Command(BaseCommand):
                 "type": "gents",
                 "brand": brands["BN CLOTHING"],
                 "num_variants": random.randint(2, 4),
-                "image_paths": [],
+                "image_paths": ["seed_data/test_data/green-shirt.jpg", "seed_data/test_data/pink-shirt.jpg", "seed_data/test_data/white-shirt.jpg"],
             })
 
         for i in range(20):
@@ -170,7 +169,7 @@ class Command(BaseCommand):
                 "type": "kids",
                 "brand": brands["XL TOWER"],
                 "num_variants": random.randint(2, 3),
-                "image_paths": [],
+                "image_paths": ["seed_data/test_data/white-shirt.jpg", "seed_data/test_data/green-shirt.jpg", "seed_data/test_data/pink-shirt.jpg" ],
             })
 
         items = []

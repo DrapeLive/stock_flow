@@ -1,7 +1,6 @@
 import uuid
 from datetime import timedelta
 
-from decouple import config
 from django.contrib.auth import get_user_model
 from django.core.mail import send_mail
 from django.utils import timezone

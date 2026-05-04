@@ -2,11 +2,23 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Package, Trash2, AlertCircle, ImagePlus, X, ChevronDown } from "lucide-react";
+import {
+  ArrowLeft,
+  Package,
+  Trash2,
+  AlertCircle,
+  ImagePlus,
+  X,
+} from "lucide-react";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import Image from "next/image";
 import { ImagePreview } from "@/components/pages/ImagePreview";
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
@@ -16,7 +28,11 @@ import { toastError } from "@/lib/toast";
 import EditVariantRow from "./editVariantRow";
 import CropModal from "../../new/cropModal";
 import imageCompression from "browser-image-compression";
-import type { EditCommonDetails, EditableVariant, ItemType } from "@/types/item";
+import type {
+  EditCommonDetails,
+  EditableVariant,
+  ItemType,
+} from "@/types/item";
 
 const uid = () => Math.random().toString(36).slice(2, 9);
 
@@ -37,19 +53,25 @@ export default function ItemEditPage() {
 
   const [variants, setVariants] = useState<EditableVariant[]>([]);
   const [openAccordions, setOpenAccordions] = useState<string[]>([]);
-  const [variantCrop, setVariantCrop] = useState<{ src: string; backendId: number } | null>(null);
+  const [variantCrop, setVariantCrop] = useState<{
+    src: string;
+    backendId: number;
+  } | null>(null);
   const fileRefs = useRef<Record<number, HTMLInputElement | null>>({});
 
   // ── Group variants by backendId ───────────────────────────────────────────
 
   const variantGroups = useMemo(() => {
-    const groups: Record<number, {
-      backendId: number;
-      imageUrl: string | null;
-      newImage: File | null;
-      imagePreview: string | null;
-      sizes: EditableVariant[];
-    }> = {};
+    const groups: Record<
+      number,
+      {
+        backendId: number;
+        imageUrl: string | null;
+        newImage: File | null;
+        imagePreview: string | null;
+        sizes: EditableVariant[];
+      }
+    > = {};
 
     variants.forEach((v) => {
       if (!groups[v.backendId]) {
@@ -69,9 +91,12 @@ export default function ItemEditPage() {
 
   // ── Variant group helpers ─────────────────────────────────────────────────
 
-  const updateVariantGroupImage = (backendId: number, updates: Partial<EditableVariant>) => {
+  const updateVariantGroupImage = (
+    backendId: number,
+    updates: Partial<EditableVariant>,
+  ) => {
     setVariants((prev) =>
-      prev.map((v) => (v.backendId === backendId ? { ...v, ...updates } : v))
+      prev.map((v) => (v.backendId === backendId ? { ...v, ...updates } : v)),
     );
   };
 
@@ -79,7 +104,10 @@ export default function ItemEditPage() {
     setVariants((prev) => prev.filter((v) => v.backendId !== backendId));
   };
 
-  const handleVariantImageUpload = (backendId: number, e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleVariantImageUpload = (
+    backendId: number,
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const f = e.target.files?.[0];
     if (!f) return;
     setVariantCrop({ src: URL.createObjectURL(f), backendId });
@@ -215,8 +243,11 @@ export default function ItemEditPage() {
       {/* Avatar */}
       <div className="flex flex-col items-center mb-8">
         <div className="relative w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center mb-3 overflow-hidden">
-          {variantGroups[0]?.imagePreview ?? variantGroups[0]?.imageUrl ? (
-            <ImagePreview src={variantGroups[0].imagePreview ?? variantGroups[0].imageUrl!} alt={common.name} />
+          {(variantGroups[0]?.imagePreview ?? variantGroups[0]?.imageUrl) ? (
+            <ImagePreview
+              src={variantGroups[0].imagePreview ?? variantGroups[0].imageUrl!}
+              alt={common.name}
+            />
           ) : (
             <Package size={36} className="text-primary" />
           )}
@@ -278,13 +309,15 @@ export default function ItemEditPage() {
           <div className="flex items-center justify-between mb-3 px-1">
             <h2 className="font-bold text-sm">Variants</h2>
             <span className="text-[10px] text-gray-400 uppercase tracking-widest">
-              {variantGroups.length} variant{variantGroups.length !== 1 ? "s" : ""}, {variants.length} size{variants.length !== 1 ? "s" : ""}
+              {variantGroups.length} variant
+              {variantGroups.length !== 1 ? "s" : ""}, {variants.length} size
+              {variants.length !== 1 ? "s" : ""}
             </span>
           </div>
 
           {variantGroups.length === 0 && (
             <div className="flex items-center gap-2 text-amber-600 bg-amber-50 border border-amber-100 rounded-xl px-4 py-3 text-xs">
-              <AlertCircle size={14} className="flex-shrink-0" />
+              <AlertCircle size={14} className="shrink-0" />
               At least one variant is required.
             </div>
           )}
@@ -297,7 +330,10 @@ export default function ItemEditPage() {
           >
             {variantGroups.map((group) => {
               const currentImage = group.imagePreview ?? group.imageUrl;
-              const variantLabel = group.backendId < 0 ? `New Variant` : `Variant #${group.backendId}`;
+              const variantLabel =
+                group.backendId < 0
+                  ? `New Variant`
+                  : `Variant #${group.backendId}`;
               return (
                 <AccordionItem
                   key={group.backendId}
@@ -313,7 +349,7 @@ export default function ItemEditPage() {
                           e.stopPropagation();
                           fileRefs.current[group.backendId]?.click();
                         }}
-                        className="flex-shrink-0 w-10 h-10 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center group relative"
+                        className="shrink-0 w-10 h-10 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center group relative"
                       >
                         {currentImage ? (
                           <>
@@ -325,7 +361,10 @@ export default function ItemEditPage() {
                               unoptimized
                             />
                             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-                              <ImagePlus size={12} className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                              <ImagePlus
+                                size={12}
+                                className="text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                              />
                             </div>
                           </>
                         ) : (
@@ -333,18 +372,23 @@ export default function ItemEditPage() {
                         )}
                       </button>
                       <input
-                        ref={(el) => { fileRefs.current[group.backendId] = el; }}
+                        ref={(el) => {
+                          fileRefs.current[group.backendId] = el;
+                        }}
                         type="file"
                         accept="image/*"
                         className="hidden"
-                        onChange={(e) => handleVariantImageUpload(group.backendId, e)}
+                        onChange={(e) =>
+                          handleVariantImageUpload(group.backendId, e)
+                        }
                       />
 
                       {/* Variant Info */}
                       <div className="flex-1 text-left">
                         <p className="text-sm font-semibold">{variantLabel}</p>
                         <p className="text-xs text-gray-400">
-                          {group.sizes.length} size{group.sizes.length !== 1 ? "s" : ""}
+                          {group.sizes.length} size
+                          {group.sizes.length !== 1 ? "s" : ""}
                         </p>
                       </div>
 
@@ -360,7 +404,7 @@ export default function ItemEditPage() {
                               imageUrl: null,
                             });
                           }}
-                          className="flex-shrink-0 p-1.5 rounded-full text-gray-300 hover:text-red-400 transition-colors"
+                          className="shrink-0 p-1.5 rounded-full text-gray-300 hover:text-red-400 transition-colors"
                           title="Remove image"
                         >
                           <X size={12} />
@@ -375,7 +419,7 @@ export default function ItemEditPage() {
                             e.stopPropagation();
                             deleteVariantGroup(group.backendId);
                           }}
-                          className="flex-shrink-0 p-1.5 rounded-full text-gray-300 hover:text-red-400 transition-colors"
+                          className="shrink-0 p-1.5 rounded-full text-gray-300 hover:text-red-400 transition-colors"
                           aria-label="Delete variant"
                         >
                           <Trash2 size={14} />
@@ -391,7 +435,9 @@ export default function ItemEditPage() {
                         variant={v}
                         index={i}
                         isOnly={group.sizes.length === 1}
-                        onChange={(updated) => updateVariant(v.localId, updated)}
+                        onChange={(updated) =>
+                          updateVariant(v.localId, updated)
+                        }
                         onDelete={() => deleteVariant(v.localId)}
                       />
                     ))}
@@ -405,7 +451,9 @@ export default function ItemEditPage() {
           {variantCrop && (
             <CropModal
               src={variantCrop.src}
-              onConfirm={(file) => handleVariantCropConfirm(variantCrop.backendId, file)}
+              onConfirm={(file) =>
+                handleVariantCropConfirm(variantCrop.backendId, file)
+              }
               onCancel={() => setVariantCrop(null)}
             />
           )}

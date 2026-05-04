@@ -14,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 import StockFlowSelect from "@/components/ui/custom/stockFlowSelect";
 import { Trash2, ArrowLeft, User, Pencil, Eye, Package } from "lucide-react";
+import Pagination from "@/components/ui/Pagination";
 
 function getColorFromId(id: number): string {
   if (!id) return "hsl(0, 0%, 85%)";
@@ -37,6 +38,10 @@ export default function CustomerDetailPage() {
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isEditing, setIsEditing] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(50);
+  const [totalOrders, setTotalOrders] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -45,13 +50,15 @@ export default function CustomerDetailPage() {
         const [customerData, agentsData, ordersData] = await Promise.all([
           customerApi.getOne(numericId),
           agentApi.getAll(),
-          orderApi.getByCustomer(numericId),
+          orderApi.getByCustomer(numericId, { page: currentPage, page_size: pageSize }),
         ]);
-        const filteredOrders = ordersData.filter(
+        const filteredOrders = ordersData.results.filter(
           (eachOrder) => eachOrder.status != "DRAFT",
         );
         setCustomer(customerData);
         setOrders(filteredOrders);
+        setTotalOrders(ordersData.count);
+        setTotalPages(Math.ceil(ordersData.count / pageSize));
         setFormData({
           name: customerData.name,
           address: customerData.address,
@@ -71,7 +78,7 @@ export default function CustomerDetailPage() {
       }
     };
     fetchData();
-  }, [id]);
+  }, [id, currentPage, pageSize]);
 
   const handleChange = (key: string, value: string) => {
     setFormData((prev) => ({ ...prev, [key]: value }));
@@ -121,6 +128,15 @@ export default function CustomerDetailPage() {
         console.error("Error deleting customer:", error);
       }
     }
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handlePageSizeChange = (size: number) => {
+    setCurrentPage(1);
   };
 
   if (loading)
@@ -365,6 +381,15 @@ export default function CustomerDetailPage() {
               </div>
             )}
           </div>
+
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalCount={totalOrders}
+            pageSize={pageSize}
+            onPageChange={handlePageChange}
+            onPageSizeChange={handlePageSizeChange}
+          />
         </>
       )}
 

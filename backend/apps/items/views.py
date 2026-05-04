@@ -1,11 +1,10 @@
 import os
 from rest_framework.viewsets import ModelViewSet
-from .models import Item, ItemVariant, ItemVariantSize
+from .models import Item, ItemVariant
 from .serializers import ItemSerializer, ItemVariantSerializer, CreateItemSerializer, UpdateItemSerializer
 from apps.accounts.permissions import IsAdmin
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from django.shortcuts import get_object_or_404
 from rest_framework.decorators import action
 from rest_framework import status
 from apps.orders.models import OrderItem

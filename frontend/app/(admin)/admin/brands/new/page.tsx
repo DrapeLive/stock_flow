@@ -289,7 +289,7 @@ export default function NewBrandPage() {
           text={isSubmitting ? "Creating..." : "Create Brand"}
           onClick={handleSubmit}
           disabled={isSubmitting}
-          className="flex-[2] h-14 rounded-2xl bg-primary shadow-lg shadow-primary/20 font-bold text-white active:scale-95 transition-all text-sm"
+          className="flex-2 h-14 rounded-2xl bg-primary shadow-lg shadow-primary/20 font-bold text-white active:scale-95 transition-all text-sm"
         />
       </div>
 

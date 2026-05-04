@@ -62,9 +62,16 @@ export const orderApi = {
       .then((r) => r.data);
   },
 
-  getByCustomer(customerId: number): Promise<OrderAllResponse> {
+  getByCustomer(
+    customerId: number,
+    params?: { page?: number; page_size?: number },
+  ): Promise<PaginatedResponse<OrderAllResponse[number]>> {
+    const query = new URLSearchParams();
+    query.append("customer", customerId.toString());
+    if (params?.page) query.append("page", params.page.toString());
+    if (params?.page_size) query.append("page_size", params.page_size.toString());
     return api
-      .get<OrderAllResponse>(`/api/orders/?customer=${customerId}`)
+      .get<PaginatedResponse<OrderAllResponse[number]>>(`/api/orders/?${query.toString()}`)
       .then((r) => r.data);
   },
 

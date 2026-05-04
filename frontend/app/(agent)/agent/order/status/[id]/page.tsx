@@ -48,7 +48,7 @@ export default function Page() {
     try {
       await orderApi.delete(Number(id));
       toastSuccess("Order deleted successfully");
-      router.push("/agent");
+      router.back();
     } catch (err) {
       toastError("Failed to delete order");
       console.error(err);

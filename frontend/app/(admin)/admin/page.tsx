@@ -2,7 +2,6 @@
 
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { CheckCheck } from "lucide-react";
 import { agentApi } from "@/lib/api/agents";
 import { customerApi } from "@/lib/api/customer";
 import { orderApi } from "@/lib/api/order";
@@ -233,7 +232,7 @@ function AdminHomePageContent() {
             <button
               key={tab}
               onClick={() => handleTabChange(tab)}
-              className={`flex-shrink-0 rounded-md flex-1 min-w-fit px-3 py-2 font-bold text-xs transition-all duration-300 relative ${
+              className={`shrink-0 rounded-md flex-1 min-w-fit px-3 py-2 font-bold text-xs transition-all duration-300 relative ${
                 activeTab === tab
                   ? "bg-primary text-white ring-1 ring-primary/10"
                   : "text-gray-500 hover:text-gray-700 hover:bg-gray-100/80"

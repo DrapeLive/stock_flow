@@ -12,8 +12,11 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 
 from apps.accounts.permissions import IsAgent, admin_business
-from apps.orders.models import Order, OrderItem
-from apps.orders.serializers import AddOrderItemSerializer, OrderItemSerializer, OrderSerializer
+from apps.agents.models import AgentItem
+from apps.items.models import ItemVariantSize
+from apps.orders.models import Order, OrderItem, OrderLog
+from apps.orders.serializers import AddOrderItemSerializer, InvoiceSerializer, OrderItemSerializer, OrderSerializer, get_piece_count
+from apps.orders.utils import SIZE_MAPPING
 
 
 class OrderPagination(PageNumberPagination):
@@ -531,7 +534,6 @@ class AddOrderItemView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        required_sizes = SIZE_MAPPING[item_type][size_group]
 
         with transaction.atomic():
 
@@ -649,8 +651,6 @@ class OrderLogsView(APIView):
 
         logs = order.logs.all().order_by('-created_at')
 
-        from django.contrib.auth import get_user_model
-        User = get_user_model()
 
         result = []
         for log in logs:
