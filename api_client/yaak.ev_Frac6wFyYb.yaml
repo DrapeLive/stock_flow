@@ -3,14 +3,14 @@ model: environment
 id: ev_Frac6wFyYb
 workspaceId: wk_Wx4mNs5A2J
 createdAt: 2026-01-03T05:49:07.265241
-updatedAt: 2026-03-17T05:48:15.234120401
+updatedAt: 2026-05-03T17:36:11.996505447
 name: Global Variables
 public: true
 base: true
 variables:
 - enabled: true
   name: BASE_URL
-  value: http://127.0.0.1:8000/api
+  value: http://localhost:8000/api
   id: dh0XBtdyeF
 - enabled: true
   name: TOKEN

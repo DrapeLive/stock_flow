@@ -1,5 +1,4 @@
 "use client";
-
 import { useEffect, useState } from "react";
 import { orderApi } from "@/lib/api/order";
 import { toastError } from "@/lib/toast";
@@ -13,6 +12,8 @@ import EmptyState from "@/components/ui/EmptyState";
 import FilterBar from "@/components/ui/FilterBar";
 import FilterToggle from "@/components/ui/FilterToggle";
 
+type ItemTypeTab = "gents" | "kids";
+
 export default function Home() {
   const [data, setData] = useState<OrderAllResponse>([]);
   const [loading, setLoading] = useState(true);
@@ -20,12 +21,11 @@ export default function Home() {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [showFilters, setShowFilters] = useState(false);
-
+  const [activeTab, setActiveTab] = useState<ItemTypeTab>("gents");
   const router = useRouter();
 
   useEffect(() => {
     setLoading(true);
-
     const fetchData = async () => {
       try {
         const response = await orderApi.getAll({
@@ -41,7 +41,6 @@ export default function Home() {
         setLoading(false);
       }
     };
-
     fetchData();
   }, [fromDate, toDate]);
 
@@ -51,7 +50,12 @@ export default function Home() {
   );
 
   const { pendingPacked } = groupOrders(sortedData);
-  const order_len = pendingPacked.length;
+
+  const filteredOrders = pendingPacked.filter((order) =>
+    order.items.some((item) => item.item_type === activeTab),
+  );
+
+  const order_len = filteredOrders.length;
 
   const handleClearFilters = () => {
     setFromDate("");
@@ -79,6 +83,22 @@ export default function Home() {
         handleToggleFilters={handleToggleFilters}
       />
 
+      <div className="flex gap-2 bg-white px-4 py-3 sticky top-0 z-10">
+        {(["gents", "kids"] as ItemTypeTab[]).map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`px-5 py-1.5 rounded-full text-sm font-semibold capitalize transition-colors ${
+              activeTab === tab
+                ? "bg-black text-white"
+                : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            {tab.charAt(0).toUpperCase() + tab.slice(1)}
+          </button>
+        ))}
+      </div>
+
       <FilterBar
         fromDate={fromDate}
         toDate={toDate}
@@ -92,7 +112,7 @@ export default function Home() {
         <EmptyState title="No Active Orders" />
       ) : (
         <div className="space-y-3 pb-32">
-          {pendingPacked?.map((order) => (
+          {filteredOrders.map((order) => (
             <OrderCard
               key={order.id}
               order={order}
