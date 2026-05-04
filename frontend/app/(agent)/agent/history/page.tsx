@@ -35,10 +35,21 @@ export default function History() {
     "agent_history_pageSize",
     50,
   );
+  const [debouncedSearch, setDebouncedSearch] = useState(search);
+  const [isFetching, setIsFetching] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 400); // 300–500ms sweet spot
+
+    return () => clearTimeout(timer);
+  }, [search]);
+
   const router = useRouter();
 
   useEffect(() => {
-    setLoading(true);
+    setIsFetching(true);
 
     const fetchData = async () => {
       try {
@@ -46,7 +57,8 @@ export default function History() {
           await orderApi.getAll({
             page: currentPage,
             page_size: pageSize,
-            search,
+            search: debouncedSearch,
+            status: ["DISPATCHED"],
             customer: selectedCustomer !== "all" ? selectedCustomer : undefined,
           });
         setData(response.results);
@@ -56,12 +68,13 @@ export default function History() {
         console.error("Error fetching orders:", e);
         toastError("Server Not Found", e);
       } finally {
+        setIsFetching(false);
         setLoading(false);
       }
     };
 
     fetchData();
-  }, [currentPage, pageSize, search, selectedCustomer]);
+  }, [currentPage, pageSize, debouncedSearch, selectedCustomer]);
 
   useEffect(() => {
     customerApi

@@ -22,15 +22,28 @@ interface Props {
   onPageChange?: (page: number) => void;
 }
 
-  const Packed: React.FC<Props> = ({ filters, search, showUnreadOnly, refreshKey, onTotalCountChange, onPageChange }) => {
+const Packed: React.FC<Props> = ({
+  filters,
+  search,
+  showUnreadOnly,
+  refreshKey,
+  onTotalCountChange,
+  onPageChange,
+}) => {
   const { isAuthenticated } = useAuth();
 
   const [data, setData] = useState<OrderAllResponse>([]);
   const [loading, setLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useSessionStorage("admin_Packed_currentPage", 1);
+  const [currentPage, setCurrentPage] = useSessionStorage(
+    "admin_Packed_currentPage",
+    1,
+  );
   const [totalCount, setTotalCount] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
-  const [pageSize, setPageSize] = useSessionStorage("admin_Packed_pageSize", 50);
+  const [pageSize, setPageSize] = useSessionStorage(
+    "admin_Packed_pageSize",
+    50,
+  );
 
   const router = useRouter();
 
@@ -41,13 +54,14 @@ interface Props {
 
     const fetchData = async () => {
       try {
-        const response: PaginatedResponse<OrderAllResponse[number]> = await orderApi.getAll({
-          ...filters,
-          page: currentPage,
-          page_size: pageSize,
-          search,
-          status: "PACKED",
-        });
+        const response: PaginatedResponse<OrderAllResponse[number]> =
+          await orderApi.getAll({
+            ...filters,
+            page: currentPage,
+            page_size: pageSize,
+            search,
+            status: ["PACKED"],
+          });
         setData(response.results);
         setTotalCount(response.count);
         setTotalPages(Math.ceil(response.count / pageSize));
@@ -64,7 +78,16 @@ interface Props {
     };
 
     fetchData();
-  }, [isAuthenticated, router, filters, search, currentPage, pageSize, refreshKey, showUnreadOnly]);
+  }, [
+    isAuthenticated,
+    router,
+    filters,
+    search,
+    currentPage,
+    pageSize,
+    refreshKey,
+    showUnreadOnly,
+  ]);
 
   const filteredPacked = showUnreadOnly
     ? packed.filter((order) => !isOrderViewed(order.id))
@@ -90,7 +113,10 @@ interface Props {
     const saveScroll = () => {
       clearTimeout(timeout);
       timeout = setTimeout(() => {
-        sessionStorage.setItem("admin_Packed_scrollY", window.scrollY.toString());
+        sessionStorage.setItem(
+          "admin_Packed_scrollY",
+          window.scrollY.toString(),
+        );
       }, 100);
     };
 

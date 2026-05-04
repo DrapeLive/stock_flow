@@ -27,23 +27,32 @@ export interface OrderFilters {
   page_size?: number;
   search?: string;
   customer?: string;
-  status?: string;
+  status?: string[];
 }
 
 export const orderApi = {
-  getAll(filters?: OrderFilters): Promise<PaginatedResponse<OrderAllResponse[number]>> {
+  getAll(
+    filters?: OrderFilters,
+  ): Promise<PaginatedResponse<OrderAllResponse[number]>> {
     const params = new URLSearchParams();
     if (filters?.from) params.append("from_date", filters.from);
     if (filters?.to) params.append("to_date", filters.to);
     if (filters?.agent) params.append("agent", filters.agent);
     if (filters?.page) params.append("page", filters.page.toString());
-    if (filters?.page_size) params.append("page_size", filters.page_size.toString());
+    if (filters?.page_size)
+      params.append("page_size", filters.page_size.toString());
     if (filters?.search) params.append("search", filters.search);
     if (filters?.customer) params.append("customer", filters.customer);
-    if (filters?.status) params.append("status", filters.status);
+    if (filters?.status?.length) {
+      filters.status.forEach((s) => {
+        params.append("status", s);
+      });
+    }
     const query = params.toString();
     return api
-      .get<PaginatedResponse<OrderAllResponse[number]>>(`/api/orders/${query ? `?${query}` : ""}`)
+      .get<
+        PaginatedResponse<OrderAllResponse[number]>
+      >(`/api/orders/${query ? `?${query}` : ""}`)
       .then((r) => r.data);
   },
 
@@ -132,7 +141,10 @@ export const orderApi = {
 
   saveEdit(id: number): Promise<{ message: string; order_id: number }> {
     return api
-      .post<{ message: string; order_id: number }>(`/api/orders/${id}/save-edit/`)
+      .post<{
+        message: string;
+        order_id: number;
+      }>(`/api/orders/${id}/save-edit/`)
       .then((r) => r.data);
   },
 

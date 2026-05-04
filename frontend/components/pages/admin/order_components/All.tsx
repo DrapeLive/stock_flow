@@ -22,12 +22,22 @@ interface Props {
   onPageChange?: (page: number) => void;
 }
 
-  const All: React.FC<Props> = ({ filters, search, showUnreadOnly, refreshKey, onTotalCountChange, onPageChange }) => {
+const All: React.FC<Props> = ({
+  filters,
+  search,
+  showUnreadOnly,
+  refreshKey,
+  onTotalCountChange,
+  onPageChange,
+}) => {
   const { isAuthenticated } = useAuth();
 
   const [data, setData] = useState<OrderAllResponse>([]);
   const [loading, setLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useSessionStorage("admin_All_currentPage", 1);
+  const [currentPage, setCurrentPage] = useSessionStorage(
+    "admin_All_currentPage",
+    1,
+  );
   const [totalCount, setTotalCount] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [pageSize, setPageSize] = useSessionStorage("admin_All_pageSize", 50);
@@ -39,13 +49,14 @@ interface Props {
 
     const fetchData = async () => {
       try {
-        const response: PaginatedResponse<OrderAllResponse[number]> = await orderApi.getAll({
-          ...filters,
-          page: currentPage,
-          page_size: pageSize,
-          search,
-          status: undefined,
-        });
+        const response: PaginatedResponse<OrderAllResponse[number]> =
+          await orderApi.getAll({
+            ...filters,
+            page: currentPage,
+            page_size: pageSize,
+            search,
+            status: [],
+          });
         const sorted = [...response.results].sort(
           (a, b) =>
             new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
@@ -66,7 +77,16 @@ interface Props {
     };
 
     fetchData();
-  }, [isAuthenticated, router, filters, search, currentPage, pageSize, refreshKey, showUnreadOnly]);
+  }, [
+    isAuthenticated,
+    router,
+    filters,
+    search,
+    currentPage,
+    pageSize,
+    refreshKey,
+    showUnreadOnly,
+  ]);
 
   const filteredData = showUnreadOnly
     ? data.filter((order) => !isOrderViewed(order.id))

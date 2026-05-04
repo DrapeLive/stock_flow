@@ -20,7 +20,6 @@ import useSessionStorage from "@/hooks/useSessionStorage";
 
 export default function Home() {
   const [data, setData] = useState<OrderAllResponse>([]);
-  const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
@@ -38,12 +37,22 @@ export default function Home() {
   const [totalCount, setTotalCount] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [pageSize, setPageSize] = useSessionStorage("agent_pageSize", 50);
+  const [debouncedSearch, setDebouncedSearch] = useState(search);
+  const [loading, setLoading] = useState(true);
+  const [isFetching, setIsFetching] = useState(false);
 
   const router = useRouter();
 
   useEffect(() => {
-    setLoading(true);
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 400); // 300–500ms sweet spot
 
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  useEffect(() => {
+    setIsFetching(true);
     const fetchData = async () => {
       try {
         const response: PaginatedResponse<OrderAllResponse[number]> =
@@ -52,7 +61,8 @@ export default function Home() {
             to: toDate || undefined,
             page: currentPage,
             page_size: pageSize,
-            search,
+            search: debouncedSearch,
+            status: ["PENDING", "PACKED"],
             customer: selectedCustomer !== "all" ? selectedCustomer : undefined,
           });
         setData(response.results);
@@ -63,12 +73,20 @@ export default function Home() {
         toastError("Failed to fetch orders", e);
         setLoadError(true);
       } finally {
+        setIsFetching(false);
         setLoading(false);
       }
     };
 
     fetchData();
-  }, [fromDate, toDate, currentPage, pageSize, search, selectedCustomer]);
+  }, [
+    fromDate,
+    toDate,
+    currentPage,
+    pageSize,
+    debouncedSearch,
+    selectedCustomer,
+  ]);
 
   useEffect(() => {
     customerApi
