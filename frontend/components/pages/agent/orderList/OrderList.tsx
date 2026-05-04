@@ -205,7 +205,7 @@ export default function AgentOrderList({
       />
 
       {/* Item-type tab bar */}
-      {/*<div className="flex gap-2 bg-white px-4 py-3 sticky top-0 z-10">
+      <div className="flex gap-2 bg-white px-4 py-3 sticky top-0 z-10">
         {(["gents", "kids"] as ItemTypeTab[]).map((tab) => (
           <button
             key={tab}
@@ -219,7 +219,7 @@ export default function AgentOrderList({
             {tab.charAt(0).toUpperCase() + tab.slice(1)}
           </button>
         ))}
-      </div>*/}
+      </div>
 
       <div className="flex gap-4 mb-4">
         <SearchBar
