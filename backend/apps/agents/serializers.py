@@ -3,8 +3,7 @@ from django.contrib.auth.hashers import make_password
 from collections import defaultdict
 from .models import Agent, AgentItem
 from apps.accounts.models import User
-from apps.items.models import Item, ItemVariant, ItemVariantSize
-from apps.orders.utils import SIZE_RANGE_REVERSE, SIZE_MAPPING
+from apps.items.models import Item
 
 
 class VariantSizeRangeSerializer(serializers.Serializer):
