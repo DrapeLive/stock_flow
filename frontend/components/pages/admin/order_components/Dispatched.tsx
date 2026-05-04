@@ -47,8 +47,6 @@ const Dispatched: React.FC<Props> = ({
 
   const router = useRouter();
 
-  const { dispatched } = groupOrders(data ?? []);
-
   useEffect(() => {
     setLoading(true);
 
@@ -67,7 +65,7 @@ const Dispatched: React.FC<Props> = ({
         setTotalPages(Math.ceil(response.count / pageSize));
         // Report total count (or filtered count if unread only)
         const countToReport = showUnreadOnly
-          ? dispatched.filter((order) => !isOrderViewed(order.id)).length
+          ? response.results.filter((order) => !isOrderViewed(order.id)).length
           : response.count;
         onTotalCountChange?.(countToReport);
       } catch (error) {
@@ -87,13 +85,12 @@ const Dispatched: React.FC<Props> = ({
     pageSize,
     refreshKey,
     showUnreadOnly,
-    dispatched,
     onTotalCountChange,
   ]);
 
   const filteredDispatched = showUnreadOnly
-    ? dispatched.filter((order) => !isOrderViewed(order.id))
-    : dispatched;
+    ? data.filter((order) => !isOrderViewed(order.id))
+    : data;
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);

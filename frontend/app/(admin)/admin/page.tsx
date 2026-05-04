@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, Suspense, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { agentApi } from "@/lib/api/agents";
 import { customerApi } from "@/lib/api/customer";
@@ -64,6 +64,17 @@ function AdminHomePageContent() {
   const [allOrderIds, setAllOrderIds] = useState<number[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
   const [activeTabTotalCount, setActiveTabTotalCount] = useState(0);
+
+  const memoFilters = useMemo(() => filters, [JSON.stringify(filters)]);
+  const [debouncedSearch, setDebouncedSearch] = useState(search);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [search]);
 
   useEffect(() => {
     agentApi
@@ -172,8 +183,8 @@ function AdminHomePageContent() {
 
   const renderContent = (): React.ReactNode => {
     const commonProps = {
-      filters,
-      search,
+      filters: memoFilters,
+      search: debouncedSearch,
       showUnreadOnly,
       refreshKey,
       onTotalCountChange: setActiveTabTotalCount,
