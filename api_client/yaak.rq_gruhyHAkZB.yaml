@@ -2,12 +2,12 @@ type: http_request
 model: http_request
 id: rq_gruhyHAkZB
 createdAt: 2025-12-24T15:22:04.579008501
-updatedAt: 2026-02-07T13:42:10.752503098
+updatedAt: 2026-05-03T17:36:36.919652676
 workspaceId: wk_Wx4mNs5A2J
 folderId: fl_yqp9XHzb55
 authentication:
   disabled: false
-  token: ${[ TOKEN ]}
+  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzgwNDIxNzc3LCJpYXQiOjE3Nzc4Mjk3NzcsImp0aSI6IjM1MzM0ZjIzNTg3NDQ1YjA4ZjhlODcxMDIyZTY0NTFmIiwidXNlcl9pZCI6IjIifQ.aMlY-fcQAfm6LCT0FIbjnr_zVGZ0QsD4MEGDL-QaDWs
 authenticationType: bearer
 body: {}
 bodyType: null
