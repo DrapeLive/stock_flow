@@ -72,17 +72,17 @@ function AdminHomePageContent() {
 
   useEffect(() => {
     orderApi
-      .getAll()
-      .then((orders) => {
-        const allIds = orders.map((o) => o.id);
-        setAllOrderIds(allIds);
-        const pendingIds = orders
+      .getAllIds()
+      .then((orderIds) => {
+        setAllOrderIds(orderIds.map((o) => o.id));
+        const allIds = orderIds.map((o) => o.id);
+        const pendingIds = orderIds
           .filter((o) => o.status === "PENDING")
           .map((o) => o.id);
-        const packedIds = orders
+        const packedIds = orderIds
           .filter((o) => o.status === "PACKED")
           .map((o) => o.id);
-        const dispatchedIds = orders
+        const dispatchedIds = orderIds
           .filter((o) => o.status === "DISPATCHED")
           .map((o) => o.id);
         setOrderCounts({
@@ -93,7 +93,7 @@ function AdminHomePageContent() {
         });
       })
       .catch(console.error);
-  }, [search, filters]);
+  }, []);
 
   useEffect(() => {
     const customerId = searchParams.get("customer");
@@ -169,17 +169,17 @@ function AdminHomePageContent() {
     setRefreshKey((prev) => prev + 1);
     // Refresh counts
     orderApi
-      .getAll()
-      .then((orders) => {
-        setAllOrderIds(orders.map((o) => o.id));
-        const allIds = orders.map((o) => o.id);
-        const pendingIds = orders
+      .getAllIds()
+      .then((orderIds) => {
+        setAllOrderIds(orderIds.map((o) => o.id));
+        const allIds = orderIds.map((o) => o.id);
+        const pendingIds = orderIds
           .filter((o) => o.status === "PENDING")
           .map((o) => o.id);
-        const packedIds = orders
+        const packedIds = orderIds
           .filter((o) => o.status === "PACKED")
           .map((o) => o.id);
-        const dispatchedIds = orders
+        const dispatchedIds = orderIds
           .filter((o) => o.status === "DISPATCHED")
           .map((o) => o.id);
         setOrderCounts({

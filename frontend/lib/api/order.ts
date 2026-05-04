@@ -7,6 +7,7 @@ import type {
   UpdateOrderRequest,
   UpdateOrderItemRequest,
   InvoiceResponse,
+  PaginatedResponse,
 } from "@/types/order";
 import { api } from "./axios";
 
@@ -22,17 +23,31 @@ export interface OrderFilters {
   from?: string;
   to?: string;
   agent?: string;
+  page?: number;
+  page_size?: number;
+  search?: string;
+  customer?: string;
 }
 
 export const orderApi = {
-  getAll(filters?: OrderFilters): Promise<OrderAllResponse> {
+  getAll(filters?: OrderFilters): Promise<PaginatedResponse<OrderAllResponse[number]>> {
     const params = new URLSearchParams();
     if (filters?.from) params.append("from_date", filters.from);
     if (filters?.to) params.append("to_date", filters.to);
     if (filters?.agent) params.append("agent", filters.agent);
+    if (filters?.page) params.append("page", filters.page.toString());
+    if (filters?.page_size) params.append("page_size", filters.page_size.toString());
+    if (filters?.search) params.append("search", filters.search);
+    if (filters?.customer) params.append("customer", filters.customer);
     const query = params.toString();
     return api
-      .get<OrderAllResponse>(`/api/orders/${query ? `?${query}` : ""}`)
+      .get<PaginatedResponse<OrderAllResponse[number]>>(`/api/orders/${query ? `?${query}` : ""}`)
+      .then((r) => r.data);
+  },
+
+  getAllIds(): Promise<{ id: number; status: string }[]> {
+    return api
+      .get<{ id: number; status: string }[]>("/api/orders/order-ids/")
       .then((r) => r.data);
   },
 

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { orderApi } from "@/lib/api/order";
 import { customerApi } from "@/lib/api/customer";
 import { toastError } from "@/lib/toast";
-import { OrderAllResponse } from "@/types/order";
+import { OrderAllResponse, PaginatedResponse } from "@/types/order";
 import { CustomerAllResponse } from "@/types/customer";
 import groupOrders from "@/util/groupOrders";
 import { PageLoading } from "@/components/ui/Loading";
@@ -15,6 +15,7 @@ import EmptyState from "@/components/ui/EmptyState";
 import FilterBar from "@/components/ui/FilterBar";
 import FilterToggle from "@/components/ui/FilterToggle";
 import SearchBar from "@/components/ui/SearchBar";
+import Pagination from "@/components/ui/Pagination";
 
 export default function Home() {
   const [data, setData] = useState<OrderAllResponse>([]);
@@ -26,6 +27,10 @@ export default function Home() {
   const [search, setSearch] = useState("");
   const [customers, setCustomers] = useState<CustomerAllResponse>([]);
   const [selectedCustomer, setSelectedCustomer] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
 
   const router = useRouter();
 
@@ -34,11 +39,17 @@ export default function Home() {
 
     const fetchData = async () => {
       try {
-        const response = await orderApi.getAll({
+        const response: PaginatedResponse<OrderAllResponse[number]> = await orderApi.getAll({
           from: fromDate || undefined,
           to: toDate || undefined,
+          page: currentPage,
+          page_size: pageSize,
+          search,
+          customer: selectedCustomer !== "all" ? selectedCustomer : undefined,
         });
-        setData(response);
+        setData(response.results);
+        setTotalCount(response.count);
+        setTotalPages(Math.ceil(response.count / pageSize));
       } catch (e) {
         console.error("Error fetching orders:", e);
         toastError("Failed to fetch orders", e);
@@ -49,7 +60,7 @@ export default function Home() {
     };
 
     fetchData();
-  }, [fromDate, toDate]);
+  }, [fromDate, toDate, currentPage, pageSize, search, selectedCustomer]);
 
   useEffect(() => {
     customerApi
@@ -67,22 +78,7 @@ export default function Home() {
 
   const { pendingPacked } = groupOrders(sortedData);
 
-  const filteredOrders = pendingPacked.filter((order) => {
-    if (selectedCustomer !== "all" && order.customer_details?.id !== Number(selectedCustomer)) {
-      return false;
-    }
-    if (search) {
-      const s = search.toLowerCase();
-      return (
-        order.customer_details?.name?.toLowerCase().includes(s) ||
-        order.agent_details?.username?.toLowerCase().includes(s) ||
-        order.id.toString().includes(s)
-      );
-    }
-    return true;
-  });
-
-  const order_len = filteredOrders.length;
+  const order_len = pendingPacked.length;
 
   const handleClearFilters = () => {
     setFromDate("");
@@ -90,6 +86,7 @@ export default function Home() {
     setSelectedCustomer("all");
     setSearch("");
     setShowFilters(false);
+    setCurrentPage(1);
   };
 
   const handleToggleFilters = () => {
@@ -100,6 +97,16 @@ export default function Home() {
     }
   };
 
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handlePageSizeChange = (size: number) => {
+    setPageSize(size);
+    setCurrentPage(1);
+  };
+
   if (loading) return <PageLoading />;
   if (loadError) return null;
 
@@ -107,7 +114,7 @@ export default function Home() {
     <div className="min-h-screen min-w-full">
       <OrderListHeader
         title="Remaining Orders"
-        count={order_len}
+        count={totalCount}
         showFilters={showFilters}
         handleToggleFilters={handleToggleFilters}
       />
@@ -115,7 +122,10 @@ export default function Home() {
       <div className="mb-4">
         <SearchBar
           value={search}
-          onChange={setSearch}
+          onChange={(val) => {
+            setSearch(val);
+            setCurrentPage(1);
+          }}
           placeholder="Search by customer or order ID..."
         />
       </div>
@@ -123,11 +133,20 @@ export default function Home() {
       <FilterBar
         fromDate={fromDate}
         toDate={toDate}
-        onFromDateChange={setFromDate}
-        onToDateChange={setToDate}
+        onFromDateChange={(date) => {
+          setFromDate(date);
+          setCurrentPage(1);
+        }}
+        onToDateChange={(date) => {
+          setToDate(date);
+          setCurrentPage(1);
+        }}
         customers={customers.map((c) => ({ id: c.id, name: c.name }))}
         selectedCustomer={selectedCustomer}
-        onCustomerChange={setSelectedCustomer}
+        onCustomerChange={(val) => {
+          setSelectedCustomer(val);
+          setCurrentPage(1);
+        }}
         isOpen={showFilters}
         onClear={handleClearFilters}
       />
@@ -136,7 +155,7 @@ export default function Home() {
         <EmptyState title={search || selectedCustomer !== "all" ? "No matching orders" : "No Active Orders"} />
       ) : (
         <div className="space-y-3 pb-32">
-          {filteredOrders.map((order) => (
+          {pendingPacked.map((order) => (
             <OrderCard
               key={order.id}
               order={order}
@@ -145,6 +164,15 @@ export default function Home() {
           ))}
         </div>
       )}
+
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalCount={totalCount}
+        pageSize={pageSize}
+        onPageChange={handlePageChange}
+        onPageSizeChange={handlePageSizeChange}
+      />
     </div>
   );
 }
