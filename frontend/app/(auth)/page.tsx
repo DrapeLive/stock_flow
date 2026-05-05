@@ -48,10 +48,13 @@ const ERROR_MESSAGES: Record<
   },
 };
 
-function classifyError(err: unknown): NonNullable<ErrorType> {
-  const error = err as { response?: { status?: number; data?: { error?: string } }; code?: string };
+function classifyError(err: any): NonNullable<ErrorType> {
+  const error = err as {
+    response?: { status?: number; data?: { error?: string } };
+    code?: string;
+  };
   if (!error.response) return error.code === "200" ? "network" : "cors";
-  const status: number = error.response.status;
+  const status: number = error.response.status!;
   const msg = (error.response?.data?.error ?? "").toLowerCase();
   if (status === 400 || status === 401) {
     if (
@@ -107,7 +110,7 @@ export default function Login() {
       const res = await authApi.login({ email, password });
       login(res);
       router.replace(res.role === "ADMIN" ? "/admin" : "/agent");
-    } catch (err: unknown) {
+    } catch (err: any) {
       setErrorType(classifyError(err));
       triggerShake();
     } finally {
@@ -115,7 +118,10 @@ export default function Login() {
     }
   };
 
-  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>, field: "email" | "password") => {
+  const handleKeyDown = (
+    e: KeyboardEvent<HTMLInputElement>,
+    field: "email" | "password",
+  ) => {
     if (e.key !== "Enter") return;
     if (field === "email") document.getElementById("password")?.focus();
     else handleLogin();

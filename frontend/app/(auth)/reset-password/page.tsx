@@ -71,9 +71,10 @@ function ResetPasswordForm() {
     try {
       await authApi.resetPassword({ token, password });
       setStatus("success");
-    } catch (err: unknown) {
+    } catch (err: any) {
       const msg =
-        (err as { response?: { data?: { error?: string } } })?.response?.data?.error ?? "Something went wrong. Please try again.";
+        (err as { response?: { data?: { error?: string } } })?.response?.data
+          ?.error ?? "Something went wrong. Please try again.";
       setErrorMsg(msg);
       triggerShake();
       setStatus("idle");

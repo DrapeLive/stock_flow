@@ -111,7 +111,7 @@ export default function PriceCheckScannerPage() {
       } else {
         setSelectedVariant(result.variants[0] || null);
       }
-    } catch (err: unknown) {
+    } catch (err: any) {
       console.error("Error fetching item:", err);
       toastError(err.response?.data?.error || "Item not found", err);
       setScanned(false);

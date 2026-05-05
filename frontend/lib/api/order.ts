@@ -14,7 +14,7 @@ import { api } from "./axios";
 export interface OrderLog {
   id: number;
   action: string;
-  details: Record<string, unknown>;
+  details: Record<string, any>;
   performed_by: string | null;
   created_at: string;
 }
@@ -69,9 +69,12 @@ export const orderApi = {
     const query = new URLSearchParams();
     query.append("customer", customerId.toString());
     if (params?.page) query.append("page", params.page.toString());
-    if (params?.page_size) query.append("page_size", params.page_size.toString());
+    if (params?.page_size)
+      query.append("page_size", params.page_size.toString());
     return api
-      .get<PaginatedResponse<OrderAllResponse[number]>>(`/api/orders/?${query.toString()}`)
+      .get<
+        PaginatedResponse<OrderAllResponse[number]>
+      >(`/api/orders/?${query.toString()}`)
       .then((r) => r.data);
   },
 

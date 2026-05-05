@@ -41,7 +41,7 @@ export default function ForgotPassword() {
     try {
       await authApi.forgotPassword({ email: email.trim().toLowerCase() });
       setStatus("success");
-    } catch (err: unknown) {
+    } catch (err: any) {
       setStatus("error");
       setErrorMsg(
         err?.response?.data?.error ?? "Something went wrong. Please try again.",
@@ -73,7 +73,8 @@ export default function ForgotPassword() {
                 <span className="font-medium text-[var(--color-heading)]">
                   {email}
                 </span>{" "}
-                is linked to an account, you&apos;ll receive a reset link shortly.
+                is linked to an account, you&apos;ll receive a reset link
+                shortly.
               </p>
             </div>
             <p className="text-xs text-gray-400">

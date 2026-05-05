@@ -6,11 +6,7 @@ import { agentApi } from "@/lib/api/agents";
 import { customerApi } from "@/lib/api/customer";
 import { toastSuccess, toastError } from "@/lib/toast";
 import { CustomerCreateRequest } from "@/types/customer";
-import {
-  Field,
-  FieldGroup,
-  FieldLabel,
-} from "@/components/ui/field";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
@@ -69,7 +65,8 @@ export default function NewCustomerPage() {
   const validate = () => {
     const newErrors: Record<string, string> = {};
     if (!formData.agent) newErrors.agent = "Please select an agent";
-    if (!formData.customerName.trim()) newErrors.customerName = "Customer name is required";
+    if (!formData.customerName.trim())
+      newErrors.customerName = "Customer name is required";
     if (!formData.address.trim()) newErrors.address = "Address is required";
     if (!formData.contactNumber.trim()) {
       newErrors.contactNumber = "Contact number is required";
@@ -82,7 +79,7 @@ export default function NewCustomerPage() {
 
   const handleSubmit = async () => {
     if (!validate()) return;
-    
+
     setIsSubmitting(true);
     try {
       const payload: CustomerCreateRequest = {
@@ -94,7 +91,7 @@ export default function NewCustomerPage() {
       await customerApi.create(payload);
       toastSuccess("Customer created successfully");
       router.push("/admin/users/");
-    } catch (error: unknown) {
+    } catch (error: any) {
       console.error("Error creating customer:", error);
       toastError("Failed to create customer", error);
     } finally {
@@ -105,16 +102,26 @@ export default function NewCustomerPage() {
   return (
     <div className="w-full px-4 py-8 flex flex-col min-h-screen bg-white">
       <div className="mb-8">
-        <h1 className="text-2xl font-black text-gray-900 tracking-tight">New Customer</h1>
-        <p className="text-sm text-gray-400 font-medium">Register a new client in the system</p>
+        <h1 className="text-2xl font-black text-gray-900 tracking-tight">
+          New Customer
+        </h1>
+        <p className="text-sm text-gray-400 font-medium">
+          Register a new client in the system
+        </p>
       </div>
 
       <div className="bg-gray-50/50 border border-gray-100 rounded-3xl p-6 mb-8">
         <FieldGroup className="space-y-6">
           <Field>
             <div className="flex justify-between items-center mb-1.5">
-              <FieldLabel className="text-xs font-bold uppercase tracking-widest text-gray-400">Assigned Agent</FieldLabel>
-              {errors.agent && <span className="text-[10px] text-red-500 font-bold">{errors.agent}</span>}
+              <FieldLabel className="text-xs font-bold uppercase tracking-widest text-gray-400">
+                Assigned Agent
+              </FieldLabel>
+              {errors.agent && (
+                <span className="text-[10px] text-red-500 font-bold">
+                  {errors.agent}
+                </span>
+              )}
             </div>
             <StockFlowSelect
               value={formData.agent}
@@ -127,8 +134,14 @@ export default function NewCustomerPage() {
 
           <Field>
             <div className="flex justify-between items-center mb-1.5">
-              <FieldLabel className="text-xs font-bold uppercase tracking-widest text-gray-400">Customer / Shop Name</FieldLabel>
-              {errors.customerName && <span className="text-[10px] text-red-500 font-bold">{errors.customerName}</span>}
+              <FieldLabel className="text-xs font-bold uppercase tracking-widest text-gray-400">
+                Customer / Shop Name
+              </FieldLabel>
+              {errors.customerName && (
+                <span className="text-[10px] text-red-500 font-bold">
+                  {errors.customerName}
+                </span>
+              )}
             </div>
             <Input
               placeholder="e.g. Fashion Hub"
@@ -140,8 +153,14 @@ export default function NewCustomerPage() {
 
           <Field>
             <div className="flex justify-between items-center mb-1.5">
-              <FieldLabel className="text-xs font-bold uppercase tracking-widest text-gray-400">Shipping Address</FieldLabel>
-              {errors.address && <span className="text-[10px] text-red-500 font-bold">{errors.address}</span>}
+              <FieldLabel className="text-xs font-bold uppercase tracking-widest text-gray-400">
+                Shipping Address
+              </FieldLabel>
+              {errors.address && (
+                <span className="text-[10px] text-red-500 font-bold">
+                  {errors.address}
+                </span>
+              )}
             </div>
             <Textarea
               rows={3}
@@ -154,8 +173,14 @@ export default function NewCustomerPage() {
 
           <Field>
             <div className="flex justify-between items-center mb-1.5">
-              <FieldLabel className="text-xs font-bold uppercase tracking-widest text-gray-400">Contact detail</FieldLabel>
-              {errors.contactNumber && <span className="text-[10px] text-red-500 font-bold">{errors.contactNumber}</span>}
+              <FieldLabel className="text-xs font-bold uppercase tracking-widest text-gray-400">
+                Contact detail
+              </FieldLabel>
+              {errors.contactNumber && (
+                <span className="text-[10px] text-red-500 font-bold">
+                  {errors.contactNumber}
+                </span>
+              )}
             </div>
             <Input
               placeholder="+91 98765 43210"

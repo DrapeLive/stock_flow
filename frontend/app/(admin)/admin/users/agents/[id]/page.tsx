@@ -90,7 +90,9 @@ export default function AgentDetailPage() {
     setSaving(true);
     try {
       const numericId = parseInt(id as string, 10);
-      const username = deriveUsername(formData.display_name || formData.username);
+      const username = deriveUsername(
+        formData.display_name || formData.username,
+      );
       const payload: AgentUpdateRequest = {
         username,
         display_name: formData.display_name,
@@ -101,7 +103,7 @@ export default function AgentDetailPage() {
       toastSuccess("Agent details updated");
       setIsEditing(false);
       router.refresh();
-    } catch (error: unknown) {
+    } catch (error: any) {
       console.error("Error updating agent:", error);
       toastError("Failed to update agent details", error);
     } finally {
@@ -261,7 +263,10 @@ export default function AgentDetailPage() {
                 />
                 {formData.display_name.trim() && (
                   <p className="mt-1.5 text-[11px] text-gray-400">
-                    Username: <span className="font-mono font-medium text-gray-600">{deriveUsername(formData.display_name)}</span>
+                    Username:{" "}
+                    <span className="font-mono font-medium text-gray-600">
+                      {deriveUsername(formData.display_name)}
+                    </span>
                   </p>
                 )}
               </Field>
@@ -271,7 +276,9 @@ export default function AgentDetailPage() {
                   System Username (auto-derived)
                 </FieldLabel>
                 <Input
-                  value={deriveUsername(formData.display_name || formData.username)}
+                  value={deriveUsername(
+                    formData.display_name || formData.username,
+                  )}
                   disabled
                   className="bg-gray-50 border-gray-100 rounded-xl h-12 font-mono text-sm"
                 />

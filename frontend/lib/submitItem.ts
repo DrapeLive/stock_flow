@@ -57,13 +57,13 @@ export class ApiError extends Error {
  *   { field: ["msg"] }
  *   ["msg"]
  */
-export function parseErrorMessage(body: unknown): string {
+export function parseErrorMessage(body: any): string {
   if (!body) return "Something went wrong. Please try again.";
   if (typeof body === "string") return body;
   if (Array.isArray(body)) return body.join(" ");
 
   if (typeof body === "object") {
-    const obj = body as Record<string, unknown>;
+    const obj = body as Record<string, any>;
 
     if (typeof obj.detail === "string") return obj.detail;
 

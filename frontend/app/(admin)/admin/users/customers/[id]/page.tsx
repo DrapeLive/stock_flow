@@ -50,7 +50,10 @@ export default function CustomerDetailPage() {
         const [customerData, agentsData, ordersData] = await Promise.all([
           customerApi.getOne(numericId),
           agentApi.getAll(),
-          orderApi.getByCustomer(numericId, { page: currentPage, page_size: pageSize }),
+          orderApi.getByCustomer(numericId, {
+            page: currentPage,
+            page_size: pageSize,
+          }),
         ]);
         const filteredOrders = ordersData.results.filter(
           (eachOrder) => eachOrder.status != "DRAFT",
@@ -109,7 +112,7 @@ export default function CustomerDetailPage() {
       toastSuccess("Customer updated successfully");
       setIsEditing(false);
       router.refresh();
-    } catch (error: unknown) {
+    } catch (error: any) {
       console.error("Error updating customer:", error);
       toastError("Failed to update customer", error);
     } finally {

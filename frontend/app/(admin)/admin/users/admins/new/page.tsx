@@ -4,11 +4,7 @@ import { useState, useEffect } from "react";
 import { adminApi } from "@/lib/api/admin";
 import { brandApi } from "@/lib/api/brand";
 import { toastSuccess, toastError } from "@/lib/toast";
-import {
-  Field,
-  FieldGroup,
-  FieldLabel,
-} from "@/components/ui/field";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -110,7 +106,7 @@ export default function NewAdminPage() {
       });
       toastSuccess("Admin created successfully");
       router.push("/admin/users/");
-    } catch (error: unknown) {
+    } catch (error: any) {
       console.error("Error creating admin:", error);
       toastError("Failed to create admin", error);
     } finally {

@@ -21,7 +21,7 @@ interface ApiErrorResponse {
   message?: string;
 }
 
-function parseApiError(error: unknown): string {
+function parseApiError(error: any): string {
   const err = error as ApiErrorResponse;
   if (err.response?.data?.error) return err.response.data.error;
   if (err.response?.data?.detail) return err.response.data.detail;
@@ -52,12 +52,12 @@ export function toastSuccess(title: string, description?: string) {
   showToast("success", { title, description });
 }
 
-export function toastError(title: string, error?: unknown) {
+export function toastError(title: string, error?: any) {
   const description = error ? parseApiError(error) : undefined;
   showToast("error", { title, description });
 }
 
-export function toastErrorFromError(error: unknown) {
+export function toastErrorFromError(error: any) {
   const message = parseApiError(error);
   showToast("error", { title: message });
 }

@@ -294,7 +294,7 @@ export const InvoicePDF = ({ invoice }: { invoice: InvoiceResponse }) => {
         <View style={styles.headerRow}>
           <View style={styles.logoBox}>
             {logoUrl ? (
-              <Image src={logoUrl} style={styles.logoImage} alt="" />
+              <Image src={logoUrl} style={styles.logoImage} />
             ) : (
               <Text style={styles.logoFallbackText}>
                 {brandName.slice(0, 2).toUpperCase()}

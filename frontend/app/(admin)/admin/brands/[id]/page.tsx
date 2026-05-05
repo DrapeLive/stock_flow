@@ -101,7 +101,7 @@ export default function BrandDetailPage() {
       setIsEditing(false);
       setLogoFile(null);
       router.refresh();
-    } catch (error: unknown) {
+    } catch (error: any) {
       console.error("Error updating brand:", error);
       toastError("Failed to update brand", error);
     } finally {
@@ -284,7 +284,9 @@ export default function BrandDetailPage() {
                 )}
                 <Textarea
                   value={formData.address_line1}
-                  onChange={(e) => handleChange("address_line1", e.target.value)}
+                  onChange={(e) =>
+                    handleChange("address_line1", e.target.value)
+                  }
                   className="bg-white border-gray-100 rounded-xl font-bold"
                 />
               </Field>
@@ -295,7 +297,9 @@ export default function BrandDetailPage() {
                 </FieldLabel>
                 <Textarea
                   value={formData.address_line2}
-                  onChange={(e) => handleChange("address_line2", e.target.value)}
+                  onChange={(e) =>
+                    handleChange("address_line2", e.target.value)
+                  }
                   className="bg-white border-gray-100 rounded-xl font-bold"
                 />
               </Field>
@@ -349,7 +353,12 @@ export default function BrandDetailPage() {
                 </span>
                 <span className="text-sm font-medium text-gray-900 text-right">
                   {brand.address_line1}
-                  {brand.address_line2 && <>{`\n`}{brand.address_line2}</>}
+                  {brand.address_line2 && (
+                    <>
+                      {`\n`}
+                      {brand.address_line2}
+                    </>
+                  )}
                 </span>
               </div>
               {brand.gst && (

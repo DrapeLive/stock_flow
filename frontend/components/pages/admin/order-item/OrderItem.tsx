@@ -295,7 +295,7 @@ const OrderItem: React.FC<Props> = ({
         ),
       );
       toastSuccess("Item updated successfully");
-    } catch (err: unknown) {
+    } catch (err: any) {
       console.error("Error updating item:", err);
       toastError(
         (err as { response?: { data?: { error?: string } } })?.response?.data

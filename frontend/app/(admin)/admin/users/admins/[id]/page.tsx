@@ -67,7 +67,10 @@ export default function AdminDetailPage() {
 
   useEffect(() => {
     if (isSuperuser) {
-      brandApi.getAll().then(setBrands).catch(() => setBrands([]));
+      brandApi
+        .getAll()
+        .then(setBrands)
+        .catch(() => setBrands([]));
     }
   }, [isSuperuser]);
 
@@ -80,7 +83,9 @@ export default function AdminDetailPage() {
     setSaving(true);
     try {
       const numericId = parseInt(id as string, 10);
-      const username = deriveUsername(formData.display_name || formData.username);
+      const username = deriveUsername(
+        formData.display_name || formData.username,
+      );
       await adminApi.update(numericId, {
         username,
         display_name: formData.display_name,
@@ -90,7 +95,7 @@ export default function AdminDetailPage() {
       toastSuccess("Admin updated successfully");
       setIsEditing(false);
       router.refresh();
-    } catch (error: unknown) {
+    } catch (error: any) {
       console.error("Error updating admin:", error);
       toastError("Failed to update admin", error);
     } finally {
@@ -181,7 +186,9 @@ export default function AdminDetailPage() {
             className={isEditing ? "text-amber-500" : "text-gray-600"}
           />
         </div>
-        <h2 className="text-2xl font-black text-gray-900">{admin.display_name || admin.username}</h2>
+        <h2 className="text-2xl font-black text-gray-900">
+          {admin.display_name || admin.username}
+        </h2>
         <span className="text-xs font-bold text-gray-400 mt-1 font-mono tracking-tighter">
           ADMINISTRATOR
         </span>
@@ -203,7 +210,10 @@ export default function AdminDetailPage() {
                 />
                 {formData.display_name.trim() && (
                   <p className="mt-1.5 text-[11px] text-gray-400">
-                    Username: <span className="font-mono font-medium text-gray-600">{deriveUsername(formData.display_name)}</span>
+                    Username:{" "}
+                    <span className="font-mono font-medium text-gray-600">
+                      {deriveUsername(formData.display_name)}
+                    </span>
                   </p>
                 )}
               </Field>
@@ -213,7 +223,9 @@ export default function AdminDetailPage() {
                   System Username (auto-derived)
                 </FieldLabel>
                 <Input
-                  value={deriveUsername(formData.display_name || formData.username)}
+                  value={deriveUsername(
+                    formData.display_name || formData.username,
+                  )}
                   disabled
                   className="bg-gray-50 border-gray-100 rounded-xl h-12 font-mono text-sm"
                 />
@@ -237,7 +249,9 @@ export default function AdminDetailPage() {
                       Brand *
                     </FieldLabel>
                     {errors.brand_id && (
-                      <span className="text-[10px] text-red-500 font-bold">{errors.brand_id}</span>
+                      <span className="text-[10px] text-red-500 font-bold">
+                        {errors.brand_id}
+                      </span>
                     )}
                   </div>
                   <Select

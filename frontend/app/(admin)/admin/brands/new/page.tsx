@@ -4,11 +4,7 @@ import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { brandApi } from "@/lib/api/brand";
 import { toastSuccess, toastError } from "@/lib/toast";
-import {
-  Field,
-  FieldGroup,
-  FieldLabel,
-} from "@/components/ui/field";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
@@ -92,7 +88,7 @@ export default function NewBrandPage() {
       });
       toastSuccess("Brand created successfully");
       router.push("/admin/brands/");
-    } catch (error: unknown) {
+    } catch (error: any) {
       console.error("Error creating brand:", error);
       toastError("Failed to create brand", error);
     } finally {

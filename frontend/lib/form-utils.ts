@@ -3,13 +3,13 @@
  * Handles nested arrays and objects like `variants[0]image` or `sizes[0]size`.
  */
 export function objectToFormData(
-  obj: Record<string, unknown>,
+  obj: Record<string, any>,
   rootName?: string,
   ignoreList?: string[],
 ): FormData {
   const formData = new FormData();
 
-  function appendFormData(data: unknown, root: string) {
+  function appendFormData(data: any, root: string) {
     if (!data) return;
 
     if (ignoreList && ignoreList.indexOf(root) !== -1) return;
@@ -42,7 +42,7 @@ export function objectToFormData(
 /**
  * Specifically tailored for ItemRequest structure in Django
  */
-export function itemToFormData(data: Record<string, unknown>): FormData {
+export function itemToFormData(data: Record<string, any>): FormData {
   const formData = new FormData();
 
   formData.append("name", data.name as string);

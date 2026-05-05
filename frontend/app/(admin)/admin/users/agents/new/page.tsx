@@ -1,11 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import {
-  Field,
-  FieldGroup,
-  FieldLabel,
-} from "@/components/ui/field";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 import { agentApi } from "@/lib/api/agents";
@@ -20,14 +16,19 @@ export default function NewAgentPage() {
     contactNumber: "",
     password: "",
   });
-  const [existingUsernames, setExistingUsernames] = useState<Set<string>>(new Set());
+  const [existingUsernames, setExistingUsernames] = useState<Set<string>>(
+    new Set(),
+  );
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    agentApi.getAll().then((agents) => {
-      setExistingUsernames(new Set(agents.map((a) => a.user.username)));
-    }).catch(() => {});
+    agentApi
+      .getAll()
+      .then((agents) => {
+        setExistingUsernames(new Set(agents.map((a) => a.user.username)));
+      })
+      .catch(() => {});
   }, []);
 
   const router = useRouter();
@@ -48,7 +49,8 @@ export default function NewAgentPage() {
 
   const validate = () => {
     const newErrors: Record<string, string> = {};
-    if (!formData.displayName.trim()) newErrors.displayName = "Name is required";
+    if (!formData.displayName.trim())
+      newErrors.displayName = "Name is required";
     if (!formData.email.trim()) {
       newErrors.email = "Email is required";
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
@@ -82,7 +84,7 @@ export default function NewAgentPage() {
       const newAgent = await agentApi.create(payload);
       toastSuccess("Agent created successfully");
       router.push(`/admin/users/agents/${newAgent.id}`);
-    } catch (error: unknown) {
+    } catch (error: any) {
       const message = error?.toString().includes("500")
         ? "Agent already registered"
         : "Failed to create agent";
@@ -125,7 +127,10 @@ export default function NewAgentPage() {
             />
             {formData.displayName.trim() && (
               <p className="mt-1.5 text-[11px] text-gray-400">
-                Username: <span className="font-mono font-medium text-gray-600">{deriveUsername(formData.displayName, existingUsernames)}</span>
+                Username:{" "}
+                <span className="font-mono font-medium text-gray-600">
+                  {deriveUsername(formData.displayName, existingUsernames)}
+                </span>
               </p>
             )}
           </Field>

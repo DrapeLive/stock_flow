@@ -177,7 +177,7 @@ export default function ItemEditPage() {
     try {
       await updateItem(Number(id), common, variants);
       router.push("/admin/items");
-    } catch (e: unknown) {
+    } catch (e: any) {
       toastError(e instanceof Error ? e.message : parseErrorMessage(e));
     } finally {
       setSaving(false);
@@ -192,7 +192,7 @@ export default function ItemEditPage() {
     try {
       await itemApi.delete(Number(id));
       router.push("/admin/items");
-    } catch (e: unknown) {
+    } catch (e: any) {
       toastError("Failed to delete item", e);
       setDeleting(false);
     }
@@ -433,7 +433,6 @@ export default function ItemEditPage() {
                       <EditVariantRow
                         key={v.localId}
                         variant={v}
-                        index={i}
                         isOnly={group.sizes.length === 1}
                         onChange={(updated) =>
                           updateVariant(v.localId, updated)
