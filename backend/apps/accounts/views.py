@@ -106,11 +106,10 @@ class ForgotPasswordView(APIView):
             expires_at=timezone.now() + timedelta(minutes=30),
         )
 
-        base_url = "https://xlapparals.in"
-        reset_link = f"{base_url}/reset-password?token={token.token}"
+        reset_link = f"https://xlapparals.in/reset-password?token={token.token}"
 
         send_mail(
-            subject="Reset your password",
+            subject="XL Apparals - Reset your password",
             message=(
                 f"Hello,\n\n"
                 f"Click the link below to reset your password. "
