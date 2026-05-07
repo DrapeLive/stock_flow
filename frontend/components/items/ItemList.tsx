@@ -218,7 +218,7 @@ export default function ItemList({
                 : "text-gray-500 hover:text-gray-700"
             }`}
           >
-            In Stock ({inStockCount})
+            Stock In ({inStockCount})
           </button>
           <button
             onClick={() => setActiveTab("out_of_stock")}
@@ -228,7 +228,7 @@ export default function ItemList({
                 : "text-gray-500 hover:text-gray-700"
             }`}
           >
-            Out ({outOfStockCount})
+            Stock Out ({outOfStockCount})
           </button>
         </div>
       </div>
