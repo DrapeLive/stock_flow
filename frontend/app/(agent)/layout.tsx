@@ -1,3 +1,4 @@
+import PushNotificationInit from "@/lib/pushInit";
 import NavBar from "../../components/ui/NavBar";
 import AgentProfileButton from "@/components/ui/custom/agentProfileButton";
 
@@ -8,6 +9,7 @@ export default function MainLayout({
 }) {
   return (
     <div className="main-layout pb-32">
+      <PushNotificationInit />
       <AgentProfileButton />
       {children}
       <NavBar />

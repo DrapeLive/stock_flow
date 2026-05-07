@@ -22,7 +22,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "StockFlow",
     description: "Control your stock seamlessly",
-    url: "https://stockflow-sigma.vercel.app",
+    url: "https://xlapparals.in/",
     siteName: "XL Apparals",
     images: [
       {
@@ -38,6 +38,11 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: "#FFFFFF",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  minimumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({
