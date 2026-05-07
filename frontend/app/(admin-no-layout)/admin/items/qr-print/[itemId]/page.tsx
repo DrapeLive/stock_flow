@@ -41,6 +41,7 @@ const QRPrintPage: React.FC = () => {
     if (!loading && item && !hasPrinted.current) {
       hasPrinted.current = true;
       setTimeout(() => {
+        document.title = `${item.name}-${item.id}`.replace(/\s+/g, "-");
         window.print();
         window.onafterprint = () => window.close();
       }, 500);
@@ -113,10 +114,7 @@ const QRPrintPage: React.FC = () => {
           </p>
 
           <div style={{ padding: "4px", background: "white" }}>
-            <QRCode
-              value={variant.qr_code || String(variant.id)}
-              size={130}
-            />
+            <QRCode value={variant.qr_code || String(variant.id)} size={130} />
           </div>
 
           <p

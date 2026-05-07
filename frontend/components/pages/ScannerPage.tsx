@@ -1,15 +1,23 @@
 "use client";
 
+import { itemApi } from "@/lib/api/item";
+import { toastError, toastSuccess } from "@/lib/toast";
 import { Scanner } from "@yudiel/react-qr-scanner";
 import { QrCode, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 interface ScannerPageProps {
   id: string;
   basePath?: string;
 }
 
-const ScannerPage: React.FC<ScannerPageProps> = ({ id, basePath = "/agent/order/new" }) => {
+const ScannerPage: React.FC<ScannerPageProps> = ({
+  id,
+  basePath = "/agent/order/new",
+}) => {
+  const [validating, setValidating] = useState(false);
+
   const router = useRouter();
 
   return (
@@ -29,9 +37,22 @@ const ScannerPage: React.FC<ScannerPageProps> = ({ id, basePath = "/agent/order/
               width: { ideal: 1280 },
               height: { ideal: 720 },
             }}
-            onScan={(data) => {
-              if (data[0]?.rawValue) {
-                router.push(`${basePath}/${id}/${data[0]["rawValue"]}`);
+            onScan={async (data) => {
+              if (data[0]?.rawValue && !validating) {
+                const qrValue = data[0].rawValue;
+                setValidating(true);
+                try {
+                  const item = await itemApi.byqr(qrValue);
+                  toastSuccess(
+                    "QR code scanned successfully",
+                    `Scanned Item: ${item.name}`,
+                  );
+                  router.push(`${basePath}/${id}/${qrValue}`);
+                } catch (e) {
+                  toastError("Invalid QR code", e); // will parse response.data.error from Django
+                } finally {
+                  setValidating(false);
+                }
               }
             }}
             onError={(err) => console.error(err)}
@@ -52,7 +73,8 @@ const ScannerPage: React.FC<ScannerPageProps> = ({ id, basePath = "/agent/order/
         </div>
         <h2 className="text-lg font-bold text-gray-800">Align QR Code</h2>
         <p className="text-sm text-gray-400 mt-2 max-w-[200px] mx-auto leading-relaxed font-medium">
-          Position the item&apos;s QR code within the frame to add it to the order
+          Position the item&apos;s QR code within the frame to add it to the
+          order
         </p>
       </div>
 

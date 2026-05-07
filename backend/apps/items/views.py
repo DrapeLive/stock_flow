@@ -114,9 +114,19 @@ class ItemViewSet(ModelViewSet):
     @action(detail=False, methods=["get"], url_path="by-qr")
     def get_by_qr(self, request):
         qr_code = request.query_params.get("qr_code")
+        qr_code = qr_code.strip()
 
-        if not qr_code:
-            return Response({"error": "qr_code query parameter is required"}, status=400)
+        if len(qr_code) > 255 or "/" in qr_code:
+            return Response({"error": "No such item with this QR exists"}, status=400)
+
+        try:
+            variant = ItemVariant.objects.select_related('item').prefetch_related('sizes').get(
+                qr_code=qr_code, item__is_deleted=False
+            )
+        except ItemVariant.DoesNotExist:
+            return Response({"error": "Item not found"}, status=404)
+        except Exception:
+            return Response({"error": "Invalid QR code"}, status=400)
 
         try:
             variant = ItemVariant.objects.select_related('item').prefetch_related('sizes').get(qr_code=qr_code, item__is_deleted=False)
