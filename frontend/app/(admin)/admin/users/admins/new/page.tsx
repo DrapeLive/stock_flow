@@ -107,7 +107,6 @@ export default function NewAdminPage() {
       toastSuccess("Admin created successfully");
       router.push("/admin/users/");
     } catch (error: any) {
-      console.error("Error creating admin:", error);
       toastError("Failed to create admin", error);
     } finally {
       setIsSubmitting(false);

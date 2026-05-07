@@ -85,11 +85,7 @@ export default function NewAgentPage() {
       toastSuccess("Agent created successfully");
       router.push(`/admin/users/agents/${newAgent.id}`);
     } catch (error: any) {
-      const message = error?.toString().includes("500")
-        ? "Agent already registered"
-        : "Failed to create agent";
-
-      toastError(message);
+      toastError(error);
     } finally {
       setIsSubmitting(false);
     }

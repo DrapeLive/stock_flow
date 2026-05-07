@@ -114,6 +114,11 @@ class AgentSerializer(serializers.ModelSerializer):
         model = Agent
         fields = ('id', 'username', 'user', 'email', 'password', 'contact', 'total_customers', 'assigned_items', 'display_name')
 
+    def validate_email(self, value):
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError(f'Email "{value}" is already taken.')
+        return value
+
     def validate_username(self, value):
         if User.objects.filter(username=value).exists():
             raise serializers.ValidationError(f'Username "{value}" is already taken.')

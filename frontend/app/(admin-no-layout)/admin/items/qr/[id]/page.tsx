@@ -25,6 +25,7 @@ const QRPage: React.FC = () => {
     if (!loading && item && !hasPrinted.current) {
       hasPrinted.current = true;
       setTimeout(() => {
+        document.title = `${item.name}-${item.id}`.replace(/\s+/g, "-");
         window.print();
         // Fires after the print dialog is closed (whether printed or cancelled)
         window.onafterprint = () => window.close();

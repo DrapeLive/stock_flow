@@ -76,7 +76,7 @@ export default function OrderCard({ order, onClick }: OrderCardProps) {
       } p-4 rounded-2xl hover:border-primary/30 hover:shadow-md transition-all cursor-pointer active:scale-[0.99] relative`}
     >
       {!viewed && (
-        <div className="absolute top-3 right-3 w-2.5 h-2.5 bg-primary rounded-full" />
+        <div className="absolute top-2 right-2 w-4 h-4 rounded-full animate-pulse bg-green-600" />
       )}
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">

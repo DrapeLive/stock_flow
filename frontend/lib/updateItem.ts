@@ -1,18 +1,22 @@
-import { api } from "@/lib/api/axios";
-import { itemApi } from "@/lib/api/item";
-import type { EditCommonDetails, EditableVariant } from "@/types/item";
-import { parseErrorMessage } from "@/lib/submitItem";
+import { EditableVariant, EditCommonDetails } from "@/types/item";
+import { api } from "./api";
+import { itemApi } from "./api/item";
 
 export async function updateItem(
   itemId: number,
   common: EditCommonDetails,
   variants: EditableVariant[],
 ): Promise<void> {
-  const groupedVariants = variants.reduce<Record<string, {
-    id?: number;
-    sizes: { size: string; stock: number }[];
-    newImage?: File | null;
-  }>>((acc, v) => {
+  const groupedVariants = variants.reduce<
+    Record<
+      string,
+      {
+        id?: number;
+        sizes: { size: string; stock: number }[];
+        newImage?: File | null;
+      }
+    >
+  >((acc, v) => {
     const key = v.backendId ? `existing_${v.backendId}` : `new_${v.localId}`;
     if (!acc[key]) {
       acc[key] = {
@@ -33,24 +37,24 @@ export async function updateItem(
     variants: Object.values(groupedVariants).map((g) => ({
       id: g.id,
       sizes: g.sizes,
-      ...(g.newImage && { image: g.newImage }),
+      // no image here — JSON can't carry File objects
     })),
   };
 
   await itemApi.update(itemId, payload);
 
-  const imageUpdates = variants.filter((v) => v.newImage);
+  const imageUpdates = Object.values(groupedVariants).filter(
+    (g) => g.newImage && g.id, // only existing variants with a new image
+  );
   if (imageUpdates.length === 0) return;
 
   await Promise.all(
-    imageUpdates.map((v) => {
+    imageUpdates.map((g) => {
       const fd = new FormData();
-      fd.append("image", v.newImage!);
-      return api.patch(`/api/items/variants/${v.backendId}/`, fd, {
+      fd.append("image", g.newImage!);
+      return api.patch(`/api/items/variants/${g.id}/`, fd, {
         headers: { "Content-Type": "multipart/form-data" },
       });
     }),
   );
 }
-
-export { parseErrorMessage };

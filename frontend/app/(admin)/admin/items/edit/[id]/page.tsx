@@ -23,8 +23,8 @@ import Image from "next/image";
 import { ImagePreview } from "@/components/pages/ImagePreview";
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 import { itemApi } from "@/lib/api/item";
-import { updateItem, parseErrorMessage } from "@/lib/updateItem";
-import { toastError } from "@/lib/toast";
+import { updateItem } from "@/lib/updateItem";
+import { toastError, toastSuccess } from "@/lib/toast";
 import EditVariantRow from "./editVariantRow";
 import CropModal from "../../new/cropModal";
 import imageCompression from "browser-image-compression";
@@ -110,6 +110,28 @@ export default function ItemEditPage() {
   ) => {
     const f = e.target.files?.[0];
     if (!f) return;
+
+    const allowed = [
+      "jpg",
+      "jpeg",
+      "png",
+      "webp",
+      "gif",
+      "avif",
+      "bmp",
+      "tiff",
+      "tif",
+    ];
+    const ext = f.name.split(".").pop()?.toLowerCase() ?? "";
+    if (!allowed.includes(ext)) {
+      toastError(
+        "Invalid file type",
+        `".${ext}" is not an allowed image format`,
+      );
+      e.target.value = "";
+      return;
+    }
+
     setVariantCrop({ src: URL.createObjectURL(f), backendId });
     e.target.value = "";
   };
@@ -121,9 +143,14 @@ export default function ItemEditPage() {
       useWebWorker: true,
     });
 
+    // Give the blob a proper filename with extension
+    const namedFile = new File([compressedFile], "image.jpg", {
+      type: "image/jpeg",
+    });
+
     updateVariantGroupImage(backendId, {
-      newImage: compressedFile,
-      imagePreview: URL.createObjectURL(compressedFile),
+      newImage: namedFile,
+      imagePreview: URL.createObjectURL(namedFile),
     });
 
     setVariantCrop(null);
@@ -176,9 +203,9 @@ export default function ItemEditPage() {
     setSaving(true);
     try {
       await updateItem(Number(id), common, variants);
-      router.push("/admin/items");
+      toastSuccess("Item updated successfully");
     } catch (e: any) {
-      toastError(e instanceof Error ? e.message : parseErrorMessage(e));
+      toastError("Failed to update item", e);
     } finally {
       setSaving(false);
     }
@@ -191,6 +218,7 @@ export default function ItemEditPage() {
     setDeleting(true);
     try {
       await itemApi.delete(Number(id));
+      toastSuccess("Item deleted successfully");
       router.push("/admin/items");
     } catch (e: any) {
       toastError("Failed to delete item", e);
@@ -376,7 +404,7 @@ export default function ItemEditPage() {
                           fileRefs.current[group.backendId] = el;
                         }}
                         type="file"
-                        accept="image/*"
+                        accept=".jpg,.jpeg,.png,.webp,.gif,.avif,.bmp,.tiff,.tif,.svg"
                         className="hidden"
                         onChange={(e) =>
                           handleVariantImageUpload(group.backendId, e)

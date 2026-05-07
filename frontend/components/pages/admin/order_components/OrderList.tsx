@@ -1,19 +1,20 @@
 "use client";
-
 import { useAuth } from "@/context/AuthContext";
 import { orderApi } from "@/lib/api/order";
 import { OrderAllResponse, PaginatedResponse } from "@/types/order";
 import { Info } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-
 import { OrderCard } from "@/components/order";
 import { OrderFilters } from "./types";
 import { isOrderViewed } from "@/lib/viewedOrders";
 import Pagination from "@/components/ui/Pagination";
 import useSessionStorage from "@/hooks/useSessionStorage";
 
+type OrderStatus = "ALL" | "PENDING" | "PACKED" | "DISPATCHED";
+
 interface Props {
+  status: OrderStatus;
   filters?: OrderFilters;
   search?: string;
   showUnreadOnly?: boolean;
@@ -22,7 +23,22 @@ interface Props {
   onPageChange?: (page: number) => void;
 }
 
-const All: React.FC<Props> = ({
+const LABELS: Record<OrderStatus, string> = {
+  ALL: "orders",
+  PENDING: "pending orders",
+  PACKED: "packed orders",
+  DISPATCHED: "dispatched orders",
+};
+
+const EMPTY_LABELS: Record<OrderStatus, string> = {
+  ALL: "No Data Found",
+  PENDING: "No Pending Orders",
+  PACKED: "No Packed Orders",
+  DISPATCHED: "No Dispatched Orders",
+};
+
+const OrderList: React.FC<Props> = ({
+  status,
   filters,
   search,
   showUnreadOnly,
@@ -31,22 +47,24 @@ const All: React.FC<Props> = ({
   onPageChange,
 }) => {
   const { isAuthenticated } = useAuth();
+  const router = useRouter();
+  const key = status.charAt(0) + status.slice(1).toLowerCase(); // "All", "Pending", etc.
 
   const [data, setData] = useState<OrderAllResponse>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useSessionStorage(
-    "admin_All_currentPage",
+    `admin_${key}_currentPage`,
     1,
   );
   const [totalCount, setTotalCount] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
-  const [pageSize, setPageSize] = useSessionStorage("admin_All_pageSize", 50);
-
-  const router = useRouter();
+  const [pageSize, setPageSize] = useSessionStorage(
+    `admin_${key}_pageSize`,
+    50,
+  );
 
   useEffect(() => {
     setLoading(true);
-
     const fetchData = async () => {
       try {
         const response: PaginatedResponse<OrderAllResponse[number]> =
@@ -55,27 +73,32 @@ const All: React.FC<Props> = ({
             page: currentPage,
             page_size: pageSize,
             search,
-            status: [],
+            status: status === "ALL" ? [] : [status],
           });
-        const sorted = [...response.results].sort(
-          (a, b) =>
-            new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-        );
-        setData(sorted);
+
+        const results =
+          status === "ALL"
+            ? [...response.results].sort(
+                (a, b) =>
+                  new Date(b.created_at).getTime() -
+                  new Date(a.created_at).getTime(),
+              )
+            : response.results;
+
+        setData(results);
         setTotalCount(response.count);
         setTotalPages(Math.ceil(response.count / pageSize));
-        // Report total count (or filtered count if unread only)
-        const countToReport = showUnreadOnly
-          ? sorted.filter((order) => !isOrderViewed(order.id)).length
-          : response.count;
-        onTotalCountChange?.(countToReport);
+        onTotalCountChange?.(
+          showUnreadOnly
+            ? results.filter((o) => !isOrderViewed(o.id)).length
+            : response.count,
+        );
       } catch (error) {
         console.error("Error fetching data:", error);
       } finally {
         setLoading(false);
       }
     };
-
     fetchData();
   }, [
     isAuthenticated,
@@ -87,10 +110,32 @@ const All: React.FC<Props> = ({
     refreshKey,
     showUnreadOnly,
     onTotalCountChange,
+    status,
   ]);
 
-  const filteredData = showUnreadOnly
-    ? data.filter((order) => !isOrderViewed(order.id))
+  // Restore and save scroll position
+  useEffect(() => {
+    const saved = sessionStorage.getItem(`admin_${key}_scrollY`);
+    if (saved) setTimeout(() => window.scrollTo(0, parseInt(saved)), 0);
+    let timeout: NodeJS.Timeout;
+    const saveScroll = () => {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => {
+        sessionStorage.setItem(
+          `admin_${key}_scrollY`,
+          window.scrollY.toString(),
+        );
+      }, 100);
+    };
+    window.addEventListener("scroll", saveScroll);
+    return () => {
+      window.removeEventListener("scroll", saveScroll);
+      clearTimeout(timeout);
+    };
+  }, [key]);
+
+  const filtered = showUnreadOnly
+    ? data.filter((o) => !isOrderViewed(o.id))
     : data;
 
   const handlePageChange = (page: number) => {
@@ -104,33 +149,14 @@ const All: React.FC<Props> = ({
     setCurrentPage(1);
   };
 
-  // Restore and save scroll position
-  useEffect(() => {
-    const saved = sessionStorage.getItem("admin_All_scrollY");
-    if (saved) setTimeout(() => window.scrollTo(0, parseInt(saved)), 0);
-
-    let timeout: NodeJS.Timeout;
-    const saveScroll = () => {
-      clearTimeout(timeout);
-      timeout = setTimeout(() => {
-        sessionStorage.setItem("admin_All_scrollY", window.scrollY.toString());
-      }, 100);
-    };
-
-    window.addEventListener("scroll", saveScroll);
-    return () => {
-      window.removeEventListener("scroll", saveScroll);
-      clearTimeout(timeout);
-    };
-  }, []);
-
   if (loading)
     return (
       <p className="text-center py-10 text-gray-400 font-medium">
-        Loading orders...
+        Loading {LABELS[status]}...
       </p>
     );
-  if (filteredData.length == 0)
+
+  if (filtered.length === 0)
     return (
       <div className="flex flex-col items-center justify-center py-20 text-gray-300">
         <Info size={40} className="mb-4 opacity-20" />
@@ -139,14 +165,14 @@ const All: React.FC<Props> = ({
             ? "No unread orders"
             : search
               ? "No matching orders"
-              : "No Data Found"}
+              : EMPTY_LABELS[status]}
         </h2>
       </div>
     );
 
   return (
     <div className="space-y-3 pb-20">
-      {filteredData?.map((order) => (
+      {filtered.map((order) => (
         <OrderCard key={`${order.id}-${refreshKey}`} order={order} />
       ))}
       <Pagination
@@ -161,4 +187,4 @@ const All: React.FC<Props> = ({
   );
 };
 
-export default All;
+export default OrderList;

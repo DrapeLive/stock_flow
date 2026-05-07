@@ -1,36 +1,48 @@
 import { toast as sonner } from "sonner";
 
 type ToastType = "success" | "error";
-
 interface ToastOptions {
   title: string;
   description?: string;
 }
 
-interface ApiErrorResponse {
-  response?: {
-    data?: {
-      error?: string;
-      detail?: string;
-    };
-  };
-  data?: {
-    detail?: string;
-    message?: string;
-  };
-  message?: string;
-}
-
 function parseApiError(error: any): string {
-  const err = error as ApiErrorResponse;
-  if (err.response?.data?.error) return err.response.data.error;
-  if (err.response?.data?.detail) return err.response.data.detail;
-  if (err.data?.detail) return err.data.detail;
-  if (err.data?.message) return err.data.message;
-  if (err.message) return err.message;
+  try {
+    // Axios-style response
+    const data = error?.response?.data;
 
-  if (error instanceof Error) return error.message;
-  if (typeof error === "string") return error;
+    if (data) {
+      // Django sent HTML (e.g. 500 debug page)
+      if (typeof data === "string") {
+        return data.includes("<html") ? "Server error, please try again" : data;
+      }
+
+      if (typeof data === "object") {
+        // { error: "..." } or { detail: "..." }
+        if (typeof data.error === "string") return data.error;
+        if (typeof data.detail === "string") return data.detail;
+
+        // DRF field errors: { username: ["..."], email: ["..."] }
+        const messages = Object.entries(data)
+          .flatMap(([field, val]) => {
+            if (Array.isArray(val)) return val.map((m) => `${field}: ${m}`);
+            if (typeof val === "string") return [`${field}: ${val}`];
+            return [];
+          })
+          .join("\n");
+        if (messages) return messages;
+      }
+    }
+
+    // Flat error object (no response wrapper)
+    if (error?.data?.detail) return error.data.detail;
+    if (error?.data?.message) return error.data.message;
+    if (error?.message) return error.message;
+    if (error instanceof Error) return error.message;
+    if (typeof error === "string") return error;
+  } catch {
+    // never crash the toast
+  }
 
   return "Something went wrong";
 }
@@ -40,7 +52,6 @@ function showToast(type: ToastType, { title, description }: ToastOptions) {
     duration: 3000,
     ...(description && { description }),
   };
-
   if (type === "success") {
     sonner.success(title, options);
   } else {
@@ -52,9 +63,15 @@ export function toastSuccess(title: string, description?: string) {
   showToast("success", { title, description });
 }
 
-export function toastError(title: string, error?: any) {
+export function toastError(titleOrError: string | any, error?: any) {
+  if (typeof titleOrError !== "string") {
+    // called as toastError(e) — treat it like toastErrorFromError
+    const message = parseApiError(titleOrError);
+    showToast("error", { title: message });
+    return;
+  }
   const description = error ? parseApiError(error) : undefined;
-  showToast("error", { title, description });
+  showToast("error", { title: titleOrError, description });
 }
 
 export function toastErrorFromError(error: any) {

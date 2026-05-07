@@ -5,16 +5,13 @@ import { useSearchParams } from "next/navigation";
 import { agentApi } from "@/lib/api/agents";
 import { customerApi } from "@/lib/api/customer";
 import { orderApi } from "@/lib/api/order";
-import Packed from "@/components/pages/admin/order_components/Packed";
-import Pending from "@/components/pages/admin/order_components/Pending";
-import Dispatched from "@/components/pages/admin/order_components/Dispatched";
-import All from "@/components/pages/admin/order_components/All";
 import FilterBar from "@/components/ui/FilterBar";
 import FilterToggle from "@/components/ui/FilterToggle";
 import SearchBar from "@/components/ui/SearchBar";
 import { OrderFilters } from "@/components/pages/admin/order_components/types";
 import { getViewedOrdersCount, markAllAsRead } from "@/lib/viewedOrders";
 import useSessionStorage from "@/hooks/useSessionStorage";
+import OrderList from "@/components/pages/admin/order_components/OrderList";
 
 type Tab = "All" | "Packed" | "Pending" | "Dispatched";
 
@@ -41,10 +38,8 @@ function AdminHomePageContent() {
   const handleTabChange = (tab: Tab) => {
     setActiveTab(tab);
     sessionStorage.setItem("adminOrdersActiveTab", tab);
-    // Reset page to 1 when switching tabs
     setTabPages((prev) => ({ ...prev, [tab]: 1 }));
     setCurrentPage(tabPages[tab] || 1);
-    // Reset scroll position for the tab
     sessionStorage.removeItem(`admin_${tab}_scrollY`);
   };
 
@@ -190,16 +185,16 @@ function AdminHomePageContent() {
       onTotalCountChange: setActiveTabTotalCount,
       onPageChange: (page: number) => handleTabPageChange(activeTab, page),
     };
-    switch (activeTab) {
-      case "Packed":
-        return <Packed {...commonProps} />;
-      case "Pending":
-        return <Pending {...commonProps} />;
-      case "Dispatched":
-        return <Dispatched {...commonProps} />;
-      default:
-        return <All {...commonProps} />;
-    }
+
+    const statusMap: Record<Tab, "ALL" | "PENDING" | "PACKED" | "DISPATCHED"> =
+      {
+        All: "ALL",
+        Pending: "PENDING",
+        Packed: "PACKED",
+        Dispatched: "DISPATCHED",
+      };
+
+    return <OrderList status={statusMap[activeTab]} {...commonProps} />;
   };
 
   const handleMarkAllRead = () => {
