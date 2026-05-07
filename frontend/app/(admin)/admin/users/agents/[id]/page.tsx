@@ -419,6 +419,7 @@ export default function AgentDetailPage() {
                 >
                   {item.variants?.[0]?.image ? (
                     <ImagePreview
+                      enlargeDisabled={true}
                       src={item.variants[0].image}
                       alt={item.name}
                     />
@@ -457,6 +458,7 @@ export default function AgentDetailPage() {
                 >
                   {item.variants?.[0]?.image ? (
                     <ImagePreview
+                      enlargeDisabled={true}
                       src={item.variants[0].image}
                       alt={item.name}
                     />

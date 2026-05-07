@@ -23,7 +23,7 @@ import Image from "next/image";
 import { ImagePreview } from "@/components/pages/ImagePreview";
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 import { itemApi } from "@/lib/api/item";
-import { updateItem, parseErrorMessage } from "@/lib/updateItem";
+import { updateItem } from "@/lib/updateItem";
 import { toastError, toastSuccess } from "@/lib/toast";
 import EditVariantRow from "./editVariantRow";
 import CropModal from "../../new/cropModal";
@@ -205,7 +205,7 @@ export default function ItemEditPage() {
       await updateItem(Number(id), common, variants);
       toastSuccess("Item updated successfully");
     } catch (e: any) {
-      toastError(e instanceof Error ? e.message : parseErrorMessage(e));
+      toastError("Failed to update item", e);
     } finally {
       setSaving(false);
     }
@@ -218,6 +218,7 @@ export default function ItemEditPage() {
     setDeleting(true);
     try {
       await itemApi.delete(Number(id));
+      toastSuccess("Item deleted successfully");
       router.push("/admin/items");
     } catch (e: any) {
       toastError("Failed to delete item", e);
