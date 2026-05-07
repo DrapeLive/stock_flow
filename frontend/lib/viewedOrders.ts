@@ -1,55 +1,33 @@
-const STORAGE_KEY = "viewed_orders";
+import { orderApi } from "@/lib/api/order";
 
-function getViewedOrders(): Set<number> {
-  if (typeof window === "undefined") return new Set();
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (!stored) return new Set();
-    return new Set(JSON.parse(stored) as number[]);
-  } catch {
-    return new Set();
-  }
+let cachedViewedIds: Set<number> | null = null;
+
+export async function fetchViewedOrderIds(): Promise<Set<number>> {
+  if (cachedViewedIds) return cachedViewedIds;
+  const ids = await orderApi.getViewedIds();
+  cachedViewedIds = new Set(ids);
+  return cachedViewedIds;
 }
 
-function saveViewedOrders(viewed: Set<number>) {
-  if (typeof window === "undefined") return;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify([...viewed]));
+export function clearViewedCache() {
+  cachedViewedIds = null;
 }
 
-export function markOrderAsViewed(orderId: number) {
-  const viewed = getViewedOrders();
-  viewed.add(orderId);
-  saveViewedOrders(viewed);
+export async function markOrderAsViewed(orderId: number) {
+  await orderApi.markAsViewed(orderId);
+  if (cachedViewedIds) cachedViewedIds.add(orderId);
 }
 
-export function isOrderViewed(orderId: number): boolean {
-  return getViewedOrders().has(orderId);
+export function getViewedOrdersCount(
+  orderIds: number[],
+  viewedIds: Set<number>,
+): number {
+  return orderIds.filter((id) => !viewedIds.has(id)).length;
 }
 
-export function getViewedOrdersCount(orderIds: number[]): number {
-  const viewed = getViewedOrders();
-  return orderIds.filter((id) => !viewed.has(id)).length;
-}
-
-export function markOrderAsUnread(orderId: number) {
-  const viewed = getViewedOrders();
-  viewed.delete(orderId);
-  saveViewedOrders(viewed);
-}
-
-export function markAllAsUnread() {
-  if (typeof window === "undefined") return;
-  localStorage.removeItem(STORAGE_KEY);
-}
-
-export function markAllAsRead(orderIds: number[]) {
-  if (typeof window === "undefined") return;
-  const viewed = getViewedOrders();
-  orderIds.forEach(id => viewed.add(id));
-  saveViewedOrders(viewed);
-}
-
-export function getUnreadIds(orderIds: number[]): number[] {
-  const viewed = getViewedOrders();
-  return orderIds.filter((id) => !viewed.has(id));
+export function getUnreadIds(
+  orderIds: number[],
+  viewedIds: Set<number>,
+): number[] {
+  return orderIds.filter((id) => !viewedIds.has(id));
 }

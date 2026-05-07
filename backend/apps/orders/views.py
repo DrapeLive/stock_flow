@@ -15,7 +15,7 @@ from apps.accounts.permissions import IsAgent, admin_business
 from apps.agents.models import AgentItem
 from apps.items.models import ItemVariantSize
 from apps.notification.tasks import send_push_to_user
-from apps.orders.models import Order, OrderItem, OrderLog
+from apps.orders.models import Order, OrderItem, OrderLog, UserViewedOrder
 from apps.orders.serializers import (
     AddOrderItemSerializer,
     InvoiceSerializer,
@@ -201,6 +201,8 @@ class StartEditView(APIView):
         order.editing_started_at = timezone.now()
         order.status = "EDITING"
         order.save()
+        # Remove viewed entries for non-pending/packed orders
+        UserViewedOrder.objects.filter(order=order).delete()
 
         OrderLog.objects.create(
             order=order,
@@ -458,6 +460,8 @@ class OrderViewSet(ModelViewSet):
 
             order.status = "DISPATCHED"
             order.save()
+            # Remove viewed entries for non-pending/packed orders
+            UserViewedOrder.objects.filter(order=order).delete()
 
         return Response({"message": "Order dispatched successfully"})
 
@@ -484,6 +488,25 @@ class OrderViewSet(ModelViewSet):
         )
 
         return Response({"message": "Edit cancelled"})
+
+    @action(detail=False, methods=["get"], url_path="my-viewed-ids")
+    def my_viewed_ids(self, request):
+        """Return list of order IDs the current user has viewed."""
+        viewed = UserViewedOrder.objects.filter(user=request.user).values_list(
+            "order_id", flat=True
+        )
+        return Response(list(viewed))
+
+    @action(detail=True, methods=["post"], url_path="mark-viewed")
+    def mark_viewed(self, request, pk=None):
+        """Mark order as viewed by current user (only for PENDING/PACKED orders)."""
+        order = self.get_object()
+        if order.status in ["PENDING", "PACKED"]:
+            UserViewedOrder.objects.get_or_create(user=request.user, order=order)
+        else:
+            # Clean up any existing entries for non-pending/packed orders
+            UserViewedOrder.objects.filter(user=request.user, order=order).delete()
+        return Response({"message": "Viewed status updated"})
 
     @action(detail=False, methods=["get"], url_path="order-ids")
     def order_ids(self, request):

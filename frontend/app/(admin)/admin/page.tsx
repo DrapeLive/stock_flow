@@ -9,7 +9,12 @@ import FilterBar from "@/components/ui/FilterBar";
 import FilterToggle from "@/components/ui/FilterToggle";
 import SearchBar from "@/components/ui/SearchBar";
 import { OrderFilters } from "@/components/pages/admin/order_components/types";
-import { getViewedOrdersCount, markAllAsRead } from "@/lib/viewedOrders";
+import {
+  fetchViewedOrderIds,
+  clearViewedCache,
+  getViewedOrdersCount,
+  getUnreadIds,
+} from "@/lib/viewedOrders";
 import useSessionStorage from "@/hooks/useSessionStorage";
 import OrderList from "@/components/pages/admin/order_components/OrderList";
 
@@ -57,8 +62,9 @@ function AdminHomePageContent() {
     false,
   );
   const [allOrderIds, setAllOrderIds] = useState<number[]>([]);
-  const [refreshKey, setRefreshKey] = useState(0);
-  const [activeTabTotalCount, setActiveTabTotalCount] = useState(0);
+const [refreshKey, setRefreshKey] = useState(0);
+const [activeTabTotalCount, setActiveTabTotalCount] = useState(0);
+const [viewedOrderIds, setViewedOrderIds] = useState<Set<number>>(new Set());
 
   const memoFilters = useMemo(() => filters, [JSON.stringify(filters)]);
   const [debouncedSearch, setDebouncedSearch] = useState(search);
@@ -101,16 +107,19 @@ function AdminHomePageContent() {
         const packedIds = orderIds
           .filter((o) => o.status === "PACKED")
           .map((o) => o.id);
-        const dispatchedIds = orderIds
-          .filter((o) => o.status === "DISPATCHED")
-          .map((o) => o.id);
         setOrderCounts({
-          all: getViewedOrdersCount(allIds),
-          pending: getViewedOrdersCount(pendingIds),
-          packed: getViewedOrdersCount(packedIds),
-          dispatched: getViewedOrdersCount(dispatchedIds),
+          all: getViewedOrdersCount(allIds, viewedOrderIds),
+          pending: getViewedOrdersCount(pendingIds, viewedOrderIds),
+          packed: getViewedOrdersCount(packedIds, viewedOrderIds),
+          dispatched: 0,
         });
       })
+      .catch(console.error);
+  }, [viewedOrderIds]);
+
+  useEffect(() => {
+    fetchViewedOrderIds()
+      .then(setViewedOrderIds)
       .catch(console.error);
   }, []);
 
@@ -197,34 +206,6 @@ function AdminHomePageContent() {
     return <OrderList status={statusMap[activeTab]} {...commonProps} />;
   };
 
-  const handleMarkAllRead = () => {
-    markAllAsRead(allOrderIds);
-    setRefreshKey((prev) => prev + 1);
-    // Refresh counts
-    orderApi
-      .getAllIds()
-      .then((orderIds) => {
-        setAllOrderIds(orderIds.map((o) => o.id));
-        const allIds = orderIds.map((o) => o.id);
-        const pendingIds = orderIds
-          .filter((o) => o.status === "PENDING")
-          .map((o) => o.id);
-        const packedIds = orderIds
-          .filter((o) => o.status === "PACKED")
-          .map((o) => o.id);
-        const dispatchedIds = orderIds
-          .filter((o) => o.status === "DISPATCHED")
-          .map((o) => o.id);
-        setOrderCounts({
-          all: getViewedOrdersCount(allIds),
-          pending: getViewedOrdersCount(pendingIds),
-          packed: getViewedOrdersCount(packedIds),
-          dispatched: getViewedOrdersCount(dispatchedIds),
-        });
-      })
-      .catch(console.error);
-  };
-
   const getActiveTabCount = () => {
     return activeTabTotalCount;
   };
@@ -273,13 +254,6 @@ function AdminHomePageContent() {
             }`}
           >
             Unread Only
-          </button>
-          <button
-            onClick={handleMarkAllRead}
-            className="text-xs px-3 py-1.5 rounded-full border transition-all p-1.5 text-gray-500 border-gray-200 hover:bg-gray-100"
-            title="Mark all as read"
-          >
-            Mark All as Read
           </button>
         </div>
       </div>

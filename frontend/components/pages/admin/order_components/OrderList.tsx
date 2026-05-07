@@ -7,7 +7,11 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { OrderCard } from "@/components/order";
 import { OrderFilters } from "./types";
-import { isOrderViewed } from "@/lib/viewedOrders";
+import {
+  markOrderAsViewed,
+  getUnreadIds,
+  fetchViewedOrderIds,
+} from "@/lib/viewedOrders";
 import Pagination from "@/components/ui/Pagination";
 import useSessionStorage from "@/hooks/useSessionStorage";
 
@@ -62,6 +66,11 @@ const OrderList: React.FC<Props> = ({
     `admin_${key}_pageSize`,
     50,
   );
+  const [viewedIds, setViewedIds] = useState<Set<number>>(new Set());
+
+  useEffect(() => {
+    fetchViewedOrderIds().then(setViewedIds).catch(console.error);
+  }, []);
 
   useEffect(() => {
     setLoading(true);
@@ -90,7 +99,10 @@ const OrderList: React.FC<Props> = ({
         setTotalPages(Math.ceil(response.count / pageSize));
         onTotalCountChange?.(
           showUnreadOnly
-            ? results.filter((o) => !isOrderViewed(o.id)).length
+            ? getUnreadIds(
+                results.map((o) => o.id),
+                viewedIds,
+              ).length
             : response.count,
         );
       } catch (error) {
@@ -135,7 +147,7 @@ const OrderList: React.FC<Props> = ({
   }, [key]);
 
   const filtered = showUnreadOnly
-    ? data.filter((o) => !isOrderViewed(o.id))
+    ? data.filter((o) => getUnreadIds([o.id], viewedIds).length > 0)
     : data;
 
   const handlePageChange = (page: number) => {
@@ -173,7 +185,15 @@ const OrderList: React.FC<Props> = ({
   return (
     <div className="space-y-3 pb-20">
       {filtered.map((order) => (
-        <OrderCard key={`${order.id}-${refreshKey}`} order={order} />
+        <OrderCard
+          key={`${order.id}-${refreshKey}`}
+          order={order}
+          viewed={viewedIds.has(order.id)}
+          onClick={() => {
+            markOrderAsViewed(order.id);
+            router.push(`/admin/order/status/${order.id}`);
+          }}
+        />
       ))}
       <Pagination
         currentPage={currentPage}
