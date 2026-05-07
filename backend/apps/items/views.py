@@ -123,8 +123,6 @@ class ItemViewSet(ModelViewSet):
             variant = ItemVariant.objects.select_related('item').prefetch_related('sizes').get(
                 qr_code=qr_code, item__is_deleted=False
             )
-        except ItemVariant.DoesNotExist:
-            return Response({"error": "Item not found"}, status=404)
         except Exception:
             return Response({"error": "Invalid QR code"}, status=400)
 
