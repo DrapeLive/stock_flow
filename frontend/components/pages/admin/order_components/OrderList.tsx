@@ -76,14 +76,7 @@ const OrderList: React.FC<Props> = ({
             status: status === "ALL" ? [] : [status],
           });
 
-        const results =
-          status === "ALL"
-            ? [...response.results].sort(
-                (a, b) =>
-                  new Date(b.created_at).getTime() -
-                  new Date(a.created_at).getTime(),
-              )
-            : response.results;
+        const results = response.results;
 
         setData(results);
         setTotalCount(response.count);

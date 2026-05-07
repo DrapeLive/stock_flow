@@ -329,7 +329,7 @@ class OrderViewSet(ModelViewSet):
         qs = Order.objects.prefetch_related(
             "items__variant",
             "items__item"
-        )
+        ).order_by('-created_at').exclude(status='DRAFT')  # newest first
 
         customer_id = self.request.query_params.get('customer')
         if customer_id:
