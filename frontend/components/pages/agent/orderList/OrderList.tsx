@@ -17,7 +17,7 @@ import SearchBar from "@/components/ui/SearchBar";
 import Pagination from "@/components/ui/Pagination";
 import useSessionStorage from "@/hooks/useSessionStorage";
 
-type ItemTypeTab = "gents" | "kids";
+type ItemTypeTab = "all" | "gents" | "kids";
 
 interface AgentOrderListProps {
   pageOrderStatus?: "PROCESSING" | "COMPLETED";
@@ -49,7 +49,7 @@ export default function AgentOrderList({
   const [isFetching, setIsFetching] = useState(false);
   const [activeTab, setActiveTab] = useSessionStorage<ItemTypeTab>(
     "agent_itemTypeTab",
-    "gents",
+    "all",
   );
 
   const router = useRouter();
@@ -114,9 +114,12 @@ export default function AgentOrderList({
   );
 
   // Client-side filter by active tab — same logic as Home page
-  const filteredData = sortedData.filter((order) =>
-    order.items.some((item) => item.item_type === activeTab),
-  );
+  const filteredData =
+    activeTab === "all"
+      ? sortedData
+      : sortedData.filter((order) =>
+          order.items.some((item) => item.item_type === activeTab),
+        );
 
   const order_len = filteredData.length;
 
@@ -204,23 +207,6 @@ export default function AgentOrderList({
         }
       />
 
-      {/* Item-type tab bar */}
-      <div className="flex gap-2 bg-white px-4 py-3 sticky top-0 z-10">
-        {(["gents", "kids"] as ItemTypeTab[]).map((tab) => (
-          <button
-            key={tab}
-            onClick={() => handleTabChange(tab)}
-            className={`px-5 py-1.5 rounded-full text-sm font-semibold capitalize transition-colors ${
-              activeTab === tab
-                ? "bg-black text-white"
-                : "text-gray-500 hover:text-gray-700"
-            }`}
-          >
-            {tab.charAt(0).toUpperCase() + tab.slice(1)}
-          </button>
-        ))}
-      </div>
-
       <div className="flex gap-4 mb-4">
         <SearchBar
           value={search}
@@ -255,6 +241,13 @@ export default function AgentOrderList({
         }}
         isOpen={showFilters}
         onClear={handleClearFilters}
+        tabs={[
+          { value: "all", label: "All" },
+          { value: "gents", label: "Gents" },
+          { value: "kids", label: "Kids" },
+        ]}
+        activeTab={activeTab}
+        onTabChange={(tab) => handleTabChange(tab as ItemTypeTab)}
       />
 
       {order_len === 0 ? (

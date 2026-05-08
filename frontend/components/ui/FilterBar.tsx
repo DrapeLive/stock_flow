@@ -2,6 +2,12 @@
 
 import DatePicker from "./date-picker";
 import StockFlowSelect from "./custom/stockFlowSelect";
+import { act } from "@testing-library/react";
+
+interface Tab {
+  value: string;
+  label: string;
+}
 
 interface FilterBarProps {
   fromDate: string;
@@ -16,6 +22,9 @@ interface FilterBarProps {
   onCustomerChange?: (customerId: string) => void;
   isOpen: boolean;
   onClear: () => void;
+  tabs?: Tab[];
+  activeTab?: string;
+  onTabChange?: (val: string) => void;
 }
 
 export default function FilterBar({
@@ -31,6 +40,9 @@ export default function FilterBar({
   onCustomerChange,
   isOpen,
   onClear,
+  tabs = [],
+  activeTab,
+  onTabChange,
 }: FilterBarProps) {
   if (!isOpen) return null;
 
@@ -94,6 +106,25 @@ export default function FilterBar({
             />
           </div>
         </>
+      )}
+
+      {tabs.length > 0 && onTabChange && (
+        <div className="flex gap-2 items-center w-full">
+          <span className="text-gray-400 text-xs">Item type</span>
+          <div className="flex-1 min-w-[140px]">
+            <StockFlowSelect
+              value={activeTab!}
+              onChange={onTabChange}
+              placeholder="All Customers"
+              options={[
+                ...tabs.map((c) => ({
+                  value: String(c.value),
+                  label: String(c.label),
+                })),
+              ]}
+            />
+          </div>
+        </div>
       )}
       {hasFilters && (
         <button
