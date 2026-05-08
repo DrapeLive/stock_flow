@@ -7,6 +7,7 @@ interface StockFlowButtonProps {
   onClick?: () => void;
   className?: string;
   disabled?: boolean;
+  fullWidth?: boolean;
 }
 
 const StockFlowButton: React.FC<StockFlowButtonProps> = ({
@@ -16,6 +17,7 @@ const StockFlowButton: React.FC<StockFlowButtonProps> = ({
   onClick,
   className = "",
   disabled = false,
+  fullWidth = false,
 }) => {
   const baseStyles =
     "flex items-center justify-center gap-2 px-4 py-3 font-semibold text-sm rounded-[var(--radius)] transition-all";
@@ -38,7 +40,7 @@ const StockFlowButton: React.FC<StockFlowButtonProps> = ({
 
   return (
     <button
-      className={`${variants[variant]} ${className}`}
+      className={`${variants[variant]} ${fullWidth ? "w-full" : ""} ${className}`}
       onClick={onClick}
       disabled={disabled}
     >
