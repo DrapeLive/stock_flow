@@ -54,7 +54,6 @@ body[data-scroll-locked] {
         font-weight: 600;
         line-height: 1.1;
         color: var(--color-heading);
-        margin-bottom: 1.5rem;
     }
 
     h2 {
@@ -62,7 +61,6 @@ body[data-scroll-locked] {
         font-weight: 700;
         line-height: 1.2;
         color: var(--color-heading);
-        margin-bottom: 1.25rem;
     }
 
     h3 {
