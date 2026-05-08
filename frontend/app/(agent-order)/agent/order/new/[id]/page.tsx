@@ -44,10 +44,11 @@ export default function OrderDetailsPage() {
     { value: string; label: string }[]
   >([]);
   const [loadingTransports, setLoadingTransports] = useState(true);
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
 
   useBackButton({
     onBack: () => {
-      router.push("/agent/order/new");
+      setShowLeaveConfirm(true);
     },
   });
 
@@ -236,7 +237,7 @@ export default function OrderDetailsPage() {
       <div className="bg-white border-b border-gray-100 px-4 py-4 sticky top-0 z-20">
         <div className="max-w-lg mx-auto flex items-center gap-3">
           <button
-            onClick={() => router.push("/agent/order/new")}
+            onClick={() => setShowLeaveConfirm(true)}
             className="p-2 -ml-1 rounded-xl hover:bg-gray-50 text-gray-400 transition-colors"
           >
             <ChevronLeft size={22} />
@@ -548,6 +549,43 @@ export default function OrderDetailsPage() {
               </div>
             </div>
           ))}
+        </Modal>
+      )}
+
+      {/* Leave Confirmation Modal */}
+      {showLeaveConfirm && (
+        <Modal
+          icon={<AlertTriangle size={18} className="text-amber-500" />}
+          iconBg="bg-amber-100"
+          title="Leave Order?"
+          description="Your current order progress may be lost if you go back."
+          onClose={() => setShowLeaveConfirm(false)}
+          actions={
+            <>
+              <ModalButton
+                variant="ghost"
+                onClick={() => setShowLeaveConfirm(false)}
+              >
+                Stay
+              </ModalButton>
+
+              <ModalButton
+                variant="primary"
+                onClick={() => {
+                  setShowLeaveConfirm(false);
+                  router.push("/agent/order/new");
+                }}
+              >
+                Leave
+              </ModalButton>
+            </>
+          }
+        >
+          <div className="bg-amber-50 rounded-xl p-3 border border-amber-100">
+            <p className="text-sm text-amber-800 font-medium">
+              Are you sure you want to leave this page?
+            </p>
+          </div>
         </Modal>
       )}
     </div>

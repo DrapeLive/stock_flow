@@ -12,16 +12,18 @@ export function useBackButton({
   preventNavigation = true,
 }: BackHandlerOptions) {
   useEffect(() => {
-    if (preventNavigation) {
-      window.history.pushState(null, "", window.location.href);
-    }
+    if (!preventNavigation) return;
+
+    // Add one fake history entry
+    window.history.pushState({ trap: true }, "");
 
     const handlePopState = () => {
       onBack();
 
-      if (preventNavigation) {
-        window.history.pushState(null, "", window.location.href);
-      }
+      // Re-add history entry AFTER browser finishes navigation event
+      setTimeout(() => {
+        window.history.pushState({ trap: true }, "");
+      }, 0);
     };
 
     window.addEventListener("popstate", handlePopState);
