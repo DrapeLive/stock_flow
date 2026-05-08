@@ -19,6 +19,7 @@ function blankVariant(common: CommonDetails): ColorVariant {
     sizeRange: getSizesForItemType(common.type, "item_creation")[0],
     stock: 0,
     image: null,
+    perSizeStock: {},
     imagePreview: null,
   };
 }

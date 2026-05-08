@@ -172,38 +172,83 @@ export default function Step2AddColor({
           />
 
           {/* Size range — filtered by common.type */}
-          <Field>
-            <FieldLabel>Size Range</FieldLabel>
-            <Select
-              value={variant.sizeRange}
-              onValueChange={(v: FrontendSizeRange) => set("sizeRange", v)}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {availableSizes.map((s) => (
-                  <SelectItem key={s} value={s}>
-                    {s}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </Field>
+          {common.type === "kids" ? (
+            <Field>
+              <FieldLabel>Sizes & Stock</FieldLabel>
+              <div className="space-y-2">
+                {availableSizes.map((size) => {
+                  const stockVal = variant.perSizeStock[size] ?? 0;
 
-          {/* Stock */}
-          <Field>
-            <FieldLabel>Stock per size</FieldLabel>
-            <Input
-              type="number"
-              min={0}
-              inputMode="numeric"
-              value={stockInput}
-              onChange={(e) => handleStockChange(e.target.value)}
-              onBlur={handleStockBlur}
-              onFocus={(e) => e.target.select()}
-            />
-          </Field>
+                  const updateStock = (raw: string) => {
+                    const parsed = parseInt(raw, 10);
+                    set("perSizeStock", {
+                      ...variant.perSizeStock,
+                      [size]: isNaN(parsed) ? 0 : parsed,
+                    });
+                  };
+
+                  return (
+                    <div
+                      key={size}
+                      className="flex items-center gap-3 rounded-xl border border-gray-200 px-4 py-3"
+                    >
+                      <span className="text-sm font-semibold w-16 flex-shrink-0">
+                        {size}
+                      </span>
+                      <div className="flex items-center gap-2 ml-auto">
+                        <span className="text-xs text-gray-400">Stock</span>
+                        <Input
+                          type="number"
+                          min={0}
+                          inputMode="numeric"
+                          value={stockVal === 0 ? "" : String(stockVal)}
+                          placeholder="0"
+                          onChange={(e) => updateStock(e.target.value)}
+                          onFocus={(e) => e.target.select()}
+                          className="w-20 text-center"
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </Field>
+          ) : (
+            /* Gents — unchanged */
+            <>
+              <Field>
+                <FieldLabel>Size Range</FieldLabel>
+                <Select
+                  value={variant.sizeRange}
+                  onValueChange={(v: FrontendSizeRange) => set("sizeRange", v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableSizes.map((s) => (
+                      <SelectItem key={s} value={s}>
+                        {s}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+
+              <Field>
+                <FieldLabel>Stock per size</FieldLabel>
+                <Input
+                  type="number"
+                  min={0}
+                  inputMode="numeric"
+                  value={stockInput}
+                  onChange={(e) => handleStockChange(e.target.value)}
+                  onBlur={handleStockBlur}
+                  onFocus={(e) => e.target.select()}
+                />
+              </Field>
+            </>
+          )}
         </div>
 
         {/* CTA */}
