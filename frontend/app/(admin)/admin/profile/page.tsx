@@ -1,6 +1,14 @@
 "use client";
 import { useAuth } from "@/context/AuthContext";
-import { LogOut, User, Mail, ShieldCheck, UserCircle, Building2 } from "lucide-react";
+import {
+  LogOut,
+  User,
+  Mail,
+  ShieldCheck,
+  UserCircle,
+  Building2,
+  Upload,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { authApi } from "@/lib/api/auth";
@@ -55,6 +63,13 @@ export default function Profile() {
         </div>
 
         <div className="space-y-4">
+          <button
+            onClick={() => router.push("/admin/bulk-import")}
+            className="flex items-center justify-center gap-3 w-full bg-primary text-white font-black py-4 rounded-3xl shadow-md hover:opacity-90 transition-all transform active:scale-95"
+          >
+            <Upload size={20} />
+            <span>Bulk Import</span>
+          </button>
           <div className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm flex items-center gap-4">
             <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-500 flex items-center justify-center">
               <User size={20} />
@@ -114,7 +129,7 @@ export default function Profile() {
           )}
         </div>
 
-        <div className="mt-12 px-4">
+        <div className="mt-12 px-4 space-y-3">
           <button
             onClick={handleLogout}
             className="flex items-center justify-center gap-3 w-full bg-white text-rose-500 font-black py-4 rounded-3xl border border-rose-100 shadow-md hover:bg-rose-50 transition-all transform active:scale-95"

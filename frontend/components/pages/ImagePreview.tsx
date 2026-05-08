@@ -74,7 +74,7 @@ export function ImagePreview({
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogPortal>
-          <DialogOverlay className="bg-black/12" />
+          <DialogOverlay className="bg-white" />
           <DialogContent className="bg-transparent border-none shadow-none p-0 w-[90vw] h-[90vh] flex items-center justify-center">
             <DialogTitle className="sr-only">{alt}</DialogTitle>
             <div className="relative w-full h-full">
@@ -82,7 +82,7 @@ export function ImagePreview({
                 src={src}
                 alt={alt}
                 fill
-                className="object-contain rounded-lg"
+                className="object-contain rounded-lg w-full"
                 unoptimized
               />
             </div>
