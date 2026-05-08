@@ -371,8 +371,7 @@ export default function ItemEditPage() {
                   <AccordionTrigger className="px-4 py-3 hover:no-underline [&[data-state=open]>svg]:rotate-180">
                     <div className="flex items-center gap-3 w-full">
                       {/* Variant Image */}
-                      <button
-                        type="button"
+                      <div
                         onClick={(e) => {
                           e.stopPropagation();
                           fileRefs.current[group.backendId]?.click();
@@ -398,7 +397,7 @@ export default function ItemEditPage() {
                         ) : (
                           <ImagePlus size={14} className="text-gray-300" />
                         )}
-                      </button>
+                      </div>
                       <input
                         ref={(el) => {
                           fileRefs.current[group.backendId] = el;

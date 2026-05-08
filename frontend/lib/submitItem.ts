@@ -1,6 +1,10 @@
 import { itemApi } from "@/lib/api/item";
 import { itemToFormData } from "@/lib/form-utils";
-import type { CommonDetails, ColorVariant } from "@/types/item";
+import type {
+  CommonDetails,
+  ColorVariant,
+  FrontendSizeRange,
+} from "@/types/item";
 import { SIZE_RANGE_TO_SIZES } from "@/types/item";
 
 export async function submitItem(
@@ -10,12 +14,24 @@ export async function submitItem(
   const variantPayload = [];
 
   for (const variant of variants) {
-    const sizes = SIZE_RANGE_TO_SIZES[variant.sizeRange] || [];
+    let sizesData: { size: string; stock: number }[];
 
-    const sizesData = sizes.map((size) => ({
-      size,
-      stock: variant.stock,
-    }));
+    if (common.type === "kids") {
+      sizesData = Object.entries(variant.perSizeStock).flatMap(
+        ([size, stock]) => {
+          const backendSizes = SIZE_RANGE_TO_SIZES[
+            size as FrontendSizeRange
+          ] || [size];
+          return backendSizes.map((s) => ({ size: s, stock }));
+        },
+      );
+    } else {
+      const sizes = SIZE_RANGE_TO_SIZES[variant.sizeRange] || [];
+      sizesData = sizes.map((size) => ({
+        size,
+        stock: variant.stock,
+      }));
+    }
 
     variantPayload.push({
       image: variant.image,
@@ -33,11 +49,9 @@ export async function submitItem(
   };
 
   console.log(payload);
-
   const fd = itemToFormData(payload);
   await itemApi.create(fd);
 }
-
 // ─── Error helpers ────────────────────────────────────────────────────────────
 
 export class ApiError extends Error {

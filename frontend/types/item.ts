@@ -100,18 +100,21 @@ export interface ColorVariant {
   id: string;
   sizeRange: FrontendSizeRange;
   stock: number;
+  perSizeStock: Record<FrontendSizeRange, number>;
   image: File | null;
   imagePreview: string | null;
 }
 
 export type FrontendSizeRange =
-  | "20-38"
   | "20-36"
   | "26-38"
+  | "20-38"
+  | "20-24"
   | "26-36"
   | "20-30"
   | "32-38"
   | "32-36"
+  | "38"
   | "S,M,L,XL"
   | "M,L,XL,XXL"
   | "S,M,L,XL,XXL"
@@ -134,7 +137,7 @@ export const ITEM_CREATION_SIZES_BY_TYPE: Record<
   FrontendSizeRange[]
 > = {
   gents: ["S,M,L,XL,XXL", "S,M,L,XL", "M,L,XL,XXL", "M,L,XL"],
-  kids: ["20-38", "20-36"],
+  kids: ["20-24", "26-36", "38"],
 };
 
 export const ORDER_CREATION_SIZES_BY_TYPE: Record<
@@ -162,7 +165,9 @@ export const SIZE_RANGE_TO_SIZES: Record<FrontendSizeRange, string[]> = {
   "26-36": ["26-30", "32-36"],
   "20-30": ["20-24", "26-30"],
   "32-38": ["32-36", "38"],
+  "20-24": ["20-24"],
   "32-36": ["32-36"],
+  "38": ["38"],
   "S,M,L,XL": ["S", "M,L,XL"],
   "M,L,XL,XXL": ["M,L,XL", "XXL"],
   "S,M,L,XL,XXL": ["S", "M,L,XL", "XXL"],

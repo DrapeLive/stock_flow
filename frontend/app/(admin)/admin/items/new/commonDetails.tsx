@@ -35,6 +35,9 @@ export default function Step1CommonDetails({
   const [brandData, setBrandData] = useState<Brand[]>([]);
   const [loading, setLoading] = useState(false);
 
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   const set = <K extends keyof CommonDetails>(key: K, val: CommonDetails[K]) =>
     onChange({ ...value, [key]: val });
 
@@ -111,10 +114,9 @@ export default function Step1CommonDetails({
               onChange={(e) => set("price", e.target.value)}
             />
           </Field>
-
           <Field>
             <FieldLabel>Type *</FieldLabel>
-            {!isSuperuser ? (
+            {!mounted || !isSuperuser ? (
               <div className="h-12 px-3 flex items-center bg-gray-50 border border-gray-100 rounded-xl text-sm font-medium text-gray-500 capitalize">
                 {value.type}
               </div>
@@ -133,8 +135,7 @@ export default function Step1CommonDetails({
               </Select>
             )}
           </Field>
-
-          {isSuperuser && (
+          {mounted && isSuperuser && (
             <Field>
               <FieldLabel>Brand *</FieldLabel>
               <Select

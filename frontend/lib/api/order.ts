@@ -163,4 +163,16 @@ export const orderApi = {
       .post<{ message: string }>(`/api/orders/${id}/cancel-edit/`)
       .then((r) => r.data);
   },
+
+  getViewedIds(): Promise<number[]> {
+    return api
+      .get<number[]>("/api/orders/my-viewed-ids/")
+      .then((r) => r.data);
+  },
+
+  markAsViewed(orderId: number): Promise<void> {
+    return api
+      .post(`/api/orders/${orderId}/mark-viewed/`)
+      .then((r) => r.data);
+  },
 };
