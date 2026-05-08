@@ -22,6 +22,7 @@ import VariantSelector from "./components/VariantSelector";
 import SizeGroupSelector from "./components/SizeGroupSelector";
 import QuantitySelector from "./components/QuantitySelector";
 import SubmitButton from "./components/SubmitButton";
+import { useBackButton } from "@/util/useBackButton";
 
 export default function ProductDetailPage() {
   const params = useParams<{ id: string; qr: string }>();
@@ -33,15 +34,27 @@ export default function ProductDetailPage() {
   const [selectedVariant, setSelectedVariant] = useState<ItemVariant | null>(
     null,
   );
-  const [selectedSizeGroup, setSelectedSizeGroup] = useState<string | null>(null);
+  const [selectedSizeGroup, setSelectedSizeGroup] = useState<string | null>(
+    null,
+  );
   const [loading, setLoading] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [existingOrderItems, setExistingOrderItems] = useState<
-    Array<{ id: number; variant_id: number; size_group: string; quantity: number }>
+    Array<{
+      id: number;
+      variant_id: number;
+      size_group: string;
+      quantity: number;
+    }>
   >([]);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingItemId, setEditingItemId] = useState<number | null>(null);
 
+  useBackButton({
+    onBack: () => {
+      router.back();
+    },
+  });
   useEffect(() => {
     setLoading(true);
     const fetchData = async () => {
@@ -102,7 +115,10 @@ export default function ProductDetailPage() {
           item.variant_id === selectedVariant.id &&
           (isEditMode ? item.id !== editingItemId : true),
       )
-      .map((item) => ({ size_group: item.size_group, quantity: item.quantity }));
+      .map((item) => ({
+        size_group: item.size_group,
+        quantity: item.quantity,
+      }));
 
     return getAvailableStockForSizeGroup(
       selectedVariant,
@@ -197,7 +213,9 @@ export default function ProductDetailPage() {
 
         if (existingSameVariant && !isEditMode) {
           const newQty = existingSameVariant.quantity + quantity;
-          await orderApi.updateItem(existingSameVariant.id, { quantity: newQty });
+          await orderApi.updateItem(existingSameVariant.id, {
+            quantity: newQty,
+          });
           setExistingOrderItems((prev) =>
             prev.map((item) =>
               item.id === existingSameVariant.id
@@ -241,7 +259,9 @@ export default function ProductDetailPage() {
         }
         router.push(`/agent/order/new/${id}`);
       } else {
-        setValidationError("Order session not found. Please restart the order.");
+        setValidationError(
+          "Order session not found. Please restart the order.",
+        );
       }
     } catch (e) {
       console.error("Error adding item to order:", e);

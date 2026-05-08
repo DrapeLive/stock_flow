@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from "react";
 import { pdf, PDFDownloadLink } from "@react-pdf/renderer";
 import { InvoicePDF } from "@/components/pages/InvoicePdf";
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
+import { useBackButton } from "@/util/useBackButton";
 
 const formatDate = (iso: string) =>
   new Date(iso).toLocaleDateString("en-IN", {
@@ -33,6 +34,12 @@ export default function InvoicePage() {
   const [, setFetchError] = useState(false);
   const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
   const [pdfGenerating, setPdfGenerating] = useState(true);
+
+  useBackButton({
+    onBack: () => {
+      router.push("/agent");
+    },
+  });
 
   const isMobile =
     typeof window !== "undefined" && /Mobi|Android/i.test(navigator.userAgent);
@@ -176,7 +183,13 @@ export default function InvoicePage() {
                     />
                   ) : (
                     <span className="text-[#0f1f3d] text-lg font-bold">
-                      {(invoice.brand?.name ?? invoice.items[0]?.item_type ?? "BR").slice(0, 2).toUpperCase()}
+                      {(
+                        invoice.brand?.name ??
+                        invoice.items[0]?.item_type ??
+                        "BR"
+                      )
+                        .slice(0, 2)
+                        .toUpperCase()}
                     </span>
                   )}
                 </div>
@@ -185,19 +198,29 @@ export default function InvoicePage() {
                     {invoice.brand?.name ?? invoice.items[0]?.item_type}
                   </p>
                   {invoice.brand?.address_line1 && (
-                    <p className="text-xs text-gray-600">{invoice.brand.address_line1}</p>
+                    <p className="text-xs text-gray-600">
+                      {invoice.brand.address_line1}
+                    </p>
                   )}
                   {invoice.brand?.address_line2 && (
-                    <p className="text-xs text-gray-600">{invoice.brand.address_line2}</p>
+                    <p className="text-xs text-gray-600">
+                      {invoice.brand.address_line2}
+                    </p>
                   )}
                   {invoice.brand?.phone && (
-                    <p className="text-xs text-gray-600">{invoice.brand.phone}</p>
+                    <p className="text-xs text-gray-600">
+                      {invoice.brand.phone}
+                    </p>
                   )}
                   {invoice.brand?.email && (
-                    <p className="text-xs text-gray-600">{invoice.brand.email}</p>
+                    <p className="text-xs text-gray-600">
+                      {invoice.brand.email}
+                    </p>
                   )}
                   {invoice.brand?.gst && (
-                    <p className="text-xs text-gray-600">GST : {invoice.brand.gst}</p>
+                    <p className="text-xs text-gray-600">
+                      GST : {invoice.brand.gst}
+                    </p>
                   )}
                 </div>
               </div>
@@ -241,10 +264,14 @@ export default function InvoicePage() {
                     {invoice.customer.name}
                   </p>
                   {invoice.customer.address && (
-                    <p className="text-xs text-gray-600">{invoice.customer.address}</p>
+                    <p className="text-xs text-gray-600">
+                      {invoice.customer.address}
+                    </p>
                   )}
                   {invoice.customer.contact && (
-                    <p className="text-xs text-gray-600">{invoice.customer.contact}</p>
+                    <p className="text-xs text-gray-600">
+                      {invoice.customer.contact}
+                    </p>
                   )}
                 </div>
                 <div className="flex-1 pl-4">
@@ -255,7 +282,9 @@ export default function InvoicePage() {
                     {invoice.agent.username}
                   </p>
                   {invoice.agent.contact && (
-                    <p className="text-xs text-gray-600">{invoice.agent.contact}</p>
+                    <p className="text-xs text-gray-600">
+                      {invoice.agent.contact}
+                    </p>
                   )}
                 </div>
               </div>
@@ -294,7 +323,9 @@ export default function InvoicePage() {
                       }`}
                     >
                       <div className="w-[30%] text-center">
-                        <p className="text-[10px] text-gray-800">{item.item_name}</p>
+                        <p className="text-[10px] text-gray-800">
+                          {item.item_name}
+                        </p>
                       </div>
                       <p className="w-[22%] text-center text-[10px] text-gray-800">
                         {item.size_group}
@@ -303,7 +334,9 @@ export default function InvoicePage() {
                         Rs. {itemPrice.toFixed(2)}/pc
                       </p>
                       <div className="w-[12%] text-center">
-                        <p className="text-[10px] text-gray-800">{item.quantity}</p>
+                        <p className="text-[10px] text-gray-800">
+                          {item.quantity}
+                        </p>
                         {pieceCount > 1 && (
                           <p className="text-[9px] text-gray-500">
                             ×{pieceCount}={totalPieces}pc

@@ -10,6 +10,7 @@ import OrderLogs from "@/components/pages/order/OrderLogs";
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 import { toastSuccess, toastError } from "@/lib/toast";
 import { Trash2, Package, Pencil } from "lucide-react";
+import { useBackButton } from "@/util/useBackButton";
 
 export default function Page() {
   const params = useParams();
@@ -21,6 +22,11 @@ export default function Page() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [startingEdit, setStartingEdit] = useState(false);
+  useBackButton({
+    onBack: () => {
+      router.push("/agent");
+    },
+  });
 
   const fetchData = useCallback(async () => {
     try {

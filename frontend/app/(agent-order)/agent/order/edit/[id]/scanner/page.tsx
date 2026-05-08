@@ -4,12 +4,19 @@ import ScannerPage from "@/components/pages/ScannerPage";
 import { ArrowLeft, X } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useEditGuard } from "@/lib/useEditGuard";
+import { useBackButton } from "@/util/useBackButton";
 
 export default function EditOrderScannerPage() {
   const params = useParams();
   const id = params.id as string;
   const router = useRouter();
   const { handleBack } = useEditGuard(id);
+
+  useBackButton({
+    onBack: () => {
+      handleBack();
+    },
+  });
 
   return (
     <div className="min-h-screen bg-gray-50/50 flex flex-col">
