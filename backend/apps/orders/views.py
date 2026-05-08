@@ -553,6 +553,8 @@ class OrderViewSet(ModelViewSet):
             dispatched_at__lte=cutoff
         ).order_by('-dispatched_at')
 
+        print(f"DEBUG get_archived: qs.count()={qs.count()}")
+
         if user.role == "ADMIN":
             biz = admin_business(user)
             if biz:

@@ -8,52 +8,42 @@ import { orderApi } from "@/lib/api/order";
 import { toastSuccess } from "@/lib/toast";
 import { AgentResponse } from "@/types/agent";
 import { UserProfile } from "@/types/auth";
+import { UIItem } from "@/types/item";
+import { Order } from "@/types/order";
 import {
   ChevronRight,
   LogOut,
   User,
   Mail,
   ShieldCheck,
-  UserCircle,
   Phone,
   Upload,
   Archive,
   ShoppingBag,
   Users,
 } from "lucide-react";
+import ItemCard from "@/components/items/ItemCard";
+import OrderCard from "@/components/order/OrderCard";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 type Tab = "profile" | "archives";
 
-interface ArchivedItem {
-  id: number;
-  name: string;
-  type: string;
-  price: string;
-  out_of_stock_since: string;
-}
-
-interface ArchivedOrder {
-  id: number;
-  customer_name: string;
-  total: number;
-  dispatched_at: string;
-}
-
 export default function ProfilePage() {
-  const { user, logout } = useAuth();
+  const { user, logout, isSuperuser } = useAuth();
   const router = useRouter();
 
   const [tab, setTab] = useState<Tab>("profile");
   const [agentData, setAgentData] = useState<AgentResponse>();
   const [profile, setProfile] = useState<UserProfile>();
-  const [ArchivedItems, setArchivedItems] = useState<ArchivedItem[]>([]);
-  const [archivedOrders, setArchivedOrders] = useState<ArchivedOrder[]>([]);
+  const [archivedItems, setArchivedItems] = useState<UIItem[]>([]);
+  const [archivedOrders, setArchivedOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [archivesLoading, setArchivesLoading] = useState(false);
 
-  const isAdmin = profile?.role === "ADMIN";
+  const [expandedItem, setExpandedItem] = useState<number | null>(null);
+
+  const isAdmin = profile?.role === "ADMIN" || isSuperuser;
 
   useEffect(() => {
     const fetchData = async () => {
@@ -61,7 +51,7 @@ export default function ProfilePage() {
         const profileData = await authApi.getProfile();
         setProfile(profileData);
 
-        if (user?.id) {
+        if (user?.id && !isAdmin) {
           const agent = await agentApi.getProfile(user.id);
           setAgentData(agent);
         }
@@ -83,8 +73,8 @@ export default function ProfilePage() {
           itemApi.getArchived(),
           orderApi.getArchived(),
         ]);
-        setArchivedItems(items as any);
-        setArchivedOrders((orders as any).results || orders);
+        setArchivedItems(items as UIItem[]);
+        setArchivedOrders((orders as any).results || (orders as Order[]));
       } catch (e) {
         console.error("Error fetching archives:", e);
       } finally {
@@ -176,23 +166,26 @@ export default function ProfilePage() {
 
             {/* Actions */}
             <div className="bg-white rounded-3xl border border-gray-100 shadow-sm divide-y divide-gray-50">
-              {isAdmin && (
+              {isAdmin ? (
                 <ActionRow
                   icon={<Upload size={16} />}
                   iconBg="bg-indigo-50 text-indigo-500"
                   label="Bulk Import"
                   onClick={() => router.push("/admin/bulk-import")}
                 />
+              ) : (
+                <ActionRow
+                  icon={<Users size={16} />}
+                  iconBg="bg-teal-50 text-teal-500"
+                  label="My Customers"
+                  badge={Number(agentData?.total_customers) || 0}
+                  onClick={() =>
+                    router.push(
+                      isAdmin ? "/admin/customers" : "/agent/customers",
+                    )
+                  }
+                />
               )}
-              <ActionRow
-                icon={<Users size={16} />}
-                iconBg="bg-teal-50 text-teal-500"
-                label="My Customers"
-                badge={Number(agentData?.total_customers) || 0}
-                onClick={() =>
-                  router.push(isAdmin ? "/admin/customers" : "/agent/customers")
-                }
-              />
             </div>
 
             {/* Sign Out */}
@@ -221,33 +214,22 @@ export default function ProfilePage() {
                     icon={<Archive size={14} />}
                     label="Archived Items"
                   />
-                  <div className="bg-white rounded-3xl border border-gray-100 shadow-sm divide-y divide-gray-50">
-                    {ArchivedItems.length === 0 ? (
-                      <EmptyState label="No archived items" />
-                    ) : (
-                      (ArchivedItems as any[]).map((item) => (
-                        <div
+                  {archivedItems.length === 0 ? (
+                    <EmptyState label="No archived items" />
+                  ) : (
+                    <div className="space-y-2">
+                      {archivedItems.map((item) => (
+                        <ItemCard
                           key={item.id}
-                          className="flex items-center gap-3 px-4 py-3"
-                        >
-                          <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-400 flex items-center justify-center shrink-0">
-                            <Archive size={14} />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm font-bold text-gray-800 truncate">
-                              {item.name}
-                            </p>
-                            <p className="text-[11px] text-gray-400">
-                              {item.type} • ₹{item.price}
-                            </p>
-                          </div>
-                          <p className="text-[10px] text-gray-300 font-bold shrink-0">
-                            {new Date(item.out_of_stock_since).toLocaleDateString()}
-                          </p>
-                        </div>
-                      ))
-                    )}
-                  </div>
+                          item={item}
+                          isExpanded={expandedItem == item.id}
+                          onToggle={() => setExpandedItem(item.id)}
+                          context={isAdmin ? "admin" : "agent"}
+                          isReadonly={true}
+                        />
+                      ))}
+                    </div>
+                  )}
                 </section>
 
                 {/* Archived Orders */}
@@ -256,33 +238,15 @@ export default function ProfilePage() {
                     icon={<ShoppingBag size={14} />}
                     label="Archived Orders"
                   />
-                  <div className="bg-white rounded-3xl border border-gray-100 shadow-sm divide-y divide-gray-50">
-                    {archivedOrders.length === 0 ? (
-                      <EmptyState label="No archived orders" />
-                    ) : (
-                      archivedOrders.map((o) => (
-                        <div
-                          key={o.id}
-                          className="flex items-center gap-3 px-4 py-3"
-                        >
-                          <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-400 flex items-center justify-center shrink-0">
-                            <ShoppingBag size={14} />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm font-bold text-gray-800 truncate">
-                              {o.customer_name}
-                            </p>
-                            <p className="text-[11px] text-gray-400">
-                              ₹{Number(o.total).toLocaleString()}
-                            </p>
-                          </div>
-                          <p className="text-[10px] text-gray-300 font-bold shrink-0">
-                            {new Date(o.dispatched_at).toLocaleDateString()}
-                          </p>
-                        </div>
-                      ))
-                    )}
-                  </div>
+                  {archivedOrders.length === 0 ? (
+                    <EmptyState label="No archived orders" />
+                  ) : (
+                    <div className="space-y-2">
+                      {archivedOrders.map((order) => (
+                        <OrderCard key={order.id} order={order} viewed={true} />
+                      ))}
+                    </div>
+                  )}
                 </section>
               </>
             )}

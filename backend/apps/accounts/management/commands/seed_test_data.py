@@ -1,7 +1,9 @@
 from pathlib import Path
+from datetime import timedelta
 from django.core.management.base import BaseCommand
 from django.core.files import File
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 from apps.business.models import Brand
 from apps.agents.models import Agent, AgentItem
 from apps.customers.models import Customer
@@ -11,6 +13,8 @@ import random
 
 from apps.orders.utils import SIZE_MAPPING
 from apps.orders.serializers import get_piece_count
+from django.db.models.signals import post_save
+from apps.items.signals import update_item_stock_status
 
 User = get_user_model()
 
@@ -212,6 +216,55 @@ class Command(BaseCommand):
                     self.style.SUCCESS(f"  Created variant {i+1} for {name} with {len(individual_sizes)} sizes")
                 )
 
+        # ---- Create Archived Items (out of stock for 30+ days) ----
+        self.stdout.write(self.style.WARNING("\nCreating archived items..."))
+
+        # Temporarily disable signal to avoid interference
+        post_save.disconnect(update_item_stock_status, sender=ItemVariantSize)
+
+        archived_items_data = [
+            {"name": "Archived Gents Item 1", "type": "gents", "brand": brands["BN CLOTHING"], "price": 1500, "description": "Archived item - out of stock"},
+            {"name": "Archived Gents Item 2", "type": "gents", "brand": brands["BN CLOTHING"], "price": 2000, "description": "Archived item - out of stock"},
+            {"name": "Archived Kids Item 1", "type": "kids", "brand": brands["XL TOWER"], "price": 1000, "description": "Archived item - out of stock"},
+        ]
+
+        for item_data in archived_items_data:
+            name = item_data["name"]
+            item = Item.objects.filter(name=name).first()
+            
+            if item:
+                # Update existing item
+                item.out_of_stock_since = timezone.now() - timedelta(days=45)
+                item.save(update_fields=['out_of_stock_since'])
+                # Set stock to 0 for all variants
+                for variant in item.variants.all():
+                    variant.sizes.update(stock=0)
+                self.stdout.write(self.style.WARNING(f"Updated archived item: {name}"))
+            else:
+                item = Item.objects.create(**item_data)
+                
+                # Create variant with 0 stock
+                variant = ItemVariant.objects.create(item=item)
+                
+                # Add sizes with 0 stock (use get_or_create to avoid duplicates)
+                size_groups = SIZE_MAPPING.get(item.type, {})
+                for size_list in size_groups.values():
+                    for size in size_list:
+                        ItemVariantSize.objects.get_or_create(
+                            item_variant=variant,
+                            size=size,
+                            defaults={'stock': 0}
+                        )
+                
+                # Set out_of_stock_since to 45 days ago (triggers archive)
+                item.out_of_stock_since = timezone.now() - timedelta(days=45)
+                item.save(update_fields=['out_of_stock_since'])
+                
+                self.stdout.write(self.style.SUCCESS(f"Created archived item: {item.name}"))
+
+        # Re-enable signal
+        post_save.connect(update_item_stock_status, sender=ItemVariantSize)
+
         # ---- Assign Items to Agent ----
         # Only assign gents items since agent's business is "gents"
         for item in items:
@@ -223,7 +276,7 @@ class Command(BaseCommand):
             else:
                 self.stdout.write(self.style.WARNING(f"Item '{item.name}' already assigned to agent"))
 
-        # ---- Orders ----
+        # ---- Orders with Past Dates ----
         if Order.objects.filter(agent=agent).exists():
             self.stdout.write(self.style.WARNING("Orders already exist for agent, skipping order creation"))
         else:
@@ -242,35 +295,51 @@ class Command(BaseCommand):
             }
 
             # ---- Create Orders in Bulk ----
-            NUM_ORDERS = 1000  # keep small here (you said 1000 elsewhere)
+            NUM_ORDERS = 100
 
-            # Only create orders for gents items (agent's business type)
+            # Create orders with dates ranging from 60 days ago to now
             orders_to_create = []
-            for _ in range(NUM_ORDERS):
-                orders_to_create.append(
-                    Order(
-                        customer=random.choice(customers),
-                        agent=agent,
-                        status=random.choices(
-                            ["PENDING", "PACKED", "DISPATCHED"],
-                            weights=[60, 25, 15]
-                        )[0],
-                    )
+            base_date = timezone.now() - timedelta(days=60)
+
+            for i in range(NUM_ORDERS):
+                # Spread orders across 60 days
+                days_ago = random.randint(0, 60)
+                created_at = base_date + timedelta(days=days_ago, hours=random.randint(0, 23))
+
+                status = random.choices(
+                    ["PENDING", "PACKED", "DISPATCHED"],
+                    weights=[30, 30, 40]
+                )[0]
+
+                order = Order(
+                    customer=random.choice(customers),
+                    agent=agent,
+                    status=status,
                 )
+                orders_to_create.append(order)
 
             orders = Order.objects.bulk_create(orders_to_create)
+
+            # Now update created_at for each order (bypass auto_now_add)
+            for i, order in enumerate(orders):
+                days_ago = random.randint(0, 60)
+                created_at = base_date + timedelta(days=days_ago, hours=random.randint(0, 23))
+                Order.objects.filter(id=order.id).update(created_at=created_at)
+
+            # Refresh orders to get updated timestamps
+            orders = list(Order.objects.filter(agent=agent))
 
             # ---- Create OrderItems in Bulk ----
             order_items_to_create = []
 
             for order in orders:
-                num_items = random.randint(20, 25)
+                num_items = random.randint(1, 5)
 
                 # Only use gents items since agent is gents business
                 selected_items = random.choices(gents_items, k=num_items)
 
                 for item in selected_items:
-                    variants = item_variants_map[item.id]
+                    variants = item_variants_map.get(item.id, [])
                     if not variants:
                         continue
 
@@ -284,10 +353,9 @@ class Command(BaseCommand):
                     # packed_quantity should be in pieces (sets * piece_count)
                     piece_count = get_piece_count(size_group, item.type)
 
+                    packed_quantity = 0
                     if order.status in ["PACKED", "DISPATCHED"]:
                         packed_quantity = quantity * piece_count
-                    else:
-                        packed_quantity = 0
 
                     order_items_to_create.append(
                         OrderItem(
@@ -306,11 +374,19 @@ class Command(BaseCommand):
                     )
 
             # ---- Bulk Insert in Chunks (VERY IMPORTANT) ----
-            BATCH_SIZE = 2000
+            BATCH_SIZE = 500
 
             for i in range(0, len(order_items_to_create), BATCH_SIZE):
                 OrderItem.objects.bulk_create(order_items_to_create[i:i + BATCH_SIZE])
 
+            # ---- Set dispatched_at for DISPATCHED orders ----
+            dispatched_orders = [o for o in orders if o.status == "DISPATCHED"]
+
+            for order in dispatched_orders:
+                # Set dispatched_at after created_at (1-3 days later)
+                days_after_creation = random.randint(1, 3)
+                dispatched_at = order.created_at + timedelta(days=days_after_creation)
+                Order.objects.filter(id=order.id).update(dispatched_at=dispatched_at)
 
             self.stdout.write(
                 self.style.SUCCESS(f"Created {len(orders)} orders with {len(order_items_to_create)} items")

@@ -14,6 +14,7 @@ interface ItemCardProps {
   onPrintAll?: (id: number) => void;
   onPrintQR?: (qr: string) => void;
   onOrder?: (variantId: number) => void;
+  isReadonly?: boolean;
 }
 
 function getItemImage(item: UIItem): string | null {
@@ -35,6 +36,7 @@ export default function ItemCard({
   onPrintAll,
   onPrintQR,
   onOrder,
+  isReadonly = false,
 }: ItemCardProps) {
   const hasPartialOutOfStock = hasOutOfStockVariants(item);
   const image = getItemImage(item);
@@ -100,7 +102,7 @@ export default function ItemCard({
         </div>
 
         <div className="flex items-center gap-1 flex-shrink-0">
-          {context === "admin" && (
+          {context === "admin" && !isReadonly && (
             <>
               <button
                 type="button"
@@ -149,6 +151,7 @@ export default function ItemCard({
                 itemType={item.type as ItemType}
                 onPrintQR={context === "admin" ? onPrintQR : undefined}
                 onOrder={context === "agent" ? onOrder : undefined}
+                isReadonly={isReadonly}
               />
             ))}
           </div>

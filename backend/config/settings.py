@@ -30,8 +30,8 @@ DEBUG = config("DEBUG", cast=bool)
 ALLOWED_HOSTS = [
     h.strip() for h in config("ALLOWED_HOSTS", default="").split(",") if h.strip()
 ]
-if DEBUG and not ALLOWED_HOSTS:
-    ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
+if DEBUG:
+    ALLOWED_HOSTS.extend(["localhost", "127.0.0.1", "testserver"])
 
 
 # Application definition

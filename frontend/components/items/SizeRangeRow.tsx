@@ -6,12 +6,14 @@ interface SizeRangeRowProps {
   sizeRange: string;
   stock: number;
   isDisabled?: boolean;
+  isReadonly?: boolean;
 }
 
 export default function SizeRangeRow({
   sizeRange,
   stock,
   isDisabled = false,
+  isReadonly = false,
 }: SizeRangeRowProps) {
   const piecesPerSet = SIZE_RANGE_PIECE_COUNT[sizeRange] || 1;
   const setsAvailable = Math.floor(stock);
@@ -19,7 +21,7 @@ export default function SizeRangeRow({
   return (
     <div
       className={`flex-shrink-0 px-3 py-2 rounded-lg min-w-[80px] ${
-        isDisabled ? "bg-gray-100 opacity-50" : "bg-gray-50"
+        isDisabled && !isReadonly ? "bg-gray-100 opacity-50" : "bg-gray-50"
       }`}
     >
       <span

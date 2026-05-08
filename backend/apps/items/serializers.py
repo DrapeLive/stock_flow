@@ -46,7 +46,7 @@ class ItemSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Item
-        fields = ['id', 'name', 'type', 'price', 'description', 'brand_id', 'brand_name', 'variants']
+        fields = ['id', 'name', 'type', 'price', 'description', 'brand_id', 'brand_name', 'variants', 'out_of_stock_since']
 
 
 class ItemVariantSizeRequestSerializer(serializers.Serializer):

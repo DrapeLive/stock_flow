@@ -19,6 +19,7 @@ interface VariantCardProps {
   onPrintQR?: (qr: string) => void;
   onOrder?: (variantId: number) => void;
   itemType?: ItemType;
+  isReadonly?: boolean;
 }
 
 function getSizeRangesWithStock(
@@ -85,6 +86,7 @@ export default function VariantCard({
   onPrintQR,
   onOrder,
   itemType,
+  isReadonly = false,
 }: VariantCardProps) {
   const isOutOfStock = isVariantOutOfStock(variant, itemType);
   const sizeRanges = getSizeRangesWithStock(variant, itemType);
@@ -94,7 +96,7 @@ export default function VariantCard({
     return (
       <div
         className={`rounded-lg border p-3 ${
-          isOutOfStock
+          isOutOfStock && !isReadonly
             ? "bg-gray-100 border-gray-200 opacity-60"
             : "bg-white border-gray-100"
         }`}
@@ -126,12 +128,13 @@ export default function VariantCard({
               sizeRange={sizeRange}
               stock={stock}
               isDisabled={isOutOfStock}
+              isReadonly={isReadonly}
             />
           ))}
         </div>
 
         <div className="flex items-center justify-end gap-1.5 mt-2">
-          {context === "admin" && qrCode && (
+          {context === "admin" && qrCode && !isReadonly && (
             <button
               onClick={() => onPrintQR?.(qrCode)}
               className="p-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg transition-colors"
@@ -144,7 +147,7 @@ export default function VariantCard({
               onClick={() => onOrder?.(variant.id)}
               disabled={isOutOfStock}
               className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors ${
-                isOutOfStock
+                isOutOfStock && !isReadonly
                   ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                   : "bg-primary text-white hover:bg-primary/90"
               }`}
@@ -160,7 +163,7 @@ export default function VariantCard({
   return (
     <div
       className={`rounded-xl border p-4 ${
-        isOutOfStock
+        isOutOfStock && !isReadonly
           ? "bg-gray-50 border-gray-200 opacity-60"
           : "bg-white border-gray-100"
       }`}
@@ -190,12 +193,13 @@ export default function VariantCard({
             sizeRange={sizeRange}
             stock={stock}
             isDisabled={isOutOfStock}
+            isReadonly={isReadonly}
           />
         ))}
       </div>
 
       <div className="flex items-center justify-end gap-2 mt-2">
-        {context === "admin" && qrCode && (
+        {context === "admin" && qrCode && !isReadonly && (
           <button
             onClick={() => onPrintQR?.(qrCode)}
             className="flex items-center gap-1.5 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg text-xs font-bold transition-colors"
