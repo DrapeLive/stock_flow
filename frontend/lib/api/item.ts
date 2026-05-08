@@ -13,6 +13,10 @@ export const itemApi = {
     return api.get<ItemAllResponse>("/api/items/").then((r) => r.data);
   },
 
+  getArchived(): Promise<ItemAllResponse> {
+    return api.get<ItemAllResponse>("/api/items/archived/").then((r) => r.data);
+  },
+
   getAllVariants(): Promise<VariantAllResponse> {
     return api.get<VariantAllResponse>("/api/items/variants/all/").then((r) => r.data);
   },

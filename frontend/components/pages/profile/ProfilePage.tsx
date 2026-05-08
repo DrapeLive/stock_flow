@@ -3,6 +3,8 @@ import { PageLoading } from "@/components/ui/Loading";
 import { useAuth } from "@/context/AuthContext";
 import { agentApi } from "@/lib/api/agents";
 import { authApi } from "@/lib/api/auth";
+import { itemApi } from "@/lib/api/item";
+import { orderApi } from "@/lib/api/order";
 import { toastSuccess } from "@/lib/toast";
 import { AgentResponse } from "@/types/agent";
 import { UserProfile } from "@/types/auth";
@@ -24,18 +26,19 @@ import { useEffect, useState } from "react";
 
 type Tab = "profile" | "archives";
 
-interface ArchivedCustomer {
-  id: string;
+interface ArchivedItem {
+  id: number;
   name: string;
-  email: string;
-  archived_at: string;
+  type: string;
+  price: string;
+  out_of_stock_since: string;
 }
 
 interface ArchivedOrder {
-  id: string;
+  id: number;
   customer_name: string;
   total: number;
-  archived_at: string;
+  dispatched_at: string;
 }
 
 export default function ProfilePage() {
@@ -45,9 +48,7 @@ export default function ProfilePage() {
   const [tab, setTab] = useState<Tab>("profile");
   const [agentData, setAgentData] = useState<AgentResponse>();
   const [profile, setProfile] = useState<UserProfile>();
-  const [archivedCustomers, setArchivedCustomers] = useState<
-    ArchivedCustomer[]
-  >([]);
+  const [ArchivedItems, setArchivedItems] = useState<ArchivedItem[]>([]);
   const [archivedOrders, setArchivedOrders] = useState<ArchivedOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [archivesLoading, setArchivesLoading] = useState(false);
@@ -78,13 +79,12 @@ export default function ProfilePage() {
     const fetchArchives = async () => {
       setArchivesLoading(true);
       try {
-        // Replace these with your actual API calls:
-        // const [customers, orders] = await Promise.all([
-        //   archiveApi.getCustomers(),
-        //   archiveApi.getOrders(),
-        // ]);
-        // setArchivedCustomers(customers);
-        // setArchivedOrders(orders);
+        const [items, orders] = await Promise.all([
+          itemApi.getArchived(),
+          orderApi.getArchived(),
+        ]);
+        setArchivedItems(items as any);
+        setArchivedOrders((orders as any).results || orders);
       } catch (e) {
         console.error("Error fetching archives:", e);
       } finally {
@@ -218,31 +218,31 @@ export default function ProfilePage() {
                 {/* Archived Items */}
                 <section>
                   <SectionHeader
-                    icon={<Users size={14} />}
-                    label="Archived Customers"
+                    icon={<Archive size={14} />}
+                    label="Archived Items"
                   />
                   <div className="bg-white rounded-3xl border border-gray-100 shadow-sm divide-y divide-gray-50">
-                    {archivedCustomers.length === 0 ? (
-                      <EmptyState label="No archived customers" />
+                    {ArchivedItems.length === 0 ? (
+                      <EmptyState label="No archived items" />
                     ) : (
-                      archivedCustomers.map((c) => (
+                      (ArchivedItems as any[]).map((item) => (
                         <div
-                          key={c.id}
+                          key={item.id}
                           className="flex items-center gap-3 px-4 py-3"
                         >
                           <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-400 flex items-center justify-center shrink-0">
-                            <User size={14} />
+                            <Archive size={14} />
                           </div>
                           <div className="min-w-0 flex-1">
                             <p className="text-sm font-bold text-gray-800 truncate">
-                              {c.name}
+                              {item.name}
                             </p>
-                            <p className="text-[11px] text-gray-400 truncate">
-                              {c.email}
+                            <p className="text-[11px] text-gray-400">
+                              {item.type} • ₹{item.price}
                             </p>
                           </div>
                           <p className="text-[10px] text-gray-300 font-bold shrink-0">
-                            {new Date(c.archived_at).toLocaleDateString()}
+                            {new Date(item.out_of_stock_since).toLocaleDateString()}
                           </p>
                         </div>
                       ))
@@ -273,11 +273,11 @@ export default function ProfilePage() {
                               {o.customer_name}
                             </p>
                             <p className="text-[11px] text-gray-400">
-                              ₹{o.total.toLocaleString()}
+                              ₹{Number(o.total).toLocaleString()}
                             </p>
                           </div>
                           <p className="text-[10px] text-gray-300 font-bold shrink-0">
-                            {new Date(o.archived_at).toLocaleDateString()}
+                            {new Date(o.dispatched_at).toLocaleDateString()}
                           </p>
                         </div>
                       ))

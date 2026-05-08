@@ -175,4 +175,21 @@ export const orderApi = {
       .post(`/api/orders/${orderId}/mark-viewed/`)
       .then((r) => r.data);
   },
+
+  getArchived(
+    filters?: OrderFilters,
+  ): Promise<PaginatedResponse<OrderAllResponse[number]>> {
+    const params = new URLSearchParams();
+    if (filters?.from) params.append("from_date", filters.from);
+    if (filters?.to) params.append("to_date", filters.to);
+    if (filters?.page) params.append("page", filters.page.toString());
+    if (filters?.page_size)
+      params.append("page_size", filters.page_size.toString());
+    const query = params.toString();
+    return api
+      .get<PaginatedResponse<OrderAllResponse[number]>>(
+        `/api/orders/archived/${query ? `?${query}` : ""}`,
+      )
+      .then((r) => r.data);
+  },
 };

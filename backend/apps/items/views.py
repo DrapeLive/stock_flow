@@ -1,6 +1,7 @@
 import os
+from datetime import timedelta
 from rest_framework.viewsets import ModelViewSet
-from .models import Item, ItemVariant
+from .models import Item, ItemVariant, ItemVariantSize
 from .serializers import ItemSerializer, ItemVariantSerializer, CreateItemSerializer, UpdateItemSerializer
 from apps.accounts.permissions import IsAdmin
 from rest_framework.permissions import IsAuthenticated
@@ -10,6 +11,7 @@ from rest_framework import status
 from apps.orders.models import OrderItem
 from apps.orders.utils import SIZE_MAPPING
 from apps.accounts.permissions import admin_business
+from django.utils import timezone
 
 
 def get_agent_reservation_boost(user):
@@ -52,10 +54,14 @@ class ItemViewSet(ModelViewSet):
         return [IsAuthenticated()]
 
     def get_queryset(self):
+        cutoff = timezone.now() - timedelta(days=30)
         return filter_items_by_business(
             Item.objects.prefetch_related("variants__sizes"),
             self.request.user,
-        ).filter(is_deleted=False)
+        ).filter(is_deleted=False).exclude(
+            out_of_stock_since__isnull=False,
+            out_of_stock_since__lte=cutoff
+        )
 
     def get_serializer_class(self):
         if self.action == 'create':
@@ -166,6 +172,20 @@ class ItemViewSet(ModelViewSet):
             "variants": response_variants,
             "matched_variant_id": variant.id
         })
+
+    @action(detail=False, methods=["get"], url_path="archived")
+    def get_archived(self, request):
+        cutoff = timezone.now() - timedelta(days=30)
+        items = filter_items_by_business(
+            Item.objects.prefetch_related("variants__sizes"),
+            request.user,
+        ).filter(
+            is_deleted=False,
+            out_of_stock_since__isnull=False,
+            out_of_stock_since__lte=cutoff
+        )
+        serializer = self.get_serializer(items, many=True)
+        return Response(serializer.data)
 
 
 class ItemVariantViewSet(ModelViewSet):

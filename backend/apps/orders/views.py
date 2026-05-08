@@ -344,6 +344,14 @@ class OrderViewSet(ModelViewSet):
             "items__item"
         ).order_by('-created_at')
 
+        if self.action == "list":
+            archive_cutoff = timezone.now() - timedelta(days=30)
+            qs = qs.exclude(
+                status="DISPATCHED",
+                dispatched_at__isnull=False,
+                dispatched_at__lte=archive_cutoff
+            )
+
         customer_id = self.request.query_params.get("customer")
         if customer_id:
             qs = qs.filter(customer_id=customer_id)
@@ -462,6 +470,7 @@ class OrderViewSet(ModelViewSet):
             )
 
             order.status = "DISPATCHED"
+            order.dispatched_at = timezone.now()
             order.save()
             # Remove viewed entries for non-pending/packed orders
             UserViewedOrder.objects.filter(order=order).delete()
@@ -526,6 +535,38 @@ class OrderViewSet(ModelViewSet):
 
         qs = qs.values_list("id", "status")
         return Response([{"id": oid, "status": stat} for oid, stat in qs])
+
+    @action(detail=False, methods=["get"], url_path="archived")
+    def get_archived(self, request):
+        from django.utils import timezone
+        from datetime import timedelta
+
+        cutoff = timezone.now() - timedelta(days=30)
+        user = request.user
+
+        qs = Order.objects.prefetch_related(
+            "items__variant",
+            "items__item"
+        ).filter(
+            status="DISPATCHED",
+            dispatched_at__isnull=False,
+            dispatched_at__lte=cutoff
+        ).order_by('-dispatched_at')
+
+        if user.role == "ADMIN":
+            biz = admin_business(user)
+            if biz:
+                qs = qs.filter(items__item_type=biz).distinct()
+        else:
+            qs = qs.filter(agent__user=user)
+
+        page = self.paginate_queryset(qs)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = self.get_serializer(qs, many=True)
+        return Response(serializer.data)
 
 
 class AddOrderItemView(APIView):

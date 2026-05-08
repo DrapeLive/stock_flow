@@ -33,6 +33,7 @@ class Item(models.Model):
     )
 
     is_deleted = models.BooleanField(default=False)
+    out_of_stock_since = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return self.name
