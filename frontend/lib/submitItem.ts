@@ -48,7 +48,6 @@ export async function submitItem(
     variants: variantPayload,
   };
 
-  console.log(payload);
   const fd = itemToFormData(payload);
   await itemApi.create(fd);
 }

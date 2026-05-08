@@ -123,7 +123,7 @@ export default function Step1CommonDetails({
             ) : (
               <Select
                 value={value.type}
-                onValueChange={(v: ItemType) => set("type", v)}
+                onValueChange={(v) => set("type", v as ItemType)}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -139,7 +139,9 @@ export default function Step1CommonDetails({
             <Field>
               <FieldLabel>Brand *</FieldLabel>
               <Select
-                value={value.brand_id?.toString()}
+                value={brandData
+                  .filter((brand) => brand.id === value.brand_id)?.[0]
+                  ?.name?.toString()}
                 onValueChange={(v) => set("brand_id", Number(v))}
               >
                 <SelectTrigger>
