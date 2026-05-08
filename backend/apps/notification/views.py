@@ -9,16 +9,14 @@ class SaveSubscriptionView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-
         data = request.data
 
-        PushSubscription.objects.update_or_create(
+        PushSubscription.objects.filter(user=request.user).delete()
+        PushSubscription.objects.create(
             user=request.user,
             endpoint=data["endpoint"],
-            defaults={
-                "p256dh": data["keys"]["p256dh"],
-                "auth": data["keys"]["auth"],
-            },
+            p256dh=data["keys"]["p256dh"],
+            auth=data["keys"]["auth"],
         )
 
         return Response({"message": "saved"})

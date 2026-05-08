@@ -1,3 +1,5 @@
+from functools import partial
+
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.db.models import F, Q
@@ -94,11 +96,26 @@ class PlaceOrderView(APIView):
             )
 
         out_of_stock_items = []
-        admins = User.objects.filter(role="ADMIN")
+
+        admin_ids = set()
+        super_admin_ids = User.objects.filter(is_superuser=True).values_list(
+            "id", flat=True
+        )
+
+        admin_ids.update(super_admin_ids)
+
         with transaction.atomic():
             for order_item in order.items.select_related("item", "variant"):
                 if order_item.item is None or order_item.item.is_deleted:
                     continue
+
+                matched_admins = User.objects.filter(
+                    role="ADMIN",
+                    brand=order_item.item.brand,
+                    business=order_item.item.type,
+                ).values_list("id", flat=True)
+
+                admin_ids.update(matched_admins)
 
                 item_type = order_item.item.type
                 required_sizes = SIZE_MAPPING[item_type][order_item.size_group]
@@ -156,12 +173,15 @@ class PlaceOrderView(APIView):
 
             order.status = "PENDING"
             order.save()
-            for admin in admins:
+            username = request.user.username
+
+            for id in admin_ids:
                 transaction.on_commit(
-                    lambda admin_id=admin.id: send_push_to_user.delay(
-                        admin_id,
+                    partial(
+                        send_push_to_user.delay,
+                        id,
                         "New Order",
-                        f"Agent {request.user.username} placed Order #{order.id}",
+                        f"Agent {username} placed Order",
                     )
                 )
 
