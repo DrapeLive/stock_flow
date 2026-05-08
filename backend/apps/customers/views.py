@@ -38,7 +38,10 @@ def bulk_import_customers(request):
         if not customers:
             return JsonResponse({"error": "No data provided."}, status=400)
 
-        created, errors = [], []
+        created_objs, errors = [], []
+
+        existing_names = set(Customer.objects.values_list("name", flat=True))
+        existing_addresses = set(Customer.objects.values_list("address", flat=True))
 
         for i, row in enumerate(customers, 1):
             name = str(row.get("name", "")).strip()
@@ -58,7 +61,29 @@ def bulk_import_customers(request):
                 if not v
             ]
             if missing:
-                errors.append({"row": i, "error": f"Missing: {', '.join(missing)}"})
+                errors.append(
+                    {"row": i, "name": name, "error": f"Missing: {', '.join(missing)}"}
+                )
+                continue
+
+            # Duplicate checks
+            if name in existing_names:
+                errors.append(
+                    {
+                        "row": i,
+                        "name": name,
+                        "error": f"Customer '{name}' already exists.",
+                    }
+                )
+                continue
+            if address in existing_addresses:
+                errors.append(
+                    {
+                        "row": i,
+                        "name": name,
+                        "error": f"Address already registered for another customer.",
+                    }
+                )
                 continue
 
             try:
@@ -67,11 +92,19 @@ def bulk_import_customers(request):
                 )
             except Agent.DoesNotExist:
                 errors.append(
-                    {"row": i, "error": f"Agent '{agent_username}' not found."}
+                    {
+                        "row": i,
+                        "name": name,
+                        "error": f"Agent '{agent_username}' not found.",
+                    }
                 )
                 continue
 
-            created.append(
+            # Track within-batch duplicates too
+            existing_names.add(name)
+            existing_addresses.add(address)
+
+            created_objs.append(
                 Customer(
                     name=name,
                     address=address,
@@ -81,17 +114,15 @@ def bulk_import_customers(request):
                 )
             )
 
-        Customer.objects.bulk_create(created)
-
+        Customer.objects.bulk_create(created_objs)
         return JsonResponse(
             {
-                "created": len(created),
+                "created": len(created_objs),
                 "failed": len(errors),
                 **({"errors": errors} if errors else {}),
             },
             status=207 if errors else 201,
         )
-
     except json.JSONDecodeError:
         return JsonResponse({"error": "Invalid JSON."}, status=400)
     except Exception as e:
