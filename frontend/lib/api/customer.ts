@@ -3,6 +3,8 @@ import type {
   CustomerResponse,
   CustomerCreateRequest,
   CustomerUpdateRequest,
+  BulkImportResponse,
+  BulkImportRequest,
 } from "@/types/customer";
 import { api } from "./axios";
 
@@ -12,7 +14,9 @@ export const customerApi = {
   },
 
   getOne(id: number): Promise<CustomerResponse> {
-    return api.get<CustomerResponse>(`/api/customers/${id}/`).then((r) => r.data);
+    return api
+      .get<CustomerResponse>(`/api/customers/${id}/`)
+      .then((r) => r.data);
   },
 
   create(data: CustomerCreateRequest): Promise<CustomerResponse> {
@@ -29,5 +33,11 @@ export const customerApi = {
 
   delete(id: number): Promise<void> {
     return api.delete(`/api/customers/${id}/`).then((r) => r.data);
+  },
+
+  bulkImport(data: BulkImportRequest): Promise<BulkImportResponse> {
+    return api
+      .post<BulkImportResponse>("/api/customers/bulk-import/", data)
+      .then((r) => r.data);
   },
 };
