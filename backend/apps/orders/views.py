@@ -99,7 +99,6 @@ class PlaceOrderView(APIView):
             )
 
         out_of_stock_items = []
-<<<<<<< HEAD
 
         admin_ids = set()
         super_admin_ids = User.objects.filter(is_superuser=True).values_list(
@@ -107,12 +106,10 @@ class PlaceOrderView(APIView):
         )
 
         admin_ids.update(super_admin_ids)
-=======
         admins = User.objects.filter(role="ADMIN")
 
         expected_delivery_date = request.data.get("expected_delivery_date")
         preferred_transport = request.data.get("preferred_transport")
->>>>>>> 1ebcb8c (refactor: Fix order summary to include delivery things)
 
         with transaction.atomic():
             for order_item in order.items.select_related("item", "variant"):
@@ -201,7 +198,6 @@ class PlaceOrderView(APIView):
                     pass
 
             order.save()
-<<<<<<< HEAD
             username = request.user.username
 
             for id in admin_ids:
@@ -211,17 +207,6 @@ class PlaceOrderView(APIView):
                         id,
                         "New Order",
                         f"Agent {username} placed Order",
-=======
-            for admin in admins:
-
-                try:
-                    transaction.on_commit(
-                        lambda admin_id=admin.id: send_push_to_user.delay(
-                            admin_id,
-                            "New Order",
-                            f"Agent {request.user.username} placed Order #{order.id}",
-                        )
->>>>>>> 1ebcb8c (refactor: Fix order summary to include delivery things)
                     )
 
                 except Exception as e:
