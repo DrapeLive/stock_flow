@@ -21,6 +21,7 @@ import { PageLoading } from "@/components/ui/Loading";
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 import { AxiosError } from "axios";
 import { OrderTotals } from "@/components/order";
+import { useBackButton } from "@/util/useBackButton";
 
 export default function OrderDetailsPage() {
   const params = useParams();
@@ -35,6 +36,12 @@ export default function OrderDetailsPage() {
   const [showOutOfStockModal, setShowOutOfStockModal] = useState(false);
   const [outOfStockItems, setOutOfStockItems] = useState<OutOfStockItem[]>([]);
   const [showMergeWarning, setShowMergeWarning] = useState(false);
+
+  useBackButton({
+    onBack: () => {
+      router.push("/agent/order/new");
+    },
+  });
 
   interface MergeGroup {
     item_name: string;

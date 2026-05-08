@@ -1,6 +1,7 @@
 "use client";
 
 import ScannerPage from "@/components/pages/ScannerPage";
+import { useBackButton } from "@/util/useBackButton";
 import { ArrowLeft } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 
@@ -8,6 +9,12 @@ export default function OrderScannerPage() {
   const params = useParams();
   const id = params.id as string;
   const router = useRouter();
+
+  useBackButton({
+    onBack: () => {
+      router.push(`/agent/order/new/${id}`);
+    },
+  });
 
   return (
     <div className="min-h-screen bg-gray-50/50 flex flex-col">

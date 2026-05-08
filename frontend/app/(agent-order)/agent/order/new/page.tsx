@@ -1,12 +1,19 @@
 "use client";
 
 import ListCustomer from "@/components/pages/ListCustomer";
+import { useBackButton } from "@/util/useBackButton";
 
 import { ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 export default function NewOrder() {
   const router = useRouter();
+
+  useBackButton({
+    onBack: () => {
+      router.push("/agent");
+    },
+  });
 
   return (
     <div className="min-h-screen bg-gray-50/50 pb-32">
