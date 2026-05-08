@@ -4,7 +4,6 @@ import { useParams, useRouter } from "next/navigation";
 import { orderApi } from "@/lib/api/order";
 import { transportApi } from "@/lib/api/transport";
 import { OrderResponse } from "@/types/order";
-import { Transport } from "@/types/transport";
 import OrderTabs, { Tab } from "@/components/pages/order/OrderTabs";
 import OrderSummary from "@/components/pages/order/OrderSummary";
 import OrderItemsSection from "@/components/pages/order/OrderItemsSection";
@@ -154,6 +153,14 @@ export default function Page() {
           agentName={data?.agent_details.username ?? ""}
           orderDate={data?.created_at?.slice(0, 10) ?? ""}
           status={data?.status ?? ""}
+          preferredTransport={data?.preferred_transport_name ?? ""}
+          expectedDeliveryDate={data?.expected_delivery_date ?? ""}
+          dispatchTransport={
+            transports.find(
+              (transport) => Number(transport.value) == data?.transport_company,
+            )?.label ?? ""
+          }
+          lrNumber={data?.lr_number ?? ""}
         />
 
         <OrderItemsSection
@@ -234,11 +241,7 @@ export default function Page() {
                   Transport Company
                 </label>
                 <select
-                  value={
-                    transports.find(
-                      (transport) => transport.value == dispatchTransport,
-                    )?.label
-                  }
+                  value={dispatchTransport}
                   onChange={(e) => setDispatchTransport(e.target.value)}
                   className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/10 text-sm"
                 >

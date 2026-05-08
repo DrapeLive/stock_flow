@@ -39,7 +39,7 @@ export default function BrandsList() {
           text="Add Brand"
           variant="filled"
           icon={<Plus className="size-4" />}
-          onClick={() => router.push("/admin/brands/new")}
+          onClick={() => router.push("/admin/settings/brands/new")}
           className="shadow-lg shadow-primary/20 ring-1 ring-primary/10"
         />
       </div>
@@ -48,10 +48,20 @@ export default function BrandsList() {
 
   return (
     <div className="px-4 space-y-3 pb-20">
+      <div className="flex w-full justify-end px-4 mb-4">
+        <StockFlowButton
+          text="Add Brand"
+          variant="filled"
+          icon={<Plus className="size-4" />}
+          onClick={() => router.push("/admin/settings/brands/new")}
+          className="shadow-lg shadow-primary/20 ring-1 ring-primary/10"
+        />
+      </div>
+
       {data.map((brand) => (
         <div
           key={brand.id}
-          onClick={() => router.push(`/admin/brands/${brand.id}`)}
+          onClick={() => router.push(`/admin/settings/brands/${brand.id}`)}
           className="flex items-center gap-4 bg-white border border-gray-100 p-4 hover:border-primary/30 hover:shadow-md transition-all rounded-2xl group cursor-pointer active:scale-[0.98]"
         >
           <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 overflow-hidden">

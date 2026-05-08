@@ -45,7 +45,7 @@ export default function TransportsList() {
 
   return (
     <div>
-      <div className="px-4 mb-4">
+      <div className="flex w-full justify-end px-4 mb-4">
         <StockFlowButton
           text="Add Transport"
           variant="filled"
@@ -87,7 +87,9 @@ export default function TransportsList() {
               <div className="flex gap-2">
                 <button
                   onClick={() =>
-                    router.push(`/admin/settings/transports/${transport.id}/edit`)
+                    router.push(
+                      `/admin/settings/transports/${transport.id}/edit`,
+                    )
                   }
                   className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
                 >
