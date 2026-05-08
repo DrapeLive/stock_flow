@@ -454,6 +454,9 @@ class OrderViewSet(ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        transport_company_id = request.data.get("transport_company")
+        lr_number = request.data.get("lr_number", "")
+
         with transaction.atomic():
             for order_item in order.items.select_related("item", "variant"):
                 if order_item.item is None or order_item.item.is_deleted:
@@ -491,6 +494,17 @@ class OrderViewSet(ModelViewSet):
 
             order.status = "DISPATCHED"
             order.dispatched_at = timezone.now()
+
+            if transport_company_id:
+                from transports.models import Transport
+                try:
+                    order.transport_company = Transport.objects.get(id=transport_company_id)
+                except Transport.DoesNotExist:
+                    pass
+
+            if lr_number:
+                order.lr_number = lr_number
+
             order.save()
             # Remove viewed entries for non-pending/packed orders
             UserViewedOrder.objects.filter(order=order).delete()

@@ -122,18 +122,24 @@ export const orderApi = {
       .then((r) => r.data);
   },
 
-  placeOrder(id: number): Promise<{ message: string; order_id: number }> {
+  placeOrder(
+    id: number,
+    data?: { expected_delivery_date?: string | null; preferred_transport?: number | null }
+  ): Promise<{ message: string; order_id: number }> {
     return api
       .post<{
         message: string;
         order_id: number;
-      }>(`/api/orders/${id}/place-order/`)
+      }>(`/api/orders/${id}/place-order/`, data)
       .then((r) => r.data);
   },
 
-  dispatchOrder(id: number): Promise<{ message: string }> {
+  dispatchOrder(
+    id: number,
+    data?: { transport_company?: number | null; lr_number?: string }
+  ): Promise<{ message: string }> {
     return api
-      .post<{ message: string }>(`/api/orders/${id}/dispatch/`)
+      .post<{ message: string }>(`/api/orders/${id}/dispatch/`, data)
       .then((r) => r.data);
   },
 

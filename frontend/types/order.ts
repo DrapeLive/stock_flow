@@ -44,6 +44,7 @@ export interface OrderItem {
   variant_image?: string | null;
   size?: string;
   quantity: number;
+  original_quantity?: number;
   packed_quantity?: number;
   piece_count?: number;
   order: number;
@@ -60,6 +61,12 @@ export interface Order {
   status?: OrderStatus;
   created_at: string;
   agent: number;
+  expected_delivery_date: string | null;
+  preferred_transport: number | null;
+  preferred_transport_name?: string;
+  transport_company: number | null;
+  transport_company_name?: string;
+  lr_number: string;
 }
 
 export interface OrderItemDisplay {

@@ -2,7 +2,9 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { orderApi } from "@/lib/api/order";
+import { transportApi } from "@/lib/api/transport";
 import { OrderResponse } from "@/types/order";
+import { Transport } from "@/types/transport";
 import OrderTabs, { Tab } from "@/components/pages/order/OrderTabs";
 import OrderSummary from "@/components/pages/order/OrderSummary";
 import OrderItemsSection from "@/components/pages/order/OrderItemsSection";
@@ -11,7 +13,7 @@ import OrderDetailHeader from "@/components/pages/admin/order-item/OrderDetailHe
 import OrderLogs from "@/components/pages/order/OrderLogs";
 import { toastSuccess, toastError } from "@/lib/toast";
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
-import { Trash2 } from "lucide-react";
+import { Trash2, Truck } from "lucide-react";
 
 export default function Page() {
   const params = useParams();
@@ -25,6 +27,11 @@ export default function Page() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showDispatchDialog, setShowDispatchDialog] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [dispatchTransport, setDispatchTransport] = useState<string>("");
+  const [lrNumber, setLrNumber] = useState<string>("");
+  const [transports, setTransports] = useState<
+    { value: string; label: string }[]
+  >([]);
 
   const fetchData = useCallback(async () => {
     try {
@@ -38,6 +45,21 @@ export default function Page() {
   useEffect(() => {
     setLoading(true);
     fetchData().finally(() => setLoading(false));
+
+    const fetchTransports = async () => {
+      try {
+        const response = await transportApi.getActive();
+        const formattedTransports = response.map((transport) => ({
+          value: transport.id.toString(),
+          label: transport.name,
+        }));
+        setTransports(formattedTransports);
+      } catch (error) {
+        console.error("Error fetching transports:", error);
+      }
+    };
+
+    fetchTransports();
   }, [fetchData]);
 
   const handlePackedChange = () => {
@@ -71,7 +93,17 @@ export default function Page() {
 
   const handleConfirmDispatch = async () => {
     setShowDispatchDialog(false);
-    await updateStatus("DISPATCHED");
+    try {
+      await orderApi.dispatchOrder(Number(id), {
+        transport_company: dispatchTransport
+          ? parseInt(dispatchTransport)
+          : null,
+        lr_number: lrNumber,
+      });
+      await fetchData();
+    } catch (err) {
+      console.error("Error dispatching order:", err);
+    }
   };
 
   const handleTabChange = (tab: Tab) => {
@@ -190,12 +222,49 @@ export default function Page() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl">
             <h3 className="text-lg font-bold text-gray-900 mb-2">
-              Order Not Fully Packed
+              Dispatch Order
             </h3>
-            <p className="text-sm text-gray-500 mb-6">
-              Unpacked items will be returned to the warehouse. Are you sure you
-              want to dispatch this order?
+            <p className="text-sm text-gray-500 mb-4">
+              Unpacked items will be returned to the warehouse.
             </p>
+
+            <div className="space-y-4 mb-6">
+              <div>
+                <label className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1.5 block">
+                  Transport Company
+                </label>
+                <select
+                  value={
+                    transports.find(
+                      (transport) => transport.value == dispatchTransport,
+                    )?.label
+                  }
+                  onChange={(e) => setDispatchTransport(e.target.value)}
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/10 text-sm"
+                >
+                  <option value="">Select Transport</option>
+                  {transports.map((t) => (
+                    <option key={t.value} value={t.value}>
+                      {t.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1.5 block">
+                  LR Number
+                </label>
+                <input
+                  type="text"
+                  value={lrNumber}
+                  onChange={(e) => setLrNumber(e.target.value)}
+                  placeholder="Enter LR number"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/10 text-sm"
+                />
+              </div>
+            </div>
+
             <div className="flex gap-3">
               <button
                 onClick={() => setShowDispatchDialog(false)}

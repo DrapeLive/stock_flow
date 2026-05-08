@@ -29,9 +29,9 @@ const AdminNavBar: React.FC = () => {
       path: "/admin",
     },
     {
-      label: "Brands",
+      label: "Settings",
       icon: Store,
-      path: "/admin/brands",
+      path: "/admin/settings",
       requiresSuperuser: true,
     },
     {

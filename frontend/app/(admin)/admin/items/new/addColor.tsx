@@ -220,7 +220,9 @@ export default function Step2AddColor({
                 <FieldLabel>Size Range</FieldLabel>
                 <Select
                   value={variant.sizeRange}
-                  onValueChange={(v: FrontendSizeRange) => set("sizeRange", v)}
+                  onValueChange={(v) =>
+                    set("sizeRange", v as FrontendSizeRange)
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue />

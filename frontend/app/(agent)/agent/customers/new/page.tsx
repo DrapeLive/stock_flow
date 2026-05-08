@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import StockFlowSelect from "@/components/ui/custom/stockFlowSelect";
 import { agentApi } from "@/lib/api/agents";
 import { customerApi } from "@/lib/api/customer";
+import { transportApi } from "@/lib/api/transport";
 import { toastSuccess, toastError } from "@/lib/toast";
 import { CustomerCreateRequest } from "@/types/customer";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
@@ -19,6 +20,7 @@ export default function NewCustomerPage() {
     customerName: "",
     address: "",
     contactNumber: "",
+    preferredTransport: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -39,8 +41,10 @@ export default function NewCustomerPage() {
 
   const { isAuthenticated } = useAuth();
   const [agents, setAgents] = useState<{ value: string; label: string }[]>([]);
+  const [transports, setTransports] = useState<{ value: string; label: string }[]>([]);
   const router = useRouter();
   const [loadingAgents, setLoadingAgents] = useState(true);
+  const [loadingTransports, setLoadingTransports] = useState(true);
 
   useEffect(() => {
     const fetchAgents = async () => {
@@ -59,7 +63,24 @@ export default function NewCustomerPage() {
       }
     };
 
+    const fetchTransports = async () => {
+      setLoadingTransports(true);
+      try {
+        const response = await transportApi.getActive();
+        const formattedTransports = response.map((transport) => ({
+          value: transport.id.toString(),
+          label: transport.name,
+        }));
+        setTransports(formattedTransports);
+      } catch (error) {
+        console.error("Error fetching transports:", error);
+      } finally {
+        setLoadingTransports(false);
+      }
+    };
+
     fetchAgents();
+    fetchTransports();
   }, [isAuthenticated, router]);
 
   const validate = () => {
@@ -87,6 +108,7 @@ export default function NewCustomerPage() {
         address: formData.address,
         contact: formData.contactNumber,
         agent: parseInt(formData.agent),
+        preferred_transport: formData.preferredTransport ? parseInt(formData.preferredTransport) : null,
       };
       await customerApi.create(payload);
       toastSuccess("Customer created successfully");
@@ -187,6 +209,20 @@ export default function NewCustomerPage() {
               value={formData.contactNumber}
               onChange={(e) => handleChange("contactNumber", e.target.value)}
               className={`bg-white border-gray-100 rounded-xl h-12 focus:ring-primary/10 ${errors.contactNumber ? "border-red-200 focus:border-red-300" : "focus:border-primary"}`}
+            />
+          </Field>
+
+          <Field>
+            <div className="flex justify-between items-center mb-1.5">
+              <FieldLabel className="text-xs font-bold uppercase tracking-widest text-gray-400">
+                Preferred Transport
+              </FieldLabel>
+            </div>
+            <StockFlowSelect
+              value={formData.preferredTransport}
+              onChange={(val) => handleChange("preferredTransport", val)}
+              options={[{ value: "", label: "None" }, ...transports]}
+              disabled={loadingTransports}
             />
           </Field>
         </FieldGroup>

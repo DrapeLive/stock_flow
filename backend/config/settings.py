@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     "apps.admins",
     "apps.business",
     "apps.notification",
+    "transports",
 ]
 
 MIDDLEWARE = [

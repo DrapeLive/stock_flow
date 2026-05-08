@@ -1,6 +1,7 @@
 "use client";
 import OrderItem from "@/components/pages/admin/order-item/OrderItem";
 import { customerApi } from "@/lib/api/customer";
+import { transportApi } from "@/lib/api/transport";
 import { toastError, toastSuccess } from "@/lib/toast";
 import { CustomerResponse } from "@/types/customer";
 import {
@@ -8,15 +9,16 @@ import {
   Plus,
   User,
   ShoppingBag,
-  Package,
   AlertTriangle,
   X,
   MapPin,
+  Calendar,
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { orderApi } from "@/lib/api/order";
 import { OrderResponse, OutOfStockItem, PlaceOrderError } from "@/types/order";
+import { Transport } from "@/types/transport";
 import { PageLoading } from "@/components/ui/Loading";
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 import { AxiosError } from "axios";
@@ -36,6 +38,12 @@ export default function OrderDetailsPage() {
   const [showOutOfStockModal, setShowOutOfStockModal] = useState(false);
   const [outOfStockItems, setOutOfStockItems] = useState<OutOfStockItem[]>([]);
   const [showMergeWarning, setShowMergeWarning] = useState(false);
+  const [expectedDeliveryDate, setExpectedDeliveryDate] = useState<string>("");
+  const [preferredTransport, setPreferredTransport] = useState<string>("");
+  const [transports, setTransports] = useState<
+    { value: string; label: string }[]
+  >([]);
+  const [loadingTransports, setLoadingTransports] = useState(true);
 
   useBackButton({
     onBack: () => {
@@ -111,7 +119,12 @@ export default function OrderDetailsPage() {
     }
     setPlacingOrder(true);
     try {
-      await orderApi.placeOrder(Number(orderKey));
+      await orderApi.placeOrder(Number(orderKey), {
+        expected_delivery_date: expectedDeliveryDate || null,
+        preferred_transport: preferredTransport
+          ? parseInt(preferredTransport)
+          : null,
+      });
       toastSuccess("Order placed successfully!");
       router.push("/agent/order/invoice");
     } catch (error) {
@@ -177,7 +190,25 @@ export default function OrderDetailsPage() {
         setLoading(false);
       }
     };
+
+    const fetchTransports = async () => {
+      setLoadingTransports(true);
+      try {
+        const response = await transportApi.getActive();
+        const formattedTransports = response.map((transport) => ({
+          value: transport.id.toString(),
+          label: transport.name,
+        }));
+        setTransports(formattedTransports);
+      } catch (error) {
+        console.error("Error fetching transports:", error);
+      } finally {
+        setLoadingTransports(false);
+      }
+    };
+
     fetchData();
+    fetchTransports();
   }, [id]);
 
   const handleDeleteItem = (itemId: number) => {
@@ -314,6 +345,55 @@ export default function OrderDetailsPage() {
             </div>
           )}
         </div>
+
+        {/* Delivery & Transport Options */}
+        {orders && orders.items.length > 0 && (
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 space-y-4">
+            <h3 className="text-sm font-bold text-gray-900">
+              Delivery Options
+            </h3>
+
+            <div>
+              <label className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1.5 block">
+                Expected Delivery Date
+              </label>
+              <div className="relative">
+                <Calendar
+                  size={16}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                />
+                <input
+                  type="date"
+                  value={expectedDeliveryDate}
+                  onChange={(e) => setExpectedDeliveryDate(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/10 text-sm"
+                />
+              </div>
+              <p className="text-[10px] text-gray-400 mt-1">
+                Leave empty for "Whenever"
+              </p>
+            </div>
+
+            <div>
+              <label className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1.5 block">
+                Preferred Transport
+              </label>
+              <select
+                value={preferredTransport}
+                onChange={(e) => setPreferredTransport(e.target.value)}
+                disabled={loadingTransports}
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/10 text-sm appearance-none"
+              >
+                <option value="">None</option>
+                {transports.map((t) => (
+                  <option key={t.value} value={t.value}>
+                    {t.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        )}
 
         {/* Order Totals */}
         {orders && orders.items.length > 0 && (

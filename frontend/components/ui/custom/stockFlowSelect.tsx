@@ -27,7 +27,11 @@ export default function StockFlowSelect({
   className,
 }: StockFlowSelectProps) {
   return (
-    <Select value={value} onValueChange={onChange} disabled={disabled}>
+    <Select
+      value={options.find((op) => op.value == value)?.label}
+      onValueChange={onChange}
+      disabled={disabled}
+    >
       <SelectTrigger className={`w-full ${className}`}>
         <SelectValue placeholder={placeholder || "Select"} />
       </SelectTrigger>

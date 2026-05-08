@@ -3,6 +3,7 @@ from django.contrib.auth import get_user_model
 from apps.customers.models import Customer
 from apps.agents.models import Agent
 from apps.items.models import Item, ItemVariant
+from transports.models import Transport
 
 
 class Order(models.Model):
@@ -23,6 +24,11 @@ class Order(models.Model):
         choices=STATUS_CHOICES,
         default='DRAFT'
     )
+
+    expected_delivery_date = models.DateField(null=True, blank=True)
+    preferred_transport = models.ForeignKey(Transport, on_delete=models.SET_NULL, null=True, blank=True, related_name="orders")
+    transport_company = models.ForeignKey(Transport, on_delete=models.SET_NULL, null=True, blank=True, related_name="dispatched_orders")
+    lr_number = models.CharField(max_length=50, blank=True, default="")
 
     reservation_snapshot = models.JSONField(default=list, blank=True)
     editing_started_at = models.DateTimeField(null=True, blank=True)
