@@ -201,12 +201,14 @@ class PlaceOrderView(APIView):
             username = request.user.username
 
             for id in admin_ids:
-                transaction.on_commit(
-                    partial(
-                        send_push_to_user.delay,
-                        id,
-                        "New Order",
-                        f"Agent {username} placed Order",
+                try:
+                    transaction.on_commit(
+                        partial(
+                            send_push_to_user.delay,
+                            id,
+                            "New Order",
+                            f"Agent {username} placed Order",
+                        )
                     )
 
                 except Exception as e:
