@@ -35,10 +35,10 @@ export default function ColorCard({
       {/* Details */}
       <div className="flex-1 min-w-0">
         <p className="font-semibold text-sm">Variant #{index + 1}</p>
-        {Object.keys(variant.perSizeStock).length > 0 ? (
+        {Object.keys(variant.perSizeStock!).length > 0 ? (
           // Kids: show selected sizes and their individual stock
           <p className="text-[11px] text-gray-400 mt-0.5 truncate">
-            {Object.entries(variant.perSizeStock)
+            {Object.entries(variant.perSizeStock!)
               .map(([size, stock]) => `${size}: ${stock} pcs`)
               .join(" | ")}
           </p>

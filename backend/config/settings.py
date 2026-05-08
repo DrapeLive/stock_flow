@@ -63,14 +63,26 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
-    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+]
+
+CORS_ALLOWED_HEADERS = [
+    "accept",
+    "accept-encoding",
+    "authorization",
+    "content-type",
+    "dnt",
+    "origin",
+    "user-agent",
+    "x-csrftoken",
+    "x-requested-with",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -102,8 +114,8 @@ EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
 DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="noreply@example.com")
 
 # VAPID
-PUBLIC_VAPID_KEY = config("PUBLIC_VAPID_KEY")
-PRIVATE_VAPID_KEY = config("PRIVATE_VAPID_KEY")
+PUBLIC_VAPID_KEY = config("PUBLIC_VAPID_KEY", "")
+PRIVATE_VAPID_KEY = config("PRIVATE_VAPID_KEY", "")
 
 
 # Database
@@ -197,18 +209,15 @@ SPECTACULAR_SETTINGS = {
     },
 }
 
-# _default_cors = "http://localhost:3000,https://stockflow-sigma.vercel.app"
-# CORS_ALLOWED_ORIGINS = [
-#     o.strip()
-#     for o in config("CORS_ALLOWED_ORIGINS", default=_default_cors).split(",")
-#     if o.strip()
-# ]
+_default_cors = "http://localhost:3000,https://stockflow-sigma.vercel.app"
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
+    o.strip()
+    for o in config("CORS_ALLOWED_ORIGINS", default=_default_cors).split(",")
+    if o.strip()
 ]
 
-# CORS_ALLOW_ALL_ORIGINS = config("CORS_ALLOW_ALL_ORIGINS", default=False, cast=bool)
+
+CORS_ALLOW_ALL_ORIGINS = config("CORS_ALLOW_ALL_ORIGINS", default=False, cast=bool)
 CORS_ALLOW_CREDENTIALS = True
 
 CORS_ALLOW_HEADERS = [
@@ -230,6 +239,8 @@ STORAGES = {
     },
 }
 
+CSRF_TRUSTED_ORIGINS = [o for o in CORS_ALLOWED_ORIGINS if o.startswith("https://")]
+
 # Production security
 if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
@@ -240,7 +251,6 @@ if not DEBUG:
     SECURE_HSTS_SECONDS = 31536000
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
-    CSRF_TRUSTED_ORIGINS = [o for o in CORS_ALLOWED_ORIGINS if o.startswith("https://")]
 
 LOGGING = {
     "version": 1,

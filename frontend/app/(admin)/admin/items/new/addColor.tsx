@@ -177,12 +177,12 @@ export default function Step2AddColor({
               <FieldLabel>Sizes & Stock</FieldLabel>
               <div className="space-y-2">
                 {availableSizes.map((size) => {
-                  const stockVal = variant.perSizeStock[size] ?? 0;
+                  const stockVal = variant.perSizeStock![size] ?? 0;
 
                   const updateStock = (raw: string) => {
                     const parsed = parseInt(raw, 10);
                     set("perSizeStock", {
-                      ...variant.perSizeStock,
+                      ...variant.perSizeStock!,
                       [size]: isNaN(parsed) ? 0 : parsed,
                     });
                   };

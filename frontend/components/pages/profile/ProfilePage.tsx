@@ -74,7 +74,7 @@ export default function ProfilePage() {
           orderApi.getArchived(),
         ]);
         setArchivedItems(items as UIItem[]);
-        setArchivedOrders((orders as any).results || (orders as Order[]));
+        setArchivedOrders(orders.results);
       } catch (e) {
         console.error("Error fetching archives:", e);
       } finally {

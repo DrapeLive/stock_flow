@@ -35,6 +35,7 @@ def send_push_to_user(self, user_id, title, body):
             logger.info(f"[PushTask] Successfully sent to user {user_id}")
 
         except WebPushException as e:
+            print(e)
             response = e.response
             is_gone = (
                 (response is not None and response.status_code in (404, 410))

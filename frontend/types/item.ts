@@ -100,7 +100,7 @@ export interface ColorVariant {
   id: string;
   sizeRange: FrontendSizeRange;
   stock: number;
-  perSizeStock: Record<FrontendSizeRange, number>;
+  perSizeStock: Partial<Record<FrontendSizeRange, number>>;
   image: File | null;
   imagePreview: string | null;
 }

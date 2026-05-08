@@ -18,7 +18,7 @@ interface VariantCardProps {
   isCompact?: boolean;
   onPrintQR?: (qr: string) => void;
   onOrder?: (variantId: number) => void;
-  itemType?: ItemType;
+  itemType: ItemType;
   isReadonly?: boolean;
 }
 
@@ -71,7 +71,7 @@ function getSizeRangesWithStock(
 
   return result;
 }
-function isVariantOutOfStock(variant: UIVariant, itemType?: ItemType): boolean {
+function isVariantOutOfStock(variant: UIVariant, itemType: ItemType): boolean {
   const sizeRanges = getSizeRangesWithStock(variant, itemType);
   return sizeRanges.every((s) => {
     return s.stock === 0;
