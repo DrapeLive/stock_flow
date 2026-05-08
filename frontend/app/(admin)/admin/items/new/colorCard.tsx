@@ -26,10 +26,7 @@ export default function ColorCard({
       {/* Thumbnail */}
       <div className="flex-shrink-0 w-14 h-14 rounded-xl overflow-hidden bg-gray-100 flex items-center justify-center">
         {variant.imagePreview ? (
-          <ImagePreview
-            src={variant.imagePreview}
-            alt={`Variant ${index}`}
-          />
+          <ImagePreview src={variant.imagePreview} alt={`Variant ${index}`} />
         ) : (
           <ImagePlus size={18} className="text-gray-300" />
         )}
@@ -37,9 +34,25 @@ export default function ColorCard({
 
       {/* Details */}
       <div className="flex-1 min-w-0">
-        <p className="font-semibold text-sm">Variant #{index}</p>
-        <p className="text-[11px] text-gray-400 mt-0.5 truncate">{sizeList}</p>
-        <p className="text-[11px] text-gray-400">{variant.stock} per size</p>
+        <p className="font-semibold text-sm">Variant #{index + 1}</p>
+        {Object.keys(variant.perSizeStock).length > 0 ? (
+          // Kids: show selected sizes and their individual stock
+          <p className="text-[11px] text-gray-400 mt-0.5 truncate">
+            {Object.entries(variant.perSizeStock)
+              .map(([size, stock]) => `${size}: ${stock} pcs`)
+              .join(" | ")}
+          </p>
+        ) : (
+          // Gents: show size range + uniform stock
+          <>
+            <p className="text-[11px] text-gray-400 mt-0.5 truncate">
+              {variant.sizeRange}
+            </p>
+            <p className="text-[11px] text-gray-400">
+              {variant.stock} per size
+            </p>
+          </>
+        )}
       </div>
 
       {/* Actions */}

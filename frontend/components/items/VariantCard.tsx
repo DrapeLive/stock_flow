@@ -7,6 +7,7 @@ import {
   ItemType,
   UIVariant,
   FrontendSizeRange,
+  ORDER_CREATION_SIZES_BY_TYPE,
 } from "@/types/item";
 import SizeRangeRow from "./SizeRangeRow";
 
@@ -22,7 +23,7 @@ interface VariantCardProps {
 
 function getSizeRangesWithStock(
   variant: UIVariant,
-  itemType?: ItemType,
+  itemType: ItemType,
 ): { sizeRange: string; stock: number }[] {
   const sizes = variant.sizes;
 
@@ -33,54 +34,29 @@ function getSizeRangesWithStock(
   for (const s of sizes) {
     sizeMap[s.size] = s.stock;
   }
+  const allowedRanges = ORDER_CREATION_SIZES_BY_TYPE[itemType];
 
-  for (const [range, groupedSizes] of Object.entries(SIZE_RANGE_TO_SIZES) as [
-    FrontendSizeRange,
-    string[],
-  ][]) {
+  for (const range of allowedRanges) {
+    const groupedSizes = SIZE_RANGE_TO_SIZES[range];
+
     const matched = groupedSizes.filter((s) => sizeMap[s] !== undefined);
 
     // ❌ skip if nothing matches
     if (matched.length === 0) continue;
 
-    // =========================
-    // 👕 GENTS LOGIC
-    // =========================
-    if (itemType === "gents") {
-      // ✅ only consider FULL matches
-      if (matched.length !== groupedSizes.length) continue;
+    // require FULL match
+    if (matched.length !== groupedSizes.length) continue;
 
-      const stocks = groupedSizes.map((s) => sizeMap[s]);
-      const minStock = Math.min(...stocks);
+    const stocks = groupedSizes.map((s) => sizeMap[s]);
+    const minStock = Math.min(...stocks);
 
-      result.push({
-        sizeRange: range,
-        stock: minStock,
-      });
-    }
-
-    // =========================
-    // 👶 KIDS LOGIC
-    // =========================
-    else {
-      // require full match
-      if (matched.length !== groupedSizes.length) continue;
-
-      const stocks = groupedSizes.map((s) => sizeMap[s]);
-      const minStock = Math.min(...stocks);
-
-      result.push({
-        sizeRange: range,
-        stock: minStock,
-      });
-    }
+    result.push({
+      sizeRange: range,
+      stock: minStock,
+    });
   }
 
-  // =========================
-  // 🧠 IMPORTANT PART (GENTS ONLY)
-  // =========================
   if (itemType === "gents") {
-    // pick ONLY the largest matching group
     return result.length
       ? [
           result.sort(
@@ -133,7 +109,7 @@ export default function VariantCard({
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-xs font-semibold text-gray-700 truncate">
-              #{index + 1}
+              Variant #{index + 1}
             </p>
             {qrCode && (
               <p className="text-[10px] text-gray-400 truncate">

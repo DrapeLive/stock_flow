@@ -3,11 +3,12 @@
 import { Order, OrderStatus } from "@/types/order";
 import { useRouter } from "next/navigation";
 import StockflowAvatar from "../ui/custom/stockflowAvatar";
-import { isOrderViewed, markOrderAsViewed } from "@/lib/viewedOrders";
+import { markOrderAsViewed } from "@/lib/viewedOrders";
 
 interface OrderCardProps {
   order: Order;
   onClick?: () => void;
+  viewed?: boolean;
 }
 
 const statusConfig: Record<
@@ -41,10 +42,9 @@ const statusConfig: Record<
   },
 };
 
-export default function OrderCard({ order, onClick }: OrderCardProps) {
+export default function OrderCard({ order, onClick, viewed = false }: OrderCardProps) {
   const router = useRouter();
   const status = statusConfig[order.status || "PENDING"];
-  const viewed = isOrderViewed(order.id);
 
   const totalSets = order.total_sets || 0;
   const totalPieces = order.total_pieces || 0;

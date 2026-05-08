@@ -100,3 +100,16 @@ class OrderItem(models.Model):
 
     def __str__(self):
         return f"{self.item_name} x {self.quantity}"
+
+
+class UserViewedOrder(models.Model):
+    user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE)
+    order = models.ForeignKey(Order, on_delete=models.CASCADE)
+    viewed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = [["user", "order"]]
+        ordering = ["-viewed_at"]
+
+    def __str__(self):
+        return f"User {self.user_id} viewed Order #{self.order_id}"

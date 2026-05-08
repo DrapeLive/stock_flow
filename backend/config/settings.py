@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     "apps.dashboard",
     "apps.admins",
     "apps.business",
+    "apps.notification",
 ]
 
 MIDDLEWARE = [
@@ -99,6 +100,10 @@ EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
 EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
 DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="noreply@example.com")
 
+# VAPID
+PUBLIC_VAPID_KEY = config("PUBLIC_VAPID_KEY")
+PRIVATE_VAPID_KEY = config("PRIVATE_VAPID_KEY")
+
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
@@ -113,6 +118,11 @@ DATABASES = {
         "PORT": config("DB_PORT", cast=int),
     }
 }
+
+# CELERY
+CELERY_BROKER_URL = "redis://localhost:6379/0"
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
 
 
 # Password validation
@@ -186,14 +196,25 @@ SPECTACULAR_SETTINGS = {
     },
 }
 
-_default_cors = "http://localhost:3000,https://stockflow-sigma.vercel.app"
+# _default_cors = "http://localhost:3000,https://stockflow-sigma.vercel.app"
+# CORS_ALLOWED_ORIGINS = [
+#     o.strip()
+#     for o in config("CORS_ALLOWED_ORIGINS", default=_default_cors).split(",")
+#     if o.strip()
+# ]
 CORS_ALLOWED_ORIGINS = [
-    o.strip()
-    for o in config("CORS_ALLOWED_ORIGINS", default=_default_cors).split(",")
-    if o.strip()
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
 ]
 
-CORS_ALLOW_ALL_ORIGINS = config("CORS_ALLOW_ALL_ORIGINS", default=False, cast=bool)
+# CORS_ALLOW_ALL_ORIGINS = config("CORS_ALLOW_ALL_ORIGINS", default=False, cast=bool)
+CORS_ALLOW_CREDENTIALS = True
+
+CORS_ALLOW_HEADERS = [
+    "content-type",
+    "x-csrftoken",
+    "authorization",
+]
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
