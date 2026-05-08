@@ -124,7 +124,10 @@ export const orderApi = {
 
   placeOrder(
     id: number,
-    data?: { expected_delivery_date?: string | null; preferred_transport?: number | null }
+    data?: {
+      expected_delivery_date?: string | null;
+      preferred_transport?: number | null;
+    },
   ): Promise<{ message: string; order_id: number }> {
     return api
       .post<{
@@ -136,7 +139,7 @@ export const orderApi = {
 
   dispatchOrder(
     id: number,
-    data?: { transport_company?: number | null; lr_number?: string }
+    data?: { transport_company?: number | null; lr_number?: string },
   ): Promise<{ message: string }> {
     return api
       .post<{ message: string }>(`/api/orders/${id}/dispatch/`, data)
@@ -155,12 +158,18 @@ export const orderApi = {
       .then((r) => r.data);
   },
 
-  saveEdit(id: number): Promise<{ message: string; order_id: number }> {
+  saveEdit(
+    id: number,
+    data?: {
+      expected_delivery_date?: string | null;
+      preferred_transport?: number | null;
+    },
+  ): Promise<{ message: string; order_id: number }> {
     return api
       .post<{
         message: string;
         order_id: number;
-      }>(`/api/orders/${id}/save-edit/`)
+      }>(`/api/orders/${id}/save-edit/`, data)
       .then((r) => r.data);
   },
 
@@ -171,15 +180,11 @@ export const orderApi = {
   },
 
   getViewedIds(): Promise<number[]> {
-    return api
-      .get<number[]>("/api/orders/my-viewed-ids/")
-      .then((r) => r.data);
+    return api.get<number[]>("/api/orders/my-viewed-ids/").then((r) => r.data);
   },
 
   markAsViewed(orderId: number): Promise<void> {
-    return api
-      .post(`/api/orders/${orderId}/mark-viewed/`)
-      .then((r) => r.data);
+    return api.post(`/api/orders/${orderId}/mark-viewed/`).then((r) => r.data);
   },
 
   getArchived(
@@ -193,9 +198,9 @@ export const orderApi = {
       params.append("page_size", filters.page_size.toString());
     const query = params.toString();
     return api
-      .get<PaginatedResponse<OrderAllResponse[number]>>(
-        `/api/orders/archived/${query ? `?${query}` : ""}`,
-      )
+      .get<
+        PaginatedResponse<OrderAllResponse[number]>
+      >(`/api/orders/archived/${query ? `?${query}` : ""}`)
       .then((r) => r.data);
   },
 };

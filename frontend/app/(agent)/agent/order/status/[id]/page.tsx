@@ -4,13 +4,14 @@ import { useParams, useRouter } from "next/navigation";
 import { orderApi } from "@/lib/api/order";
 import { OrderResponse } from "@/types/order";
 import OrderDetailHeader from "@/components/pages/agent/order/OrderDetailHeader";
-import OrderDetailSummary from "@/components/pages/agent/order/OrderDetailSummary";
 import OrderDetailItems from "@/components/pages/agent/order/OrderDetailItems";
 import OrderLogs from "@/components/pages/order/OrderLogs";
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 import { toastSuccess, toastError } from "@/lib/toast";
 import { Trash2, Package, Pencil } from "lucide-react";
 import { useBackButton } from "@/util/useBackButton";
+import OrderSummary from "@/components/pages/order/OrderSummary";
+import { transportApi } from "@/lib/api/transport";
 
 export default function Page() {
   const params = useParams();
@@ -28,9 +29,19 @@ export default function Page() {
     },
   });
 
+  const [transports, setTransports] = useState<
+    { value: string; label: string }[]
+  >([]);
+
   const fetchData = useCallback(async () => {
     try {
       const response = await orderApi.getOne(Number(id));
+      const transportData = await transportApi.getActive();
+      const formattedTransports = transportData.map((transport) => ({
+        value: transport.id.toString(),
+        label: transport.name,
+      }));
+      setTransports(formattedTransports);
       setData(response);
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -84,6 +95,13 @@ export default function Page() {
   const isDeletable = data?.status === "PENDING";
   const showPackingStatus = data?.status === "PACKED";
 
+  const getPreferredTransport = (id: string | number) => {
+    return (
+      transports.find((transport) => transport.value === id.toString())
+        ?.label ?? ""
+    );
+  };
+
   return (
     <div className="min-h-screen bg-white pb-6">
       <OrderDetailHeader
@@ -93,11 +111,21 @@ export default function Page() {
       />
 
       <div className="px-4 pt-4 max-w-4xl mx-auto">
-        <OrderDetailSummary
+        <OrderSummary
           customerName={data?.customer_details.name ?? ""}
           agentName={data?.agent_details.username ?? ""}
           orderDate={data?.created_at?.slice(0, 10) ?? ""}
           status={data?.status ?? ""}
+          preferredTransport={
+            data?.preferred_transport
+              ? getPreferredTransport(data?.preferred_transport)
+              : undefined
+          }
+          expectedDeliveryDate={
+            data?.expected_delivery_date?.slice(0, 10) ?? ""
+          }
+          dispatchTransport={data?.transport_company_name ?? ""}
+          lrNumber={data?.lr_number ?? ""}
         />
 
         {showPackingStatus && (

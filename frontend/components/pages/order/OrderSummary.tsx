@@ -33,16 +33,15 @@ function DeliverySummary({
           {expectedDeliveryDate ? expectedDeliveryDate : "Not specified"}
         </h3>
       </div>
-      {preferredTransport && (
-        <div>
-          <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-1">
-            Preferred Transport
-          </p>
-          <h3 className="text-sm font-semibold text-gray-800">
-            {preferredTransport}
-          </h3>
-        </div>
-      )}
+
+      <div>
+        <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-1">
+          Preferred Transport
+        </p>
+        <h3 className="text-sm font-semibold text-gray-800">
+          {preferredTransport ? preferredTransport : "Not specified"}
+        </h3>
+      </div>
       {dispatchTransport && (
         <div>
           <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-1">

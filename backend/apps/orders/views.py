@@ -80,6 +80,9 @@ def _revert_edit(order):
 class PlaceOrderView(APIView):
     permission_classes = [IsAuthenticated]
 
+class PlaceOrderView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def post(self, request, order_id):
         order = get_object_or_404(Order, id=order_id)
 
@@ -96,6 +99,7 @@ class PlaceOrderView(APIView):
             )
 
         out_of_stock_items = []
+<<<<<<< HEAD
 
         admin_ids = set()
         super_admin_ids = User.objects.filter(is_superuser=True).values_list(
@@ -103,6 +107,12 @@ class PlaceOrderView(APIView):
         )
 
         admin_ids.update(super_admin_ids)
+=======
+        admins = User.objects.filter(role="ADMIN")
+
+        expected_delivery_date = request.data.get("expected_delivery_date")
+        preferred_transport = request.data.get("preferred_transport")
+>>>>>>> 1ebcb8c (refactor: Fix order summary to include delivery things)
 
         with transaction.atomic():
             for order_item in order.items.select_related("item", "variant"):
@@ -123,8 +133,10 @@ class PlaceOrderView(APIView):
                 for size in required_sizes:
                     try:
                         size_obj = ItemVariantSize.objects.select_for_update().get(
-                            item_variant=order_item.variant, size=size
+                            item_variant=order_item.variant,
+                            size=size,
                         )
+
                     except ItemVariantSize.DoesNotExist:
                         out_of_stock_items.append(
                             {
@@ -168,11 +180,28 @@ class PlaceOrderView(APIView):
 
                 for size in required_sizes:
                     ItemVariantSize.objects.filter(
-                        item_variant=order_item.variant, size=size
-                    ).update(stock=F("stock") - order_item.quantity)
+                        item_variant=order_item.variant,
+                        size=size,
+                    ).update(
+                        stock=F("stock") - order_item.quantity
+                    )
 
             order.status = "PENDING"
+            if expected_delivery_date:
+                order.expected_delivery_date = expected_delivery_date
+
+            if preferred_transport:
+                from transports.models import Transport
+
+                try:
+                    order.preferred_transport = Transport.objects.get(
+                        id=preferred_transport
+                    )
+                except Transport.DoesNotExist:
+                    pass
+
             order.save()
+<<<<<<< HEAD
             username = request.user.username
 
             for id in admin_ids:
@@ -182,11 +211,28 @@ class PlaceOrderView(APIView):
                         id,
                         "New Order",
                         f"Agent {username} placed Order",
+=======
+            for admin in admins:
+
+                try:
+                    transaction.on_commit(
+                        lambda admin_id=admin.id: send_push_to_user.delay(
+                            admin_id,
+                            "New Order",
+                            f"Agent {request.user.username} placed Order #{order.id}",
+                        )
+>>>>>>> 1ebcb8c (refactor: Fix order summary to include delivery things)
                     )
-                )
 
-        return Response({"message": "Order placed successfully", "order_id": order.id})
+                except Exception as e:
+                    print("Failed to queue notifications:", str(e))
 
+        return Response(
+            {
+                "message": "Order placed successfully",
+                "order_id": order.id,
+            }
+        )
 
 def return_stock_for_item(order_item):
     """Return stock to warehouse for an order item."""
@@ -317,9 +363,30 @@ class SaveEditView(APIView):
                         item_variant=order_item.variant, size=size
                     ).update(stock=F("stock") - order_item.quantity)
 
+            expected_delivery_date = request.data.get("expected_delivery_date")
+            preferred_transport = request.data.get("preferred_transport")
+
             order.reservation_snapshot = []
             order.editing_started_at = None
             order.status = "PENDING"
+
+            if expected_delivery_date:
+                order.expected_delivery_date = expected_delivery_date
+            else:
+                order.expected_delivery_date = None
+
+            if preferred_transport:
+                from transports.models import Transport
+
+                try:
+                    order.preferred_transport = Transport.objects.get(
+                        id=preferred_transport
+                    )
+                except Transport.DoesNotExist:
+                    pass
+            else:
+                order.preferred_transport = None
+
             order.save()
 
         OrderLog.objects.create(

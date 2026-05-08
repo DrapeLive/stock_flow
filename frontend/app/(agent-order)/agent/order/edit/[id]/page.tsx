@@ -1,7 +1,14 @@
 "use client";
 import OrderItem from "@/components/pages/admin/order-item/OrderItem";
 import { toastError, toastSuccess } from "@/lib/toast";
-import { ChevronLeft, Plus, ShoppingBag, AlertTriangle, X } from "lucide-react";
+import {
+  ChevronLeft,
+  Plus,
+  ShoppingBag,
+  AlertTriangle,
+  X,
+  Package,
+} from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { orderApi } from "@/lib/api/order";
@@ -11,6 +18,7 @@ import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 import { AxiosError } from "axios";
 import { OrderTotals } from "@/components/order";
 import { useEditGuard } from "@/lib/useEditGuard";
+import { transportApi } from "@/lib/api/transport";
 
 export default function EditOrderPage() {
   const params = useParams();
@@ -25,6 +33,15 @@ export default function EditOrderPage() {
   const [showOutOfStockModal, setShowOutOfStockModal] = useState(false);
   const [outOfStockItems, setOutOfStockItems] = useState<OutOfStockItem[]>([]);
   const [showMergeWarning, setShowMergeWarning] = useState(false);
+
+  const [expectedDeliveryDate, setExpectedDeliveryDate] = useState("");
+  const [preferredTransport, setPreferredTransport] = useState("");
+
+  const [transports, setTransports] = useState<
+    { value: string; label: string }[]
+  >([]);
+
+  const [loadingTransports, setLoadingTransports] = useState(true);
 
   interface MergeGroup {
     item_name: string;
@@ -98,7 +115,12 @@ export default function EditOrderPage() {
 
     setPlacingOrder(true);
     try {
-      await orderApi.saveEdit(Number(id));
+      await orderApi.saveEdit(Number(id), {
+        expected_delivery_date: expectedDeliveryDate || null,
+        preferred_transport: preferredTransport
+          ? parseInt(preferredTransport)
+          : null,
+      });
       toastSuccess("Order saved successfully!");
       router.push(`/agent/order/status/${id}`);
     } catch (error) {
@@ -129,7 +151,12 @@ export default function EditOrderPage() {
       const res = await orderApi.getOne(Number(id));
       setOrders(res);
 
-      await orderApi.saveEdit(Number(id));
+      await orderApi.saveEdit(Number(id), {
+        expected_delivery_date: expectedDeliveryDate || null,
+        preferred_transport: preferredTransport
+          ? parseInt(preferredTransport)
+          : null,
+      });
       toastSuccess("Order saved successfully!");
       router.push(`/agent/order/status/${id}`);
     } catch (error) {
@@ -151,7 +178,14 @@ export default function EditOrderPage() {
     const fetchData = async () => {
       try {
         const res = await orderApi.getOne(Number(id));
+
         setOrders(res);
+
+        setExpectedDeliveryDate(res.expected_delivery_date || "");
+
+        setPreferredTransport(
+          res.preferred_transport ? String(res.preferred_transport) : "",
+        );
       } catch (e) {
         console.error("Error fetching order details:", e);
         setLoadError(true);
@@ -160,7 +194,27 @@ export default function EditOrderPage() {
       }
     };
 
+    const fetchTransports = async () => {
+      setLoadingTransports(true);
+
+      try {
+        const response = await transportApi.getActive();
+
+        const formatted = response.map((transport) => ({
+          value: transport.id.toString(),
+          label: transport.name,
+        }));
+
+        setTransports(formatted);
+      } catch (error) {
+        console.error("Error fetching transports:", error);
+      } finally {
+        setLoadingTransports(false);
+      }
+    };
+
     fetchData();
+    fetchTransports();
   }, [id]);
 
   useEffect(() => {
@@ -198,18 +252,53 @@ export default function EditOrderPage() {
 
       <div className="max-w-md mx-auto px-0 pt-8">
         {/* Customer Card */}
-        {orders && (
-          <div className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm flex items-center gap-4 mb-8">
-            <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center border border-primary/5">
-              <ShoppingBag size={24} />
-            </div>
-            <div>
-              <p className="text-[10px] text-gray-400 uppercase font-black tracking-wider leading-none mb-1">
-                Customer
-              </p>
-              <h3 className="text-lg font-bold text-gray-900 leading-tight">
-                {orders.customer_details.name}
+        {orders && orders.items.length > 0 && (
+          <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-5 mb-8">
+            <div className="flex items-center gap-2 mb-4">
+              <Package size={16} className="text-primary" />
+              <h3 className="text-sm font-black text-gray-900">
+                Delivery Options
               </h3>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5 block">
+                  Expected Delivery Date
+                </label>
+
+                <input
+                  type="date"
+                  value={expectedDeliveryDate}
+                  onChange={(e) => setExpectedDeliveryDate(e.target.value)}
+                  className="w-full px-3 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/10 text-sm"
+                />
+
+                <p className="text-[9px] text-gray-400 mt-1">
+                  Leave empty for “Whenever”
+                </p>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5 block">
+                  Preferred Transport
+                </label>
+
+                <select
+                  value={preferredTransport}
+                  onChange={(e) => setPreferredTransport(e.target.value)}
+                  disabled={loadingTransports}
+                  className="w-full px-3 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/10 text-sm appearance-none"
+                >
+                  <option value="">None</option>
+
+                  {transports.map((t) => (
+                    <option key={t.value} value={t.value}>
+                      {t.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
         )}

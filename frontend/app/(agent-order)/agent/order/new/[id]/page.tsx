@@ -13,12 +13,12 @@ import {
   X,
   MapPin,
   Calendar,
+  Package,
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { orderApi } from "@/lib/api/order";
 import { OrderResponse, OutOfStockItem, PlaceOrderError } from "@/types/order";
-import { Transport } from "@/types/transport";
 import { PageLoading } from "@/components/ui/Loading";
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 import { AxiosError } from "axios";
@@ -231,7 +231,7 @@ export default function OrderDetailsPage() {
   if (loading) return <PageLoading />;
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-36">
+    <div className="min-h-screen pb-36">
       {/* Header */}
       <div className="bg-white border-b border-gray-100 px-4 py-4 sticky top-0 z-20">
         <div className="max-w-lg mx-auto flex items-center gap-3">
@@ -264,28 +264,74 @@ export default function OrderDetailsPage() {
       <div className="max-w-lg mx-auto px-4 pt-6 space-y-6">
         {/* Customer Card */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="flex items-center gap-4 p-4">
-            <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-              <User size={20} className="text-primary" />
+          <div className="grid grid-cols-2 items-center gap-4 p-4">
+            <div className="flex items-center gap-4">
+              <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                <User size={20} className="text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 leading-none mb-1">
+                  Customer
+                </p>
+                <h3 className="text-base font-black text-gray-900 truncate">
+                  {data?.name}
+                </h3>
+              </div>
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 leading-none mb-1">
-                Customer
-              </p>
-              <h3 className="text-base font-black text-gray-900 truncate">
-                {data?.name}
-              </h3>
-            </div>
+            {data?.address && (
+              <div className="flex items-start gap-2 px-4 py-2.5 bg-gray-50 border-t border-gray-100">
+                <MapPin
+                  size={12}
+                  className="text-gray-400 mt-0.5 flex-shrink-0"
+                />
+                <p className="text-xs text-gray-500 leading-relaxed">
+                  {data.address}
+                </p>
+              </div>
+            )}
           </div>
-          {data?.address && (
-            <div className="flex items-start gap-2 px-4 py-2.5 bg-gray-50 border-t border-gray-100">
-              <MapPin
-                size={12}
-                className="text-gray-400 mt-0.5 flex-shrink-0"
-              />
-              <p className="text-xs text-gray-500 leading-relaxed">
-                {data.address}
-              </p>
+          {orders && orders.items.length > 0 && (
+            <div className="bg-white border-t border-gray-100 p-4 space-y-4">
+              <h3 className="text-sm font-bold text-gray-900">
+                Delivery Options
+              </h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[8px] md:text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5 block">
+                    Expected Delivery Date
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="date"
+                      value={expectedDeliveryDate}
+                      onChange={(e) => setExpectedDeliveryDate(e.target.value)}
+                      className="w-full px-2 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/10 text-sm"
+                    />
+                  </div>
+                  <p className="text-[8px] text-gray-400 mt-1">
+                    Leave empty for &quot;Whenever&quot;
+                  </p>
+                </div>
+
+                <div>
+                  <label className="text-[8px] md:text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5 block">
+                    Preferred Transport
+                  </label>
+                  <select
+                    value={preferredTransport}
+                    onChange={(e) => setPreferredTransport(e.target.value)}
+                    disabled={loadingTransports}
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/10 text-sm appearance-none"
+                  >
+                    <option value="">None</option>
+                    {transports.map((t) => (
+                      <option key={t.value} value={t.value}>
+                        {t.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -345,55 +391,6 @@ export default function OrderDetailsPage() {
             </div>
           )}
         </div>
-
-        {/* Delivery & Transport Options */}
-        {orders && orders.items.length > 0 && (
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 space-y-4">
-            <h3 className="text-sm font-bold text-gray-900">
-              Delivery Options
-            </h3>
-
-            <div>
-              <label className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1.5 block">
-                Expected Delivery Date
-              </label>
-              <div className="relative">
-                <Calendar
-                  size={16}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                />
-                <input
-                  type="date"
-                  value={expectedDeliveryDate}
-                  onChange={(e) => setExpectedDeliveryDate(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/10 text-sm"
-                />
-              </div>
-              <p className="text-[10px] text-gray-400 mt-1">
-                Leave empty for "Whenever"
-              </p>
-            </div>
-
-            <div>
-              <label className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1.5 block">
-                Preferred Transport
-              </label>
-              <select
-                value={preferredTransport}
-                onChange={(e) => setPreferredTransport(e.target.value)}
-                disabled={loadingTransports}
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/10 text-sm appearance-none"
-              >
-                <option value="">None</option>
-                {transports.map((t) => (
-                  <option key={t.value} value={t.value}>
-                    {t.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-        )}
 
         {/* Order Totals */}
         {orders && orders.items.length > 0 && (
