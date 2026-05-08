@@ -1,13 +1,14 @@
 "use client";
 
 import { useAuth } from "@/context/AuthContext";
-import { Info, ArrowLeft } from "lucide-react";
+import { Info, ArrowLeft, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { CustomerAllResponse } from "@/types/customer";
 import { customerApi } from "@/lib/api/customer";
 import { PageLoading } from "@/components/ui/Loading";
 import StockflowAvatar from "@/components/ui/custom/stockflowAvatar";
+import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 
 export default function AgentCustomersPage() {
   const { isAuthenticated } = useAuth();
@@ -39,7 +40,7 @@ export default function AgentCustomersPage() {
   return (
     <div className="min-h-screen bg-gray-50/50 pb-20">
       {/* Header */}
-      <div className="bg-white border-b border-gray-100 px-6 py-6 sticky top-0 z-10">
+      <div className="flex justify-between items-center bg-white border-b border-gray-100 px-6 py-6 sticky top-0 z-10">
         <div className="max-w-md mx-auto flex items-center gap-4">
           <button
             onClick={() => router.back()}
@@ -60,6 +61,15 @@ export default function AgentCustomersPage() {
               </div>
             </div>
           </div>
+        </div>
+        <div>
+          <StockFlowButton
+            text="Add Customer"
+            variant="filled"
+            icon={<Plus className="size-4" />}
+            onClick={() => router.push("/agent/customers/new")}
+            className="shadow-lg shadow-primary/20 ring-1 ring-primary/10"
+          />
         </div>
       </div>
 
