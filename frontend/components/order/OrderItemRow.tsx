@@ -3,6 +3,7 @@
 import { Trash2, CheckCircle2, Circle, Pencil } from "lucide-react";
 import { ImagePreview } from "@/components/pages/ImagePreview";
 import { OrderItem } from "@/types/order";
+import { Spinner } from "../ui/spinner";
 
 interface OrderItemRowProps {
   item: OrderItem;
@@ -14,6 +15,7 @@ interface OrderItemRowProps {
   showPackedToggle?: boolean;
   isPacked?: boolean;
   isOutOfStock?: boolean;
+  isLoading?: boolean;
 }
 
 export default function OrderItemRow({
@@ -26,6 +28,7 @@ export default function OrderItemRow({
   showPackedToggle = false,
   isPacked = false,
   isOutOfStock = false,
+  isLoading = false,
 }: OrderItemRowProps) {
   const pieceCount = item.piece_count || 1;
   const quantity = item.quantity;
@@ -58,10 +61,12 @@ export default function OrderItemRow({
 
       {showPackedToggle && onTogglePacked && (
         <button
-          onClick={() => onTogglePacked(item.id, !isPacked)}
+          onClick={() => !isLoading && onTogglePacked(item.id, !isPacked)}
           className="flex items-center justify-center p-2 mr-1 flex-shrink-0"
         >
-          {isPacked ? (
+          {isLoading ? (
+            <Spinner className="w-6 h-6" />
+          ) : isPacked ? (
             <CheckCircle2 className="text-green-600 w-6 h-6" />
           ) : (
             <Circle className="text-gray-300 w-6 h-6 hover:text-primary/50 transition-colors" />

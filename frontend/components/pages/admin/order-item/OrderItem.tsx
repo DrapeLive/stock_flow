@@ -84,6 +84,7 @@ const OrderItem: React.FC<Props> = ({
   outOfStockItemIds = [],
 }) => {
   const [loading, setLoading] = useState(false);
+  const [loadingItemId, setLoadingItemId] = useState<number | null>(null);
   const [orderItems, setOrderItems] = useState(items);
   const [showUnpackDialog, setShowUnpackDialog] = useState(false);
   const [pendingUnpack, setPendingUnpack] = useState<{
@@ -111,7 +112,7 @@ const OrderItem: React.FC<Props> = ({
     const { itemId, newPacked } = pendingUnpack;
 
     try {
-      setLoading(true);
+      setLoadingItemId(pendingUnpack.itemId);
       await orderApi.updateItem(itemId, { packed_quantity: newPacked });
 
       if (status === "PACKED" && orderId) {
@@ -129,7 +130,7 @@ const OrderItem: React.FC<Props> = ({
       console.error("Error updating packed status:", err);
       toastError("Failed to update packed status");
     } finally {
-      setLoading(false);
+      setLoadingItemId(null);
       setShowUnpackDialog(false);
       setPendingUnpack(null);
     }
@@ -152,15 +153,16 @@ const OrderItem: React.FC<Props> = ({
       const updatePromise = orderApi.updateItem(itemId, {
         packed_quantity: newPacked,
       });
+      const statusChanged = status === "PACKED" && orderId;
       const statusPromise =
         status === "PACKED" && orderId
           ? orderApi.update(orderId, { status: "PENDING" })
           : Promise.resolve();
 
-      setLoading(true);
+      setLoadingItemId(itemId);
       await Promise.all([updatePromise, statusPromise]);
 
-      if (status === "PACKED" && orderId) {
+      if (statusChanged) {
         toastSuccess("Order status changed to PENDING");
       }
 
@@ -169,12 +171,12 @@ const OrderItem: React.FC<Props> = ({
           item.id === itemId ? { ...item, packed_quantity: newPacked } : item,
         ),
       );
-      if (onPackedChange) onPackedChange();
+      if (statusChanged && onPackedChange) onPackedChange();
     } catch (err) {
       console.error("Error updating packed status:", err);
       toastError("Failed to update packed status");
     } finally {
-      setLoading(false);
+      setLoadingItemId(null);
     }
   };
 
@@ -331,6 +333,7 @@ const OrderItem: React.FC<Props> = ({
                 showDelete={isDeletable}
                 showEdit={isEditable}
                 showPackedToggle={isPacking}
+                isLoading={loadingItemId === item.id}
                 isPacked={isFullyPacked}
                 isOutOfStock={outOfStockItemIds.includes(item.id)}
                 onDelete={(deleteItemID) => onDelete(deleteItemID, orderId)}

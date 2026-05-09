@@ -97,7 +97,6 @@ export default function NewItemPage() {
       router.push("/admin/items");
     } catch (err) {
       toastError("Failed to create item", err);
-    } finally {
       setLoading(false);
     }
   };
