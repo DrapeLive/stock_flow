@@ -11,12 +11,13 @@ class SaveSubscriptionView(APIView):
     def post(self, request):
         data = request.data
 
-        PushSubscription.objects.filter(user=request.user).delete()
-        PushSubscription.objects.create(
-            user=request.user,
+        subscription, created = PushSubscription.objects.update_or_create(
             endpoint=data["endpoint"],
-            p256dh=data["keys"]["p256dh"],
-            auth=data["keys"]["auth"],
+            defaults={
+                "user": request.user,
+                "p256dh": data["keys"]["p256dh"],
+                "auth": data["keys"]["auth"],
+            },
         )
 
-        return Response({"message": "saved"})
+        return Response({"message": "created" if created else "updated"})

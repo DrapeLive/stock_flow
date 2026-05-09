@@ -10,7 +10,7 @@ class PushSubscription(models.Model):
         related_name="push_subscription",
     )
 
-    endpoint = models.TextField()
+    endpoint = models.TextField(unique=True)
 
     p256dh = models.TextField()
 
