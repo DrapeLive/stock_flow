@@ -74,7 +74,6 @@ const AdminNavBar: React.FC = () => {
             <button
               key={item.path}
               onClick={() => handleNavigation(item.path)}
-              disabled={!!loadingPath}
               className={`
                 flex flex-col items-center justify-center flex-1 h-14 relative
                 transition-all duration-200
