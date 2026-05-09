@@ -28,7 +28,7 @@ type ToastType = "info" | "success" | "error";
 
 interface CustomerRow extends BulkCustomerRequest {
   _id: string;
-  _backendError?: string; // error message from server
+  _backendError?: string;
 }
 
 interface ColumnDef {
@@ -83,9 +83,16 @@ const COLUMNS: ColumnDef[] = [
     required: false,
     placeholder: "22AAAAA0000A1Z5",
   },
+  {
+    key: "transport",
+    label: "Transport",
+    required: false,
+    placeholder: "Transport name",
+  },
 ];
 
 const uid = (): string => Math.random().toString(36).slice(2, 9);
+
 const emptyRow = (): CustomerRow => ({
   _id: uid(),
   name: "",
@@ -93,12 +100,14 @@ const emptyRow = (): CustomerRow => ({
   contact: "",
   agent: "",
   gst: "",
+  transport: "",
 });
 
 function normalizeRow(raw: Record<string, unknown>): BulkCustomerRequest {
   const lower: Record<string, string> = {};
   Object.keys(raw).forEach(
-    (k) => (lower[k.toLowerCase().trim()] = String(raw[k] ?? "")),
+    (k) =>
+      (lower[k.toLowerCase().trim().replace(/\./g, "")] = String(raw[k] ?? "")),
   );
   return {
     name: lower["name"] ?? lower["customer name"] ?? "",
@@ -106,6 +115,7 @@ function normalizeRow(raw: Record<string, unknown>): BulkCustomerRequest {
     contact: lower["contact"] ?? lower["phone"] ?? lower["mobile"] ?? "",
     agent: lower["agent"] ?? lower["agent name"] ?? "",
     gst: lower["gst"] ?? lower["gst no"] ?? lower["gstin"] ?? "",
+    transport: lower["transport"] ?? lower["transport name"] ?? "",
   };
 }
 
@@ -118,6 +128,7 @@ function downloadTemplate() {
       Contact: "+91 98765 43210",
       Agent: "agent_username",
       "GST No.": "22AAAAA0000A1Z5",
+      Transport: "FastCargo",
     },
     {
       "Customer Name": "Jane Smith",
@@ -125,13 +136,14 @@ function downloadTemplate() {
       Contact: "+91 91234 56789",
       Agent: "agent_username",
       "GST No.": "",
+      Transport: "",
     },
   ];
   const ws = XLSX.utils.json_to_sheet(sample);
-  // Column widths
   ws["!cols"] = [
     { wch: 20 },
     { wch: 30 },
+    { wch: 18 },
     { wch: 18 },
     { wch: 18 },
     { wch: 18 },
@@ -169,7 +181,8 @@ const ResultModal: React.FC<{
   backendErrors: BackendError[];
   onRemoveFailed: () => void;
   onClose: () => void;
-}> = ({ created, backendErrors, onRemoveFailed, onClose }) => (
+  onDone: () => void;
+}> = ({ created, backendErrors, onRemoveFailed, onClose, onDone }) => (
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm px-4">
     <div className="bg-white rounded-3xl shadow-2xl border border-gray-100 w-full max-w-lg overflow-hidden">
       {/* Header */}
@@ -253,7 +266,7 @@ const ResultModal: React.FC<{
           </button>
         )}
         <button
-          onClick={onClose}
+          onClick={onDone}
           className="text-sm font-black text-white bg-primary rounded-2xl px-5 py-2.5 hover:opacity-90 transition-all shadow-md"
         >
           Done
@@ -296,6 +309,15 @@ export default function BulkImportPage(): React.ReactElement {
       if (Object.keys(rowErr).length) errs[r._id] = rowErr;
     });
     return errs;
+  }, []);
+
+  const clearAll = useCallback(() => {
+    setRows([]);
+    setFileName("");
+    setStatus("idle");
+    setErrors({});
+    setSelected(new Set());
+    setBackendErrors([]);
   }, []);
 
   const parseFile = useCallback(
@@ -381,16 +403,7 @@ export default function BulkImportPage(): React.ReactElement {
         ? new Set()
         : new Set(rows.map((r) => r._id)),
     );
-  const clearAll = () => {
-    setRows([]);
-    setFileName("");
-    setStatus("idle");
-    setErrors({});
-    setSelected(new Set());
-    setBackendErrors([]);
-  };
 
-  // Remove rows that the backend rejected (matched by name)
   const removeFailedRows = useCallback(() => {
     const failedNames = new Set(backendErrors.map((e) => e.name));
     setRows((prev) => prev.filter((r) => !failedNames.has(r.name)));
@@ -408,6 +421,11 @@ export default function BulkImportPage(): React.ReactElement {
       return;
     }
     setStatus("saving");
+
+    setBackendErrors([]);
+    setImportResult(null);
+    setRows((prev) => prev.map((r) => ({ ...r, _backendError: undefined })));
+
     const payload: BulkCustomerRequest[] = rows.map(
       ({ _id, _backendError, ...rest }) => rest,
     );
@@ -415,7 +433,6 @@ export default function BulkImportPage(): React.ReactElement {
       const result = await customerApi.bulkImport({ customers: payload });
       const bErrs: BackendError[] = result.errors ?? [];
 
-      // Annotate rows with backend errors
       if (bErrs.length) {
         const errByName = new Map(bErrs.map((e) => [e.name, e.error]));
         setRows((prev) =>
@@ -428,7 +445,7 @@ export default function BulkImportPage(): React.ReactElement {
         setBackendErrors(bErrs);
       }
 
-      setImportResult({ created: result.created, failed: result.failed });
+      setImportResult({ created: result.created, failed: bErrs.length });
       setShowModal(true);
       setStatus(result.failed > 0 ? "error" : "success");
     } catch (err: unknown) {
@@ -453,6 +470,10 @@ export default function BulkImportPage(): React.ReactElement {
           backendErrors={backendErrors}
           onRemoveFailed={removeFailedRows}
           onClose={() => setShowModal(false)}
+          onDone={() => {
+            setShowModal(false);
+            if (backendErrors.length === 0) clearAll();
+          }}
         />
       )}
 
@@ -496,7 +517,6 @@ export default function BulkImportPage(): React.ReactElement {
           <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">
             Upload · Review · Save
           </p>
-          {/* Template download */}
           <button
             onClick={downloadTemplate}
             className="mt-4 inline-flex items-center gap-2 text-xs font-bold text-primary bg-primary/8 border border-primary/15 rounded-2xl px-4 py-2 hover:bg-primary/15 transition-all"
@@ -569,7 +589,7 @@ export default function BulkImportPage(): React.ReactElement {
                 or click to browse — .xlsx, .xls, .csv
               </p>
               <p className="text-xs text-gray-300 font-semibold uppercase tracking-wider mt-4">
-                Name · Address · Contact · Agent · GST No.
+                Name · Address · Contact · Agent · GST No. · Transport
               </p>
             </>
           )}
@@ -716,14 +736,12 @@ export default function BulkImportPage(): React.ReactElement {
                               />
                             </td>
                           ))}
-                          {/* Status column */}
                           <td className="px-4 py-2 text-center">
                             {hasBackendError ? (
                               <div className="group relative inline-flex">
                                 <span className="flex items-center gap-1 text-xs font-bold text-orange-500 bg-orange-50 border border-orange-100 rounded-xl px-2 py-1 cursor-default">
                                   <AlertCircle size={11} /> Duplicate
                                 </span>
-                                {/* Tooltip */}
                                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:flex bg-gray-900 text-white text-xs rounded-xl px-3 py-2 whitespace-nowrap shadow-lg z-10 max-w-[200px] text-center">
                                   {row._backendError}
                                 </div>
@@ -819,6 +837,7 @@ export default function BulkImportPage(): React.ReactElement {
               { sheet: "contact / phone / mobile", field: "Contact *" },
               { sheet: "agent / agent name", field: "Agent *" },
               { sheet: "gst / gst no / gstin", field: "GST No." },
+              { sheet: "transport / transport name", field: "Transport" },
             ].map((m) => (
               <div key={m.field} className="text-xs flex items-center gap-2">
                 <code className="text-primary bg-primary/8 border border-primary/10 rounded-lg px-2 py-1 font-mono text-[11px]">
