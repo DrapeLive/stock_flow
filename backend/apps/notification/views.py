@@ -23,14 +23,13 @@ class SaveSubscriptionView(APIView):
             )
 
         subscription, created = PushSubscription.objects.update_or_create(
-            user=request.user,
+            endpoint=data["endpoint"],
             defaults={
-                "endpoint": endpoint,
-                "p256dh": p256dh,
-                "auth": auth,
+                "user": request.user,
+                "p256dh": data["keys"]["p256dh"],
+                "auth": data["keys"]["auth"],
             },
         )
-
         return Response(
             {"message": "created" if created else "updated"},
             status=status.HTTP_200_OK,
