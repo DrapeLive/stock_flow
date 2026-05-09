@@ -36,6 +36,7 @@ export interface BulkCustomerRequest {
   contact: string;
   agent: string;
   gst: string;
+  transport: string;
 }
 
 export interface BulkCustomerResponse {
@@ -45,6 +46,7 @@ export interface BulkCustomerResponse {
   contact: string;
   agent: string;
   gst: string;
+  transport: string;
 }
 
 export interface BulkCustomerAllResponse {
