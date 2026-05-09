@@ -7,6 +7,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.viewsets import ModelViewSet
 
 from apps.agents.models import Agent
+from transports.models import Transport
 
 from .models import Customer
 from .serializers import CustomerSerializer
@@ -39,7 +40,6 @@ def bulk_import_customers(request):
             return JsonResponse({"error": "No data provided."}, status=400)
 
         created_objs, errors = [], []
-
         existing_names = set(Customer.objects.values_list("name", flat=True))
         existing_addresses = set(Customer.objects.values_list("address", flat=True))
 
@@ -49,6 +49,7 @@ def bulk_import_customers(request):
             contact = str(row.get("contact", "")).strip()
             agent_username = str(row.get("agent", "")).strip()
             gst = str(row.get("gst", "")).strip()
+            transport_name = str(row.get("transport", "")).strip()
 
             missing = [
                 f
@@ -66,7 +67,6 @@ def bulk_import_customers(request):
                 )
                 continue
 
-            # Duplicate checks
             if name in existing_names:
                 errors.append(
                     {
@@ -76,12 +76,13 @@ def bulk_import_customers(request):
                     }
                 )
                 continue
+
             if address in existing_addresses:
                 errors.append(
                     {
                         "row": i,
                         "name": name,
-                        "error": f"Address already registered for another customer.",
+                        "error": "Address already registered for another customer.",
                     }
                 )
                 continue
@@ -100,10 +101,24 @@ def bulk_import_customers(request):
                 )
                 continue
 
-            # Track within-batch duplicates too
+            transport = None
+            if transport_name:
+                try:
+                    transport = Transport.objects.get(
+                        name__iexact=transport_name, is_active=True
+                    )
+                except Transport.DoesNotExist:
+                    errors.append(
+                        {
+                            "row": i,
+                            "name": name,
+                            "error": f"Transport '{transport_name}' not found or inactive.",
+                        }
+                    )
+                    continue
+
             existing_names.add(name)
             existing_addresses.add(address)
-
             created_objs.append(
                 Customer(
                     name=name,
@@ -111,6 +126,7 @@ def bulk_import_customers(request):
                     contact=contact,
                     agent=agent,
                     gst=gst,
+                    preferred_transport=transport,
                 )
             )
 
