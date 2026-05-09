@@ -36,3 +36,5 @@ venv.bak/
 # OS Specific
 .DS_Store
 Thumbs.db
+
+.env.prod

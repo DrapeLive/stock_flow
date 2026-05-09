@@ -9,7 +9,7 @@ import {
   useCallback,
 } from "react";
 import Cookies from "js-cookie";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { api } from "@/lib/api/axios";
 
 type AuthContextType = {
@@ -69,6 +69,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     initialAuth.business,
   );
   const [isSuperuser, setIsSuperuser] = useState(initialAuth.isSuperuser);
+  const [isReady, setIsReady] = useState(false);
+
+  const pathname = usePathname();
+
+  useEffect(() => {
+    // eslint-disable-next-line
+    setIsReady(true);
+  }, []);
 
   const login = (data: LoginResponse) => {
     const authUser: AuthUser = {
@@ -132,9 +140,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [logout]);
 
   useEffect(() => {
-    if (accessToken === null && role === null) return;
-
-    const pathname = window.location.pathname;
+    if (!isReady) return;
 
     if (!accessToken) {
       if (pathname !== "/") {
@@ -157,7 +163,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         router.replace("/agent");
       }
     }
-  }, [accessToken, role, router]);
+  }, [accessToken, role, router, isReady, pathname]);
 
   return (
     <AuthContext.Provider
