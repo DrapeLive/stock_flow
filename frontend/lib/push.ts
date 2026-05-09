@@ -1,20 +1,19 @@
-export async function registerServiceWorker() {
+export async function registerServiceWorker(): Promise<ServiceWorkerRegistration> {
   if (!("serviceWorker" in navigator)) {
     throw new Error("Service workers not supported");
   }
-  const registration = await navigator.serviceWorker.register("/sw.js");
-  await navigator.serviceWorker.ready;
-  return registration;
+  await navigator.serviceWorker.register("/sw.js");
+  return await navigator.serviceWorker.ready;
 }
 
-export async function askNotificationPermission() {
+export async function askNotificationPermission(): Promise<void> {
   const permission = await Notification.requestPermission();
   if (permission !== "granted") {
-    throw new Error(`Permission not granted: ${permission}`);
+    throw new Error(`Notification permission not granted: ${permission}`);
   }
 }
 
-function urlBase64ToUint8Array(base64String: string) {
+function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
   const rawData = window.atob(base64);
@@ -22,81 +21,58 @@ function urlBase64ToUint8Array(base64String: string) {
 }
 
 function validateVapidKey(key: string): void {
-  try {
-    const bytes = urlBase64ToUint8Array(key);
-    if (bytes.length !== 65) {
-      throw new Error(
-        `Invalid VAPID key length: ${bytes.length} (expected 65)`,
-      );
-    }
-    if (bytes[0] !== 4) {
-      throw new Error(
-        `Invalid VAPID key format: first byte is ${bytes[0]} (expected 4)`,
-      );
-    }
-  } catch (e) {
-    throw new Error(`VAPID key validation failed: ${(e as Error).message}`);
+  const bytes = urlBase64ToUint8Array(key);
+  if (bytes.length !== 65) {
+    throw new Error(`Invalid VAPID key length: ${bytes.length} (expected 65)`);
+  }
+  if (bytes[0] !== 4) {
+    throw new Error(
+      `Invalid VAPID key format: first byte is ${bytes[0]} (expected 4)`,
+    );
   }
 }
 
-export async function subscribeUser() {
+export async function getOrCreateSubscription(): Promise<PushSubscriptionJSON> {
   const publicVapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-
-  if (!publicVapidKey) {
+  if (!publicVapidKey)
     throw new Error("NEXT_PUBLIC_VAPID_PUBLIC_KEY is missing");
-  }
 
-  // Validate key format before even trying to subscribe
   validateVapidKey(publicVapidKey);
 
   const registration = await navigator.serviceWorker.ready;
+  const pushManager = registration.pushManager;
 
-  // Unsubscribe from any stale subscription first
-  const existingSubscription = await registration.pushManager.getSubscription();
-  if (existingSubscription) {
-    await existingSubscription.unsubscribe();
+  const existing = await pushManager.getSubscription();
+  if (existing) {
+    return existing.toJSON();
   }
 
   try {
-    const subscription = await registration.pushManager.subscribe({
+    const subscription = await pushManager.subscribe({
       userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(publicVapidKey),
+      applicationServerKey: urlBase64ToUint8Array(publicVapidKey)
+        .buffer as ArrayBuffer,
     });
-    return subscription;
+    return subscription.toJSON();
   } catch (err) {
     const error = err as DOMException;
 
     if (error.name === "AbortError") {
-      // Wait 2 seconds and retry once — Firefox sometimes needs this
-      // after unsubscribing a stale subscription
       await new Promise((resolve) => setTimeout(resolve, 2000));
-      try {
-        const retrySubscription = await registration.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(publicVapidKey),
-        });
-        return retrySubscription;
-      } catch (retryErr) {
-        throw new Error(
-          `Push subscription failed after retry. ` +
-            `This is usually a Firefox/browser push service issue. ` +
-            `Try: 1) Go to about:config and toggle dom.push.enabled off/on. ` +
-            `2) Clear site data for localhost. ` +
-            `Error: ${(retryErr as Error).message}`,
-        );
-      }
+      const retrySubscription = await pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(publicVapidKey)
+          .buffer as ArrayBuffer,
+      });
+      return retrySubscription.toJSON();
     }
 
     if (error.name === "NotAllowedError") {
-      throw new Error(
-        "Push subscription blocked — notification permission was denied.",
-      );
+      throw new Error("Push blocked — notification permission denied.");
     }
 
     if (error.name === "InvalidStateError") {
-      throw new Error(
-        "Service worker is not active yet. Please refresh the page.",
-      );
+      throw new Error("Service worker not active yet. Refresh the page.");
     }
 
     throw err;
