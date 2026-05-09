@@ -88,17 +88,17 @@ export default function RangePresets({ onRangeChange }: RangePresetsProps) {
         ))}
       </div>
       {activePreset === "custom" && (
-        <div className="relative flex flex-col md:flex-row gap-2 items-center">
+        <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2">
-            <div className="relative flex-1 min-w-[140px]">
+            <div className="flex-1 min-w-0">
               <DatePicker
                 value={customFrom}
                 onChange={setCustomFrom}
                 placeholder="From"
               />
             </div>
-            <span className="text-gray-400 text-xs">to</span>
-            <div className="relative flex-1 min-w-[140px]">
+            <span className="text-gray-400 text-xs shrink-0">to</span>
+            <div className="flex-1 min-w-0">
               <DatePicker
                 value={customTo}
                 onChange={setCustomTo}
@@ -106,7 +106,7 @@ export default function RangePresets({ onRangeChange }: RangePresetsProps) {
               />
             </div>
           </div>
-          <div className="flex flex-1 gap-1">
+          <div className="flex gap-1">
             <StockFlowButton
               disabled={!customFrom && !customTo}
               text="Apply"
