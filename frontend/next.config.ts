@@ -17,7 +17,21 @@ const nextConfig: NextConfig = {
             },
           ]
         : []),
+      {
+        protocol: "https" as const,
+        hostname: "*.ngrok-free.app",
+        pathname: "/media/**",
+      },
     ],
   },
+  async headers() {
+    return [
+      {
+        source: "/media/:path*",
+        headers: [{ key: "ngrok-skip-browser-warning", value: "true" }],
+      },
+    ];
+  },
 };
+
 export default nextConfig;

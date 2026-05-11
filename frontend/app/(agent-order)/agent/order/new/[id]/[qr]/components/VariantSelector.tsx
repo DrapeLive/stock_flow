@@ -3,6 +3,7 @@
 import { Check } from "lucide-react";
 import { ImagePreview } from "@/components/pages/ImagePreview";
 import type { ItemVariant } from "@/types/item";
+import { mediaUrl } from "@/lib/media";
 
 interface VariantItem {
   variant_id: number;
@@ -60,7 +61,7 @@ export default function VariantSelector({
             >
               {v.image ? (
                 <ImagePreview
-                  src={v.image}
+                  src={mediaUrl(v.image)}
                   alt={`Variant ${index + 1}`}
                   enlargeDisabled={true}
                 />

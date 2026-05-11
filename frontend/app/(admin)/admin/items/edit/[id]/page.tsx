@@ -33,6 +33,7 @@ import type {
   EditableVariant,
   ItemType,
 } from "@/types/item";
+import { mediaUrl } from "@/lib/media";
 
 const uid = () => Math.random().toString(36).slice(2, 9);
 
@@ -273,7 +274,9 @@ export default function ItemEditPage() {
         <div className="relative w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center mb-3 overflow-hidden">
           {(variantGroups[0]?.imagePreview ?? variantGroups[0]?.imageUrl) ? (
             <ImagePreview
-              src={variantGroups[0].imagePreview ?? variantGroups[0].imageUrl!}
+              src={mediaUrl(
+                variantGroups[0].imagePreview ?? variantGroups[0].imageUrl!,
+              )}
               alt={common.name}
             />
           ) : (
@@ -381,7 +384,7 @@ export default function ItemEditPage() {
                         {currentImage ? (
                           <>
                             <Image
-                              src={currentImage}
+                              src={mediaUrl(currentImage)}
                               fill
                               className="object-cover"
                               alt=""
@@ -476,7 +479,7 @@ export default function ItemEditPage() {
           {/* Variant Crop Modal */}
           {variantCrop && (
             <CropModal
-              src={variantCrop.src}
+              src={mediaUrl(variantCrop.src)}
               onConfirm={(file) =>
                 handleVariantCropConfirm(variantCrop.backendId, file)
               }

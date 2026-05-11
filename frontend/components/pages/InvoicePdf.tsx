@@ -7,6 +7,7 @@ import {
   Image,
 } from "@react-pdf/renderer";
 import { InvoiceResponse } from "@/types/order";
+import { mediaUrl } from "@/lib/media";
 
 const styles = StyleSheet.create({
   page: {
@@ -294,7 +295,7 @@ export const InvoicePDF = ({ invoice }: { invoice: InvoiceResponse }) => {
         <View style={styles.headerRow}>
           <View style={styles.logoBox}>
             {logoUrl ? (
-              <Image src={logoUrl} style={styles.logoImage} />
+              <Image src={mediaUrl(logoUrl)} style={styles.logoImage} />
             ) : (
               <Text style={styles.logoFallbackText}>
                 {brandName.slice(0, 2).toUpperCase()}

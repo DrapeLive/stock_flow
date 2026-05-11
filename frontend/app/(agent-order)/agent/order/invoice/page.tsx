@@ -9,6 +9,7 @@ import { pdf, PDFDownloadLink } from "@react-pdf/renderer";
 import { InvoicePDF } from "@/components/pages/InvoicePdf";
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 import { useBackButton } from "@/util/useBackButton";
+import { mediaUrl } from "@/lib/media";
 
 const formatDate = (iso: string) =>
   new Date(iso).toLocaleDateString("en-IN", {
@@ -177,7 +178,7 @@ export default function InvoicePage() {
                 <div className="w-12 h-12 rounded overflow-hidden flex items-center justify-center bg-gray-100">
                   {invoice.brand?.logo_url ? (
                     <img
-                      src={invoice.brand.logo_url}
+                      src={mediaUrl(invoice.brand.logo_url)}
                       alt="Brand Logo"
                       className="w-12 h-12 object-cover rounded"
                     />

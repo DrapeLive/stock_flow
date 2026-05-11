@@ -5,6 +5,7 @@ import Cropper from "react-easy-crop";
 import type { Area } from "react-easy-crop";
 import { X, Check, ZoomIn, ZoomOut } from "lucide-react";
 import { getCroppedFile, getFitFile } from "@/lib/crop-utils";
+import { mediaUrl } from "@/lib/media";
 
 interface Props {
   src: string;
@@ -83,7 +84,7 @@ export default function CropModal({ src, onConfirm, onCancel }: Props) {
         {fitMode === "fit" ? (
           <div className="w-full h-full flex items-center justify-center bg-white">
             <img
-              src={src}
+              src={mediaUrl(src)}
               alt="Preview"
               className="max-w-[90%] max-h-[90%] object-contain"
             />
@@ -103,33 +104,33 @@ export default function CropModal({ src, onConfirm, onCancel }: Props) {
       </div>
 
       {fitMode === "crop" && (
-      /* Zoom bar */
-      <div className="flex items-center gap-3 px-6 py-5 flex-shrink-0">
-        <button
-          type="button"
-          onClick={() => setZoom((z) => Math.max(1, +(z - 0.1).toFixed(2)))}
-          className="text-white/60 active:text-white"
-        >
-          <ZoomOut size={18} />
-        </button>
-        <input
-          type="range"
-          min={1}
-          max={3}
-          step={0.05}
-          value={zoom}
-          onChange={(e) => setZoom(Number(e.target.value))}
-          className="flex-1 accent-white h-1"
-        />
-        <button
-          type="button"
-          onClick={() => setZoom((z) => Math.min(3, +(z + 0.1).toFixed(2)))}
-          className="text-white/60 active:text-white"
-        >
-          <ZoomIn size={18} />
-        </button>
-      </div>
-)}
+        /* Zoom bar */
+        <div className="flex items-center gap-3 px-6 py-5 flex-shrink-0">
+          <button
+            type="button"
+            onClick={() => setZoom((z) => Math.max(1, +(z - 0.1).toFixed(2)))}
+            className="text-white/60 active:text-white"
+          >
+            <ZoomOut size={18} />
+          </button>
+          <input
+            type="range"
+            min={1}
+            max={3}
+            step={0.05}
+            value={zoom}
+            onChange={(e) => setZoom(Number(e.target.value))}
+            className="flex-1 accent-white h-1"
+          />
+          <button
+            type="button"
+            onClick={() => setZoom((z) => Math.min(3, +(z + 0.1).toFixed(2)))}
+            className="text-white/60 active:text-white"
+          >
+            <ZoomIn size={18} />
+          </button>
+        </div>
+      )}
     </div>
   );
 }

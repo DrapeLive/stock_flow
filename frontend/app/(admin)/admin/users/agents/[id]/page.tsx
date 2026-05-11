@@ -25,6 +25,7 @@ import {
   Scan,
 } from "lucide-react";
 import QRScanModal from "@/components/items/QRScanModal";
+import { mediaUrl } from "@/lib/media";
 
 function getColorFromId(id: number): string {
   if (!id) return "hsl(0, 0%, 85%)";
@@ -420,7 +421,7 @@ export default function AgentDetailPage() {
                   {item.variants?.[0]?.image ? (
                     <ImagePreview
                       enlargeDisabled={true}
-                      src={item.variants[0].image}
+                      src={mediaUrl(item.variants[0].image)}
                       alt={item.name}
                     />
                   ) : (
@@ -459,7 +460,7 @@ export default function AgentDetailPage() {
                   {item.variants?.[0]?.image ? (
                     <ImagePreview
                       enlargeDisabled={true}
-                      src={item.variants[0].image}
+                      src={mediaUrl(item.variants[0].image)}
                       alt={item.name}
                     />
                   ) : (
