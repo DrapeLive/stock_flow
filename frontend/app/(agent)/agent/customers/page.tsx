@@ -43,7 +43,7 @@ export default function AgentCustomersPage() {
       <div className="flex justify-between items-center bg-white border-b border-gray-100 sticky top-0 z-10">
         <div className="flex max-w-md justify-start items-center gap-4">
           <button
-            onClick={() => router.back()}
+            onClick={() => router.push("/agent/profile")}
             className="p-2 rounded-xl hover:bg-gray-50 text-gray-400 transition-colors"
           >
             <ArrowLeft size={20} />

@@ -275,7 +275,10 @@ export default function ProductDetailPage() {
 
   return (
     <div className="min-h-screen bg-gray-50/50 pb-32">
-      <ProductHeader isEditMode={isEditMode} onBack={() => router.back()} />
+      <ProductHeader
+        isEditMode={isEditMode}
+        onBack={() => router.push(`/agent/order/new/${id}`)}
+      />
 
       <div className="max-w-md mx-auto px-6 pt-6">
         <ProductImage

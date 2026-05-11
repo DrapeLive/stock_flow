@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import StockFlowSelect from "@/components/ui/custom/stockFlowSelect";
-import { agentApi } from "@/lib/api/agents";
 import { customerApi } from "@/lib/api/customer";
 import { transportApi } from "@/lib/api/transport";
 import { toastSuccess, toastError } from "@/lib/toast";
@@ -16,7 +15,6 @@ import { useRouter } from "next/navigation";
 
 export default function NewCustomerPage() {
   const [formData, setFormData] = useState({
-    agent: "",
     customerName: "",
     address: "",
     contactNumber: "",
@@ -24,12 +22,16 @@ export default function NewCustomerPage() {
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [transports, setTransports] = useState<
+    { value: string; label: string }[]
+  >([]);
+  const [loadingTransports, setLoadingTransports] = useState(true);
+
+  const { user } = useAuth();
+  const router = useRouter();
 
   const handleChange = (key: string, value: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      [key]: value,
-    }));
+    setFormData((prev) => ({ ...prev, [key]: value }));
     if (errors[key]) {
       setErrors((prev) => {
         const newErrors = { ...prev };
@@ -39,53 +41,25 @@ export default function NewCustomerPage() {
     }
   };
 
-  const { isAuthenticated } = useAuth();
-  const [agents, setAgents] = useState<{ value: string; label: string }[]>([]);
-  const [transports, setTransports] = useState<{ value: string; label: string }[]>([]);
-  const router = useRouter();
-  const [loadingAgents, setLoadingAgents] = useState(true);
-  const [loadingTransports, setLoadingTransports] = useState(true);
-
   useEffect(() => {
-    const fetchAgents = async () => {
-      setLoadingAgents(true);
-      try {
-        const response = await agentApi.getAll();
-        const formattedAgents = response.map((agent) => ({
-          value: agent.id.toString(),
-          label: agent.user.username,
-        }));
-        setAgents(formattedAgents);
-      } catch (error) {
-        console.error("Error fetching agents:", error);
-      } finally {
-        setLoadingAgents(false);
-      }
-    };
-
     const fetchTransports = async () => {
       setLoadingTransports(true);
       try {
         const response = await transportApi.getActive();
-        const formattedTransports = response.map((transport) => ({
-          value: transport.id.toString(),
-          label: transport.name,
-        }));
-        setTransports(formattedTransports);
+        setTransports(
+          response.map((t) => ({ value: t.id.toString(), label: t.name })),
+        );
       } catch (error) {
         console.error("Error fetching transports:", error);
       } finally {
         setLoadingTransports(false);
       }
     };
-
-    fetchAgents();
     fetchTransports();
-  }, [isAuthenticated, router]);
+  }, []);
 
   const validate = () => {
     const newErrors: Record<string, string> = {};
-    if (!formData.agent) newErrors.agent = "Please select an agent";
     if (!formData.customerName.trim())
       newErrors.customerName = "Customer name is required";
     if (!formData.address.trim()) newErrors.address = "Address is required";
@@ -107,8 +81,10 @@ export default function NewCustomerPage() {
         name: formData.customerName,
         address: formData.address,
         contact: formData.contactNumber,
-        agent: parseInt(formData.agent),
-        preferred_transport: formData.preferredTransport ? parseInt(formData.preferredTransport) : null,
+        agent: user!.id,
+        preferred_transport: formData.preferredTransport
+          ? parseInt(formData.preferredTransport)
+          : null,
       };
       await customerApi.create(payload);
       toastSuccess("Customer created successfully");
@@ -134,26 +110,6 @@ export default function NewCustomerPage() {
 
       <div className="bg-gray-50/50 border border-gray-100 rounded-3xl p-6 mb-8">
         <FieldGroup className="space-y-6">
-          <Field>
-            <div className="flex justify-between items-center mb-1.5">
-              <FieldLabel className="text-xs font-bold uppercase tracking-widest text-gray-400">
-                Assigned Agent
-              </FieldLabel>
-              {errors.agent && (
-                <span className="text-[10px] text-red-500 font-bold">
-                  {errors.agent}
-                </span>
-              )}
-            </div>
-            <StockFlowSelect
-              value={formData.agent}
-              onChange={(val) => handleChange("agent", val)}
-              options={agents}
-              disabled={loadingAgents}
-              className={errors.agent ? "border-red-200 ring-red-50" : ""}
-            />
-          </Field>
-
           <Field>
             <div className="flex justify-between items-center mb-1.5">
               <FieldLabel className="text-xs font-bold uppercase tracking-widest text-gray-400">
@@ -196,7 +152,7 @@ export default function NewCustomerPage() {
           <Field>
             <div className="flex justify-between items-center mb-1.5">
               <FieldLabel className="text-xs font-bold uppercase tracking-widest text-gray-400">
-                Contact detail
+                Contact Detail
               </FieldLabel>
               {errors.contactNumber && (
                 <span className="text-[10px] text-red-500 font-bold">
@@ -235,7 +191,6 @@ export default function NewCustomerPage() {
           onClick={() => router.back()}
           className="flex-1 h-14 rounded-2xl border-gray-200 font-bold text-gray-500 active:scale-95 transition-all text-sm"
         />
-
         <StockFlowButton
           variant="filled"
           text={isSubmitting ? "Creating..." : "Add Customer"}
