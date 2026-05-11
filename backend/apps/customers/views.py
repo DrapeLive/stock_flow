@@ -5,6 +5,8 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.viewsets import ModelViewSet
+from rest_framework.pagination import PageNumberPagination
+from rest_framework.filters import SearchFilter
 
 from apps.agents.models import Agent
 from transports.models import Transport
@@ -12,14 +14,20 @@ from transports.models import Transport
 from .models import Customer
 from .serializers import CustomerSerializer
 
+class CustomerPagination(PageNumberPagination):
+    page_size = 50
+    page_size_query_param = "page_size"
+    max_page_size = 100
 
 class CustomerViewSet(ModelViewSet):
     serializer_class = CustomerSerializer
     permission_classes = [IsAuthenticated]
+    pagination_class = CustomerPagination
+    filter_backends = [SearchFilter]
+    search_fields = ["name", "address", "contact"]
 
     def get_queryset(self):
         user = self.request.user
-
         if user.role == "ADMIN":
             return Customer.objects.all()
         return Customer.objects.filter(agent__user=user)
@@ -29,8 +37,6 @@ class CustomerViewSet(ModelViewSet):
             serializer.save(agent=self.request.user.agent)
         else:
             serializer.save()
-
-
 @csrf_exempt
 @require_POST
 def bulk_import_customers(request):

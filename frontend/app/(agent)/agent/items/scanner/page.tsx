@@ -86,7 +86,7 @@ export default function PriceCheckScannerPage() {
     const fetchCustomers = async () => {
       try {
         const data = await customerApi.getAll();
-        setCustomers(data);
+        setCustomers(data.results);
       } catch (err) {
         console.error("Error fetching customers:", err);
       }

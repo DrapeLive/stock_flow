@@ -6,8 +6,11 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { CustomerAllResponse } from "@/types/customer";
 import { customerApi } from "@/lib/api/customer";
+import { PaginatedResponse } from "@/types/global";
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 import StockflowAvatar from "@/components/ui/custom/stockflowAvatar";
+import Pagination from "@/components/ui/Pagination";
+import { Spinner } from "@/components/ui/spinner";
 
 const CustomerList: React.FC = () => {
   const { isAuthenticated, business } = useAuth();
@@ -15,58 +18,60 @@ const CustomerList: React.FC = () => {
   const [data, setData] = useState<CustomerAllResponse>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
 
   const router = useRouter();
 
   useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      setCurrentPage(1);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  useEffect(() => {
+    // eslint-disable-next-line
     setLoading(true);
+    customerApi
+      .getAll({
+        page: currentPage,
+        page_size: pageSize,
+        search: debouncedSearch,
+      })
+      .then((response: PaginatedResponse<CustomerAllResponse[number]>) => {
+        setData(response.results);
+        setTotalCount(response.count);
+        setTotalPages(Math.ceil(response.count / pageSize));
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, [isAuthenticated, currentPage, pageSize, debouncedSearch]);
 
-    const fetchData = async () => {
-      try {
-        const response = await customerApi.getAll();
-        setData(response);
-      } catch (error) {
-        console.error("Error fetching data:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
-    fetchData();
-  }, [isAuthenticated]);
+  const handlePageSizeChange = (size: number) => {
+    setPageSize(size);
+    setCurrentPage(1);
+  };
 
-  const filteredData = data.filter((item) =>
-    item.name.toLowerCase().includes(search.toLowerCase()),
-  );
-
+  // business filtering is still client-side within the current page
   const businessCustomers = business
-    ? filteredData.filter((c) => c.has_business_orders === true)
-    : filteredData;
+    ? data.filter((c) => c.has_business_orders === true)
+    : data;
   const otherCustomers = business
-    ? filteredData.filter((c) => c.has_business_orders !== true)
+    ? data.filter((c) => c.has_business_orders !== true)
     : [];
 
-  if (loading) {
-    return <h2 className="flex justify-center">Loading</h2>;
-  }
-
-  if (data.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4">
-        <h2 className="text-xl font-bold text-gray-400">No Customers</h2>
-        <StockFlowButton
-          text="Add Customer"
-          variant="filled"
-          icon={<Plus className="size-4" />}
-          onClick={() => router.push("/admin/users/customers/new")}
-          className="shadow-lg shadow-primary/20 ring-1 ring-primary/10"
-        />
-      </div>
-    );
-  }
-
   const renderSection = (
-    customers: typeof filteredData,
+    customers: typeof data,
     header: string,
     count: number,
   ) => {
@@ -86,7 +91,7 @@ const CustomerList: React.FC = () => {
           </div>
         </div>
 
-        <div className="px-0 space-y-3 pb-20">
+        <div className="px-0 space-y-3">
           {customers.map((customer) => (
             <div
               key={customer.id}
@@ -125,6 +130,19 @@ const CustomerList: React.FC = () => {
     );
   };
 
+  const searchBar = (
+    <div className="relative px-2 mb-4">
+      <input
+        type="text"
+        placeholder="Search customers..."
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/30 text-sm"
+      />
+      {loading && <Spinner className="absolute top-1/2 right-2" />}
+    </div>
+  );
+
   if (!business) {
     return (
       <>
@@ -138,7 +156,7 @@ const CustomerList: React.FC = () => {
                 Total Active
               </span>
               <div className="bg-primary/10 text-primary rounded-full py-0.5 px-3 border border-primary/20">
-                <span className="font-bold text-xs">{data.length}</span>
+                <span className="font-bold text-xs">{totalCount}</span>
               </div>
             </div>
           </div>
@@ -152,25 +170,28 @@ const CustomerList: React.FC = () => {
           />
         </div>
 
-        <div className="px-2 mb-4">
-          <input
-            type="text"
-            placeholder="Search customers..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/30 text-sm"
-          />
-        </div>
+        {searchBar}
 
-        {filteredData.length === 0 ? (
+        {totalCount === 0 && !debouncedSearch ? (
+          <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4">
+            <h2 className="text-xl font-bold text-gray-400">No Customers</h2>
+            <StockFlowButton
+              text="Add Customer"
+              variant="filled"
+              icon={<Plus className="size-4" />}
+              onClick={() => router.push("/admin/users/customers/new")}
+              className="shadow-lg shadow-primary/20 ring-1 ring-primary/10"
+            />
+          </div>
+        ) : data.length === 0 ? (
           <div className="flex justify-center mt-10">
             <h2 className="text-gray-400 font-semibold">
               No matching customers
             </h2>
           </div>
         ) : (
-          <div className="px-0 space-y-3 pb-20">
-            {filteredData.map((item) => (
+          <div className="px-0 space-y-3 pb-4">
+            {data.map((item) => (
               <div
                 key={item.id}
                 onClick={() =>
@@ -205,6 +226,15 @@ const CustomerList: React.FC = () => {
             ))}
           </div>
         )}
+
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalCount={totalCount}
+          pageSize={pageSize}
+          onPageChange={handlePageChange}
+          onPageSizeChange={handlePageSizeChange}
+        />
       </>
     );
   }
@@ -227,28 +257,25 @@ const CustomerList: React.FC = () => {
         />
       </div>
 
-      <div className="px-2 mb-4">
-        <input
-          type="text"
-          placeholder="Search customers..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/30 text-sm"
-        />
-      </div>
+      {searchBar}
 
       {renderSection(
         businessCustomers,
-        `Our customers`,
+        "Our customers",
         businessCustomers.length,
       )}
       {renderSection(otherCustomers, "Others", otherCustomers.length)}
 
-      {businessCustomers.length === 0 && otherCustomers.length === 0 && (
-        <div className="flex justify-center mt-10">
-          <h2 className="text-gray-400 font-semibold">No matching customers</h2>
-        </div>
-      )}
+      {businessCustomers.length === 0 && otherCustomers.length === 0}
+
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalCount={totalCount}
+        pageSize={pageSize}
+        onPageChange={handlePageChange}
+        onPageSizeChange={handlePageSizeChange}
+      />
     </>
   );
 };

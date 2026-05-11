@@ -41,7 +41,9 @@ export default function NewCustomerPage() {
 
   const { isAuthenticated } = useAuth();
   const [agents, setAgents] = useState<{ value: string; label: string }[]>([]);
-  const [transports, setTransports] = useState<{ value: string; label: string }[]>([]);
+  const [transports, setTransports] = useState<
+    { value: string; label: string }[]
+  >([]);
   const router = useRouter();
   const [loadingAgents, setLoadingAgents] = useState(true);
   const [loadingTransports, setLoadingTransports] = useState(true);
@@ -108,7 +110,9 @@ export default function NewCustomerPage() {
         address: formData.address,
         contact: formData.contactNumber,
         agent: parseInt(formData.agent),
-        preferred_transport: formData.preferredTransport ? parseInt(formData.preferredTransport) : null,
+        preferred_transport: formData.preferredTransport
+          ? parseInt(formData.preferredTransport)
+          : null,
       };
       await customerApi.create(payload);
       toastSuccess("Customer created successfully");
