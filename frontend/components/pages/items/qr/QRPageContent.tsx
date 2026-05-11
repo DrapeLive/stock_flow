@@ -132,12 +132,24 @@ export default function QRPrintPageContent() {
     setPrinting(true);
     try {
       const url = URL.createObjectURL(pdfBlob);
-      const win = window.open(url);
-      if (win) {
-        win.onload = () => {
-          win.focus();
-          win.print();
-          setTimeout(() => URL.revokeObjectURL(url), 2000);
+
+      if (isMobile) {
+        // Mobile — open in new tab, user prints from browser menu
+        window.open(url, "_blank");
+        setTimeout(() => URL.revokeObjectURL(url), 60000);
+      } else {
+        // Desktop — silent print via hidden iframe
+        const iframe = document.createElement("iframe");
+        iframe.style.display = "none";
+        iframe.src = url;
+        document.body.appendChild(iframe);
+        iframe.onload = () => {
+          iframe.contentWindow?.focus();
+          iframe.contentWindow?.print();
+          setTimeout(() => {
+            document.body.removeChild(iframe);
+            URL.revokeObjectURL(url);
+          }, 3000);
         };
       }
     } finally {
