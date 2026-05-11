@@ -3,7 +3,6 @@
 import { useEffect, useState, Suspense, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { agentApi } from "@/lib/api/agents";
-import { customerApi } from "@/lib/api/customer";
 import { orderApi } from "@/lib/api/order";
 import FilterBar from "@/components/ui/FilterBar";
 import FilterToggle from "@/components/ui/FilterToggle";
@@ -48,7 +47,6 @@ function AdminHomePageContent() {
     {},
   );
   const [agents, setAgents] = useState<SimpleAgent[]>([]);
-  const [customers, setCustomers] = useState<SimpleCustomer[]>([]);
   const [showFilters, setShowFilters] = useState(false);
   const [search, setSearch] = useSessionStorage("admin_search", "");
   const [orderCounts, setOrderCounts] = useState<Record<string, number>>({});
@@ -79,15 +77,6 @@ function AdminHomePageContent() {
       .getAll()
       .then((agents) => {
         setAgents(agents.map((a) => ({ id: a.id, username: a.user.username })));
-      })
-      .catch(console.error);
-  }, []);
-
-  useEffect(() => {
-    customerApi
-      .getAll()
-      .then((customers) => {
-        setCustomers(customers.map((c) => ({ id: c.id, name: c.name })));
       })
       .catch(console.error);
   }, []);
@@ -271,7 +260,6 @@ function AdminHomePageContent() {
           agents={agents}
           selectedAgent={filters.agent || "all"}
           onAgentChange={handleAgentChange}
-          customers={customers}
           selectedCustomer={filters.customer || "all"}
           onCustomerChange={handleCustomerChange}
           isOpen={showFilters}
