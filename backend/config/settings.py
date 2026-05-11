@@ -224,6 +224,7 @@ CORS_ALLOW_HEADERS = [
     "content-type",
     "x-csrftoken",
     "authorization",
+    "ngrok-skip-browser-warning",
 ]
 
 MEDIA_URL = "/media/"
