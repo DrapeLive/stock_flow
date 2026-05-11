@@ -12,6 +12,7 @@ import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 import { Trash2, ArrowLeft, Store, Pencil, Eye, X, Camera } from "lucide-react";
 import CropModal from "@/app/(admin)/admin/items/new/cropModal";
 import { mediaUrl } from "@/lib/media";
+import { Modal, ModalButton } from "@/components/ui/custom/Modals";
 
 export default function BrandDetailPage() {
   const { id } = useParams();
@@ -33,6 +34,8 @@ export default function BrandDetailPage() {
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isEditing, setIsEditing] = useState(false);
+  const [showDeleteConfirmation, setShowDeleteConfirmation] =
+    useState<boolean>(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -385,6 +388,42 @@ export default function BrandDetailPage() {
           onConfirm={handleCropConfirm}
           onCancel={handleCropCancel}
         />
+      )}
+
+      {showDeleteConfirmation && (
+        <Modal
+          icon={<AlertTriangle size={18} className="text-amber-500" />}
+          iconBg="bg-amber-100"
+          title="Leave Order?"
+          description="Your current order progress may be lost if you go back."
+          onClose={() => setShowLeaveConfirm(false)}
+          actions={
+            <>
+              <ModalButton
+                variant="ghost"
+                onClick={() => setShowLeaveConfirm(false)}
+              >
+                Stay
+              </ModalButton>
+
+              <ModalButton
+                variant="primary"
+                onClick={() => {
+                  setShowLeaveConfirm(false);
+                  router.push("/agent/order/new");
+                }}
+              >
+                Leave
+              </ModalButton>
+            </>
+          }
+        >
+          <div className="bg-amber-50 rounded-xl p-3 border border-amber-100">
+            <p className="text-sm text-amber-800 font-medium">
+              Are you sure you want to leave this page?
+            </p>
+          </div>
+        </Modal>
       )}
     </div>
   );

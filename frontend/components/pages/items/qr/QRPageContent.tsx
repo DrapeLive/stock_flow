@@ -6,13 +6,12 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { itemApi } from "@/lib/api/item";
 import type { ItemQRResponse, ItemVariant } from "@/types/item";
 
-import { pdf, PDFDownloadLink } from "@react-pdf/renderer";
+import { pdf } from "@react-pdf/renderer";
 import { QRLabelPdf } from "@/components/pages/items/qr/QRLabelPdf";
 
 import QRCode from "qrcode";
 import Image from "next/image";
 import { ChevronLeft, Download, Printer, Share2 } from "lucide-react";
-import { mediaUrl } from "@/lib/media";
 
 type QRPrintItem = {
   id: number;

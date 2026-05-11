@@ -10,6 +10,9 @@ import { InvoicePDF } from "@/components/pages/InvoicePdf";
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 import { useBackButton } from "@/util/useBackButton";
 import { mediaUrl } from "@/lib/media";
+import OrderForm from "@/components/pages/order-form/OrderFormView";
+import { Download, Printer, Share2 } from "lucide-react";
+import { PageLoading } from "@/components/ui/Loading";
 
 const formatDate = (iso: string) =>
   new Date(iso).toLocaleDateString("en-IN", {
@@ -31,6 +34,8 @@ export default function InvoicePage() {
   const invoiceRef = useRef<HTMLDivElement>(null);
 
   const [invoice, setInvoice] = useState<InvoiceResponse | null>(null);
+  const [printing, setPrinting] = useState<boolean>(false);
+  const [sharing, setSharing] = useState<boolean>(false);
   const [loading, setLoading] = useState(true);
   const [, setFetchError] = useState(false);
   const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
@@ -107,16 +112,71 @@ export default function InvoicePage() {
     };
   }, [pdfBlobUrl]);
 
+  const handlePrint = async () => {
+    if (!pdfBlobUrl) return;
+    setPrinting(true);
+    try {
+      if (isMobile) {
+        // Mobile — open in new tab, user prints from browser menu
+        window.open(pdfBlobUrl, "_blank");
+        setTimeout(() => URL.revokeObjectURL(pdfBlobUrl), 60000);
+      } else {
+        // Desktop — silent print via hidden iframe
+        const iframe = document.createElement("iframe");
+        iframe.style.display = "none";
+        iframe.src = pdfBlobUrl;
+        document.body.appendChild(iframe);
+        iframe.onload = () => {
+          iframe.contentWindow?.focus();
+          iframe.contentWindow?.print();
+          setTimeout(() => {
+            document.body.removeChild(iframe);
+            URL.revokeObjectURL(pdfBlobUrl);
+          }, 3000);
+        };
+      }
+    } finally {
+      setPrinting(false);
+    }
+  };
+
+  const handleShare = async () => {
+    if (!pdfBlobUrl) return;
+    setSharing(true);
+    try {
+      const file = new File([pdfBlobUrl], `order-form.pdf`, {
+        type: "application/pdf",
+      });
+
+      if (navigator.canShare?.({ files: [file] })) {
+        await navigator.share({
+          title: "Order Form",
+          text: `Order Form`,
+          files: [file],
+        });
+      } else {
+        // Fallback — just download if share not supported
+        handleDownload();
+      }
+    } catch (e) {
+      if ((e as Error).name !== "AbortError") console.error(e);
+    } finally {
+      setSharing(false);
+    }
+  };
+
+  const handleDownload = () => {
+    if (!pdfBlobUrl) return;
+    const a = document.createElement("a");
+    a.href = pdfBlobUrl;
+    a.download = `orderform.pdf`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(pdfBlobUrl), 1000);
+  };
+
   // ── Loading state ──
   if (loading) {
-    return (
-      <main className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 rounded-full border-4 border-indigo-200 border-t-indigo-500 animate-spin" />
-          <p className="text-sm text-slate-400">Loading invoice…</p>
-        </div>
-      </main>
-    );
+    return <PageLoading text="Loading Order Form..." />;
   }
 
   // ── Error / not found state ──
@@ -141,9 +201,9 @@ export default function InvoicePage() {
 
   // ── Main render ──
   return (
-    <main className="min-h-screen bg-slate-50 font-sans flex flex-col items-center py-10 px-4">
+    <main className="min-h-screen font-sans flex flex-col items-center py-10 px-4">
       {/* ── Header ── */}
-      <header className="w-full max-w-4xl flex items-center justify-between mb-6">
+      <header className="w-full flex items-center justify-between mb-6">
         <button
           onClick={() => router.push("/agent")}
           className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 transition-colors"
@@ -169,225 +229,20 @@ export default function InvoicePage() {
       </header>
 
       {/* ── PDF Preview ── */}
-      <div className={isMobile ? "w-full" : "w-full max-w-4xl"}>
+      <div className="flex flex-1 w-full overflow-y-auto">
         {isMobile ? (
           <div className="flex flex-col w-full gap-4">
-            <div ref={invoiceRef} className="bg-white w-full">
-              {/* ── Brand Header ── */}
-              <div className="flex items-center justify-between mb-4">
-                <div className="w-12 h-12 rounded overflow-hidden flex items-center justify-center bg-gray-100">
-                  {invoice.brand?.logo_url ? (
-                    <img
-                      src={mediaUrl(invoice.brand.logo_url)}
-                      alt="Brand Logo"
-                      className="w-12 h-12 object-cover rounded"
-                    />
-                  ) : (
-                    <span className="text-[#0f1f3d] text-lg font-bold">
-                      {(
-                        invoice.brand?.name ??
-                        invoice.items[0]?.item_type ??
-                        "BR"
-                      )
-                        .slice(0, 2)
-                        .toUpperCase()}
-                    </span>
-                  )}
-                </div>
-                <div className="text-right">
-                  <p className="text-[#0f1f3d] font-bold text-base">
-                    {invoice.brand?.name ?? invoice.items[0]?.item_type}
-                  </p>
-                  {invoice.brand?.address_line1 && (
-                    <p className="text-xs text-gray-600">
-                      {invoice.brand.address_line1}
-                    </p>
-                  )}
-                  {invoice.brand?.address_line2 && (
-                    <p className="text-xs text-gray-600">
-                      {invoice.brand.address_line2}
-                    </p>
-                  )}
-                  {invoice.brand?.phone && (
-                    <p className="text-xs text-gray-600">
-                      {invoice.brand.phone}
-                    </p>
-                  )}
-                  {invoice.brand?.email && (
-                    <p className="text-xs text-gray-600">
-                      {invoice.brand.email}
-                    </p>
-                  )}
-                  {invoice.brand?.gst && (
-                    <p className="text-xs text-gray-600">
-                      GST : {invoice.brand.gst}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              <div className="border-b-2 border-[#0f1f3d] mb-4" />
-
-              {/* ── ORDER FORM Title ── */}
-              <div className="flex justify-between items-start mb-4">
-                <p className="text-[#0f1f3d] text-xl font-bold tracking-wider">
-                  ORDER FORM
-                </p>
-                <div className="text-right text-xs text-gray-700">
-                  <p>
-                    Order Form{" "}
-                    <span className="font-bold">#{String(invoice.id)}</span>
-                  </p>
-                  <p>
-                    Date :{" "}
-                    <span className="font-bold">
-                      {formatDate(invoice.created_at)}
-                    </span>
-                  </p>
-                  <p>
-                    Time :{" "}
-                    <span className="font-bold">
-                      {formatTime(invoice.created_at)}
-                    </span>
-                  </p>
-                </div>
-              </div>
-
-              <div className="border-b border-gray-300 mb-4" />
-
-              {/* ── Customer & Agent ── */}
-              <div className="flex mb-4">
-                <div className="flex-1 pr-4 border-r border-gray-300">
-                  <span className="bg-[#0f1f3d] text-white text-[10px] font-bold uppercase px-1.5 py-0.5">
-                    Customer:
-                  </span>
-                  <p className="text-[#0f1f3d] font-bold text-sm mt-1">
-                    {invoice.customer.name}
-                  </p>
-                  {invoice.customer.address && (
-                    <p className="text-xs text-gray-600">
-                      {invoice.customer.address}
-                    </p>
-                  )}
-                  {invoice.customer.contact && (
-                    <p className="text-xs text-gray-600">
-                      {invoice.customer.contact}
-                    </p>
-                  )}
-                </div>
-                <div className="flex-1 pl-4">
-                  <span className="bg-[#0f1f3d] text-white text-[10px] font-bold uppercase px-1.5 py-0.5">
-                    Agent:
-                  </span>
-                  <p className="text-[#0f1f3d] font-bold text-sm mt-1">
-                    {invoice.agent.username}
-                  </p>
-                  {invoice.agent.contact && (
-                    <p className="text-xs text-gray-600">
-                      {invoice.agent.contact}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* ── Items Table ── */}
-              <div className="border border-[#0f1f3d] mb-4 overflow-x-auto">
-                <div className="flex bg-[#0f1f3d] py-2 px-1">
-                  <p className="w-[30%] text-center text-white text-[10px] font-bold">
-                    Item
-                  </p>
-                  <p className="w-[22%] text-center text-white text-[10px] font-bold">
-                    Size
-                  </p>
-                  <p className="w-[18%] text-center text-white text-[10px] font-bold">
-                    Price
-                  </p>
-                  <p className="w-[12%] text-center text-white text-[10px] font-bold">
-                    Qty
-                  </p>
-                  <p className="w-[18%] text-center text-white text-[10px] font-bold">
-                    Amount
-                  </p>
-                </div>
-
-                {invoice.items.map((item, idx) => {
-                  const pieceCount = item.piece_count || 1;
-                  const totalPieces = item.quantity * pieceCount;
-                  const itemPrice = parseFloat(String(item.item_price)) || 0;
-                  const amount = itemPrice * item.quantity * pieceCount;
-
-                  return (
-                    <div
-                      key={item.id}
-                      className={`flex border-b border-dashed border-gray-300 py-2 px-1 items-center ${
-                        idx % 2 === 1 ? "bg-gray-50" : ""
-                      }`}
-                    >
-                      <div className="w-[30%] text-center">
-                        <p className="text-[10px] text-gray-800">
-                          {item.item_name}
-                        </p>
-                      </div>
-                      <p className="w-[22%] text-center text-[10px] text-gray-800">
-                        {item.size_group}
-                      </p>
-                      <p className="w-[18%] text-center text-[10px] text-gray-800">
-                        Rs. {itemPrice.toFixed(2)}/pc
-                      </p>
-                      <div className="w-[12%] text-center">
-                        <p className="text-[10px] text-gray-800">
-                          {item.quantity}
-                        </p>
-                        {pieceCount > 1 && (
-                          <p className="text-[9px] text-gray-500">
-                            ×{pieceCount}={totalPieces}pc
-                          </p>
-                        )}
-                      </div>
-                      <p className="w-[18%] text-center text-[10px] text-gray-800">
-                        Rs. {amount.toLocaleString("en-IN")}
-                      </p>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* ── Total ── */}
-              <div className="flex justify-end mt-4">
-                <span className="bg-[#0f1f3d] text-white text-sm font-bold px-4 py-2">
-                  TOTAL:
-                </span>
-                <div className="border border-[#0f1f3d] px-6 py-2">
-                  <p className="text-[#0f1f3d] font-bold">
-                    Rs. {invoice.total_price.toLocaleString("en-IN")}
-                  </p>
-                </div>
-              </div>
-
-              {/* ── Footer ── */}
-              <div className="flex justify-center items-center mt-8">
-                <div className="flex-1 border-b border-gray-400 mb-1" />
-                <p className="text-sm text-gray-600 italic px-4">
-                  Thank you for your business!
-                </p>
-                <div className="flex-1 border-b border-gray-400 mb-1" />
-              </div>
-            </div>
-
-            {/* Open PDF */}
-            {pdfBlobUrl && (
-              <div className="flex justify-center w-full">
-                <StockFlowButton
-                  text="Open PDF Preview"
-                  variant="outline"
-                  onClick={() => {
-                    if (pdfBlobUrl) {
-                      window.open(pdfBlobUrl, "_blank");
-                    }
-                  }}
-                />
-              </div>
-            )}
+            <OrderForm
+              id={invoice.id}
+              customer={invoice.customer}
+              agent={invoice.agent}
+              brand={invoice.brand}
+              created_at={invoice.created_at}
+              items={invoice.items}
+              total_price={invoice.total_price}
+              invoiceRef={invoiceRef}
+              status={invoice.status}
+            />
           </div>
         ) : pdfGenerating ? (
           <div className="flex flex-col items-center justify-center h-96 gap-3">
@@ -403,20 +258,40 @@ export default function InvoicePage() {
         )}
       </div>
 
-      {/* ── Download PDF Button ── */}
-      <div className="w-full max-w-4xl mt-6">
-        <PDFDownloadLink
-          document={<InvoicePDF invoice={invoice!} />}
-          fileName={`invoice-${invoice?.id}.pdf`}
-          className="flex justify-center w-full"
-        >
-          {({ loading }) => (
-            <StockFlowButton
-              text={loading ? "Generating PDF..." : "Download Invoice PDF"}
-              variant="filled"
-            />
+      <div className="sticky bottom-0 p-4 border-t">
+        <div className="flex gap-3 max-w-md mx-auto">
+          {/* Print — hidden on mobile since it opens a new tab */}
+
+          <button
+            onClick={handlePrint}
+            disabled={printing || !pdfBlobUrl}
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 border border-gray-200 text-gray-700 rounded-2xl font-medium hover:bg-gray-50 disabled:opacity-50 transition-colors"
+          >
+            <Printer size={18} />
+            {printing ? "Opening..." : "Print"}
+          </button>
+
+          {isMobile && (
+            <button
+              onClick={handleShare}
+              disabled={sharing || !pdfBlobUrl}
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 border border-gray-200 text-gray-700 rounded-2xl font-medium hover:bg-gray-50 disabled:opacity-50 transition-colors"
+            >
+              <Share2 size={18} />
+              {sharing ? "Sharing..." : "Share"}
+            </button>
           )}
-        </PDFDownloadLink>
+
+          {/* Download */}
+          <button
+            onClick={handleDownload}
+            disabled={!pdfBlobUrl}
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-primary text-white rounded-2xl font-medium disabled:opacity-50 transition-colors"
+          >
+            <Download size={18} />
+            Download
+          </button>
+        </div>
       </div>
     </main>
   );
