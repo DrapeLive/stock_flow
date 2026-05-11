@@ -80,9 +80,6 @@ def _revert_edit(order):
 class PlaceOrderView(APIView):
     permission_classes = [IsAuthenticated]
 
-class PlaceOrderView(APIView):
-    permission_classes = [IsAuthenticated]
-
     def post(self, request, order_id):
         order = get_object_or_404(Order, id=order_id)
 
@@ -160,6 +157,27 @@ class PlaceOrderView(APIView):
                         )
 
             if out_of_stock_items:
+                agent_user_id = order.agent.user_id if order.agent else None
+                if agent_user_id:
+                    try:
+                        send_push_to_user.delay(
+                            agent_user_id,
+                            "Items Out of Stock",
+                            f"{len(out_of_stock_items)} item(s) in your order are out of stock",
+                        )
+                    except Exception as e:
+                        print("Failed to queue agent notification:", str(e))
+
+                for admin_id in admin_ids:
+                    try:
+                        send_push_to_user.delay(
+                            admin_id,
+                            "Stock Alert",
+                            f"Order #{order.id} has {len(out_of_stock_items)} out-of-stock item(s)",
+                        )
+                    except Exception as e:
+                        print("Failed to queue admin notification:", str(e))
+
                 return Response(
                     {
                         "error": "Some items are no longer available. Another agent may have placed an order.",
@@ -179,9 +197,7 @@ class PlaceOrderView(APIView):
                     ItemVariantSize.objects.filter(
                         item_variant=order_item.variant,
                         size=size,
-                    ).update(
-                        stock=F("stock") - order_item.quantity
-                    )
+                    ).update(stock=F("stock") - order_item.quantity)
 
             order.status = "PENDING"
             if expected_delivery_date:
@@ -220,6 +236,7 @@ class PlaceOrderView(APIView):
                 "order_id": order.id,
             }
         )
+
 
 def return_stock_for_item(order_item):
     """Return stock to warehouse for an order item."""
@@ -330,6 +347,41 @@ class SaveEditView(APIView):
                         )
 
             if out_of_stock_items:
+                # Build admin_ids the same way PlaceOrderView does
+                admin_ids = set(
+                    User.objects.filter(is_superuser=True).values_list("id", flat=True)
+                )
+                for order_item in order.items.select_related("item"):
+                    if order_item.item is None or order_item.item.is_deleted:
+                        continue
+                    matched = User.objects.filter(
+                        role="ADMIN",
+                        brand=order_item.item.brand,
+                        business=order_item.item.type,
+                    ).values_list("id", flat=True)
+                    admin_ids.update(matched)
+
+                agent_user_id = order.agent.user_id if order.agent else None
+                if agent_user_id:
+                    try:
+                        send_push_to_user.delay(
+                            agent_user_id,
+                            "Items Out of Stock",
+                            f"{len(out_of_stock_items)} item(s) in your edited order are out of stock",
+                        )
+                    except Exception as e:
+                        print("Failed to queue agent notification:", str(e))
+
+                for admin_id in admin_ids:
+                    try:
+                        send_push_to_user.delay(
+                            admin_id,
+                            "Stock Alert",
+                            f"Order #{order.id} has {len(out_of_stock_items)} out-of-stock item(s) after edit",
+                        )
+                    except Exception as e:
+                        print("Failed to queue admin notification:", str(e))
+
                 return Response(
                     {
                         "error": "Some items are no longer available. Another agent may have placed an order.",
@@ -413,17 +465,16 @@ class OrderViewSet(ModelViewSet):
 
         user = self.request.user
 
-        qs = Order.objects.prefetch_related(
-            "items__variant",
-            "items__item"
-        ).order_by('-created_at')
+        qs = Order.objects.prefetch_related("items__variant", "items__item").order_by(
+            "-created_at"
+        )
 
         if self.action == "list":
             archive_cutoff = timezone.now() - timedelta(days=30)
             qs = qs.exclude(
                 status="DISPATCHED",
                 dispatched_at__isnull=False,
-                dispatched_at__lte=archive_cutoff
+                dispatched_at__lte=archive_cutoff,
             )
 
         customer_id = self.request.query_params.get("customer")
@@ -511,6 +562,8 @@ class OrderViewSet(ModelViewSet):
         transport_company_id = request.data.get("transport_company")
         lr_number = request.data.get("lr_number", "")
 
+        agent_user_id = order.agent.user_id if order.agent else None
+
         with transaction.atomic():
             for order_item in order.items.select_related("item", "variant"):
                 if order_item.item is None or order_item.item.is_deleted:
@@ -520,9 +573,7 @@ class OrderViewSet(ModelViewSet):
                     order_item.size_group, order_item.item_type or "gents"
                 )
                 packed_sets = (
-                    (order_item.packed_quantity or 0) // piece_count
-                    if piece_count > 0
-                    else 0
+                    (order_item.packed_quantity or 0) if piece_count > 0 else 0
                 )
                 unpacked_sets = order_item.quantity - packed_sets
 
@@ -551,8 +602,11 @@ class OrderViewSet(ModelViewSet):
 
             if transport_company_id:
                 from transports.models import Transport
+
                 try:
-                    order.transport_company = Transport.objects.get(id=transport_company_id)
+                    order.transport_company = Transport.objects.get(
+                        id=transport_company_id
+                    )
                 except Transport.DoesNotExist:
                     pass
 
@@ -560,6 +614,20 @@ class OrderViewSet(ModelViewSet):
                 order.lr_number = lr_number
 
             order.save()
+
+            if agent_user_id:
+                try:
+                    transaction.on_commit(
+                        partial(
+                            send_push_to_user.delay,
+                            agent_user_id,
+                            "Order Dispatched",
+                            "Your Order has been dispatched",
+                        )
+                    )
+                except Exception as e:
+                    print("Failed to queue notification:", str(e))
+
             # Remove viewed entries for non-pending/packed orders
             UserViewedOrder.objects.filter(order=order).delete()
 
@@ -626,20 +694,22 @@ class OrderViewSet(ModelViewSet):
 
     @action(detail=False, methods=["get"], url_path="archived")
     def get_archived(self, request):
-        from django.utils import timezone
         from datetime import timedelta
+
+        from django.utils import timezone
 
         cutoff = timezone.now() - timedelta(days=30)
         user = request.user
 
-        qs = Order.objects.prefetch_related(
-            "items__variant",
-            "items__item"
-        ).filter(
-            status="DISPATCHED",
-            dispatched_at__isnull=False,
-            dispatched_at__lte=cutoff
-        ).order_by('-dispatched_at')
+        qs = (
+            Order.objects.prefetch_related("items__variant", "items__item")
+            .filter(
+                status="DISPATCHED",
+                dispatched_at__isnull=False,
+                dispatched_at__lte=cutoff,
+            )
+            .order_by("-dispatched_at")
+        )
 
         print(f"DEBUG get_archived: qs.count()={qs.count()}")
 
