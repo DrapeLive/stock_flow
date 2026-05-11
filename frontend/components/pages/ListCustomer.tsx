@@ -12,6 +12,7 @@ import { orderApi } from "@/lib/api/order";
 import { toastError } from "@/lib/toast";
 import Pagination from "../ui/Pagination";
 import { PaginatedResponse } from "@/types/global";
+import StockflowAvatar from "../ui/custom/stockflowAvatar";
 
 const CACHE_KEY = "customers_cache";
 const CACHE_META_KEY = "customers_cache_meta";
@@ -199,11 +200,7 @@ const ListCustomer: React.FC = () => {
               key={customer.id}
               className="flex w-full items-center gap-4 bg-white border border-gray-100 p-4 hover:border-primary/30 hover:shadow-md transition-all rounded-3xl group text-left active:scale-[0.98]"
             >
-              <div className="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center border border-gray-100 shadow-sm flex-shrink-0 group-hover:bg-primary/5 transition-colors">
-                <span className="text-xl font-black text-gray-400 opacity-40 group-hover:text-primary/50">
-                  {customer.name.charAt(0).toUpperCase()}
-                </span>
-              </div>
+              <StockflowAvatar user={customer} />
 
               <div className="flex-1 min-w-0">
                 <h6 className="font-bold text-gray-900 text-base truncate leading-tight">
