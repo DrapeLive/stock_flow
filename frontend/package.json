@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --webpack",
+    "local": "next dev --hostname 0.0.0.0",
     "mobile": "next dev --experimental-https",
     "build": "next build --webpack",
     "start": "next start",
@@ -18,7 +19,7 @@
     "@radix-ui/react-separator": "^1.1.8",
     "@react-pdf/renderer": "^4.3.2",
     "@yudiel/react-qr-scanner": "^2.5.1",
-    "axios": "^1.14.0",
+    "axios": "^1.15.2",
     "browser-image-compression": "^2.0.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -26,6 +27,7 @@
     "js-cookie": "^3.0.5",
     "lucide-react": "^0.562.0",
     "next": "16.2.2",
+    "qrcode": "^1.5.4",
     "radix-ui": "^1.4.3",
     "react": "19.2.3",
     "react-day-picker": "^9.14.0",
@@ -38,7 +40,7 @@
     "tailwind-merge": "^3.5.0",
     "tailwindcss-animate": "^1.0.7",
     "web-push": "^3.6.7",
-    "xlsx": "^0.18.5"
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.2.2",
@@ -47,6 +49,7 @@
     "@testing-library/user-event": "^14.6.1",
     "@types/js-cookie": "^3.0.6",
     "@types/node": "^20.19.37",
+    "@types/qrcode": "^1.5.6",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",

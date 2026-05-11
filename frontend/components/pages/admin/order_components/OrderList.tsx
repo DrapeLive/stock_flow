@@ -85,7 +85,9 @@ const OrderList: React.FC<Props> = ({
             status: status === "ALL" ? [] : [status],
           });
 
-        const results = response.results;
+        const results = response.results.filter(
+          (order) => order.status != "DRAFT",
+        );
 
         setData(results);
         setTotalCount(response.count);
@@ -110,6 +112,7 @@ const OrderList: React.FC<Props> = ({
     router,
     filters,
     search,
+    viewedIds,
     currentPage,
     pageSize,
     refreshKey,
@@ -181,7 +184,7 @@ const OrderList: React.FC<Props> = ({
         <OrderCard
           key={`${order.id}-${refreshKey}`}
           order={order}
-          viewed={viewedIds.has(order.id)}
+          viewed={status === "DISPATCHED" ? true : viewedIds.has(order.id)}
           onClick={() => {
             markOrderAsViewed(order.id);
             router.push(`/admin/order/status/${order.id}`);

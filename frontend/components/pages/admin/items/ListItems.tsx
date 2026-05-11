@@ -62,11 +62,11 @@ const ListItems: React.FC = () => {
   };
 
   const handlePrintAll = (id: number) => {
-    window.open(`/admin/items/qr-print/${id}`, "_blank");
+    router.push(`/admin/items/qr-print?item=${id}`);
   };
 
   const handlePrintQR = (qr: string) => {
-    window.open(`/admin/items/qr/${qr}`, "_blank");
+    router.push(`/admin/items/qr-print?qr=${qr}`);
   };
 
   return (

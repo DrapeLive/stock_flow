@@ -9,6 +9,7 @@ import { PageLoading } from "../ui/Loading";
 import { useAuth } from "@/context/AuthContext";
 import { agentApi } from "@/lib/api/agents";
 import { orderApi } from "@/lib/api/order";
+import { toastError } from "@/lib/toast";
 
 const ListCustomer: React.FC = () => {
   const { user } = useAuth();
@@ -50,8 +51,7 @@ const ListCustomer: React.FC = () => {
       }
       router.push(`/agent/order/new/${id}`);
     } catch {
-      alert("Error creating order. Please try again.");
-    } finally {
+      toastError("Error creating order. Please try again.");
       setLoading(false);
     }
   };

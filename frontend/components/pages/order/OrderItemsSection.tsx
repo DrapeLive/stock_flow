@@ -69,7 +69,7 @@ export default function OrderItemsSection({
         {activeTab === "Packing" && status !== "DISPATCHED" && (
           <button
             onClick={onTogglePackingMode}
-            className={`px-4 py-2 rounded-xl flex gap-2 items-center font-bold text-sm transition-all ${
+            className={`px-4 py-2 rounded-md flex gap-2 items-center font-bold text-sm transition-all ${
               isPackingMode
                 ? "bg-green-600 text-white shadow-lg"
                 : "bg-primary text-white shadow-md"

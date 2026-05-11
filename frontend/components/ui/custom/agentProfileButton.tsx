@@ -10,11 +10,15 @@ const AgentProfileButton: React.FC = () => {
 
   return (
     <div
-      className="flex relative w-full justify-end cursor-pointer pt-2 pr-2"
-      onClick={() => router.push("/agent/profile")}
+      className="flex relative w-full justify-end  pt-2 pr-2"
       title="View Profile"
     >
-      <StockflowAvatar user={user} />
+      <div
+        className="cursor-pointer"
+        onClick={() => router.push("/agent/profile")}
+      >
+        <StockflowAvatar user={user} />
+      </div>
     </div>
   );
 };

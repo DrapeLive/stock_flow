@@ -1,10 +1,8 @@
 import json
 import logging
-
 from celery import shared_task
 from django.conf import settings
 from pywebpush import WebPushException, webpush
-
 from .models import PushSubscription
 
 logger = logging.getLogger(__name__)
@@ -17,6 +15,7 @@ def send_push_to_user(self, user_id, title, body, urgency="high", ttl=86400):
     except PushSubscription.DoesNotExist:
         logger.warning(f"[PushTask] No subscription for user {user_id} — skipping")
         return
+
     try:
         webpush(
             subscription_info={
@@ -37,12 +36,12 @@ def send_push_to_user(self, user_id, title, body, urgency="high", ttl=86400):
         response = e.response
         if response is not None:
             logger.error(
-                f"[PushTask] Push service rejected for user {user_id} — "
-                f"status={response.status_code}, body={response.text!r}"
+                f"[PushTask] Push rejected (user={user_id}, sub={sub.id}) "
+                f"status={response.status_code} body={response.text!r}"
             )
             if response.status_code in (404, 410):
                 logger.warning(
-                    f"[PushTask] Subscription expired for user {user_id} — deleting"
+                    f"[PushTask] Expired subscription (user={user_id}, sub={sub.id}) — deleting"
                 )
                 sub.delete()
         else:

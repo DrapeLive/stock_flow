@@ -87,7 +87,7 @@ export default function NewBrandPage() {
         logo: logoFile,
       });
       toastSuccess("Brand created successfully");
-      router.push("/admin/settings/brands/");
+      router.push("/admin/settings/");
     } catch (error: any) {
       console.error("Error creating brand:", error);
       toastError("Failed to create brand", error);

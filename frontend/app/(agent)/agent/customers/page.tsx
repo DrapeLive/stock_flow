@@ -40,8 +40,8 @@ export default function AgentCustomersPage() {
   return (
     <div className="min-h-screen bg-gray-50/50 pb-20">
       {/* Header */}
-      <div className="flex justify-between items-center bg-white border-b border-gray-100 px-6 py-6 sticky top-0 z-10">
-        <div className="max-w-md mx-auto flex items-center gap-4">
+      <div className="flex justify-between items-center bg-white border-b border-gray-100 sticky top-0 z-10">
+        <div className="flex max-w-md justify-start items-center gap-4">
           <button
             onClick={() => router.back()}
             className="p-2 rounded-xl hover:bg-gray-50 text-gray-400 transition-colors"
@@ -56,20 +56,11 @@ export default function AgentCustomersPage() {
               <span className="text-gray-400 text-[10px] font-bold uppercase tracking-wider">
                 Total Linked
               </span>
-              <div className="bg-primary/10 text-primary rounded-full py-0.5 px-3 border border-primary/20">
+              <div className="flex bg-primary/10 text-primary rounded-full w-6 h-6 items-center justify-center border border-primary/20">
                 <span className="font-bold text-xs">{data.length}</span>
               </div>
             </div>
           </div>
-        </div>
-        <div>
-          <StockFlowButton
-            text="Add Customer"
-            variant="filled"
-            icon={<Plus className="size-4" />}
-            onClick={() => router.push("/agent/customers/new")}
-            className="shadow-lg shadow-primary/20 ring-1 ring-primary/10"
-          />
         </div>
       </div>
 
@@ -80,10 +71,28 @@ export default function AgentCustomersPage() {
             <h2 className="text-xl font-bold">No Customers Found</h2>
             <p className="text-sm text-gray-400 mt-1">
               You haven&apos;t been assigned any customers yet.
+              <div className="flex justify-center items-center p-4">
+                <StockFlowButton
+                  text="Add Customer"
+                  variant="filled"
+                  icon={<Plus className="size-4" />}
+                  onClick={() => router.push("/agent/customers/new")}
+                  className="shadow-lg shadow-primary/20 ring-1 ring-primary/10"
+                />
+              </div>
             </p>
           </div>
         ) : (
           <div className="space-y-3 pb-10">
+            <div className="flex justify-end">
+              <StockFlowButton
+                text="Add Customer"
+                variant="filled"
+                icon={<Plus className="size-4" />}
+                onClick={() => router.push("/agent/customers/new")}
+                className="shadow-lg shadow-primary/20 ring-1 ring-primary/10"
+              />
+            </div>
             {data.map((item) => (
               <div
                 key={item.id}

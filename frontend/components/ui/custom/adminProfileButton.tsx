@@ -29,14 +29,16 @@ const AdminProfileButton: React.FC = () => {
     : "";
 
   return (
-    <div
-      className="flex relative w-full justify-between cursor-pointer"
-      onClick={() => router.push("/admin/profile")}
-    >
+    <div className="flex relative w-full justify-between">
       <div className="flex items-center px-2 py-1 text-primary text-md font-black tracking-wider">
         {businessLabel || (isSuperuser ? "Superuser" : "")}
       </div>
-      <StockflowAvatar user={user} />
+      <div
+        className="flex  cursor-pointer"
+        onClick={() => router.push("/admin/profile")}
+      >
+        <StockflowAvatar user={user} />
+      </div>
     </div>
   );
 };
