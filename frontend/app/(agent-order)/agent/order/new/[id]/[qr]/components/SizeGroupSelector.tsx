@@ -39,11 +39,8 @@ export default function SizeGroupSelector({
 
       {sizeGroups.length > 0 ? (
         <div className="relative">
-          <Select
-            value={selectedSizeGroup ?? ""}
-            onValueChange={onSelect}
-          >
-            <SelectTrigger className="w-full h-14 border-2 border-gray-100 bg-white px-4 pr-10 flex items-center text-sm font-semibold shadow-sm">
+          <Select value={selectedSizeGroup ?? ""} onValueChange={onSelect}>
+            <SelectTrigger className="w-full h-14 border-2 border-gray-100 bg-white px-4 flex items-center text-sm font-semibold shadow-sm">
               <SelectValue placeholder="Select size group" />
             </SelectTrigger>
 
@@ -55,10 +52,6 @@ export default function SizeGroupSelector({
               ))}
             </SelectContent>
           </Select>
-
-          <div className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">
-            <ChevronDown size={18} />
-          </div>
         </div>
       ) : (
         <div className="w-full h-14 rounded-2xl border-2 border-gray-100 bg-gray-50 px-4 flex items-center text-gray-400 font-medium">

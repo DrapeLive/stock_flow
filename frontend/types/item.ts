@@ -145,7 +145,7 @@ export const ORDER_CREATION_SIZES_BY_TYPE: Record<
   FrontendSizeRange[]
 > = {
   gents: ["S,M,L,XL,XXL", "S,M,L,XL", "M,L,XL,XXL", "M,L,XL"],
-  kids: ["20-38", "26-38", "32-38", "20-36", "26-36", "20-30", "32-36"],
+  kids: ["20-36", "26-36", "20-30", "32-36", "20-38", "26-38", "32-38"],
 };
 
 export function getSizesForItemType(
