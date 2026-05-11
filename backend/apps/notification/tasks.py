@@ -11,13 +11,12 @@ logger = logging.getLogger(__name__)
 
 
 @shared_task(bind=True)
-def send_push_to_user(self, user_id, title, body):
+def send_push_to_user(self, user_id, title, body, urgency="high", ttl=86400):
     try:
         sub = PushSubscription.objects.get(user_id=user_id)
     except PushSubscription.DoesNotExist:
         logger.warning(f"[PushTask] No subscription for user {user_id} — skipping")
         return
-
     try:
         webpush(
             subscription_info={
@@ -30,12 +29,12 @@ def send_push_to_user(self, user_id, title, body):
             data=json.dumps({"title": title, "body": body}),
             vapid_private_key=settings.PRIVATE_VAPID_KEY,
             vapid_claims={"sub": "mailto:muhammedmuflih9605@gmail.com"},
+            ttl=ttl,
+            headers={"Urgency": urgency},
         )
-        logger.info(f"[PushTask] Sent push to user {user_id}")
-
+        logger.info(f"[PushTask] Sent push to user {user_id} (urgency={urgency})")
     except WebPushException as e:
         response = e.response
-
         if response is not None:
             logger.error(
                 f"[PushTask] Push service rejected for user {user_id} — "
@@ -50,6 +49,5 @@ def send_push_to_user(self, user_id, title, body):
             logger.error(
                 f"[PushTask] WebPush failed (no response) for user {user_id}: {e}"
             )
-
     except Exception as e:
         logger.exception(f"[PushTask] Unexpected error for user {user_id}: {e}")
