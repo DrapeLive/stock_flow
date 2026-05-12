@@ -4,6 +4,7 @@ import AdminNavBar from "@/components/ui/AdminNavBar";
 import AdminProfileButton from "@/components/ui/custom/adminProfileButton";
 import PushNotificationInit from "@/lib/pushInit";
 import { usePathname } from "next/navigation";
+import { SizeRangeProvider } from "@/context/SizeRangeContext";
 
 export default function AdminLayout({
   children,
@@ -15,10 +16,12 @@ export default function AdminLayout({
 
   return (
     <div className={`admin-order-layout ${isStatusPage ? "" : "pb-32"}`}>
-      <PushNotificationInit />
-      <AdminProfileButton />
-      {children}
-      {!isStatusPage && <AdminNavBar />}
+      <SizeRangeProvider>
+        <PushNotificationInit />
+        <AdminProfileButton />
+        {children}
+        {!isStatusPage && <AdminNavBar />}
+      </SizeRangeProvider>
     </div>
   );
 }

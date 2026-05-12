@@ -1,5 +1,4 @@
 "use client";
-
 import { itemApi } from "@/lib/api/item";
 import { toastError, toastSuccess } from "@/lib/toast";
 import { Scanner } from "@yudiel/react-qr-scanner";
@@ -17,7 +16,6 @@ const ScannerPage: React.FC<ScannerPageProps> = ({
   basePath = "/agent/order/new",
 }) => {
   const [validating, setValidating] = useState(false);
-
   const router = useRouter();
 
   return (
@@ -42,6 +40,16 @@ const ScannerPage: React.FC<ScannerPageProps> = ({
                 const qrValue = data[0].rawValue;
                 setValidating(true);
                 try {
+                  const result = await itemApi.checkOutOfStock(qrValue);
+                  console.log(result.out_of_stock);
+                  console.log(result.group_stock);
+                  if (result.out_of_stock) {
+                    toastError(
+                      "Out of stock",
+                      "All sizes for this item are unavailable.",
+                    );
+                    return;
+                  }
                   const item = await itemApi.byqr(qrValue);
                   toastSuccess(
                     "QR code scanned successfully",
@@ -49,7 +57,7 @@ const ScannerPage: React.FC<ScannerPageProps> = ({
                   );
                   router.push(`${basePath}/${id}/${qrValue}`);
                 } catch (e) {
-                  toastError("Invalid QR code", e); // will parse response.data.error from Django
+                  toastError("Invalid QR code", e);
                 } finally {
                   setValidating(false);
                 }
@@ -68,7 +76,7 @@ const ScannerPage: React.FC<ScannerPageProps> = ({
         <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full border border-primary/20 mb-4">
           <QrCode size={16} />
           <span className="text-xs font-black uppercase tracking-widest">
-            Awaiting Scan
+            {validating ? "Checking..." : "Awaiting Scan"}
           </span>
         </div>
         <h2 className="text-lg font-bold text-gray-800">Align QR Code</h2>

@@ -1,0 +1,19 @@
+type: http_request
+model: http_request
+id: rq_a5wcGFaWWp
+createdAt: 2026-05-11T15:47:45.293167837
+updatedAt: 2026-05-11T16:04:29.092219274
+workspaceId: wk_Wx4mNs5A2J
+folderId: fl_R3n2mRa8qW
+authentication:
+  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzgxMTA3MjY2LCJpYXQiOjE3Nzg1MTUyNjYsImp0aSI6ImRkNDZmZjRiMzRkMjRmMWY4Mzk2YjgwNGRkYzRmMmFkIiwidXNlcl9pZCI6IjIifQ.5_-P-4P4ztWXQnJBwbutjqbOrW0LboLtAD-qJxW31aU
+authenticationType: bearer
+body: {}
+bodyType: null
+description: ''
+headers: []
+method: GET
+name: Size Range
+sortPriority: -1766583527706.999
+url: ${[ BASE_URL ]}/items/size-ranges/
+urlParameters: []
