@@ -52,6 +52,7 @@ export default function SizeGroupSelector({
               ))}
             </SelectContent>
           </Select>
+
         </div>
       ) : (
         <div className="w-full h-14 rounded-2xl border-2 border-gray-100 bg-gray-50 px-4 flex items-center text-gray-400 font-medium">

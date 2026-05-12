@@ -1,4 +1,5 @@
 export type ItemType = "kids" | "gents";
+
 export type ItemStatus = "PENDING" | "PACKED" | "DISPATCHED";
 
 export interface ItemVariantSize {
@@ -25,7 +26,9 @@ export interface Item {
 
 export interface ItemVariantRequest {
   id?: number;
+
   image?: File | string | null;
+
   sizes: {
     size: string;
     stock?: number;
@@ -41,8 +44,12 @@ export interface ItemRequest {
 }
 
 export type ItemAllResponse = Item[];
+
 export type ItemResponse = Item;
-export type ItemQRResponse = Item & { matched_variant_id?: number };
+
+export type ItemQRResponse = Item & {
+  matched_variant_id?: number;
+};
 
 export interface VariantSize {
   size: string;
@@ -96,15 +103,6 @@ export interface EditCommonDetails {
   type: ItemType;
 }
 
-export interface ColorVariant {
-  id: string;
-  sizeRange: FrontendSizeRange;
-  stock: number;
-  perSizeStock: Partial<Record<FrontendSizeRange, number>>;
-  image: File | null;
-  imagePreview: string | null;
-}
-
 export type FrontendSizeRange =
   | "20-36"
   | "26-38"
@@ -120,6 +118,17 @@ export type FrontendSizeRange =
   | "S,M,L,XL,XXL"
   | "M,L,XL";
 
+export interface ColorVariant {
+  id: string;
+  sizeRange: FrontendSizeRange;
+  stock: number;
+
+  perSizeStock: Partial<Record<FrontendSizeRange, number>>;
+
+  image: File | null;
+  imagePreview: string | null;
+}
+
 export interface EditableVariant {
   backendId: number;
   localId: string;
@@ -132,21 +141,27 @@ export interface EditableVariant {
 
 export type SizeContext = "item_creation" | "order_creation";
 
-export const ITEM_CREATION_SIZES_BY_TYPE: Record<
-  ItemType,
-  FrontendSizeRange[]
-> = {
-  gents: ["S,M,L,XL,XXL", "S,M,L,XL", "M,L,XL,XXL", "M,L,XL"],
-  kids: ["20-24", "26-36", "38"],
-};
+export let ITEM_CREATION_SIZES_BY_TYPE: Record<ItemType, FrontendSizeRange[]> =
+  {
+    gents: [],
+    kids: [],
+  };
 
-export const ORDER_CREATION_SIZES_BY_TYPE: Record<
-  ItemType,
-  FrontendSizeRange[]
-> = {
-  gents: ["S,M,L,XL,XXL", "S,M,L,XL", "M,L,XL,XXL", "M,L,XL"],
-  kids: ["20-36", "26-36", "20-30", "32-36", "20-38", "26-38", "32-38"],
-};
+export let ORDER_CREATION_SIZES_BY_TYPE: Record<ItemType, FrontendSizeRange[]> =
+  {
+    gents: [],
+    kids: [],
+  };
+
+export function setSizeRanges(data: {
+  item_creation_sizes_by_type: Record<ItemType, FrontendSizeRange[]>;
+
+  order_creation_sizes_by_type: Record<ItemType, FrontendSizeRange[]>;
+}) {
+  ITEM_CREATION_SIZES_BY_TYPE = data.item_creation_sizes_by_type;
+
+  ORDER_CREATION_SIZES_BY_TYPE = data.order_creation_sizes_by_type;
+}
 
 export function getSizesForItemType(
   itemType: ItemType,
@@ -155,22 +170,35 @@ export function getSizesForItemType(
   if (context === "item_creation") {
     return ITEM_CREATION_SIZES_BY_TYPE[itemType];
   }
+
   return ORDER_CREATION_SIZES_BY_TYPE[itemType];
 }
 
 export const SIZE_RANGE_TO_SIZES: Record<FrontendSizeRange, string[]> = {
   "20-38": ["20-24", "26-30", "32-36", "38"],
+
   "20-36": ["20-24", "26-30", "32-36"],
+
   "26-38": ["26-30", "32-36", "38"],
+
   "26-36": ["26-30", "32-36"],
+
   "20-30": ["20-24", "26-30"],
+
   "32-38": ["32-36", "38"],
+
   "20-24": ["20-24"],
+
   "32-36": ["32-36"],
+
   "38": ["38"],
+
   "S,M,L,XL": ["S", "M,L,XL"],
+
   "M,L,XL,XXL": ["M,L,XL", "XXL"],
+
   "S,M,L,XL,XXL": ["S", "M,L,XL", "XXL"],
+
   "M,L,XL": ["M,L,XL"],
 };
 
@@ -193,12 +221,16 @@ export type SizeEnum = "S" | "M" | "L" | "XL" | "XXL";
 export type WizardStep =
   | { screen: "common" }
   | { screen: "list" }
-  | { screen: "add-color"; editingId?: string };
+  | {
+      screen: "add-color";
+      editingId?: string;
+    };
 
 export interface UIVariant {
   id: number;
   image: string | null;
   qr_code: string | null;
+
   sizes: {
     size: string;
     stock: number;

@@ -1,32 +1,22 @@
-from django.db import models
 import uuid
+
+from django.db import models
 
 
 class Item(models.Model):
-
-    TYPE_CHOICES = [
-        ('kids', 'Kids'),
-        ('gents', 'Gents')
-    ]
+    TYPE_CHOICES = [("kids", "Kids"), ("gents", "Gents")]
 
     name = models.CharField(max_length=100)
 
     description = models.TextField(blank=True)
 
-    price = models.DecimalField(
-        max_digits=10,
-        decimal_places=2
-    )
+    price = models.DecimalField(max_digits=10, decimal_places=2)
 
-    type = models.CharField(
-        max_length=10,
-        choices=TYPE_CHOICES,
-        default="NONE"
-    )
+    type = models.CharField(max_length=10, choices=TYPE_CHOICES, default="NONE")
 
     brand = models.ForeignKey(
-        'business.Brand',
-        related_name='items',
+        "business.Brand",
+        related_name="items",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -44,26 +34,14 @@ def item_variant_image_path(instance, filename):
 
 
 class ItemVariant(models.Model):
-    item = models.ForeignKey(
-        Item,
-        related_name="variants",
-        on_delete=models.CASCADE
-    )
+    item = models.ForeignKey(Item, related_name="variants", on_delete=models.CASCADE)
 
-    qr_code = models.UUIDField(
-        default=uuid.uuid4,
-        unique=True,
-        editable=False
-    )
+    qr_code = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
 
-    image = models.ImageField(
-        upload_to=item_variant_image_path,
-        null=True,
-        blank=True
-    )
+    image = models.ImageField(upload_to=item_variant_image_path, null=True, blank=True)
 
     def __str__(self):
-        img_name = self.image.name.split('/')[-1] if self.image else 'no image'
+        img_name = self.image.name.split("/")[-1] if self.image else "no image"
         return f"{self.item.name} - {img_name}"
 
 
@@ -79,20 +57,15 @@ class ItemVariantSize(models.Model):
     ]
 
     item_variant = models.ForeignKey(
-        ItemVariant,
-        related_name="sizes",
-        on_delete=models.CASCADE
+        ItemVariant, related_name="sizes", on_delete=models.CASCADE
     )
 
-    size = models.CharField(
-        max_length=10,
-        choices=SIZE_CHOICES
-    )
+    size = models.CharField(max_length=10, choices=SIZE_CHOICES)
 
     stock = models.PositiveIntegerField(default=0)
 
     class Meta:
-        unique_together = ['item_variant', 'size']
+        unique_together = ["item_variant", "size"]
 
     def __str__(self):
         return f"{self.item_variant} - {self.size}"

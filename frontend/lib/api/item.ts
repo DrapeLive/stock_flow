@@ -5,8 +5,16 @@ import type {
   ItemQRResponse,
   VariantAllResponse,
   ItemStockEntry,
+  FrontendSizeRange,
+  ItemType,
 } from "@/types/item";
 import { api } from "./axios";
+
+export interface SizeRangeResponse {
+  item_creation_sizes_by_type: Record<ItemType, FrontendSizeRange[]>;
+
+  order_creation_sizes_by_type: Record<ItemType, FrontendSizeRange[]>;
+}
 
 export const itemApi = {
   getAll(): Promise<ItemAllResponse> {
@@ -17,12 +25,27 @@ export const itemApi = {
     return api.get<ItemAllResponse>("/api/items/archived/").then((r) => r.data);
   },
 
+  checkOutOfStock(
+    qrCode: string,
+  ): Promise<{ out_of_stock: boolean; group_stock: boolean }> {
+    return api
+      .get<{
+        out_of_stock: boolean;
+        group_stock: boolean;
+      }>(`/api/items/by-qr/out-of-stock/?qr_code=${qrCode}`)
+      .then((r) => r.data);
+  },
+
   getAllVariants(): Promise<VariantAllResponse> {
-    return api.get<VariantAllResponse>("/api/items/variants/all/").then((r) => r.data);
+    return api
+      .get<VariantAllResponse>("/api/items/variants/all/")
+      .then((r) => r.data);
   },
 
   getStockList(): Promise<ItemStockEntry[]> {
-    return api.get<ItemStockEntry[]>("/api/items/stock-list/").then((r) => r.data);
+    return api
+      .get<ItemStockEntry[]>("/api/items/stock-list/")
+      .then((r) => r.data);
   },
 
   getOne(id: number): Promise<ItemResponse> {
@@ -57,5 +80,11 @@ export const itemApi = {
 
   delete(id: number): Promise<void> {
     return api.delete(`/api/items/${id}/`).then((r) => r.data);
+  },
+
+  getSizeRanges(): Promise<SizeRangeResponse> {
+    return api
+      .get<SizeRangeResponse>("/api/items/size-ranges")
+      .then((r) => r.data);
   },
 };
