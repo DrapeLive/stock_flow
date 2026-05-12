@@ -1,6 +1,5 @@
 import { RefObject } from "react";
 import { InvoiceResponse } from "@/types/order";
-import { mediaUrl } from "@/lib/media";
 
 interface OrderFormProps extends InvoiceResponse {
   invoiceRef?: RefObject<HTMLDivElement | null>;
@@ -39,7 +38,7 @@ export default function OrderForm({
         <div className="w-12 h-12 rounded overflow-hidden flex items-center justify-center bg-gray-100">
           {brand?.logo_url ? (
             <img
-              src={mediaUrl(brand.logo_url)}
+              src={brand.logo_url}
               alt="Brand Logo"
               className="w-12 h-12 object-cover rounded"
             />

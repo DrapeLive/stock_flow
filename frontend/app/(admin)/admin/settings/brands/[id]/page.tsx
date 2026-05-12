@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 import { Trash2, ArrowLeft, Store, Pencil, Eye, X, Camera } from "lucide-react";
 import CropModal from "@/app/(admin)/admin/items/new/cropModal";
-import { mediaUrl } from "@/lib/media";
+
 import { Modal, ModalButton } from "@/components/ui/custom/Modals";
 
 export default function BrandDetailPage() {
@@ -182,7 +182,7 @@ export default function BrandDetailPage() {
         <div className="w-24 h-24 rounded-3xl flex items-center justify-center mb-4 shadow-sm bg-primary/10 overflow-hidden relative">
           {logoPreview ? (
             <img
-              src={mediaUrl(logoPreview)}
+              src={logoPreview}
               alt={brand.name}
               className="w-full h-full object-cover"
             />
@@ -384,7 +384,7 @@ export default function BrandDetailPage() {
 
       {cropSrc && (
         <CropModal
-          src={mediaUrl(cropSrc)}
+          src={cropSrc}
           onConfirm={handleCropConfirm}
           onCancel={handleCropCancel}
         />

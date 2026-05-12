@@ -10,7 +10,6 @@ import {
   ORDER_CREATION_SIZES_BY_TYPE,
 } from "@/types/item";
 import SizeRangeRow from "./SizeRangeRow";
-import { mediaUrl } from "@/lib/media";
 
 interface VariantCardProps {
   variant: UIVariant;
@@ -105,10 +104,7 @@ export default function VariantCard({
         <div className="flex items-center gap-2 mb-2">
           <div className="relative w-8 h-8 rounded bg-gray-200 overflow-hidden flex-shrink-0">
             {variant.image ? (
-              <ImagePreview
-                src={mediaUrl(variant.image)}
-                alt={`Variant ${index + 1}`}
-              />
+              <ImagePreview src={variant.image} alt={`Variant ${index + 1}`} />
             ) : (
               <div className="w-full h-full" />
             )}
@@ -175,10 +171,7 @@ export default function VariantCard({
       <div className="flex items-center gap-3 mb-3">
         <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-gray-100 border border-gray-200 flex-shrink-0">
           {variant.image ? (
-            <ImagePreview
-              src={mediaUrl(variant.image)}
-              alt={`Variant ${index + 1}`}
-            />
+            <ImagePreview src={variant.image} alt={`Variant ${index + 1}`} />
           ) : (
             <div className="w-full h-full" />
           )}

@@ -5,7 +5,7 @@ import Cropper from "react-easy-crop";
 import type { Area } from "react-easy-crop";
 import { X, Check, ZoomIn, ZoomOut } from "lucide-react";
 import { getCroppedFile, getFitFile } from "@/lib/crop-utils";
-import { mediaUrl } from "@/lib/media";
+import Image from "next/image";
 
 interface Props {
   src: string;
@@ -35,8 +35,7 @@ export default function CropModal({ src, onConfirm, onCancel }: Props) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-black">
-      {/* Toolbar */}
+    <div className="fixed inset-0 z-50 flex flex-col bg-black overflow-hidden">
       <div className="flex items-center justify-between px-4 pt-12 pb-4 flex-shrink-0">
         <button
           type="button"
@@ -78,16 +77,13 @@ export default function CropModal({ src, onConfirm, onCancel }: Props) {
           Use Photo
         </button>
       </div>
-
       {/* Crop area */}
-      <div className="relative flex-1">
+      <div className="relative flex flex-1 min-h-0 justify-center items-center">
         {fitMode === "fit" ? (
-          <div className="w-full h-full flex items-center justify-center bg-white">
-            <img
-              src={mediaUrl(src)}
-              alt="Preview"
-              className="max-w-[90%] max-h-[90%] object-contain"
-            />
+          <div className="flex relative w-100 h-100">
+            <div className="w-full h-full bg-white flex items-center justify-center">
+              <Image src={src} alt="Preview" fill className="object-contain" />
+            </div>
           </div>
         ) : (
           <Cropper
@@ -102,7 +98,6 @@ export default function CropModal({ src, onConfirm, onCancel }: Props) {
           />
         )}
       </div>
-
       {fitMode === "crop" && (
         /* Zoom bar */
         <div className="flex items-center gap-3 px-6 py-5 flex-shrink-0">

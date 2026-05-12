@@ -4,7 +4,6 @@ import { Trash2, CheckCircle2, Circle, Pencil } from "lucide-react";
 import { ImagePreview } from "@/components/pages/ImagePreview";
 import { OrderItem } from "@/types/order";
 import { Spinner } from "../ui/spinner";
-import { mediaUrl } from "@/lib/media";
 
 interface OrderItemRowProps {
   item: OrderItem;
@@ -78,7 +77,7 @@ export default function OrderItemRow({
       <div className="relative w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 border border-gray-100 bg-gray-50">
         {item.variant_image ? (
           <ImagePreview
-            src={mediaUrl(item.variant_image)}
+            src={item.variant_image}
             alt={item.item_name || "Item"}
           />
         ) : (

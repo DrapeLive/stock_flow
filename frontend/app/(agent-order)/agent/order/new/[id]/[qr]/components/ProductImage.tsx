@@ -2,7 +2,6 @@
 
 import { PackagePlus } from "lucide-react";
 import { ImagePreview } from "@/components/pages/ImagePreview";
-import { mediaUrl } from "@/lib/media";
 
 interface ProductImageProps {
   image: string | null | undefined;
@@ -13,7 +12,7 @@ export default function ProductImage({ image, alt }: ProductImageProps) {
   return (
     <div className="bg-white rounded-[40px] overflow-hidden border-2 border-black mb-8 aspect-square relative">
       {image ? (
-        <ImagePreview src={mediaUrl(image)} alt={alt} />
+        <ImagePreview src={image} alt={alt} />
       ) : (
         <div className="w-full h-full bg-gray-50 flex items-center justify-center">
           <PackagePlus size={64} className="text-gray-200" />

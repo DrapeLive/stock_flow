@@ -33,7 +33,6 @@ import type {
   EditableVariant,
   ItemType,
 } from "@/types/item";
-import { mediaUrl } from "@/lib/media";
 
 const uid = () => Math.random().toString(36).slice(2, 9);
 
@@ -384,7 +383,7 @@ export default function ItemEditPage() {
                         {currentImage ? (
                           <>
                             <Image
-                              src={mediaUrl(currentImage)}
+                              src={currentImage}
                               fill
                               className="object-cover"
                               alt=""
@@ -479,7 +478,7 @@ export default function ItemEditPage() {
           {/* Variant Crop Modal */}
           {variantCrop && (
             <CropModal
-              src={mediaUrl(variantCrop.src)}
+              src={variantCrop.src}
               onConfirm={(file) =>
                 handleVariantCropConfirm(variantCrop.backendId, file)
               }

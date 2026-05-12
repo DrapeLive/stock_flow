@@ -10,7 +10,6 @@ import { Textarea } from "@/components/ui/textarea";
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 import { ArrowLeft, X, Camera } from "lucide-react";
 import CropModal from "@/app/(admin)/admin/items/new/cropModal";
-import { mediaUrl } from "@/lib/media";
 
 export default function NewBrandPage() {
   const router = useRouter();
@@ -134,7 +133,7 @@ export default function NewBrandPage() {
             {logoPreview ? (
               <div className="relative w-24 h-24 rounded-2xl overflow-hidden border border-gray-200">
                 <img
-                  src={mediaUrl(logoPreview)}
+                  src={logoPreview}
                   alt="Logo preview"
                   className="w-full h-full object-cover"
                 />
@@ -291,7 +290,7 @@ export default function NewBrandPage() {
 
       {cropSrc && (
         <CropModal
-          src={mediaUrl(cropSrc)}
+          src={cropSrc}
           onConfirm={handleCropConfirm}
           onCancel={handleCropCancel}
         />

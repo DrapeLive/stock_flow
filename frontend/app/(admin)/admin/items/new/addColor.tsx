@@ -18,7 +18,6 @@ import CommonDetailsBadge from "./commonDetailsBadge";
 import { ColorVariant, CommonDetails, FrontendSizeRange } from "@/types/item";
 import { getSizesForItemType } from "@/types/item";
 import imageCompression from "browser-image-compression";
-import { mediaUrl } from "@/lib/media";
 
 interface Props {
   initial: ColorVariant;
@@ -83,7 +82,7 @@ export default function Step2AddColor({
     <>
       {cropSrc && (
         <CropModal
-          src={mediaUrl(cropSrc)}
+          src={cropSrc}
           onConfirm={handleCropDone}
           onCancel={() => setCropSrc(null)}
         />
@@ -124,7 +123,7 @@ export default function Step2AddColor({
             >
               {variant.imagePreview ? (
                 <Image
-                  src={mediaUrl(variant.imagePreview)}
+                  src={variant.imagePreview}
                   fill
                   className="object-cover"
                   alt="preview"

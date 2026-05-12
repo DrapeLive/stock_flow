@@ -4,7 +4,6 @@ import { ChevronDown, ChevronUp, Eye, Printer, Info } from "lucide-react";
 import { ImagePreview } from "@/components/pages/ImagePreview";
 import { ItemType, UIItem } from "@/types/item";
 import VariantCard from "./VariantCard";
-import { mediaUrl } from "@/lib/media";
 
 interface ItemCardProps {
   item: UIItem;
@@ -59,7 +58,7 @@ export default function ItemCard({
       >
         <div className="relative w-14 h-14 rounded-xl bg-gray-50 overflow-hidden flex-shrink-0 border border-gray-100">
           {image ? (
-            <ImagePreview src={mediaUrl(image)} alt={item.name} />
+            <ImagePreview src={image} alt={item.name} />
           ) : (
             <div className="w-full h-full flex items-center justify-center">
               <Info size={20} className="text-gray-300" />
