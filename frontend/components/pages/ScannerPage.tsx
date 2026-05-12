@@ -2,9 +2,10 @@
 import { itemApi } from "@/lib/api/item";
 import { toastError, toastSuccess } from "@/lib/toast";
 import { Scanner } from "@yudiel/react-qr-scanner";
-import { QrCode, Sparkles } from "lucide-react";
+import { AlertTriangle, QrCode, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { Modal, ModalButton } from "../ui/custom/Modals";
 
 interface ScannerPageProps {
   id: string;
@@ -17,6 +18,7 @@ const ScannerPage: React.FC<ScannerPageProps> = ({
   basePath = "/agent/order/new",
   orderId,
 }) => {
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [validating, setValidating] = useState(false);
   const router = useRouter();
 
@@ -48,10 +50,7 @@ const ScannerPage: React.FC<ScannerPageProps> = ({
                   );
 
                   if (result.out_of_stock) {
-                    toastError(
-                      "Out of stock",
-                      "All sizes for this item are unavailable.",
-                    );
+                    setShowLeaveConfirm(true);
                     return;
                   }
 
@@ -97,6 +96,42 @@ const ScannerPage: React.FC<ScannerPageProps> = ({
           Auto-detecting
         </span>
       </div>
+
+      {showLeaveConfirm && (
+        <Modal
+          icon={<AlertTriangle size={18} className="text-amber-500" />}
+          iconBg="bg-amber-100"
+          title="Out of Stock?"
+          description="This item is out of stock, you can add other items though."
+          onClose={() => setShowLeaveConfirm(false)}
+          actions={
+            <>
+              <ModalButton
+                variant="ghost"
+                onClick={() => setShowLeaveConfirm(false)}
+              >
+                Scan another QR
+              </ModalButton>
+
+              <ModalButton
+                variant="primary"
+                onClick={() => {
+                  setShowLeaveConfirm(false);
+                  router.push(`/agent/order/new/${id}`);
+                }}
+              >
+                Back to Orders
+              </ModalButton>
+            </>
+          }
+        >
+          <div className="bg-amber-50 rounded-xl p-3 border border-amber-100">
+            <p className="text-sm text-amber-800 font-medium">
+              Continue adding other items?
+            </p>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 };

@@ -12,6 +12,8 @@ import { Textarea } from "@/components/ui/textarea";
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
+import { AgentResponse } from "@/types/agent";
+import { agentApi } from "@/lib/api/agents";
 
 export default function NewCustomerPage() {
   const [formData, setFormData] = useState({
@@ -20,6 +22,7 @@ export default function NewCustomerPage() {
     contactNumber: "",
     preferredTransport: "",
   });
+  const [agent, setAgent] = useState<AgentResponse | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [transports, setTransports] = useState<
@@ -56,7 +59,9 @@ export default function NewCustomerPage() {
       }
     };
     fetchTransports();
-  }, []);
+
+    agentApi.getProfile(user!.id).then((data) => setAgent(data));
+  }, [user]);
 
   const validate = () => {
     const newErrors: Record<string, string> = {};
@@ -81,7 +86,7 @@ export default function NewCustomerPage() {
         name: formData.customerName,
         address: formData.address,
         contact: formData.contactNumber,
-        agent: user!.id,
+        agent: Number(agent?.id),
         preferred_transport: formData.preferredTransport
           ? parseInt(formData.preferredTransport)
           : null,

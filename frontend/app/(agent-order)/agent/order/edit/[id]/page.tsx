@@ -180,8 +180,9 @@ export default function EditOrderPage() {
         const res = await orderApi.getOne(Number(id));
 
         setOrders(res);
-
-        setExpectedDeliveryDate(res.expected_delivery_date || "");
+        setExpectedDeliveryDate(
+          res.expected_delivery_date ? res.expected_delivery_date : "",
+        );
 
         setPreferredTransport(
           res.preferred_transport ? String(res.preferred_transport) : "",
@@ -215,7 +216,7 @@ export default function EditOrderPage() {
 
     fetchData();
     fetchTransports();
-  }, [id]);
+  }, []);
 
   useEffect(() => {
     if (loadError) {

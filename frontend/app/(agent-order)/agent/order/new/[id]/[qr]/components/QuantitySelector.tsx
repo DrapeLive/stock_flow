@@ -5,13 +5,15 @@ import { Minus, Plus } from "lucide-react";
 interface QuantitySelectorProps {
   quantity: number;
   availableStock: number;
-  onChange: (quantity: number) => void;
+  disabled?: boolean;
+  onChange: (qty: number) => void;
 }
 
 export default function QuantitySelector({
   quantity,
   availableStock,
   onChange,
+  disabled,
 }: QuantitySelectorProps) {
   return (
     <div className="mb-10 bg-white p-6 rounded-[32px] border border-gray-100 flex items-center justify-between shadow-sm">
@@ -28,7 +30,9 @@ export default function QuantitySelector({
           type="number"
           min={1}
           value={quantity}
-          onChange={(e) => onChange(Math.max(1, parseInt(e.target.value, 10) || 1))}
+          onChange={(e) =>
+            onChange(Math.max(1, parseInt(e.target.value, 10) || 1))
+          }
           onFocus={(e) => e.target.select()}
           className="w-16 h-10 rounded-xl border border-gray-100 text-center text-xl font-black text-gray-900 focus:outline-none focus:border-gray-400 transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
         />
@@ -40,6 +44,12 @@ export default function QuantitySelector({
           <Plus size={20} />
         </button>
       </div>
+      {disabled && (
+        <p className="mt-2 text-xs text-amber-600 font-medium text-center">
+          This size is already in your order — select it above to edit the
+          quantity
+        </p>
+      )}
     </div>
   );
 }

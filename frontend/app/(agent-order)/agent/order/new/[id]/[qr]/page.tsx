@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Info } from "lucide-react";
 import { itemApi } from "@/lib/api/item";
@@ -51,6 +51,7 @@ export default function ProductDetailPage() {
       router.back();
     },
   });
+
   useEffect(() => {
     setLoading(true);
     const fetchData = async () => {
@@ -96,9 +97,77 @@ export default function ProductDetailPage() {
 
   const sizeGroups = getAvailableSizeRanges(selectedVariant, data?.type);
 
+  const sizeGroupMeta = useMemo(() => {
+    if (!selectedVariant)
+      return {} as Record<string, { stock: number; alreadyAdded: boolean }>;
+
+    return Object.fromEntries(
+      sizeGroups.map((group) => {
+        const reservedItems = existingOrderItems
+          .filter(
+            (item) =>
+              item.variant_id === selectedVariant.id &&
+              (isEditMode ? item.id !== editingItemId : true),
+          )
+          .map((item) => ({
+            size_group: item.size_group,
+            quantity: item.quantity,
+          }));
+
+        const stock = getAvailableStockForSizeGroup(
+          selectedVariant,
+          group,
+          reservedItems,
+        );
+        const alreadyAdded = existingOrderItems.some(
+          (item) =>
+            item.variant_id === selectedVariant.id &&
+            item.size_group === group &&
+            (isEditMode ? item.id !== editingItemId : true),
+        );
+
+        return [group, { stock, alreadyAdded }];
+      }),
+    );
+  }, [
+    sizeGroups,
+    selectedVariant,
+    existingOrderItems,
+    isEditMode,
+    editingItemId,
+  ]);
+
+  const isAlreadyAdded =
+    !!selectedSizeGroup &&
+    !isEditMode &&
+    existingOrderItems.some(
+      (item) =>
+        item.variant_id === selectedVariant?.id &&
+        item.size_group === selectedSizeGroup,
+    );
+
   useEffect(() => {
     if (sizeGroups.length > 0 && !selectedSizeGroup) {
-      setSelectedSizeGroup(sizeGroups[0]);
+      const bestGroup = sizeGroups.reduce((best, group) => {
+        const reservedItems = existingOrderItems
+          .filter((item) => item.variant_id === selectedVariant?.id)
+          .map((item) => ({
+            size_group: item.size_group,
+            quantity: item.quantity,
+          }));
+        const stock = getAvailableStockForSizeGroup(
+          selectedVariant,
+          group,
+          reservedItems,
+        );
+        const bestStock = getAvailableStockForSizeGroup(
+          selectedVariant,
+          best,
+          reservedItems,
+        );
+        return stock > bestStock ? group : best;
+      });
+      setSelectedSizeGroup(bestGroup);
     }
   }, [sizeGroups, selectedSizeGroup]);
 
@@ -294,12 +363,14 @@ export default function ProductDetailPage() {
           sizeGroups={sizeGroups}
           selectedSizeGroup={selectedSizeGroup}
           availableStock={availableStock}
+          sizeGroupMeta={sizeGroupMeta}
           onSelect={handleSizeGroupSelect}
         />
 
         <QuantitySelector
           quantity={quantity}
           availableStock={availableStock}
+          disabled={isAlreadyAdded}
           onChange={setQuantity}
         />
 
