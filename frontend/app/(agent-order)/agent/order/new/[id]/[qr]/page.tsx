@@ -9,11 +9,7 @@ import { PageLoading } from "@/components/ui/Loading";
 import { toastSuccess, toastError } from "@/lib/toast";
 import type { ItemQRResponse, ItemVariant } from "@/types/item";
 
-import {
-  getAvailableSizeRanges,
-  getMaxSizeGroup,
-  getAvailableStockForSizeGroup,
-} from "./utils";
+import { getAvailableSizeRanges, getAvailableStockForSizeGroup } from "./utils";
 
 import ProductHeader from "./components/ProductHeader";
 import ProductImage from "./components/ProductImage";
@@ -102,7 +98,7 @@ export default function ProductDetailPage() {
 
   useEffect(() => {
     if (sizeGroups.length > 0 && !selectedSizeGroup) {
-      setSelectedSizeGroup(getMaxSizeGroup(sizeGroups));
+      setSelectedSizeGroup(sizeGroups[0]);
     }
   }, [sizeGroups, selectedSizeGroup]);
 
@@ -266,8 +262,6 @@ export default function ProductDetailPage() {
     } catch (e) {
       console.error("Error adding item to order:", e);
       toastError("Failed to add item", e);
-    } finally {
-      setLoading(false);
     }
   };
 

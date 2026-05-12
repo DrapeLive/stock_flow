@@ -7,10 +7,29 @@ import type {
   BulkImportRequest,
 } from "@/types/customer";
 import { api } from "./axios";
+import type { PaginatedResponse } from "@/types/global";
+
+export interface CustomerFilters {
+  page?: number;
+  page_size?: number;
+  search?: string;
+}
 
 export const customerApi = {
-  getAll(): Promise<CustomerAllResponse> {
-    return api.get<CustomerAllResponse>("/api/customers/").then((r) => r.data);
+  getAll(
+    filters?: CustomerFilters,
+  ): Promise<PaginatedResponse<CustomerAllResponse[number]>> {
+    const params = new URLSearchParams();
+    if (filters?.page) params.append("page", filters.page.toString());
+    if (filters?.page_size)
+      params.append("page_size", filters.page_size.toString());
+    if (filters?.search) params.append("search", filters.search);
+    const query = params.toString();
+    return api
+      .get<
+        PaginatedResponse<CustomerAllResponse[number]>
+      >(`/api/customers/${query ? `?${query}` : ""}`)
+      .then((r) => r.data);
   },
 
   getOne(id: number): Promise<CustomerResponse> {

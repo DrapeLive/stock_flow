@@ -114,14 +114,34 @@ class AgentSerializer(serializers.ModelSerializer):
         model = Agent
         fields = ('id', 'username', 'user', 'email', 'password', 'contact', 'total_customers', 'assigned_items', 'display_name')
 
-    def validate_email(self, value):
-        if User.objects.filter(email=value).exists():
-            raise serializers.ValidationError(f'Email "{value}" is already taken.')
+    def validate_username(self, value):
+        instance = self.instance
+
+        existing = User.objects.filter(username=value)
+
+        if instance:
+            existing = existing.exclude(id=instance.user.id)
+
+        if existing.exists():
+            raise serializers.ValidationError(
+                f'Username "{value}" is already taken.'
+            )
+
         return value
 
-    def validate_username(self, value):
-        if User.objects.filter(username=value).exists():
-            raise serializers.ValidationError(f'Username "{value}" is already taken.')
+    def validate_email(self, value):
+        instance = self.instance
+
+        existing = User.objects.filter(email=value)
+
+        if instance:
+            existing = existing.exclude(id=instance.user.id)
+
+        if existing.exists():
+            raise serializers.ValidationError(
+                f'Email "{value}" is already taken.'
+            )
+
         return value
 
     def get_total_customers(self, obj):
@@ -151,24 +171,41 @@ class AgentSerializer(serializers.ModelSerializer):
 
         return agent
 
-    def update(self, instance, validated_data):
-        user = instance.user
+def update(self, instance, validated_data):
+    user = instance.user
 
-        if 'username' in validated_data:
-            user.username = validated_data['username']
+    if (
+        'username' in validated_data
+        and validated_data['username'] != user.username
+    ):
+        user.username = validated_data['username']
 
-        if 'email' in validated_data:
-            user.email = validated_data['email']
+    if (
+        'email' in validated_data
+        and validated_data['email'] != user.email
+    ):
+        user.email = validated_data['email']
 
-        if 'password' in validated_data:
-            user.password = make_password(validated_data['password'])
+    if 'password' in validated_data:
+        password = validated_data['password']
 
-        if 'display_name' in validated_data:
-            user.display_name = validated_data['display_name']
+        if password and not user.check_password(password):
+            user.password = make_password(password)
 
-        user.save()
+    if (
+        'display_name' in validated_data
+        and validated_data['display_name'] != user.display_name
+    ):
+        user.display_name = validated_data['display_name']
 
-        instance.contact = validated_data.get('contact', instance.contact)
-        instance.save()
+    user.save()
 
-        return instance
+    if (
+        'contact' in validated_data
+        and validated_data['contact'] != instance.contact
+    ):
+        instance.contact = validated_data['contact']
+
+    instance.save()
+
+    return instance

@@ -61,16 +61,17 @@ export default function Page() {
     fetchTransports();
   }, [fetchData]);
 
-  const handlePackedChange = () => {
-    fetchData();
-  };
+  const handlePackedChange = useCallback(async () => {
+    await fetchData();
+  }, [fetchData]);
 
   const handleUpdateStatus = async (newStatus: "PACKED" | "DISPATCHED") => {
-    if (newStatus === "DISPATCHED" && isPartiallyPacked) {
+    if (newStatus === "DISPATCHED" && anyItemPacked) {
       setShowDispatchDialog(true);
       return;
+    } else if (newStatus === "PACKED") {
+      await updateStatus(newStatus);
     }
-    await updateStatus(newStatus);
   };
 
   const updateStatus = async (newStatus: "PACKED" | "DISPATCHED") => {
@@ -129,13 +130,6 @@ export default function Page() {
   const anyItemPacked = data?.items.some(
     (item) => (item.packed_quantity ?? 0) > 0,
   );
-
-  const allItemsPacked = data?.items.every(
-    (item) => (item.packed_quantity ?? 0) >= item.quantity,
-  );
-
-  const isPartiallyPacked = anyItemPacked && !allItemsPacked;
-
   const isDeletable = data?.status === "PENDING" || data?.status === "PACKED";
 
   if (loading && !data)
@@ -153,7 +147,12 @@ export default function Page() {
           agentName={data?.agent_details.username ?? ""}
           orderDate={data?.created_at?.slice(0, 10) ?? ""}
           status={data?.status ?? ""}
-          preferredTransport={data?.preferred_transport_name ?? ""}
+          preferredTransport={
+            transports.find(
+              (transport) =>
+                Number(transport.value) == data?.preferred_transport,
+            )?.label ?? ""
+          }
           expectedDeliveryDate={data?.expected_delivery_date ?? ""}
           dispatchTransport={
             transports.find(
@@ -168,7 +167,10 @@ export default function Page() {
           activeTab={activeTab}
           isPackingMode={isPackingMode}
           onPackedChange={handlePackedChange}
-          onTogglePackingMode={() => setIsPackingMode(!isPackingMode)}
+          onTogglePackingMode={async () => {
+            await fetchData();
+            setIsPackingMode((prev) => !prev);
+          }}
           status={data?.status}
           orderId={Number(id)}
         />
@@ -192,7 +194,8 @@ export default function Page() {
         activeTab={activeTab}
         status={data?.status}
         anyItemPacked={anyItemPacked!}
-        onUpdateStatus={handleUpdateStatus}
+        isPackingMode={isPackingMode}
+        onActionButtonClick={handleUpdateStatus}
       />
 
       {showDeleteDialog && (

@@ -7,9 +7,9 @@ import type {
   UpdateOrderRequest,
   UpdateOrderItemRequest,
   InvoiceResponse,
-  PaginatedResponse,
 } from "@/types/order";
 import { api } from "./axios";
+import { PaginatedResponse } from "@/types/global";
 
 export interface OrderLog {
   id: number;

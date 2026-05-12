@@ -6,12 +6,12 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { itemApi } from "@/lib/api/item";
 import type { ItemQRResponse, ItemVariant } from "@/types/item";
 
-import { pdf, PDFDownloadLink } from "@react-pdf/renderer";
+import { pdf } from "@react-pdf/renderer";
 import { QRLabelPdf } from "@/components/pages/items/qr/QRLabelPdf";
 
 import QRCode from "qrcode";
 import Image from "next/image";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, Download, Printer, Share2 } from "lucide-react";
 
 type QRPrintItem = {
   id: number;
@@ -31,12 +31,12 @@ export default function QRPrintPageContent() {
   const router = useRouter();
 
   const [item, setItem] = useState<QRPrintItem | null>(null);
-
   const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
-
+  const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
   const [qrImages, setQrImages] = useState<Record<number, string>>({});
-
   const [loading, setLoading] = useState(true);
+  const [sharing, setSharing] = useState(false);
+  const [printing, setPrinting] = useState(false);
 
   const isMobile =
     typeof window !== "undefined" && /Mobi|Android/i.test(navigator.userAgent);
@@ -44,17 +44,14 @@ export default function QRPrintPageContent() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // ── Full item QR page ──
         if (itemId) {
           const data = await itemApi.getOne(Number(itemId));
-
           const variants = data.variants.map((v) => ({
             id: v.id,
             qr_code: v.qr_code,
             image: v.image,
             sizes: v.sizes,
           }));
-
           const parsedItem: QRPrintItem = {
             id: data.id,
             name: data.name,
@@ -63,17 +60,11 @@ export default function QRPrintPageContent() {
             image: variants[0]?.image || null,
             variants,
           };
-
           await prepareItem(parsedItem);
-        }
-
-        // ── Single QR page ──
-        else if (qrId) {
+        } else if (qrId) {
           const data: ItemQRResponse = await itemApi.byqr(qrId);
-
           const matchedVariant =
             data.variants.find((v) => v.qr_code === qrId) || data.variants[0];
-
           const parsedItem: QRPrintItem = {
             id: data.id,
             name: data.name,
@@ -82,7 +73,6 @@ export default function QRPrintPageContent() {
             image: matchedVariant?.image || null,
             variants: [matchedVariant],
           };
-
           await prepareItem(parsedItem);
         }
       } catch (e) {
@@ -97,9 +87,7 @@ export default function QRPrintPageContent() {
 
   useEffect(() => {
     return () => {
-      if (pdfBlobUrl) {
-        URL.revokeObjectURL(pdfBlobUrl);
-      }
+      if (pdfBlobUrl) URL.revokeObjectURL(pdfBlobUrl);
     };
   }, [pdfBlobUrl]);
 
@@ -108,25 +96,91 @@ export default function QRPrintPageContent() {
       setItem(parsedItem);
 
       const qrMap: Record<number, string> = {};
-
       for (const variant of parsedItem.variants) {
         qrMap[variant.id] = await QRCode.toDataURL(
           variant.qr_code || String(variant.id),
         );
       }
-
       setQrImages(qrMap);
 
-      if (!isMobile) {
-        const blob = await pdf(
-          <QRLabelPdf item={parsedItem} qrImages={qrMap} />,
-        ).toBlob();
+      // Always generate blob — needed for share + print on mobile too
+      const blob = await pdf(
+        <QRLabelPdf item={parsedItem} qrImages={qrMap} />,
+      ).toBlob();
 
+      setPdfBlob(blob);
+
+      if (!isMobile) {
         setPdfBlobUrl(URL.createObjectURL(blob));
       }
     },
     [isMobile],
   );
+
+  const handleDownload = () => {
+    if (!pdfBlob || !item) return;
+    const url = URL.createObjectURL(pdfBlob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${item.name}-${item.id}.pdf`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+
+  const handlePrint = async () => {
+    if (!pdfBlob) return;
+    setPrinting(true);
+    try {
+      const url = URL.createObjectURL(pdfBlob);
+
+      if (isMobile) {
+        // Mobile — open in new tab, user prints from browser menu
+        window.open(url, "_blank");
+        setTimeout(() => URL.revokeObjectURL(url), 60000);
+      } else {
+        // Desktop — silent print via hidden iframe
+        const iframe = document.createElement("iframe");
+        iframe.style.display = "none";
+        iframe.src = url;
+        document.body.appendChild(iframe);
+        iframe.onload = () => {
+          iframe.contentWindow?.focus();
+          iframe.contentWindow?.print();
+          setTimeout(() => {
+            document.body.removeChild(iframe);
+            URL.revokeObjectURL(url);
+          }, 3000);
+        };
+      }
+    } finally {
+      setPrinting(false);
+    }
+  };
+
+  const handleShare = async () => {
+    if (!pdfBlob || !item) return;
+    setSharing(true);
+    try {
+      const file = new File([pdfBlob], `${item.name}-${item.id}.pdf`, {
+        type: "application/pdf",
+      });
+
+      if (navigator.canShare?.({ files: [file] })) {
+        await navigator.share({
+          title: item.name,
+          text: `QR Labels for ${item.name}`,
+          files: [file],
+        });
+      } else {
+        // Fallback — just download if share not supported
+        handleDownload();
+      }
+    } catch (e) {
+      if ((e as Error).name !== "AbortError") console.error(e);
+    } finally {
+      setSharing(false);
+    }
+  };
 
   if (loading || !item) {
     return (
@@ -138,7 +192,7 @@ export default function QRPrintPageContent() {
 
   return (
     <main className="h-screen flex flex-col">
-      {/* ── Header ── */}
+      {/* Header */}
       <header className="w-full flex items-center p-4">
         <button
           onClick={() => router.push("/admin/items")}
@@ -149,9 +203,10 @@ export default function QRPrintPageContent() {
         </button>
       </header>
 
-      {/* ── Preview Area ── */}
+      {/* Preview Area */}
       <div className="flex-1 overflow-y-auto p-4">
         {isMobile ? (
+          // Mobile — iframe doesn't work, show card preview instead
           <div className="flex flex-col gap-3 items-center pb-4">
             {item.variants.map((variant, index) => (
               <div
@@ -159,11 +214,9 @@ export default function QRPrintPageContent() {
                 className="bg-white border shadow-sm flex flex-col items-center justify-center w-full max-w-sm min-h-[90mm] px-4 py-6"
               >
                 <p className="text-[11px] font-bold text-center">{item.name}</p>
-
                 <p className="text-[9px] bg-gray-100 px-2 py-1 rounded mt-1">
                   Variant #{index + 1}
                 </p>
-
                 <Image
                   src={qrImages[variant.id]}
                   unoptimized
@@ -172,7 +225,6 @@ export default function QRPrintPageContent() {
                   height={130}
                   className="mt-3"
                 />
-
                 <p className="text-sm font-extrabold mt-2">
                   Rs. {Number(item.price).toFixed(2)}
                 </p>
@@ -188,19 +240,41 @@ export default function QRPrintPageContent() {
         )}
       </div>
 
-      {/* ── Download Bar ── */}
+      {/* Action Bar */}
       <div className="sticky bottom-0 p-4 bg-white border-t">
-        <PDFDownloadLink
-          document={<QRLabelPdf item={item} qrImages={qrImages} />}
-          fileName={`${item.name}-${item.id}.pdf`}
-          className="w-full flex justify-center"
-        >
-          {({ loading }) => (
-            <button className="w-full max-w-md px-4 py-3 bg-primary text-white rounded-2xl font-medium">
-              {loading ? "Generating..." : "Download PDF"}
+        <div className="flex gap-3 max-w-md mx-auto">
+          {/* Print — hidden on mobile since it opens a new tab */}
+
+          <button
+            onClick={handlePrint}
+            disabled={printing || !pdfBlob}
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 border border-gray-200 text-gray-700 rounded-2xl font-medium hover:bg-gray-50 disabled:opacity-50 transition-colors"
+          >
+            <Printer size={18} />
+            {printing ? "Opening..." : "Print"}
+          </button>
+
+          {isMobile && (
+            <button
+              onClick={handleShare}
+              disabled={sharing || !pdfBlob}
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 border border-gray-200 text-gray-700 rounded-2xl font-medium hover:bg-gray-50 disabled:opacity-50 transition-colors"
+            >
+              <Share2 size={18} />
+              {sharing ? "Sharing..." : "Share"}
             </button>
           )}
-        </PDFDownloadLink>
+
+          {/* Download */}
+          <button
+            onClick={handleDownload}
+            disabled={!pdfBlob}
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-primary text-white rounded-2xl font-medium disabled:opacity-50 transition-colors"
+          >
+            <Download size={18} />
+            Download
+          </button>
+        </div>
       </div>
     </main>
   );

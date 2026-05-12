@@ -224,6 +224,7 @@ CORS_ALLOW_HEADERS = [
     "content-type",
     "x-csrftoken",
     "authorization",
+    "ngrok-skip-browser-warning",
 ]
 
 MEDIA_URL = "/media/"
@@ -252,6 +253,7 @@ if not DEBUG:
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
 
+TIME_ZONE = "Asia/Kolkata"
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,

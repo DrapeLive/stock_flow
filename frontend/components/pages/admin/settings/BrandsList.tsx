@@ -5,6 +5,7 @@ import { brandApi } from "@/lib/api/brand";
 import { BrandAllResponse } from "@/types/brand";
 import { Plus, Store, Info } from "lucide-react";
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
+import { mediaUrl } from "@/lib/media";
 
 export default function BrandsList() {
   const [data, setData] = useState<BrandAllResponse>([]);
@@ -67,7 +68,7 @@ export default function BrandsList() {
           <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 overflow-hidden">
             {brand.logo_url ? (
               <img
-                src={brand.logo_url}
+                src={mediaUrl(brand.logo_url)}
                 alt={brand.name}
                 className="w-full h-full object-cover"
               />

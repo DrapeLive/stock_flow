@@ -89,11 +89,12 @@ export interface AddOrderItemRequest {
   size_group: string;
 }
 
-export interface UpdateOrderItemRequest {
-  size_group?: string;
-  quantity?: number;
-  packed_quantity?: number;
-  variant?: number | null;
+export interface UpdateOrderRequest {
+  customer?: number;
+  status?: OrderStatus;
+  agent?: number;
+  expected_delivery_date?: string | null;
+  preferred_transport?: number | null;
 }
 
 export interface UpdateOrderRequest {
@@ -103,13 +104,6 @@ export interface UpdateOrderRequest {
 }
 
 export type OrderAllResponse = Order[];
-
-export interface PaginatedResponse<T> {
-  count: number;
-  next: string | null;
-  previous: string | null;
-  results: T[];
-}
 
 export type OrderResponse = Order;
 export type OrderItems = Order["items"];

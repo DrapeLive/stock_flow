@@ -12,11 +12,10 @@ import {
   AlertTriangle,
   X,
   MapPin,
-  Calendar,
   Package,
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { orderApi } from "@/lib/api/order";
 import { OrderResponse, OutOfStockItem, PlaceOrderError } from "@/types/order";
 import { PageLoading } from "@/components/ui/Loading";
@@ -24,6 +23,7 @@ import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 import { AxiosError } from "axios";
 import { OrderTotals } from "@/components/order";
 import { useBackButton } from "@/util/useBackButton";
+import { Modal, ModalButton } from "@/components/ui/custom/Modals";
 
 export default function OrderDetailsPage() {
   const params = useParams();
@@ -39,9 +39,11 @@ export default function OrderDetailsPage() {
   const [outOfStockItems, setOutOfStockItems] = useState<OutOfStockItem[]>([]);
   const [showMergeWarning, setShowMergeWarning] = useState(false);
   const [expectedDeliveryDate, setExpectedDeliveryDate] = useState<string>("");
-  const [preferredTransport, setPreferredTransport] = useState<string>("");
+  const [preferredTransportID, setPreferredTransportID] = useState<
+    number | null
+  >(null);
   const [transports, setTransports] = useState<
-    { value: string; label: string }[]
+    { value: number; label: string }[]
   >([]);
   const [loadingTransports, setLoadingTransports] = useState(true);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
@@ -51,6 +53,29 @@ export default function OrderDetailsPage() {
       setShowLeaveConfirm(true);
     },
   });
+
+  const isFirstRender = useRef(true);
+
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+
+    const key = localStorage.getItem("orderKey");
+    if (!key) return;
+
+    const timer = setTimeout(() => {
+      orderApi
+        .update(Number(key), {
+          expected_delivery_date: expectedDeliveryDate || null,
+          preferred_transport: preferredTransportID || null,
+        })
+        .catch(console.error);
+    }, 600);
+
+    return () => clearTimeout(timer);
+  }, [expectedDeliveryDate, preferredTransportID]);
 
   interface MergeGroup {
     item_name: string;
@@ -122,9 +147,7 @@ export default function OrderDetailsPage() {
     try {
       await orderApi.placeOrder(Number(orderKey), {
         expected_delivery_date: expectedDeliveryDate || null,
-        preferred_transport: preferredTransport
-          ? parseInt(preferredTransport)
-          : null,
+        preferred_transport: preferredTransportID || null,
       });
       toastSuccess("Order placed successfully!");
       router.push("/agent/order/invoice");
@@ -183,6 +206,9 @@ export default function OrderDetailsPage() {
         if (key) {
           const res2 = await orderApi.getOne(Number(key));
           setOrders(res2);
+          setPreferredTransportID(
+            res2.preferred_transport || response.preferred_transport,
+          );
         }
       } catch (e) {
         console.error("Error fetching order details:", e);
@@ -197,7 +223,7 @@ export default function OrderDetailsPage() {
       try {
         const response = await transportApi.getActive();
         const formattedTransports = response.map((transport) => ({
-          value: transport.id.toString(),
+          value: transport.id,
           label: transport.name,
         }));
         setTransports(formattedTransports);
@@ -291,50 +317,49 @@ export default function OrderDetailsPage() {
               </div>
             )}
           </div>
-          {orders && orders.items.length > 0 && (
-            <div className="bg-white border-t border-gray-100 p-4 space-y-4">
-              <h3 className="text-sm font-bold text-gray-900">
-                Delivery Options
-              </h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-[8px] md:text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5 block">
-                    Expected Delivery Date
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="date"
-                      value={expectedDeliveryDate}
-                      onChange={(e) => setExpectedDeliveryDate(e.target.value)}
-                      className="w-full px-2 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/10 text-sm"
-                    />
-                  </div>
-                  <p className="text-[8px] text-gray-400 mt-1">
-                    Leave empty for &quot;Whenever&quot;
-                  </p>
-                </div>
 
-                <div>
-                  <label className="text-[8px] md:text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5 block">
-                    Preferred Transport
-                  </label>
-                  <select
-                    value={preferredTransport}
-                    onChange={(e) => setPreferredTransport(e.target.value)}
-                    disabled={loadingTransports}
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/10 text-sm appearance-none"
-                  >
-                    <option value="">None</option>
-                    {transports.map((t) => (
-                      <option key={t.value} value={t.value}>
-                        {t.label}
-                      </option>
-                    ))}
-                  </select>
+          <div className="bg-white border-t border-gray-100 p-4 space-y-4">
+            <h3 className="text-sm font-bold text-gray-900">
+              Delivery Options
+            </h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-[8px] md:text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5 block">
+                  Expected Delivery Date
+                </label>
+                <div className="relative">
+                  <input
+                    type="date"
+                    value={expectedDeliveryDate}
+                    onChange={(e) => setExpectedDeliveryDate(e.target.value)}
+                    className="w-full px-2 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/10 text-sm"
+                  />
                 </div>
+                <p className="text-[8px] text-gray-400 mt-1">
+                  Leave empty for &quot;Whenever&quot;
+                </p>
+              </div>
+
+              <div>
+                <label className="text-[8px] md:text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5 block">
+                  Preferred Transport
+                </label>
+                <select
+                  value={preferredTransportID || ""}
+                  onChange={(e) => setPreferredTransportID(e.target.value)}
+                  disabled={loadingTransports}
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/10 text-sm appearance-none"
+                >
+                  <option value="">None</option>
+                  {transports.map((t) => (
+                    <option key={t.value} value={t.value}>
+                      {t.label}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
-          )}
+          </div>
         </div>
 
         {/* Items Section */}
@@ -589,87 +614,5 @@ export default function OrderDetailsPage() {
         </Modal>
       )}
     </div>
-  );
-}
-
-/* ── Shared modal primitives ── */
-
-function Modal({
-  icon,
-  iconBg,
-  title,
-  description,
-  onClose,
-  actions,
-  children,
-}: {
-  icon: React.ReactNode;
-  iconBg: string;
-  title: string;
-  description: string;
-  onClose: () => void;
-  actions: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4">
-      <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl">
-        {/* Modal header */}
-        <div className="flex items-center justify-between p-5 pb-0">
-          <div className="flex items-center gap-3">
-            <div
-              className={`w-9 h-9 rounded-xl ${iconBg} flex items-center justify-center`}
-            >
-              {icon}
-            </div>
-            <h3 className="text-base font-black text-gray-900">{title}</h3>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 hover:bg-gray-100 rounded-xl transition-colors"
-          >
-            <X size={18} className="text-gray-400" />
-          </button>
-        </div>
-
-        <p className="text-sm text-gray-500 px-5 pt-3 pb-4 leading-relaxed">
-          {description}
-        </p>
-
-        {/* Scrollable content */}
-        <div className="px-5 space-y-2 max-h-52 overflow-y-auto">
-          {children}
-        </div>
-
-        {/* Actions */}
-        <div className="flex gap-2.5 p-5">{actions}</div>
-      </div>
-    </div>
-  );
-}
-
-function ModalButton({
-  variant,
-  onClick,
-  disabled,
-  children,
-}: {
-  variant: "ghost" | "primary";
-  onClick: () => void;
-  disabled?: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all active:scale-95 disabled:opacity-50 ${
-        variant === "ghost"
-          ? "border border-gray-200 text-gray-600 hover:bg-gray-50"
-          : "bg-primary text-white shadow-md shadow-primary/20 hover:opacity-90"
-      }`}
-    >
-      {children}
-    </button>
   );
 }

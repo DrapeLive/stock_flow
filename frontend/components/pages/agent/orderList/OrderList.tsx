@@ -2,10 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { orderApi } from "@/lib/api/order";
-import { customerApi } from "@/lib/api/customer";
 import { toastError } from "@/lib/toast";
-import { OrderAllResponse, PaginatedResponse } from "@/types/order";
-import { CustomerAllResponse } from "@/types/customer";
+import { OrderAllResponse } from "@/types/order";
 import { PageLoading } from "@/components/ui/Loading";
 import { useRouter } from "next/navigation";
 import OrderCard from "@/components/pages/agent/order/OrderCard";
@@ -16,6 +14,7 @@ import FilterToggle from "@/components/ui/FilterToggle";
 import SearchBar from "@/components/ui/SearchBar";
 import Pagination from "@/components/ui/Pagination";
 import useSessionStorage from "@/hooks/useSessionStorage";
+import { PaginatedResponse } from "@/types/global";
 
 type ItemTypeTab = "all" | "gents" | "kids";
 
@@ -32,7 +31,6 @@ export default function AgentOrderList({
   const [toDate, setToDate] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [search, setSearch] = useSessionStorage("agent_search", "");
-  const [customers, setCustomers] = useState<CustomerAllResponse>([]);
   const [selectedCustomer, setSelectedCustomer] = useSessionStorage(
     "agent_selectedCustomer",
     "all",
@@ -100,13 +98,6 @@ export default function AgentOrderList({
     debouncedSearch,
     selectedCustomer,
   ]);
-
-  useEffect(() => {
-    customerApi
-      .getAll()
-      .then((customers) => setCustomers(customers))
-      .catch(console.error);
-  }, []);
 
   const sortedData = [...data].sort(
     (a, b) =>
@@ -233,7 +224,6 @@ export default function AgentOrderList({
           setToDate(date);
           setCurrentPage(1);
         }}
-        customers={customers.map((c) => ({ id: c.id, name: c.name }))}
         selectedCustomer={selectedCustomer}
         onCustomerChange={(val) => {
           setSelectedCustomer(val);

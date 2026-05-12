@@ -1,7 +1,7 @@
 "use client";
 import { useAuth } from "@/context/AuthContext";
 import { orderApi } from "@/lib/api/order";
-import { OrderAllResponse, PaginatedResponse } from "@/types/order";
+import { OrderAllResponse } from "@/types/order";
 import { Info } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -14,6 +14,7 @@ import {
 } from "@/lib/viewedOrders";
 import Pagination from "@/components/ui/Pagination";
 import useSessionStorage from "@/hooks/useSessionStorage";
+import { PaginatedResponse } from "@/types/global";
 
 type OrderStatus = "ALL" | "PENDING" | "PACKED" | "DISPATCHED";
 

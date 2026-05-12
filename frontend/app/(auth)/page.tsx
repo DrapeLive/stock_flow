@@ -130,7 +130,7 @@ export default function Login() {
   const error = errorType ? ERROR_MESSAGES[errorType] : null;
 
   return (
-    <div className="flex min-h-screen min-w-full bg-gray-50 justify-center items-center px-6 py-10">
+    <div className="flex min-h-screen min-w-full justify-center items-center px-6 py-10">
       <AuthCard shake={shake} onShakeEnd={() => setShake(false)}>
         <AuthBranding />
 

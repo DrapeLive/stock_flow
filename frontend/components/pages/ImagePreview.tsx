@@ -10,6 +10,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Search } from "lucide-react";
+import { mediaUrl } from "@/lib/media";
 
 interface ImagePreviewProps {
   src: string;
@@ -33,7 +34,7 @@ export function ImagePreview({
         >
           <div className="relative w-full h-full">
             <Image
-              src={src}
+              src={mediaUrl(src)}
               alt={alt}
               fill
               className="object-cover"
@@ -54,7 +55,7 @@ export function ImagePreview({
         >
           <div className="relative w-full h-full">
             <Image
-              src={src}
+              src={mediaUrl(src)}
               alt={alt}
               fill
               className="object-cover"
@@ -79,7 +80,7 @@ export function ImagePreview({
             <DialogTitle className="sr-only">{alt}</DialogTitle>
             <div className="relative w-full h-full">
               <Image
-                src={src}
+                src={mediaUrl(src)}
                 alt={alt}
                 fill
                 className="object-contain rounded-lg w-full"
