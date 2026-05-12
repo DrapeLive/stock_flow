@@ -4,7 +4,7 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: [
     "10.118.213.7",
     "localhost",
-    "b3a3-2401-4900-6139-5722-957c-47bf-3282-53a6.ngrok-free.app",
+    "5a9e-2401-4900-9672-fc43-b544-1e82-f80c-2946.ngrok-free.app",
   ],
   images: {
     remotePatterns: [
