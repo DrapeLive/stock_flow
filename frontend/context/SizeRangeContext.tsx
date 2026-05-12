@@ -13,7 +13,6 @@ export function SizeRangeProvider({ children }: { children: ReactNode }) {
     const fetchSizeRanges = async () => {
       try {
         const data = await itemApi.getSizeRanges();
-        console.log(data);
         setSizeRanges(data);
       } catch (error) {
         console.error("Failed to fetch size ranges", error);

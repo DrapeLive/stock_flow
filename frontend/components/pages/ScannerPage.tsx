@@ -9,11 +9,13 @@ import { useState } from "react";
 interface ScannerPageProps {
   id: string;
   basePath?: string;
+  orderId?: number | null;
 }
 
 const ScannerPage: React.FC<ScannerPageProps> = ({
   id,
   basePath = "/agent/order/new",
+  orderId,
 }) => {
   const [validating, setValidating] = useState(false);
   const router = useRouter();
@@ -40,9 +42,11 @@ const ScannerPage: React.FC<ScannerPageProps> = ({
                 const qrValue = data[0].rawValue;
                 setValidating(true);
                 try {
-                  const result = await itemApi.checkOutOfStock(qrValue);
-                  console.log(result.out_of_stock);
-                  console.log(result.group_stock);
+                  const result = await itemApi.checkOutOfStock(
+                    qrValue,
+                    orderId,
+                  );
+
                   if (result.out_of_stock) {
                     toastError(
                       "Out of stock",
@@ -50,6 +54,7 @@ const ScannerPage: React.FC<ScannerPageProps> = ({
                     );
                     return;
                   }
+
                   const item = await itemApi.byqr(qrValue);
                   toastSuccess(
                     "QR code scanned successfully",

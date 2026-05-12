@@ -4,11 +4,20 @@ import ScannerPage from "@/components/pages/ScannerPage";
 import { useBackButton } from "@/util/useBackButton";
 import { ArrowLeft } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
+import { useState } from "react";
 
 export default function OrderScannerPage() {
   const params = useParams();
   const id = params.id as string;
   const router = useRouter();
+
+  const [orderId] = useState<number | null>(() => {
+    if (typeof window === "undefined") return null;
+
+    const stored = localStorage.getItem("orderKey");
+
+    return stored ? Number(stored) : null;
+  });
 
   useBackButton({
     onBack: () => {
@@ -41,7 +50,7 @@ export default function OrderScannerPage() {
       </div>
 
       <div className="flex-1 max-w-md mx-auto w-full px-6 py-10 flex flex-col items-center justify-center">
-        <ScannerPage id={id} />
+        <ScannerPage id={id} orderId={orderId} />
       </div>
     </div>
   );

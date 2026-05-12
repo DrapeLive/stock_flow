@@ -8,10 +8,12 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
+from django.db.models import Sum
 
 from apps.accounts.permissions import IsAdmin, admin_business
 from apps.orders.models import OrderItem
 from apps.orders.utils import SIZE_MAPPING
+from apps.orders.models import OrderItem
 
 from .models import Item, ItemVariant, ItemVariantSize
 from .serializers import (
@@ -254,6 +256,8 @@ class ItemViewSet(ModelViewSet):
     @action(detail=False, methods=["get"], url_path="by-qr/out-of-stock")
     def check_out_of_stock(self, request):
         qr_code = request.query_params.get("qr_code", "").strip()
+        order_id = request.query_params.get("order_id")
+
         if not qr_code or len(qr_code) > 255 or "/" in qr_code:
             return Response({"error": "Invalid QR code"}, status=400)
 
@@ -274,12 +278,31 @@ class ItemViewSet(ModelViewSet):
         item_type = item.type
         boost = get_agent_reservation_boost(request.user)
 
+        # Existing draft quantities for this order
+        draft_reserved: dict[str, int] = {}
+
+        if order_id:
+            draft_items = (
+                OrderItem.objects.filter(
+                    order_id=order_id,
+                    order__status="DRAFT",
+                    variant=variant,
+                )
+            )
+
+            for d in draft_items:
+                for draft_size in SIZE_MAPPING[item_type][d.size_group]:
+                    draft_reserved[draft_size] = d.quantity
+
         # Build a flat stock map: { size: total_stock } across all variants
         stock_map: dict[str, int] = {}
-        for v in item.variants.prefetch_related("sizes").all():
-            for s in v.sizes.all():
-                effective = s.stock + boost.get((v.id, s.size), 0)
-                stock_map[s.size] = stock_map.get(s.size, 0) + effective
+        for s in variant.sizes.all():
+
+            effective = s.stock + boost.get((variant.id, s.size), 0)
+            # Reducing quantity that are already orderdered by the agent
+            effective -= draft_reserved.get(s.size, 0)
+
+            stock_map[s.size] = stock_map.get(s.size, 0) + effective
 
         size_groups = ORDER_CREATION_SIZES_BY_TYPE.get(item_type, [])
 

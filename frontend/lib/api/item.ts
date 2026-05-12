@@ -27,12 +27,21 @@ export const itemApi = {
 
   checkOutOfStock(
     qrCode: string,
+    orderId?: number | null,
   ): Promise<{ out_of_stock: boolean; group_stock: boolean }> {
+    const params = new URLSearchParams({
+      qr_code: qrCode,
+    });
+
+    if (orderId) {
+      params.append("order_id", orderId.toString());
+    }
+
     return api
       .get<{
         out_of_stock: boolean;
         group_stock: boolean;
-      }>(`/api/items/by-qr/out-of-stock/?qr_code=${qrCode}`)
+      }>(`/api/items/by-qr/out-of-stock/?${params.toString()}`)
       .then((r) => r.data);
   },
 

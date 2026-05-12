@@ -1,10 +1,9 @@
-import PushNotificationInit from "@/lib/pushInit";
+import { SizeRangeProvider } from "@/context/SizeRangeContext";
 
 export default function NoLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="auth-layout">
-      <PushNotificationInit />
-      {children}
+      <SizeRangeProvider>{children}</SizeRangeProvider>
     </div>
   );
 }
