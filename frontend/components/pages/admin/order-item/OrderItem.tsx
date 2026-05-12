@@ -5,58 +5,16 @@ import { itemApi } from "@/lib/api/item";
 import { toastError, toastSuccess } from "@/lib/toast";
 import { OrderItem as OrderItemType, OrderItems } from "@/types/order";
 import { VariantSize, ItemType } from "@/types/item";
-import {
-  SIZE_RANGE_TO_SIZES,
-  SIZE_RANGE_PIECE_COUNT,
-  FrontendSizeRange,
-  getSizesForItemType,
-} from "@/types/item";
 import { useState, useEffect } from "react";
 
 import { OrderItemRow } from "@/components/order";
+import OrderItemEditModal from "./orderItemEdit";
 
-function getAvailableStockForSizeGroup(
-  variantSizes: VariantSize[],
-  sizeGroup: string,
-  reservedItems: Array<{ size_group: string; quantity: number }>,
-): number {
-  const selectedSizes =
-    SIZE_RANGE_TO_SIZES[sizeGroup as FrontendSizeRange] || [];
-  if (selectedSizes.length === 0) return 0;
-
-  const remainingStocks = selectedSizes.map((selectedSize) => {
-    const baseStock =
-      variantSizes.find((s) => s.size === selectedSize)?.stock || 0;
-
-    const reservedForThisSize = reservedItems.reduce((sum, item) => {
-      const itemSizes =
-        SIZE_RANGE_TO_SIZES[item.size_group as FrontendSizeRange] || [];
-      if (itemSizes.includes(selectedSize)) {
-        return sum + item.quantity;
-      }
-      return sum;
-    }, 0);
-
-    return baseStock - reservedForThisSize;
-  });
-
-  return Math.max(0, Math.min(...remainingStocks));
-}
-
-function getPiecesForGroup(sizeGroup: string): number {
-  return SIZE_RANGE_PIECE_COUNT[sizeGroup] || 0;
-}
-
-function getAvailableSizeGroups(
-  variantSizes: VariantSize[],
-  itemType: ItemType,
-): string[] {
-  const variantSizeSet = new Set(variantSizes.map((s) => s.size));
-  return getSizesForItemType(itemType, "order_creation").filter((range) => {
-    const requiredSizes = SIZE_RANGE_TO_SIZES[range];
-    return requiredSizes.every((s) => variantSizeSet.has(s));
-  });
-}
+import {
+  getAvailableSizeGroups,
+  getAvailableStockForSizeGroup,
+  getPiecesForGroup,
+} from "./orderItemUtils";
 
 type Props = {
   items: OrderItems | undefined;
@@ -379,186 +337,26 @@ const OrderItem: React.FC<Props> = ({
       )}
 
       {showEditDialog && editingItem && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl max-h-[90vh] overflow-y-auto">
-            <h3 className="text-lg font-bold text-gray-900 mb-1">Edit Item</h3>
-            <p className="text-sm text-gray-500 mb-4">
-              {editingItem.item_name}
-            </p>
-
-            {variantsLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-              </div>
-            ) : sizeGroupOptions.length === 0 ? (
-              <div className="py-6 text-center">
-                <p className="text-sm text-red-500 font-medium">
-                  No sizes available
-                </p>
-                <button
-                  onClick={() => {
-                    setShowEditDialog(false);
-                    setEditingItem(null);
-                  }}
-                  className="mt-4 w-full py-3 px-4 rounded-xl border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors"
-                >
-                  Close
-                </button>
-              </div>
-            ) : (
-              <>
-                <div className="mb-4">
-                  <div className="flex justify-between">
-                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                      Size Group
-                    </label>
-                    {editingItem.item_type == "gents" && (
-                      <p className="text-[10px] text-red-800">
-                        Cannot edit size group for gents items
-                      </p>
-                    )}
-                  </div>
-
-                  <select
-                    disabled={editingItem.item_type == "gents"}
-                    value={editSizeGroup}
-                    onChange={(e) => {
-                      const newGroup = e.target.value;
-                      setEditSizeGroup(newGroup);
-                      setSizeGroupError(null);
-                      setQuantityError(null);
-                      if (newGroup) {
-                        setEditPieceCount(getPiecesForGroup(newGroup));
-                      }
-                    }}
-                    className={`w-full mt-1 px-4 py-3 rounded-xl border text-lg font-bold focus:outline-none focus:ring-2 focus:ring-primary/50 ${
-                      sizeGroupError ? "border-red-300" : "border-gray-200"
-                    } ${editingItem.item_type == "gents" ? "bg-gray-100" : " bg-white"}
-                    `}
-                  >
-                    <option value="">Select Size Group</option>
-                    {sizeGroupOptions.map((group) => (
-                      <option key={group} value={group}>
-                        {group}
-                      </option>
-                    ))}
-                  </select>
-                  {sizeGroupError && (
-                    <p className="text-xs text-red-500 mt-1">
-                      {sizeGroupError}
-                    </p>
-                  )}
-
-                  {editSizeGroup &&
-                    !sizeGroupError &&
-                    variantSizes.length > 0 &&
-                    (() => {
-                      const reservedItems =
-                        orderItems
-                          ?.filter((item) => item.id !== editingItem.id)
-                          .map((item) => ({
-                            size_group: item.size_group || "",
-                            quantity: item.quantity,
-                          })) || [];
-                      const available = getAvailableStockForSizeGroup(
-                        variantSizes,
-                        editSizeGroup,
-                        reservedItems,
-                      );
-                      return (
-                        <div className="flex w-full justify-between mt-1">
-                          <p className="text-xs text-gray-500">
-                            Available: {available} sets
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            {editPieceCount} pcs/set
-                          </p>
-                        </div>
-                      );
-                    })()}
-                </div>
-
-                <div className="mb-4">
-                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                    Quantity (sets)
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={editQuantity}
-                    onChange={(e) => {
-                      setEditQuantity(
-                        Math.max(1, parseInt(e.target.value) || 1),
-                      );
-                      setQuantityError(null);
-                    }}
-                    className={`w-full mt-1 px-4 py-3 rounded-xl border text-lg font-bold focus:outline-none focus:ring-2 focus:ring-primary/50 ${
-                      quantityError ? "border-red-300" : "border-gray-200"
-                    }`}
-                  />
-                  {quantityError && (
-                    <p className="text-xs text-red-500 mt-1">{quantityError}</p>
-                  )}
-                  {editSizeGroup &&
-                    !quantityError &&
-                    variantSizes.length > 0 &&
-                    (() => {
-                      const reservedItems =
-                        orderItems
-                          ?.filter((item) => item.id !== editingItem.id)
-                          .map((item) => ({
-                            size_group: item.size_group || "",
-                            quantity: item.quantity,
-                          })) || [];
-                      const available = getAvailableStockForSizeGroup(
-                        variantSizes,
-                        editSizeGroup,
-                        reservedItems,
-                      );
-                      return (
-                        <p className="text-xs text-gray-500 mt-1">
-                          Max available: {available} sets
-                        </p>
-                      );
-                    })()}
-                </div>
-
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => {
-                      setShowEditDialog(false);
-                      setEditingItem(null);
-                    }}
-                    className="flex-1 py-3 px-4 rounded-xl border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={saveEditItem}
-                    disabled={
-                      !!sizeGroupError ||
-                      !!quantityError ||
-                      !editSizeGroup ||
-                      !editQuantity ||
-                      variantsLoading
-                    }
-                    className={`flex-1 py-3 px-4 rounded-xl font-medium transition-colors ${
-                      sizeGroupError ||
-                      quantityError ||
-                      !editSizeGroup ||
-                      !editQuantity ||
-                      variantsLoading
-                        ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                        : "bg-primary text-white hover:bg-primary/90"
-                    }`}
-                  >
-                    Save
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
+        <OrderItemEditModal
+          editingItem={editingItem}
+          editQuantity={editQuantity}
+          editSizeGroup={editSizeGroup}
+          editPieceCount={editPieceCount}
+          variantsLoading={variantsLoading}
+          sizeGroupOptions={sizeGroupOptions}
+          variantSizes={variantSizes}
+          sizeGroupError={sizeGroupError}
+          quantityError={quantityError}
+          orderItems={orderItems}
+          setEditSizeGroup={setEditSizeGroup}
+          setEditQuantity={setEditQuantity}
+          setEditPieceCount={setEditPieceCount}
+          setSizeGroupError={setSizeGroupError}
+          setQuantityError={setQuantityError}
+          setShowEditDialog={setShowEditDialog}
+          setEditingItem={setEditingItem}
+          saveEditItem={saveEditItem}
+        />
       )}
     </>
   );
