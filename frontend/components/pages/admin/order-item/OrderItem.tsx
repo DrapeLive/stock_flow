@@ -212,7 +212,12 @@ const OrderItem: React.FC<Props> = ({
 
     const reservedItems =
       orderItems
-        ?.filter((item) => item.id !== editingItem.id)
+        ?.filter(
+          (orderItem) =>
+            orderItem.item == editingItem.item &&
+            orderItem.variant == editingItem.variant &&
+            orderItem.id != editingItem.id,
+        )
         .map((item) => ({
           size_group: item.size_group || "",
           quantity: item.quantity,

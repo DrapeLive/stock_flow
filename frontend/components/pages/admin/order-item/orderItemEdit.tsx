@@ -75,65 +75,20 @@ const OrderItemEditModal: React.FC<OrderItemEditModalProps> = ({
           <>
             <div className="mb-4">
               <div className="flex justify-between">
-                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  Size Group
-                </label>
-                {editingItem.item_type == "gents" && (
-                  <p className="text-[10px] text-red-800">
-                    Cannot edit size group for gents items
-                  </p>
-                )}
+                <div className="flex flex-col justify-between h-full">
+                  <label className="text-sm font-semibold text-gray-500 uppercase tracking-wider">
+                    Size Group:
+                  </label>
+                </div>
+
+                <p className="text-lg">{editSizeGroup}</p>
               </div>
 
-              <select
-                disabled={editingItem.item_type == "gents"}
-                value={editSizeGroup}
-                onChange={(e) => {
-                  const newGroup = e.target.value;
-                  setEditSizeGroup(newGroup);
-                  setSizeGroupError(null);
-                  setQuantityError(null);
-                  if (newGroup) {
-                    setEditPieceCount(getPiecesForGroup(newGroup));
-                  }
-                }}
-                className={`w-full mt-1 px-4 py-3 rounded-xl border text-lg font-bold focus:outline-none focus:ring-2 focus:ring-primary/50 ${
-                  sizeGroupError ? "border-red-300" : "border-gray-200"
-                } ${editingItem.item_type == "gents" ? "bg-gray-100" : " bg-white"}
-              `}
-              >
-                <option value="">Select Size Group</option>
-                {sizeGroupOptions.map((group) => (
-                  <option key={group} value={group}>
-                    {group}
-                  </option>
-                ))}
-              </select>
-              {sizeGroupError && (
-                <p className="text-xs text-red-500 mt-1">{sizeGroupError}</p>
-              )}
-
               {editSizeGroup &&
-                !sizeGroupError &&
                 variantSizes.length > 0 &&
                 (() => {
-                  const reservedItems =
-                    orderItems
-                      ?.filter((item) => item.id !== editingItem.id)
-                      .map((item) => ({
-                        size_group: item.size_group || "",
-                        quantity: item.quantity,
-                      })) || [];
-                  const available = getAvailableStockForSizeGroup(
-                    variantSizes,
-                    editSizeGroup,
-                    reservedItems,
-                  );
                   return (
-                    <div className="flex w-full justify-between mt-1">
-                      <p className="text-xs text-gray-500">
-                        Available: {available} sets
-                      </p>
+                    <div className="flex w-full justify-end mt-1">
                       <p className="text-xs text-gray-500">
                         {editPieceCount} pcs/set
                       </p>
@@ -167,11 +122,17 @@ const OrderItemEditModal: React.FC<OrderItemEditModalProps> = ({
                 (() => {
                   const reservedItems =
                     orderItems
-                      ?.filter((item) => item.id !== editingItem.id)
+                      ?.filter(
+                        (orderItem) =>
+                          orderItem.item == editingItem.item &&
+                          orderItem.variant == editingItem.variant &&
+                          orderItem.id != editingItem.id,
+                      )
                       .map((item) => ({
                         size_group: item.size_group || "",
                         quantity: item.quantity,
                       })) || [];
+
                   const available = getAvailableStockForSizeGroup(
                     variantSizes,
                     editSizeGroup,
