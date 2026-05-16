@@ -16,7 +16,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
-import { Trash2, ArrowLeft, ShieldAlert, Pencil, Eye } from "lucide-react";
+import {
+  Trash2,
+  ArrowLeft,
+  ShieldAlert,
+  Pencil,
+  Eye,
+  KeyRound,
+  EyeOff,
+} from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { deriveUsername } from "@/lib/utils/deriveUsername";
 import type { Brand } from "@/types/brand";
@@ -41,8 +49,17 @@ export default function AdminDetailPage() {
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isEditing, setIsEditing] = useState(false);
+
+  // ── PIN change state ──────────────────────────────────────────────────────
+  const [showPinSection, setShowPinSection] = useState(false);
+  const [pinData, setPinData] = useState({ pin: "", confirmPin: "" });
+  const [showPin, setShowPin] = useState(false);
+  const [showConfirmPin, setShowConfirmPin] = useState(false);
+  const [pinErrors, setPinErrors] = useState<Record<string, string>>({});
+  const [savingPin, setSavingPin] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -109,6 +126,7 @@ export default function AdminDetailPage() {
         "Are you sure you want to delete this administrator? This action is irreversible.",
       )
     ) {
+      setDeleting(true);
       try {
         const numericId = parseInt(id as string, 10);
         await adminApi.delete(numericId);
@@ -117,9 +135,56 @@ export default function AdminDetailPage() {
       } catch (error) {
         console.error("Error deleting admin:", error);
         toastError("Failed to delete admin", error);
+        setDeleting(false);
       }
     }
   };
+
+  // ── PIN handlers ──────────────────────────────────────────────────────────
+
+  const handlePinChange = (key: string, value: string) => {
+    const digit = value.replace(/\D/g, "").slice(0, 6);
+    setPinData((prev) => ({ ...prev, [key]: digit }));
+    if (pinErrors[key]) setPinErrors((prev) => ({ ...prev, [key]: "" }));
+  };
+
+  const validatePin = () => {
+    const newErrors: Record<string, string> = {};
+    if (!pinData.pin) {
+      newErrors.pin = "PIN is required";
+    } else if (pinData.pin.length !== 6) {
+      newErrors.pin = "PIN must be exactly 6 digits";
+    }
+    if (!pinData.confirmPin) {
+      newErrors.confirmPin = "Please confirm the PIN";
+    } else if (pinData.pin !== pinData.confirmPin) {
+      newErrors.confirmPin = "PINs do not match";
+    }
+    setPinErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSavePin = async () => {
+    if (!validatePin()) return;
+    setSavingPin(true);
+    try {
+      const numericId = parseInt(id as string, 10);
+      await adminApi.update(numericId, {
+        pin: pinData.pin,
+        brand_id: formData.brand_id ? parseInt(formData.brand_id) : undefined,
+      });
+      toastSuccess("PIN updated successfully");
+      setPinData({ pin: "", confirmPin: "" });
+      setShowPinSection(false);
+    } catch (error: any) {
+      console.error("Error updating PIN:", error);
+      toastError("Failed to update PIN", error);
+    } finally {
+      setSavingPin(false);
+    }
+  };
+
+  // ── Render ────────────────────────────────────────────────────────────────
 
   if (loading)
     return (
@@ -166,9 +231,14 @@ export default function AdminDetailPage() {
           </button>
           <button
             onClick={handleDelete}
-            className="p-2 rounded-xl text-red-500 hover:bg-red-50 transition-colors"
+            disabled={deleting}
+            className="p-2 rounded-xl text-red-500 hover:bg-red-50 transition-colors disabled:opacity-40"
           >
-            <Trash2 size={20} />
+            {deleting ? (
+              <span className="w-5 h-5 border-2 border-red-300 border-t-red-500 rounded-full animate-spin block" />
+            ) : (
+              <Trash2 size={20} />
+            )}
           </button>
         </div>
       </div>
@@ -274,7 +344,7 @@ export default function AdminDetailPage() {
             </FieldGroup>
           </div>
 
-          <div className="mb-20 px-4">
+          <div className="mb-6 px-4">
             <StockFlowButton
               variant="filled"
               text={saving ? "Processing..." : "Commit Update"}
@@ -313,7 +383,6 @@ export default function AdminDetailPage() {
                   {admin.email || "—"}
                 </span>
               </div>
-
               <div className="flex justify-between items-center">
                 <span className="text-xs font-bold text-gray-400 uppercase">
                   {admin.business ? "Business" : "Admin Type"}
@@ -322,7 +391,6 @@ export default function AdminDetailPage() {
                   {admin.business ? admin.business : "Super user"}
                 </span>
               </div>
-
               {getBrandName() && (
                 <div className="flex justify-between items-center">
                   <span className="text-xs font-bold text-gray-400 uppercase">
@@ -336,6 +404,182 @@ export default function AdminDetailPage() {
             </div>
           </div>
         </>
+      )}
+
+      {/* ── PIN Section (superuser only) ────────────────────────────────────── */}
+      {isSuperuser && (
+        <div className="mb-6">
+          {/* Toggle button */}
+          <button
+            onClick={() => {
+              setShowPinSection((v) => !v);
+              setPinData({ pin: "", confirmPin: "" });
+              setPinErrors({});
+            }}
+            className="w-full flex items-center justify-between px-5 py-4 bg-amber-50 border border-amber-200 rounded-2xl active:scale-[0.99] transition-all"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center">
+                <KeyRound size={18} className="text-amber-600" />
+              </div>
+              <div className="text-left">
+                <p className="text-sm font-black text-gray-900">
+                  Change Delete PIN
+                </p>
+                <p className="text-[11px] text-gray-400">
+                  Update the 6-digit PIN for this admin
+                </p>
+              </div>
+            </div>
+            <div
+              className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
+                showPinSection
+                  ? "border-amber-500 bg-amber-500"
+                  : "border-gray-300"
+              }`}
+            >
+              {showPinSection && (
+                <div className="w-2 h-2 rounded-full bg-white" />
+              )}
+            </div>
+          </button>
+
+          {/* PIN form */}
+          {showPinSection && (
+            <div className="mt-3 bg-gray-50/50 border border-gray-100 rounded-2xl p-5 space-y-4">
+              {/* New PIN */}
+              <Field>
+                <div className="flex justify-between items-center mb-1.5">
+                  <FieldLabel className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+                    New PIN
+                  </FieldLabel>
+                  {pinErrors.pin ? (
+                    <span className="text-[10px] text-red-500 font-bold">
+                      {pinErrors.pin}
+                    </span>
+                  ) : (
+                    <span className="text-[10px] text-gray-400">
+                      {pinData.pin.length}/6 digits
+                    </span>
+                  )}
+                </div>
+                <div className="relative">
+                  <Input
+                    type={showPin ? "text" : "password"}
+                    inputMode="numeric"
+                    placeholder="6-digit PIN"
+                    value={pinData.pin}
+                    onChange={(e) => handlePinChange("pin", e.target.value)}
+                    className={`bg-white border-gray-100 rounded-xl h-12 pr-12 tracking-[0.3em] font-mono ${
+                      pinErrors.pin ? "border-red-200" : "focus:border-primary"
+                    }`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPin((v) => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                  >
+                    {showPin ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+
+                {/* PIN dot preview */}
+                {pinData.pin.length > 0 && (
+                  <div className="flex gap-2 mt-3">
+                    {Array.from({ length: 6 }).map((_, i) => (
+                      <div
+                        key={i}
+                        className={`w-8 h-8 rounded-lg border-2 flex items-center justify-center transition-all ${
+                          i < pinData.pin.length
+                            ? "border-primary bg-primary/10"
+                            : "border-gray-200 bg-gray-50"
+                        }`}
+                      >
+                        {showPin ? (
+                          <span className="text-sm font-bold text-primary">
+                            {pinData.pin[i] ?? ""}
+                          </span>
+                        ) : (
+                          i < pinData.pin.length && (
+                            <div className="w-2 h-2 rounded-full bg-primary" />
+                          )
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </Field>
+
+              {/* Confirm PIN */}
+              <Field>
+                <div className="flex justify-between items-center mb-1.5">
+                  <FieldLabel className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+                    Confirm PIN
+                  </FieldLabel>
+                  {pinErrors.confirmPin && (
+                    <span className="text-[10px] text-red-500 font-bold">
+                      {pinErrors.confirmPin}
+                    </span>
+                  )}
+                </div>
+                <div className="relative">
+                  <Input
+                    type={showConfirmPin ? "text" : "password"}
+                    inputMode="numeric"
+                    placeholder="Re-enter PIN"
+                    value={pinData.confirmPin}
+                    onChange={(e) =>
+                      handlePinChange("confirmPin", e.target.value)
+                    }
+                    className={`bg-white border-gray-100 rounded-xl h-12 pr-12 tracking-[0.3em] font-mono ${
+                      pinErrors.confirmPin
+                        ? "border-red-200"
+                        : pinData.confirmPin.length === 6 &&
+                            pinData.pin === pinData.confirmPin
+                          ? "border-green-400"
+                          : "focus:border-primary"
+                    }`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPin((v) => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                  >
+                    {showConfirmPin ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+
+                {/* Match indicator */}
+                {pinData.confirmPin.length > 0 && (
+                  <p
+                    className={`text-[11px] font-bold mt-1.5 ${
+                      pinData.pin === pinData.confirmPin
+                        ? "text-green-500"
+                        : "text-red-400"
+                    }`}
+                  >
+                    {pinData.pin === pinData.confirmPin
+                      ? "✓ PINs match"
+                      : "✗ PINs do not match"}
+                  </p>
+                )}
+              </Field>
+
+              {/* Save PIN button */}
+              <StockFlowButton
+                variant="filled"
+                text={savingPin ? "Saving PIN..." : "Save PIN"}
+                onClick={handleSavePin}
+                disabled={
+                  savingPin ||
+                  pinData.pin.length !== 6 ||
+                  pinData.pin !== pinData.confirmPin
+                }
+                className="w-full h-12 rounded-xl bg-amber-500 text-white font-bold shadow-lg shadow-amber-500/20 active:scale-95 transition-all disabled:opacity-40"
+              />
+            </div>
+          )}
+        </div>
       )}
 
       <div className="h-20"></div>

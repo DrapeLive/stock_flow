@@ -3,21 +3,24 @@ import json
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
+from rest_framework.filters import SearchFilter
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.viewsets import ModelViewSet
-from rest_framework.pagination import PageNumberPagination
-from rest_framework.filters import SearchFilter
 
+from apps.accounts.permissions import check_admin_pin
 from apps.agents.models import Agent
 from transports.models import Transport
 
 from .models import Customer
 from .serializers import CustomerSerializer
 
+
 class CustomerPagination(PageNumberPagination):
     page_size = 50
     page_size_query_param = "page_size"
     max_page_size = 100
+
 
 class CustomerViewSet(ModelViewSet):
     serializer_class = CustomerSerializer
@@ -37,6 +40,14 @@ class CustomerViewSet(ModelViewSet):
             serializer.save(agent=self.request.user.agent)
         else:
             serializer.save()
+
+    def destroy(self, request, *args, **kwargs):
+        pin_error = check_admin_pin(request)
+        if pin_error:
+            return pin_error
+        return super().destroy(request, *args, **kwargs)
+
+
 @csrf_exempt
 @require_POST
 def bulk_import_customers(request):

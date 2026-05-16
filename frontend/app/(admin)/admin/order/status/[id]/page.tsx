@@ -13,8 +13,11 @@ import OrderLogs from "@/components/pages/order/OrderLogs";
 import { toastSuccess, toastError } from "@/lib/toast";
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 import { Trash2, Truck } from "lucide-react";
+import PinDeleteDialog from "@/components/ui/pinDeleteDialog";
+import { useAuth } from "@/context/AuthContext";
 
 export default function Page() {
+  const { isSuperuser } = useAuth();
   const params = useParams();
   const id = params.id as string;
   const router = useRouter();
@@ -31,6 +34,7 @@ export default function Page() {
   const [transports, setTransports] = useState<
     { value: string; label: string }[]
   >([]);
+  const [pinDialogOpen, setPinDialogOpen] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
@@ -111,19 +115,31 @@ export default function Page() {
     setIsPackingMode(false);
   };
 
-  const handleDeleteOrder = async () => {
+  const handleDeleteClick = () => {
+    if (isSuperuser) {
+      if (
+        !confirm(
+          "Delete this order? Stock will be returned to inventory. This cannot be undone.",
+        )
+      )
+        return;
+      handleDeleteConfirm("");
+      return;
+    }
+    setPinDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async (pin: string) => {
     if (!id) return;
     setDeleting(true);
     try {
-      await orderApi.delete(Number(id));
+      await orderApi.delete(Number(id), pin);
       toastSuccess("Order deleted successfully");
       router.push("/admin");
     } catch (err) {
-      toastError("Failed to delete order");
-      console.error(err);
-    } finally {
       setDeleting(false);
-      setShowDeleteDialog(false);
+      // Re-throw so PinDeleteDialog shows the error inside the dialog
+      throw err;
     }
   };
 
@@ -137,6 +153,13 @@ export default function Page() {
 
   return (
     <div className="min-h-screen bg-white pb-20">
+      <PinDeleteDialog
+        open={pinDialogOpen}
+        onClose={() => setPinDialogOpen(false)}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Order"
+        description="Stock will be returned to inventory. This cannot be undone."
+      />
       <OrderDetailHeader orderId={id} backHref="/admin" />
 
       <div className="px-4 pt-4 max-w-4xl mx-auto">
@@ -178,11 +201,18 @@ export default function Page() {
         {isDeletable && (
           <div className="mt-6 pt-4 border-t border-gray-100">
             <StockFlowButton
-              text="Delete Order"
-              icon={<Trash2 />}
-              onClick={() => setShowDeleteDialog(true)}
+              text={deleting ? "Deleting..." : "Delete Order"}
+              icon={
+                deleting ? (
+                  <span className="w-4 h-4 border-2 border-red-300 border-t-red-500 rounded-full animate-spin block" />
+                ) : (
+                  <Trash2 />
+                )
+              }
+              onClick={handleDeleteClick}
+              disabled={deleting}
               variant="outline"
-              className="w-full shadow-lg border-red-200 text-red-500 hover:bg-red-500 hover:text-white"
+              className="w-full shadow-lg border-red-200 text-red-500 hover:bg-red-500 hover:text-white disabled:opacity-40"
             />
           </div>
         )}

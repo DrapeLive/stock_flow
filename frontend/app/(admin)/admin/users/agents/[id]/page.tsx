@@ -25,6 +25,8 @@ import {
   Scan,
 } from "lucide-react";
 import QRScanModal from "@/components/items/QRScanModal";
+import PinDeleteDialog from "@/components/ui/pinDeleteDialog";
+import { useAuth } from "@/context/AuthContext";
 
 function getColorFromId(id: number): string {
   if (!id) return "hsl(0, 0%, 85%)";
@@ -35,6 +37,8 @@ function getColorFromId(id: number): string {
 export default function AgentDetailPage() {
   const { id } = useParams();
   const router = useRouter();
+  const { isSuperuser } = useAuth();
+
   const [agent, setAgent] = useState<AgentResponse | null>(null);
   const [formData, setFormData] = useState({
     username: "",
@@ -44,6 +48,8 @@ export default function AgentDetailPage() {
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [pinDialogOpen, setPinDialogOpen] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isEditing, setIsEditing] = useState(false);
   const [showQRScanner, setShowQRScanner] = useState(false);
@@ -130,7 +136,7 @@ export default function AgentDetailPage() {
   const toggleItem = (itemId: number) => {
     setSelectedItemIds((prev) =>
       prev.includes(itemId)
-        ? prev.filter((id) => id !== itemId)
+        ? prev.filter((i) => i !== itemId)
         : [...prev, itemId],
     );
   };
@@ -164,21 +170,37 @@ export default function AgentDetailPage() {
     selectedItemIds.includes(item.id),
   );
 
-  const handleDelete = async () => {
-    if (
-      confirm(
-        "Are you sure you want to delete this agent? This will also delete their user account.",
+  // ── Delete ────────────────────────────────────────────────────────────────
+
+  const handleDeleteClick = () => {
+    if (isSuperuser) {
+      if (
+        !confirm(
+          "Delete this agent? This will also delete their user account. This cannot be undone.",
+        )
       )
-    ) {
-      try {
-        const numericId = parseInt(id as string, 10);
-        await agentApi.delete(numericId);
-        router.push("/admin/users/");
-      } catch (error) {
-        console.error("Error deleting agent:", error);
-      }
+        return;
+      handleDeleteConfirm("");
+      return;
+    }
+    setPinDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async (pin: string) => {
+    const numericId = parseInt(id as string, 10);
+    setDeleting(true);
+    try {
+      await agentApi.delete(numericId, pin);
+      toastSuccess("Agent deleted successfully");
+      router.push("/admin/users/");
+    } catch (error) {
+      setDeleting(false);
+      // Re-throw so PinDeleteDialog can show the error inline
+      throw error;
     }
   };
+
+  // ── Render ────────────────────────────────────────────────────────────────
 
   if (loading)
     return (
@@ -189,6 +211,14 @@ export default function AgentDetailPage() {
 
   return (
     <div className="w-full px-4 py-8 flex flex-col min-h-screen bg-white">
+      <PinDeleteDialog
+        open={pinDialogOpen}
+        onClose={() => setPinDialogOpen(false)}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Agent"
+        description="This will also delete their user account. This cannot be undone."
+      />
+
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <button
@@ -218,10 +248,15 @@ export default function AgentDetailPage() {
             )}
           </button>
           <button
-            onClick={handleDelete}
-            className="p-2 rounded-xl text-red-500 hover:bg-red-50 transition-colors"
+            onClick={handleDeleteClick}
+            disabled={deleting}
+            className="p-2 rounded-xl text-red-500 hover:bg-red-50 transition-colors disabled:opacity-40"
           >
-            <Trash2 size={20} />
+            {deleting ? (
+              <span className="w-5 h-5 border-2 border-red-300 border-t-red-500 rounded-full animate-spin block" />
+            ) : (
+              <Trash2 size={20} />
+            )}
           </button>
         </div>
       </div>
@@ -247,7 +282,7 @@ export default function AgentDetailPage() {
         </span>
       </div>
 
-      {/* User Details Section - View Mode (Compact) / Edit Mode */}
+      {/* User Details Section */}
       {isEditing ? (
         <>
           <div className="bg-gray-50/50 border border-gray-100 rounded-[2rem] p-6 space-y-6 mb-6">
@@ -319,50 +354,46 @@ export default function AgentDetailPage() {
           </div>
         </>
       ) : (
-        <>
-          {/* View Mode - Compact Details */}
-          <div className="bg-gray-50 border border-gray-100 rounded-2xl p-4 mb-6 w-full">
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-xs font-bold text-gray-400 uppercase">
-                  Display Name
-                </span>
-                <span className="text-sm font-medium text-gray-900">
-                  {agent.user.display_name || "—"}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-xs font-bold text-gray-400 uppercase">
-                  Username
-                </span>
-                <span className="text-sm font-medium text-gray-900">
-                  {agent.user.username}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-xs font-bold text-gray-400 uppercase">
-                  Email
-                </span>
-                <span className="text-sm font-medium text-gray-900">
-                  {agent.user.email}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-xs font-bold text-gray-400 uppercase">
-                  Contact
-                </span>
-                <span className="text-sm font-medium text-gray-900">
-                  {agent.contact || "—"}
-                </span>
-              </div>
+        <div className="bg-gray-50 border border-gray-100 rounded-2xl p-4 mb-6 w-full">
+          <div className="space-y-3">
+            <div className="flex justify-between items-center">
+              <span className="text-xs font-bold text-gray-400 uppercase">
+                Display Name
+              </span>
+              <span className="text-sm font-medium text-gray-900">
+                {agent.user.display_name || "—"}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-xs font-bold text-gray-400 uppercase">
+                Username
+              </span>
+              <span className="text-sm font-medium text-gray-900">
+                {agent.user.username}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-xs font-bold text-gray-400 uppercase">
+                Email
+              </span>
+              <span className="text-sm font-medium text-gray-900">
+                {agent.user.email}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-xs font-bold text-gray-400 uppercase">
+                Contact
+              </span>
+              <span className="text-sm font-medium text-gray-900">
+                {agent.contact || "—"}
+              </span>
             </div>
           </div>
-        </>
+        </div>
       )}
 
-      {/* Item Assignment Section - Mobile-Friendly with Sticky Header */}
+      {/* Item Assignment Section */}
       <div className="border-t border-gray-100 pt-6 mt-2">
-        {/* Sticky Header */}
         <div className="sticky top-0 z-10 bg-white pt-2 pb-3 -mt-2 mb-3 border-b border-gray-100">
           <div className="flex items-center gap-2">
             <div className="flex-1 flex items-center gap-2">
@@ -437,7 +468,7 @@ export default function AgentDetailPage() {
           </div>
         )}
 
-        {/* Available Items - Mobile Card Style */}
+        {/* Available Items */}
         <div className="space-y-2">
           {filteredItems.map((item) => {
             const isSelected = selectedItemIds.includes(item.id);

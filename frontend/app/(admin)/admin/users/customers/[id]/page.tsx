@@ -15,6 +15,8 @@ import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 import StockFlowSelect from "@/components/ui/custom/stockFlowSelect";
 import { Trash2, ArrowLeft, User, Pencil, Eye, Package } from "lucide-react";
 import Pagination from "@/components/ui/Pagination";
+import PinDeleteDialog from "@/components/ui/pinDeleteDialog";
+import { useAuth } from "@/context/AuthContext";
 
 function getColorFromId(id: number): string {
   if (!id) return "hsl(0, 0%, 85%)";
@@ -25,6 +27,8 @@ function getColorFromId(id: number): string {
 export default function CustomerDetailPage() {
   const { id } = useParams();
   const router = useRouter();
+  const { isSuperuser } = useAuth();
+
   const [customer, setCustomer] = useState<CustomerResponse | null>(null);
   const [agents, setAgents] = useState<{ value: string; label: string }[]>([]);
   const [orders, setOrders] = useState<OrderResponse[]>([]);
@@ -36,6 +40,8 @@ export default function CustomerDetailPage() {
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [pinDialogOpen, setPinDialogOpen] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isEditing, setIsEditing] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -56,7 +62,7 @@ export default function CustomerDetailPage() {
           }),
         ]);
         const filteredOrders = ordersData.results.filter(
-          (eachOrder) => eachOrder.status != "DRAFT",
+          (eachOrder) => eachOrder.status !== "DRAFT",
         );
         setCustomer(customerData);
         setOrders(filteredOrders);
@@ -120,18 +126,32 @@ export default function CustomerDetailPage() {
     }
   };
 
-  const handleDelete = async () => {
-    if (confirm("Are you sure you want to delete this customer?")) {
-      try {
-        const numericId = parseInt(id as string, 10);
-        await customerApi.delete(numericId);
-        toastSuccess("Customer deleted successfully");
-        router.push("/admin/users/");
-      } catch (error) {
-        console.error("Error deleting customer:", error);
-      }
+  // ── Delete ────────────────────────────────────────────────────────────────
+
+  const handleDeleteClick = () => {
+    if (isSuperuser) {
+      if (!confirm("Delete this customer? This cannot be undone.")) return;
+      handleDeleteConfirm("");
+      return;
+    }
+    setPinDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async (pin: string) => {
+    const numericId = parseInt(id as string, 10);
+    setDeleting(true);
+    try {
+      await customerApi.delete(numericId, pin);
+      toastSuccess("Customer deleted successfully");
+      router.push("/admin/users/");
+    } catch (error) {
+      setDeleting(false);
+      // Re-throw so PinDeleteDialog shows the error inline
+      throw error;
     }
   };
+
+  // ── Pagination ────────────────────────────────────────────────────────────
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
@@ -142,6 +162,8 @@ export default function CustomerDetailPage() {
     void size;
     setCurrentPage(1);
   };
+
+  // ── Render ────────────────────────────────────────────────────────────────
 
   if (loading)
     return (
@@ -154,6 +176,14 @@ export default function CustomerDetailPage() {
 
   return (
     <div className="w-full px-4 py-8 flex flex-col min-h-screen bg-white">
+      <PinDeleteDialog
+        open={pinDialogOpen}
+        onClose={() => setPinDialogOpen(false)}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Customer"
+        description="All orders linked to this customer will also be affected."
+      />
+
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <button
@@ -183,10 +213,15 @@ export default function CustomerDetailPage() {
             )}
           </button>
           <button
-            onClick={handleDelete}
-            className="p-2 rounded-xl text-red-500 hover:bg-red-50 transition-colors"
+            onClick={handleDeleteClick}
+            disabled={deleting}
+            className="p-2 rounded-xl text-red-500 hover:bg-red-50 transition-colors disabled:opacity-40"
           >
-            <Trash2 size={20} />
+            {deleting ? (
+              <span className="w-5 h-5 border-2 border-red-300 border-t-red-500 rounded-full animate-spin block" />
+            ) : (
+              <Trash2 size={20} />
+            )}
           </button>
         </div>
       </div>
@@ -290,7 +325,7 @@ export default function CustomerDetailPage() {
         </>
       ) : (
         <>
-          {/* View Mode - Compact Details */}
+          {/* View Mode */}
           <div className="bg-gray-50 border border-gray-100 rounded-2xl p-4 mb-6 w-full">
             <div className="space-y-3">
               <div className="flex justify-between items-center">

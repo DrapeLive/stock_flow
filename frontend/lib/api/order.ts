@@ -106,8 +106,10 @@ export const orderApi = {
       .then((r) => r.data);
   },
 
-  delete(id: number): Promise<void> {
-    return api.delete(`/api/orders/${id}/`).then((r) => r.data);
+  delete(id: number, pin: string): Promise<void> {
+    return api
+      .delete(`/api/orders/${id}/`, { data: { pin } })
+      .then((r) => r.data);
   },
 
   deleteItem(orderId: number, itemId: number): Promise<void> {

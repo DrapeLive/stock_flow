@@ -33,16 +33,20 @@ import type {
   EditableVariant,
   ItemType,
 } from "@/types/item";
+import { useAuth } from "@/context/AuthContext";
+import PinDeleteDialog from "@/components/ui/pinDeleteDialog";
 
 const uid = () => Math.random().toString(36).slice(2, 9);
 
 export default function ItemEditPage() {
+  const { isSuperuser } = useAuth();
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [pinDialogOpen, setPinDialogOpen] = useState(false);
 
   const [common, setCommon] = useState<EditCommonDetails>({
     name: "",
@@ -213,16 +217,25 @@ export default function ItemEditPage() {
 
   // ── Delete ────────────────────────────────────────────────────────────────
 
-  const handleDelete = async () => {
-    if (!confirm("Delete this item? This cannot be undone.")) return;
+  const handleDelete = () => {
+    if (isSuperuser) {
+      if (!confirm("Delete this item? This cannot be undone.")) return;
+      handleDeleteConfirm("");
+      return;
+    }
+    setPinDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async (pin: string) => {
     setDeleting(true);
     try {
-      await itemApi.delete(Number(id));
+      await itemApi.delete(Number(id), pin);
       toastSuccess("Item deleted successfully");
       router.push("/admin/items");
     } catch (e: any) {
-      toastError("Failed to delete item", e);
       setDeleting(false);
+      // Re-throw so PinDeleteDialog can catch it and show the error inside the dialog
+      throw e;
     }
   };
 
@@ -243,6 +256,13 @@ export default function ItemEditPage() {
 
   return (
     <div className="w-full px-4 py-8 flex flex-col min-h-screen bg-white">
+      <PinDeleteDialog
+        open={pinDialogOpen}
+        onClose={() => setPinDialogOpen(false)}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Item"
+        description="This item and all its variants will be removed."
+      />
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <button

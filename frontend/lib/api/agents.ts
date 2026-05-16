@@ -32,8 +32,10 @@ export const agentApi = {
       .then((r) => r.data);
   },
 
-  delete(id: number): Promise<void> {
-    return api.delete(`/api/agents/${id}/`).then((r) => r.data);
+  delete(id: number, pin: string): Promise<void> {
+    return api
+      .delete(`/api/agents/${id}/`, { data: { pin } })
+      .then((r) => r.data);
   },
 
   getItems(agentId: number): Promise<AssignedItem[]> {
