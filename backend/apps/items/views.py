@@ -1,6 +1,7 @@
 import os
 from datetime import timedelta
 
+from django.db.models import Sum
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import action
@@ -8,12 +9,10 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
-from django.db.models import Sum
 
-from apps.accounts.permissions import IsAdmin, admin_business
+from apps.accounts.permissions import IsAdmin, admin_business, check_admin_pin
 from apps.orders.models import OrderItem
 from apps.orders.utils import SIZE_MAPPING
-from apps.orders.models import OrderItem
 
 from .models import Item, ItemVariant, ItemVariantSize
 from .serializers import (
@@ -115,6 +114,9 @@ class ItemViewSet(ModelViewSet):
         return ItemSerializer
 
     def destroy(self, request, *args, **kwargs):
+        pin_error = check_admin_pin(request)
+        if pin_error:
+            return pin_error
         instance = self.get_object()
 
         for variant in instance.variants.all():
@@ -282,12 +284,10 @@ class ItemViewSet(ModelViewSet):
         draft_reserved: dict[str, int] = {}
 
         if order_id:
-            draft_items = (
-                OrderItem.objects.filter(
-                    order_id=order_id,
-                    order__status="DRAFT",
-                    variant=variant,
-                )
+            draft_items = OrderItem.objects.filter(
+                order_id=order_id,
+                order__status="DRAFT",
+                variant=variant,
             )
 
             for d in draft_items:
@@ -297,7 +297,6 @@ class ItemViewSet(ModelViewSet):
         # Build a flat stock map: { size: total_stock } across all variants
         stock_map: dict[str, int] = {}
         for s in variant.sizes.all():
-
             effective = s.stock + boost.get((variant.id, s.size), 0)
             # Reducing quantity that are already orderdered by the agent
             effective -= draft_reserved.get(s.size, 0)

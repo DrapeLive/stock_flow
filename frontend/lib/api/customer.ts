@@ -50,8 +50,10 @@ export const customerApi = {
       .then((r) => r.data);
   },
 
-  delete(id: number): Promise<void> {
-    return api.delete(`/api/customers/${id}/`).then((r) => r.data);
+  delete(id: number, pin: string): Promise<void> {
+    return api
+      .delete(`/api/customers/${id}/`, { data: { pin } })
+      .then((r) => r.data);
   },
 
   bulkImport(data: BulkImportRequest): Promise<BulkImportResponse> {

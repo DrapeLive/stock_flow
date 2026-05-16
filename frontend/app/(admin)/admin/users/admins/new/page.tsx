@@ -33,9 +33,11 @@ export default function NewAdminPage() {
     password: "",
     business: isSuperuser ? "" : (business ?? ""),
     brand_id: "",
+    pin: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPin, setShowPin] = useState(false);
 
   useEffect(() => {
     if (isSuperuser) {
@@ -53,10 +55,11 @@ export default function NewAdminPage() {
   }, [isSuperuser]);
 
   const handleChange = (key: string, value: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      [key]: value,
-    }));
+    // PIN: only allow digits, max 6
+    if (key === "pin") {
+      value = value.replace(/\D/g, "").slice(0, 6);
+    }
+    setFormData((prev) => ({ ...prev, [key]: value }));
     if (errors[key]) {
       setErrors((prev) => {
         const newErrors = { ...prev };
@@ -86,6 +89,11 @@ export default function NewAdminPage() {
     if (isSuperuser && !formData.brand_id) {
       newErrors.brand_id = "Brand is required";
     }
+    if (!formData.pin) {
+      newErrors.pin = "PIN is required";
+    } else if (formData.pin.length !== 6) {
+      newErrors.pin = "PIN must be exactly 6 digits";
+    }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -103,6 +111,7 @@ export default function NewAdminPage() {
         password: formData.password,
         business: isSuperuser ? (formData.business as Business) : null,
         brand_id: parseInt(formData.brand_id),
+        pin: formData.pin,
       });
       toastSuccess("Admin created successfully");
       router.push("/admin/users/");
@@ -148,6 +157,7 @@ export default function NewAdminPage() {
 
       <div className="bg-gray-50/50 border border-gray-100 rounded-3xl p-6 mb-8">
         <FieldGroup className="space-y-6 flex-1">
+          {/* Display Name */}
           <Field>
             <div className="flex justify-between items-center mb-1.5">
               <FieldLabel className="text-xs font-bold uppercase tracking-widest text-gray-400">
@@ -175,6 +185,7 @@ export default function NewAdminPage() {
             )}
           </Field>
 
+          {/* Email */}
           <Field>
             <div className="flex justify-between items-center mb-1.5">
               <FieldLabel className="text-xs font-bold uppercase tracking-widest text-gray-400">
@@ -195,6 +206,7 @@ export default function NewAdminPage() {
             />
           </Field>
 
+          {/* Password */}
           <Field>
             <div className="flex justify-between items-center mb-1.5">
               <FieldLabel className="text-xs font-bold uppercase tracking-widest text-gray-400">
@@ -215,6 +227,76 @@ export default function NewAdminPage() {
             />
           </Field>
 
+          {/* PIN — always shown, required for all admins */}
+          <Field>
+            <div className="flex justify-between items-center mb-1.5">
+              <FieldLabel className="text-xs font-bold uppercase tracking-widest text-gray-400">
+                PIN
+              </FieldLabel>
+              {errors.pin ? (
+                <span className="text-[10px] text-red-500 font-bold">
+                  {errors.pin}
+                </span>
+              ) : (
+                <span className="text-[10px] text-gray-400">
+                  {formData.pin.length}/6 digits
+                </span>
+              )}
+            </div>
+            <div className="relative">
+              <Input
+                type={showPin ? "text" : "password"}
+                inputMode="numeric"
+                placeholder="6-digit PIN"
+                value={formData.pin}
+                onChange={(e) => handleChange("pin", e.target.value)}
+                className={`bg-white border-gray-100 rounded-xl h-12 pr-12 tracking-[0.3em] font-mono focus:ring-primary/10 ${
+                  errors.pin
+                    ? "border-red-200 focus:border-red-300"
+                    : "focus:border-primary"
+                }`}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPin((v) => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors text-xs font-bold select-none"
+              >
+                {showPin ? "HIDE" : "SHOW"}
+              </button>
+            </div>
+            <p className="mt-1.5 text-[11px] text-gray-400">
+              Admin must enter this PIN whenever they delete orders, customers,
+              agents, or items.
+            </p>
+
+            {/* PIN dot preview */}
+            {formData.pin.length > 0 && (
+              <div className="flex gap-2 mt-3">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className={`w-8 h-8 rounded-lg border-2 flex items-center justify-center transition-all ${
+                      i < formData.pin.length
+                        ? "border-primary bg-primary/10"
+                        : "border-gray-200 bg-gray-50"
+                    }`}
+                  >
+                    {showPin ? (
+                      <span className="text-sm font-bold text-primary">
+                        {formData.pin[i] ?? ""}
+                      </span>
+                    ) : (
+                      i < formData.pin.length && (
+                        <div className="w-2 h-2 rounded-full bg-primary" />
+                      )
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </Field>
+
+          {/* Business (superuser only) */}
           {isSuperuser && (
             <Field>
               <div className="flex justify-between items-center mb-1.5">
@@ -244,11 +326,12 @@ export default function NewAdminPage() {
             </Field>
           )}
 
+          {/* Brand (superuser only) */}
           {isSuperuser && (
             <Field>
               <div className="flex justify-between items-center mb-1.5">
                 <FieldLabel className="text-xs font-bold uppercase tracking-widest text-gray-400">
-                  Brand *
+                  Brand
                 </FieldLabel>
                 {errors.brand_id && (
                   <span className="text-[10px] text-red-500 font-bold">
@@ -285,7 +368,6 @@ export default function NewAdminPage() {
           onClick={() => router.back()}
           className="flex-1 h-14 rounded-2xl border-gray-200 font-bold text-gray-500 active:scale-95 transition-all text-sm"
         />
-
         <StockFlowButton
           variant="filled"
           text={isSubmitting ? "Creating..." : "Create Admin"}

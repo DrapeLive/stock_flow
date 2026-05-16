@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.contrib.auth.hashers import check_password, make_password
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 
@@ -22,7 +23,14 @@ class User(AbstractUser):
         null=True,
         blank=True,
     )
-    display_name = models.CharField(max_length=255, blank=True, default='')
+    display_name = models.CharField(max_length=255, blank=True, default="")
+    pin = models.CharField(max_length=128, blank=True, default="")
+
+    def set_pin(self, raw_pin):
+        self.pin = make_password(str(raw_pin))
+
+    def check_pin(self, raw_pin):
+        return check_password(str(raw_pin), self.pin)
 
     def save(self, *args, **kwargs):
         if self.is_superuser:

@@ -13,7 +13,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 
-from apps.accounts.permissions import IsAgent, admin_business
+from apps.accounts.permissions import IsAgent, admin_business, check_admin_pin
 from apps.agents.models import AgentItem
 from apps.items.models import ItemVariantSize
 from apps.notification.tasks import send_push_to_user
@@ -527,6 +527,9 @@ class OrderViewSet(ModelViewSet):
         serializer.save(agent=self.request.user.agent)
 
     def destroy(self, request, pk=None):
+        pin_error = check_admin_pin(request)
+        if pin_error:
+            return pin_error
         order = self.get_object()
 
         if order.status != "DRAFT":

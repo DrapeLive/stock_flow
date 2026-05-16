@@ -4,7 +4,11 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 
-from apps.accounts.permissions import IsAdminOrSelfAgent, admin_business
+from apps.accounts.permissions import (
+    IsAdminOrSelfAgent,
+    admin_business,
+    check_admin_pin,
+)
 from apps.items.models import Item
 from apps.notification.tasks import send_push_to_user
 
@@ -23,6 +27,12 @@ class AgentViewSet(ModelViewSet):
             return Agent.objects.all()
 
         return Agent.objects.filter(user=user)
+
+    def destroy(self, request, *args, **kwargs):
+        pin_error = check_admin_pin(request)
+        if pin_error:
+            return pin_error
+        return super().destroy(request, *args, **kwargs)
 
 
 class AgentDetail(APIView):
