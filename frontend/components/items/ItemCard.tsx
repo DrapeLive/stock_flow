@@ -22,8 +22,9 @@ function getItemImage(item: UIItem): string | null {
 }
 
 function hasOutOfStockVariants(item: UIItem): boolean {
+  console.log(item);
   return item.variants.some((variant) =>
-    variant.sizes.every((s) => s.stock === 0),
+    variant.sizes.some((s) => s.stock === 0),
   );
 }
 
@@ -90,7 +91,7 @@ export default function ItemCard({
                 </span>
               </>
             )}
-            {hasPartialOutOfStock && context === "admin" && (
+            {hasPartialOutOfStock && (
               <>
                 <span className="text-gray-200">•</span>
                 <span className="text-xs text-red-500 font-medium">
@@ -147,7 +148,6 @@ export default function ItemCard({
                 variant={variant}
                 index={index}
                 context={context}
-                isCompact={true}
                 itemType={item.type as ItemType}
                 onPrintQR={context === "admin" ? onPrintQR : undefined}
                 onOrder={context === "agent" ? onOrder : undefined}

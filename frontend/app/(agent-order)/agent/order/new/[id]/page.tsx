@@ -54,13 +54,10 @@ export default function OrderDetailsPage() {
     },
   });
 
-  const isFirstRender = useRef(true);
+  const isReady = useRef(false);
 
   useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      return;
-    }
+    if (!isReady.current) return; // skip until data is loaded
 
     const key = localStorage.getItem("orderKey");
     if (!key) return;
@@ -209,6 +206,8 @@ export default function OrderDetailsPage() {
           setPreferredTransportID(
             res2.preferred_transport || response.preferred_transport,
           );
+          setExpectedDeliveryDate(res2.expected_delivery_date || "");
+          isReady.current = true;
         }
       } catch (e) {
         console.error("Error fetching order details:", e);
@@ -332,6 +331,7 @@ export default function OrderDetailsPage() {
                     type="date"
                     value={expectedDeliveryDate}
                     onChange={(e) => setExpectedDeliveryDate(e.target.value)}
+                    min={new Date().toISOString().split("T")[0]}
                     className="w-full px-2 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/10 text-sm"
                   />
                 </div>

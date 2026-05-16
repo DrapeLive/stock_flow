@@ -82,7 +82,6 @@ export default function VariantCard({
   variant,
   index,
   context,
-  isCompact = false,
   onPrintQR,
   onOrder,
   itemType,
@@ -92,84 +91,16 @@ export default function VariantCard({
   const sizeRanges = getSizeRangesWithStock(variant, itemType);
   const qrCode = "qr_code" in variant ? variant.qr_code : null;
 
-  if (isCompact) {
-    return (
-      <div
-        className={`rounded-lg border p-3 ${
-          isOutOfStock && !isReadonly
-            ? "bg-gray-100 border-gray-200 opacity-60"
-            : "bg-white border-gray-100"
-        }`}
-      >
-        <div className="flex items-center gap-2 mb-2">
-          <div className="relative w-8 h-8 rounded bg-gray-200 overflow-hidden flex-shrink-0">
-            {variant.image ? (
-              <ImagePreview src={variant.image} alt={`Variant ${index + 1}`} />
-            ) : (
-              <div className="w-full h-full" />
-            )}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold text-gray-700 truncate">
-              Variant #{index + 1}
-            </p>
-            {qrCode && (
-              <p className="text-[10px] text-gray-400 truncate">
-                {qrCode.slice(0, 10)}...
-              </p>
-            )}
-          </div>
-        </div>
-
-        <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
-          {sizeRanges.map(({ sizeRange, stock }) => (
-            <SizeRangeRow
-              key={sizeRange}
-              sizeRange={sizeRange}
-              stock={stock}
-              isDisabled={isOutOfStock}
-              isReadonly={isReadonly}
-            />
-          ))}
-        </div>
-
-        <div className="flex items-center justify-end gap-1.5 mt-2">
-          {context === "admin" && qrCode && !isReadonly && (
-            <button
-              onClick={() => onPrintQR?.(qrCode)}
-              className="p-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg transition-colors"
-            >
-              <Printer size={12} />
-            </button>
-          )}
-          {context === "agent" && (
-            <button
-              onClick={() => onOrder?.(variant.id)}
-              disabled={isOutOfStock}
-              className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors ${
-                isOutOfStock && !isReadonly
-                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                  : "bg-primary text-white hover:bg-primary/90"
-              }`}
-            >
-              Order
-            </button>
-          )}
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div
-      className={`rounded-xl border p-4 ${
+      className={`rounded-lg border p-3 ${
         isOutOfStock && !isReadonly
-          ? "bg-gray-50 border-gray-200 opacity-60"
+          ? "bg-red-100 border border-red-200"
           : "bg-white border-gray-100"
       }`}
     >
-      <div className="flex items-center gap-3 mb-3">
-        <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-gray-100 border border-gray-200 flex-shrink-0">
+      <div className="flex items-center gap-2 mb-2">
+        <div className="relative w-8 h-8 rounded bg-gray-200 overflow-hidden flex-shrink-0">
           {variant.image ? (
             <ImagePreview src={variant.image} alt={`Variant ${index + 1}`} />
           ) : (
@@ -177,16 +108,18 @@ export default function VariantCard({
           )}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-gray-700">
+          <p className="text-xs font-semibold text-gray-700 truncate">
             Variant #{index + 1}
           </p>
           {qrCode && (
-            <p className="text-xs text-gray-400">QR: {qrCode.slice(0, 8)}...</p>
+            <p className="text-[10px] text-gray-400 truncate">
+              {qrCode.slice(0, 10)}...
+            </p>
           )}
         </div>
       </div>
 
-      <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
+      <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
         {sizeRanges.map(({ sizeRange, stock }) => (
           <SizeRangeRow
             key={sizeRange}
@@ -198,22 +131,21 @@ export default function VariantCard({
         ))}
       </div>
 
-      <div className="flex items-center justify-end gap-2 mt-2">
+      <div className="flex items-center justify-end gap-1.5 mt-2">
         {context === "admin" && qrCode && !isReadonly && (
           <button
             onClick={() => onPrintQR?.(qrCode)}
-            className="flex items-center gap-1.5 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg text-xs font-bold transition-colors"
+            className="p-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg transition-colors"
           >
-            <Printer size={14} />
-            QR
+            <Printer size={12} />
           </button>
         )}
         {context === "agent" && (
           <button
             onClick={() => onOrder?.(variant.id)}
             disabled={isOutOfStock}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-colors ${
-              isOutOfStock
+            className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors ${
+              isOutOfStock && !isReadonly
                 ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                 : "bg-primary text-white hover:bg-primary/90"
             }`}
