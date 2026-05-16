@@ -617,12 +617,15 @@ class OrderViewSet(ModelViewSet):
 
             if agent_user_id:
                 try:
+                    customer_name = (
+                        order.customer.name if order.customer else "Customer"
+                    )
                     transaction.on_commit(
                         partial(
                             send_push_to_user.delay,
                             agent_user_id,
                             "Order Dispatched",
-                            "Your Order has been dispatched",
+                            f"Order for {customer_name} has been dispatched",
                         )
                     )
                 except Exception as e:
