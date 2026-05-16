@@ -142,29 +142,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!isReady) return;
 
+    const publicRoutes = ["/", "/forgot-password", "/reset-password"];
+
+    const isPublicRoute = publicRoutes.some(
+      (route) => pathname === route || pathname.startsWith(`${route}/`),
+    );
+
+    // Not logged in
     if (!accessToken) {
-      if (pathname !== "/") {
+      if (!isPublicRoute) {
         router.replace("/");
       }
       return;
     }
 
-    if (accessToken) {
-      if (pathname === "/") {
-        if (role === "ADMIN") {
-          router.replace("/admin");
-        } else {
-          router.replace("/agent");
-        }
-        return;
-      }
-
-      if (pathname.startsWith("/admin") && role !== "ADMIN") {
+    // Logged in
+    if (pathname === "/") {
+      if (role === "ADMIN") {
+        router.replace("/admin");
+      } else {
         router.replace("/agent");
       }
+      return;
+    }
+
+    // Prevent non-admin access
+    if (pathname.startsWith("/admin") && role !== "ADMIN") {
+      router.replace("/agent");
     }
   }, [accessToken, role, router, isReady, pathname]);
-
   return (
     <AuthContext.Provider
       value={{
