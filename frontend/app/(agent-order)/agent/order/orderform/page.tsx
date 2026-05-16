@@ -5,28 +5,13 @@ import { toastError } from "@/lib/toast";
 import { InvoiceResponse } from "@/types/order";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { pdf, PDFDownloadLink } from "@react-pdf/renderer";
+import { pdf } from "@react-pdf/renderer";
 import { InvoicePDF } from "@/components/pages/InvoicePdf";
-import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 import { useBackButton } from "@/util/useBackButton";
 
 import OrderForm from "@/components/pages/order-form/OrderFormView";
 import { Download, Printer, Share2 } from "lucide-react";
 import { PageLoading } from "@/components/ui/Loading";
-
-const formatDate = (iso: string) =>
-  new Date(iso).toLocaleDateString("en-IN", {
-    day: "numeric",
-    month: "numeric",
-    year: "numeric",
-  });
-const formatTime = (iso: string) =>
-  new Date(iso).toLocaleTimeString("en-IN", {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: true,
-  });
 
 // ── Page Component ─────────────────────────────────────────────────────────────
 export default function InvoicePage() {
@@ -64,7 +49,7 @@ export default function InvoicePage() {
         }
       } catch (e) {
         console.error("Error fetching order details:", e);
-        toastError("Failed to load invoice", e);
+        toastError("Failed to load order form", e);
         setFetchError(true);
       } finally {
         setLoading(false);
@@ -253,7 +238,7 @@ export default function InvoicePage() {
           <iframe
             src={pdfBlobUrl ?? undefined}
             className="w-full h-[650px] border-0"
-            title="Invoice Preview"
+            title="Order Form Preview"
           />
         )}
       </div>

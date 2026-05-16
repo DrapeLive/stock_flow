@@ -150,7 +150,7 @@ export default function OrderDetailsPage() {
         preferred_transport: preferredTransportID || null,
       });
       toastSuccess("Order placed successfully!");
-      router.push("/agent/order/invoice");
+      router.push("/agent/order/orderform");
     } catch (error) {
       const axiosError = error as AxiosError<PlaceOrderError>;
       if (axiosError.response?.data?.out_of_stock_items) {
@@ -181,7 +181,7 @@ export default function OrderDetailsPage() {
       setOrders(res);
       await orderApi.placeOrder(Number(orderKey));
       toastSuccess("Order placed successfully!");
-      router.push("/agent/order/invoice");
+      router.push("/agent/order/orderform");
     } catch (error) {
       const axiosError = error as AxiosError<PlaceOrderError>;
       if (axiosError.response?.data?.out_of_stock_items) {

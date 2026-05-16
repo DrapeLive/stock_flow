@@ -87,6 +87,7 @@ export default function ProductDetailPage() {
           );
         }
       } catch (e) {
+        setLoading(false);
         console.error("Error fetching product details:", e);
       } finally {
         setLoading(false);
@@ -324,11 +325,13 @@ export default function ProductDetailPage() {
         }
         router.push(`/agent/order/new/${id}`);
       } else {
+        setLoading(false);
         setValidationError(
           "Order session not found. Please restart the order.",
         );
       }
     } catch (e) {
+      setLoading(false);
       console.error("Error adding item to order:", e);
       toastError("Failed to add item", e);
       router.push(`/agent/order/new/${id}`);

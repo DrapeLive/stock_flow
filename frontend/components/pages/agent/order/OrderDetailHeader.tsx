@@ -26,7 +26,7 @@ export default function OrderDetailHeader({
       <div className="flex items-center gap-3">
         {onViewInvoice && (
           <StockFlowButton
-            text="View Invoice"
+            text="View Order Form"
             icon={<FileText />}
             variant="filled"
             onClick={onViewInvoice}

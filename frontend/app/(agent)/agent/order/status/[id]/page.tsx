@@ -56,7 +56,7 @@ export default function Page() {
 
   const handleViewInvoice = () => {
     localStorage.setItem("orderKey", id);
-    router.push("/agent/order/invoice");
+    router.push("/agent/order/orderform");
   };
 
   const handleDeleteOrder = async () => {
