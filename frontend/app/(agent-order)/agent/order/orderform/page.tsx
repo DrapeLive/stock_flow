@@ -13,6 +13,22 @@ import OrderForm from "@/components/pages/order-form/OrderFormView";
 import { Download, Printer, Share2 } from "lucide-react";
 import { PageLoading } from "@/components/ui/Loading";
 
+const urlToDataUrl = async (url: string): Promise<string | null> => {
+  try {
+    const res = await fetch(url, { mode: "cors" });
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    return await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+};
+
 // ── Page Component ─────────────────────────────────────────────────────────────
 export default function InvoicePage() {
   const router = useRouter();
@@ -23,6 +39,7 @@ export default function InvoicePage() {
   const [sharing, setSharing] = useState<boolean>(false);
   const [loading, setLoading] = useState(true);
   const [, setFetchError] = useState(false);
+  const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
   const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
   const [pdfGenerating, setPdfGenerating] = useState(true);
 
@@ -32,8 +49,10 @@ export default function InvoicePage() {
     },
   });
 
-  const isMobile =
-    typeof window !== "undefined" && /Mobi|Android/i.test(navigator.userAgent);
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    setIsMobile(/Mobi|Android/i.test(navigator.userAgent));
+  }, []);
 
   // ── Fetch invoice on mount ──
   useEffect(() => {
@@ -68,11 +87,23 @@ export default function InvoicePage() {
 
     const generatePdf = async () => {
       try {
-        const blob = await pdf(<InvoicePDF invoice={invoice} />).toBlob();
-        if (!cancelled) {
-          setPdfBlobUrl(URL.createObjectURL(blob));
-          setPdfGenerating(false);
-        }
+        const logoDataUrl = invoice.brand?.logo_url
+          ? await urlToDataUrl(invoice.brand.logo_url)
+          : null;
+
+        const invoiceForPdf = {
+          ...invoice,
+          brand: invoice.brand
+            ? { ...invoice.brand, logo_url: logoDataUrl }
+            : invoice.brand,
+        };
+
+        const blob = await pdf(<InvoicePDF invoice={invoiceForPdf} />).toBlob();
+        if (cancelled) return;
+
+        setPdfBlob(blob);
+        setPdfBlobUrl(URL.createObjectURL(blob));
+        setPdfGenerating(false);
       } catch (e) {
         console.error("Failed to generate PDF preview:", e);
         if (!cancelled) {
@@ -98,25 +129,27 @@ export default function InvoicePage() {
   }, [pdfBlobUrl]);
 
   const handlePrint = async () => {
-    if (!pdfBlobUrl) return;
+    if (!pdfBlob) return;
     setPrinting(true);
     try {
+      const url = URL.createObjectURL(pdfBlob);
+
       if (isMobile) {
         // Mobile — open in new tab, user prints from browser menu
-        window.open(pdfBlobUrl, "_blank");
-        setTimeout(() => URL.revokeObjectURL(pdfBlobUrl), 60000);
+        window.open(url, "_blank");
+        setTimeout(() => URL.revokeObjectURL(url), 60000);
       } else {
         // Desktop — silent print via hidden iframe
         const iframe = document.createElement("iframe");
         iframe.style.display = "none";
-        iframe.src = pdfBlobUrl;
+        iframe.src = url;
         document.body.appendChild(iframe);
         iframe.onload = () => {
           iframe.contentWindow?.focus();
           iframe.contentWindow?.print();
           setTimeout(() => {
             document.body.removeChild(iframe);
-            URL.revokeObjectURL(pdfBlobUrl);
+            URL.revokeObjectURL(url);
           }, 3000);
         };
       }
@@ -126,37 +159,67 @@ export default function InvoicePage() {
   };
 
   const handleShare = async () => {
-    if (!pdfBlobUrl) return;
+    if (!pdfBlob) {
+      toastError("PDF not ready yet, please wait");
+      return;
+    }
+
     setSharing(true);
     try {
-      const file = new File([pdfBlobUrl], `order-form.pdf`, {
+      const file = new File([pdfBlob], `order-form.pdf`, {
         type: "application/pdf",
       });
 
-      if (navigator.canShare?.({ files: [file] })) {
-        await navigator.share({
-          title: "Order Form",
-          text: `Order Form`,
-          files: [file],
-        });
-      } else {
-        // Fallback — just download if share not supported
+      // Check Web Share API exists at all
+      if (!navigator.share) {
+        toastError("Web Share API not supported, falling back to download");
+        handleDownload();
+        return;
+      }
+
+      // Try file share first, fallback to URL-only share, then download
+      try {
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            title: "Order Form",
+            text: "Order Form",
+            files: [file],
+          });
+        } else {
+          // Fallback: share blob URL instead of file
+          const blobUrl = URL.createObjectURL(pdfBlob);
+          try {
+            await navigator.share({
+              title: "Order Form",
+              text: "Please find the order form attached.",
+              url: blobUrl, // share the URL instead
+            });
+          } finally {
+            setTimeout(() => URL.revokeObjectURL(blobUrl), 30000);
+          }
+        }
+      } catch (shareError) {
+        const err = shareError as Error;
+        if (err.name === "AbortError") return; // silent cancel
+        toastError(shareError); // only real errors
         handleDownload();
       }
     } catch (e) {
-      if ((e as Error).name !== "AbortError") console.error(e);
+      console.error("handleShare outer error:", e);
+      handleDownload();
     } finally {
       setSharing(false);
     }
   };
 
   const handleDownload = () => {
-    if (!pdfBlobUrl) return;
+    if (!pdfBlob) return;
+    const url = URL.createObjectURL(pdfBlob);
     const a = document.createElement("a");
-    a.href = pdfBlobUrl;
+    a.href = url;
     a.download = `orderform.pdf`;
     a.click();
-    setTimeout(() => URL.revokeObjectURL(pdfBlobUrl), 1000);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
   // ── Loading state ──
@@ -249,7 +312,7 @@ export default function InvoicePage() {
 
           <button
             onClick={handlePrint}
-            disabled={printing || !pdfBlobUrl}
+            disabled={printing || !pdfBlob}
             className="flex-1 flex items-center justify-center gap-2 px-4 py-3 border border-gray-200 text-gray-700 rounded-2xl font-medium hover:bg-gray-50 disabled:opacity-50 transition-colors"
           >
             <Printer size={18} />
@@ -259,7 +322,7 @@ export default function InvoicePage() {
           {isMobile && (
             <button
               onClick={handleShare}
-              disabled={sharing || !pdfBlobUrl}
+              disabled={sharing || !pdfBlob}
               className="flex-1 flex items-center justify-center gap-2 px-4 py-3 border border-gray-200 text-gray-700 rounded-2xl font-medium hover:bg-gray-50 disabled:opacity-50 transition-colors"
             >
               <Share2 size={18} />
@@ -270,7 +333,7 @@ export default function InvoicePage() {
           {/* Download */}
           <button
             onClick={handleDownload}
-            disabled={!pdfBlobUrl}
+            disabled={!pdfBlob}
             className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-primary text-white rounded-2xl font-medium disabled:opacity-50 transition-colors"
           >
             <Download size={18} />
