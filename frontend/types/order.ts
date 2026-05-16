@@ -103,6 +103,13 @@ export interface UpdateOrderRequest {
   agent?: number;
 }
 
+export interface UpdateOrderItemRequest {
+  size_group?: string;
+  quantity?: number;
+  packed_quantity?: number;
+  variant?: number | null;
+}
+
 export type OrderAllResponse = Order[];
 
 export type OrderResponse = Order;

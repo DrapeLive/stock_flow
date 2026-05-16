@@ -273,9 +273,7 @@ export default function ItemEditPage() {
         <div className="relative w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center mb-3 overflow-hidden">
           {(variantGroups[0]?.imagePreview ?? variantGroups[0]?.imageUrl) ? (
             <ImagePreview
-              src={mediaUrl(
-                variantGroups[0].imagePreview ?? variantGroups[0].imageUrl!,
-              )}
+              src={variantGroups[0].imagePreview ?? variantGroups[0].imageUrl!}
               alt={common.name}
             />
           ) : (

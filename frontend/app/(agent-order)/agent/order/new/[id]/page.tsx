@@ -346,7 +346,9 @@ export default function OrderDetailsPage() {
                 </label>
                 <select
                   value={preferredTransportID || ""}
-                  onChange={(e) => setPreferredTransportID(e.target.value)}
+                  onChange={(e) =>
+                    setPreferredTransportID(Number(e.target.value))
+                  }
                   disabled={loadingTransports}
                   className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/10 text-sm appearance-none"
                 >

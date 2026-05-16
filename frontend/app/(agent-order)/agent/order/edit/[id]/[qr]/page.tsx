@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Info } from "lucide-react";
 import { itemApi } from "@/lib/api/item";
@@ -20,9 +20,9 @@ import ProductHeader from "../../../new/[id]/[qr]/components/ProductHeader";
 import ProductImage from "../../../new/[id]/[qr]/components/ProductImage";
 import ProductInfo from "../../../new/[id]/[qr]/components/ProductInfo";
 import VariantSelector from "../../../new/[id]/[qr]/components/VariantSelector";
-import SizeGroupSelector from "../../../new/[id]/[qr]/components/SizeGroupSelector";
 import QuantitySelector from "../../../new/[id]/[qr]/components/QuantitySelector";
 import SubmitButton from "../../../new/[id]/[qr]/components/SubmitButton";
+import SizeGroupSelector from "../../../new/[id]/[qr]/components/SizeGroupSelector";
 
 export default function EditProductDetailPage() {
   const params = useParams<{ id: string; qr: string }>();
@@ -35,11 +35,18 @@ export default function EditProductDetailPage() {
   const [selectedVariant, setSelectedVariant] = useState<ItemVariant | null>(
     null,
   );
-  const [selectedSizeGroup, setSelectedSizeGroup] = useState<string | null>(null);
+  const [selectedSizeGroup, setSelectedSizeGroup] = useState<string | null>(
+    null,
+  );
   const [loading, setLoading] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [existingOrderItems, setExistingOrderItems] = useState<
-    Array<{ id: number; variant_id: number; size_group: string; quantity: number }>
+    Array<{
+      id: number;
+      variant_id: number;
+      size_group: string;
+      quantity: number;
+    }>
   >([]);
 
   useEffect(() => {
@@ -87,6 +94,34 @@ export default function EditProductDetailPage() {
 
   const sizeGroups = getAvailableSizeRanges(selectedVariant, data?.type);
 
+  const sizeGroupMeta = useMemo(() => {
+    if (!selectedVariant)
+      return {} as Record<string, { stock: number; alreadyAdded: boolean }>;
+
+    return Object.fromEntries(
+      sizeGroups.map((group) => {
+        const reservedItems = existingOrderItems
+          .filter((item) => item.variant_id === selectedVariant.id)
+          .map((item) => ({
+            size_group: item.size_group,
+            quantity: item.quantity,
+          }));
+
+        const stock = getAvailableStockForSizeGroup(
+          selectedVariant,
+          group,
+          reservedItems,
+        );
+        const alreadyAdded = existingOrderItems.some(
+          (item) =>
+            item.variant_id === selectedVariant.id && item.size_group === group,
+        );
+
+        return [group, { stock, alreadyAdded }];
+      }),
+    );
+  }, [sizeGroups, selectedVariant, existingOrderItems]);
+
   useEffect(() => {
     if (sizeGroups.length > 0 && !selectedSizeGroup) {
       setSelectedSizeGroup(getMaxSizeGroup(sizeGroups));
@@ -98,7 +133,10 @@ export default function EditProductDetailPage() {
 
     const reservedItems = existingOrderItems
       .filter((item) => item.variant_id === selectedVariant.id)
-      .map((item) => ({ size_group: item.size_group, quantity: item.quantity }));
+      .map((item) => ({
+        size_group: item.size_group,
+        quantity: item.quantity,
+      }));
 
     return getAvailableStockForSizeGroup(
       selectedVariant,
@@ -185,7 +223,9 @@ export default function EditProductDetailPage() {
         toastSuccess("Item Added Successfully");
         router.push(`/agent/order/edit/${id}`);
       } else {
-        setValidationError("Order session not found. Please restart the order.");
+        setValidationError(
+          "Order session not found. Please restart the order.",
+        );
       }
     } catch (e) {
       console.error("Error adding item to order:", e);
@@ -221,12 +261,14 @@ export default function EditProductDetailPage() {
           sizeGroups={sizeGroups}
           selectedSizeGroup={selectedSizeGroup}
           availableStock={availableStock}
+          sizeGroupMeta={sizeGroupMeta}
           onSelect={handleSizeGroupSelect}
         />
 
         <QuantitySelector
           quantity={quantity}
           availableStock={availableStock}
+          disabled={!!existingSameVariantAndSize}
           onChange={setQuantity}
         />
 
@@ -234,7 +276,9 @@ export default function EditProductDetailPage() {
           <div className="mb-6 p-4 bg-amber-50 border border-amber-100 rounded-2xl flex items-start gap-3">
             <Info size={18} className="text-amber-500 mt-0.5 shrink-0" />
             <p className="text-sm text-amber-800 font-medium">
-              You already added {existingSameVariantAndSize.quantity} sets of this color and size range. Submitting will add a new separate item.
+              You already added {existingSameVariantAndSize.quantity} sets of
+              this color and size range. Submitting will add a new separate
+              item.
             </p>
           </div>
         )}
