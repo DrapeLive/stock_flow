@@ -13,6 +13,7 @@ import OrderForm from "@/components/pages/order-form/OrderFormView";
 import { Download, Printer, Share2 } from "lucide-react";
 import { PageLoading } from "@/components/ui/Loading";
 
+<<<<<<< HEAD
 const urlToDataUrl = async (url: string): Promise<string | null> => {
   try {
     const res = await fetch(url, { mode: "cors" });
@@ -29,6 +30,8 @@ const urlToDataUrl = async (url: string): Promise<string | null> => {
   }
 };
 
+=======
+>>>>>>> fe98e84 (refactor: Rename invoice to order form and logo rendering in order form)
 // ── Page Component ─────────────────────────────────────────────────────────────
 export default function InvoicePage() {
   const router = useRouter();
