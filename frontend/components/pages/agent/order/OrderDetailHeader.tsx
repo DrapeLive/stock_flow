@@ -24,17 +24,18 @@ export default function OrderDetailHeader({
         <span>Back</span>
       </Link>
       <div className="flex items-center gap-3">
-        {onViewInvoice && (
+        {onViewInvoice ? (
           <StockFlowButton
-            text="View Order Form"
+            text="PO"
             icon={<FileText />}
             variant="filled"
             onClick={onViewInvoice}
           />
+        ) : (
+          <div className="text-sm font-bold text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+            #{orderId}
+          </div>
         )}
-        <div className="text-sm font-bold text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
-          #{orderId}
-        </div>
       </div>
     </div>
   );
