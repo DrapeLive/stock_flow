@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 import { Trash2, ArrowLeft, Store, Pencil, Eye, X, Camera } from "lucide-react";
 import CropModal from "@/app/(admin)/admin/items/new/cropModal";
+import DeleteWithTransferDialog from "@/components/ui/deleteWithTransferDialog";
 
 export default function BrandDetailPage() {
   const { id } = useParams();
@@ -32,8 +33,7 @@ export default function BrandDetailPage() {
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isEditing, setIsEditing] = useState(false);
-  const [showDeleteConfirmation, setShowDeleteConfirmation] =
-    useState<boolean>(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -111,22 +111,21 @@ export default function BrandDetailPage() {
     }
   };
 
-  const handleDelete = async () => {
-    if (
-      confirm(
-        "Are you sure you want to delete this brand? This action is irreversible.",
-      )
-    ) {
-      try {
-        const numericId = parseInt(id as string, 10);
-        await brandApi.delete(numericId);
-        toastSuccess("Brand deleted successfully");
-        router.push("/admin/brands/");
-      } catch (error) {
-        console.error("Error deleting brand:", error);
-        toastError("Failed to delete brand", error);
-      }
+  const handleDeleteConfirm = async (
+    _id: number,
+    payload: { pin: string; action: "transfer" | "deactivate"; transfer_to_id?: number },
+  ) => {
+    try {
+      await brandApi.delete(_id, payload.pin, payload.action, payload.transfer_to_id);
+      toastSuccess("Brand deleted successfully");
+      router.push("/admin/brands/");
+    } catch (error) {
+      throw error;
     }
+  };
+
+  const handleDeleteClick = () => {
+    setDeleteDialogOpen(true);
   };
 
   if (loading)
@@ -138,6 +137,15 @@ export default function BrandDetailPage() {
 
   return (
     <div className="w-full px-4 py-8 flex flex-col min-h-screen bg-white">
+      <DeleteWithTransferDialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        entityType="brand"
+        entityId={parseInt(id as string, 10)}
+        entityName={brand?.name || ""}
+        onFetchDeleteInfo={brandApi.getDeleteInfo}
+        onDelete={handleDeleteConfirm}
+      />
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <button
@@ -167,7 +175,7 @@ export default function BrandDetailPage() {
             )}
           </button>
           <button
-            onClick={handleDelete}
+            onClick={handleDeleteClick}
             className="p-2 rounded-xl text-red-500 hover:bg-red-50 transition-colors"
           >
             <Trash2 size={20} />

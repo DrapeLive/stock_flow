@@ -15,6 +15,7 @@ import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 import StockFlowSelect from "@/components/ui/custom/stockFlowSelect";
 import { Trash2, ArrowLeft, User, Pencil, Eye, Package } from "lucide-react";
 import Pagination from "@/components/ui/Pagination";
+import DeleteWithTransferDialog from "@/components/ui/deleteWithTransferDialog";
 
 function getColorFromId(id: number): string {
   if (!id) return "hsl(0, 0%, 85%)";
@@ -39,6 +40,7 @@ export default function CustomerDetailPage() {
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isEditing, setIsEditing] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(50);
   const [totalOrders, setTotalOrders] = useState(0);
@@ -132,17 +134,26 @@ export default function CustomerDetailPage() {
     }
   };
 
-  const handleDelete = async () => {
-    if (confirm("Are you sure you want to delete this customer?")) {
-      try {
-        const numericId = parseInt(id as string, 10);
-        await customerApi.agentDelete(numericId);
-        toastSuccess("Customer deleted successfully");
-        router.push("/agent/customers/");
-      } catch (error) {
-        console.error("Error deleting customer:", error);
-      }
+  const handleDeleteConfirm = async (
+    _id: number,
+    payload: {
+      pin: string;
+      action: "transfer" | "deactivate";
+      transfer_to_id?: number;
+    },
+  ) => {
+    try {
+      await customerApi.delete(_id, payload.pin, payload.action);
+      toastSuccess("Customer deactivated successfully");
+      router.push("/agent/customers/");
+    } catch (error) {
+      throw error;
     }
+  };
+
+  // customer page runs inside agent context; Admins use pin, agents cannot delete
+  const handleDeleteClick = () => {
+    setDeleteDialogOpen(true);
   };
 
   const handlePageChange = (page: number) => {
@@ -166,6 +177,15 @@ export default function CustomerDetailPage() {
 
   return (
     <div className="w-full px-4 py-8 flex flex-col min-h-screen bg-white">
+      <DeleteWithTransferDialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        entityType="customer"
+        entityId={parseInt(id as string, 10)}
+        entityName={customer?.name || ""}
+        onFetchDeleteInfo={customerApi.getDeleteInfo}
+        onDelete={handleDeleteConfirm}
+      />
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <button
@@ -195,7 +215,7 @@ export default function CustomerDetailPage() {
             )}
           </button>
           <button
-            onClick={handleDelete}
+            onClick={handleDeleteClick}
             className="p-2 rounded-xl text-red-500 hover:bg-red-50 transition-colors"
           >
             <Trash2 size={20} />

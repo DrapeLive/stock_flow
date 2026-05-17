@@ -25,7 +25,7 @@ import {
   Scan,
 } from "lucide-react";
 import QRScanModal from "@/components/items/QRScanModal";
-import PinDeleteDialog from "@/components/ui/pinDeleteDialog";
+import DeleteWithTransferDialog from "@/components/ui/deleteWithTransferDialog";
 import { useAuth } from "@/context/AuthContext";
 
 function getColorFromId(id: number): string {
@@ -49,7 +49,7 @@ export default function AgentDetailPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [pinDialogOpen, setPinDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isEditing, setIsEditing] = useState(false);
   const [showQRScanner, setShowQRScanner] = useState(false);
@@ -173,29 +173,20 @@ export default function AgentDetailPage() {
   // ── Delete ────────────────────────────────────────────────────────────────
 
   const handleDeleteClick = () => {
-    if (isSuperuser) {
-      if (
-        !confirm(
-          "Delete this agent? This will also delete their user account. This cannot be undone.",
-        )
-      )
-        return;
-      handleDeleteConfirm("");
-      return;
-    }
-    setPinDialogOpen(true);
+    setDeleteDialogOpen(true);
   };
 
-  const handleDeleteConfirm = async (pin: string) => {
-    const numericId = parseInt(id as string, 10);
+  const handleDeleteConfirm = async (
+    _id: number,
+    payload: { pin: string; action: "transfer" | "deactivate"; transfer_to_id?: number },
+  ) => {
     setDeleting(true);
     try {
-      await agentApi.delete(numericId, pin);
+      await agentApi.delete(_id, payload.pin, payload.action, payload.transfer_to_id);
       toastSuccess("Agent deleted successfully");
       router.push("/admin/users/");
     } catch (error) {
       setDeleting(false);
-      // Re-throw so PinDeleteDialog can show the error inline
       throw error;
     }
   };
@@ -211,12 +202,15 @@ export default function AgentDetailPage() {
 
   return (
     <div className="w-full px-4 py-8 flex flex-col min-h-screen bg-white">
-      <PinDeleteDialog
-        open={pinDialogOpen}
-        onClose={() => setPinDialogOpen(false)}
-        onConfirm={handleDeleteConfirm}
-        title="Delete Agent"
-        description="This will also delete their user account. This cannot be undone."
+      <DeleteWithTransferDialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        entityType="agent"
+        entityId={parseInt(id as string, 10)}
+        entityName={agent?.user.display_name || agent?.user.username || ""}
+        onFetchDeleteInfo={agentApi.getDeleteInfo}
+        onDelete={handleDeleteConfirm}
+        isSuperuser={isSuperuser}
       />
 
       {/* Header */}

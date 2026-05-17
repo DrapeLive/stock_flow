@@ -18,7 +18,7 @@ class AdminDashboardView(APIView):
         data = {s.lower(): order_qs.filter(status=s).count() for s, _ in Order.STATUS_CHOICES}
 
         agents = []
-        for agent in Agent.objects.all():
+        for agent in Agent.objects.filter(is_active=True):
             customers_count = agent.customers.filter(order__items__item_type=biz).distinct().count() if biz else agent.customers.count()
             agents.append({
                 "agent": agent.user.username,

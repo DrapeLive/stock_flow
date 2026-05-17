@@ -3,6 +3,7 @@ import type {
   CustomerResponse,
   CustomerCreateRequest,
   CustomerUpdateRequest,
+  CustomerDeleteInfo,
   BulkImportResponse,
   BulkImportRequest,
 } from "@/types/customer";
@@ -50,9 +51,13 @@ export const customerApi = {
       .then((r) => r.data);
   },
 
-  delete(id: number, pin: string): Promise<void> {
+  getDeleteInfo(id: number): Promise<CustomerDeleteInfo> {
+    return api.get<CustomerDeleteInfo>(`/api/customers/${id}/delete_info/`).then((r) => r.data);
+  },
+
+  delete(id: number, pin: string, action?: string): Promise<void> {
     return api
-      .delete(`/api/customers/${id}/`, { data: { pin } })
+      .delete(`/api/customers/${id}/`, { data: { pin, action } })
       .then((r) => r.data);
   },
 

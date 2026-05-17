@@ -1,8 +1,11 @@
 import json
 
 from django.http import JsonResponse
+from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
+from rest_framework import status
+from rest_framework.decorators import action
 from rest_framework.filters import SearchFilter
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
@@ -10,6 +13,7 @@ from rest_framework.viewsets import ModelViewSet
 
 from apps.accounts.permissions import check_admin_pin
 from apps.agents.models import Agent
+from apps.orders.models import Order
 from transports.models import Transport
 
 from .models import Customer
@@ -32,8 +36,8 @@ class CustomerViewSet(ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         if user.role == "ADMIN":
-            return Customer.objects.all()
-        return Customer.objects.filter(agent__user=user)
+            return Customer.objects.filter(is_active=True)
+        return Customer.objects.filter(agent__user=user, is_active=True)
 
     def perform_create(self, serializer):
         if self.request.user.role == "AGENT":
@@ -41,11 +45,24 @@ class CustomerViewSet(ModelViewSet):
         else:
             serializer.save()
 
+    @action(detail=True, methods=["get"])
+    def delete_info(self, request, pk=None):
+        customer = self.get_object()
+        orders_count = Order.objects.filter(customer=customer).count()
+        return Response({
+            "orders_count": orders_count,
+        })
+
     def destroy(self, request, *args, **kwargs):
         pin_error = check_admin_pin(request)
         if pin_error:
             return pin_error
-        return super().destroy(request, *args, **kwargs)
+
+        customer = self.get_object()
+        customer.is_active = False
+        customer.deactivated_at = timezone.now()
+        customer.save(update_fields=["is_active", "deactivated_at"])
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 @csrf_exempt

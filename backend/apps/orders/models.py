@@ -16,8 +16,8 @@ class Order(models.Model):
         ('DISPATCHED', 'Dispatched')
     )
 
-    customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
-    agent = models.ForeignKey(Agent, on_delete=models.SET_NULL, null=True)
+    customer = models.ForeignKey(Customer, on_delete=models.PROTECT)
+    agent = models.ForeignKey(Agent, on_delete=models.PROTECT, null=True)
 
     status = models.CharField(
         max_length=20,

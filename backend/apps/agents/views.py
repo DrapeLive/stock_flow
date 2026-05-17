@@ -1,5 +1,6 @@
 from django.shortcuts import get_object_or_404
 from rest_framework import status
+from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
@@ -11,6 +12,7 @@ from apps.accounts.permissions import (
 )
 from apps.items.models import Item
 from apps.notification.tasks import send_push_to_user
+from apps.orders.models import Order
 
 from .models import Agent, AgentItem
 from .serializers import AgentItemListSerializer, AgentSerializer
@@ -24,15 +26,54 @@ class AgentViewSet(ModelViewSet):
         user = self.request.user
 
         if user.role == "ADMIN":
-            return Agent.objects.all()
+            return Agent.objects.filter(is_active=True)
 
-        return Agent.objects.filter(user=user)
+        return Agent.objects.filter(user=user, is_active=True)
+
+    @action(detail=True, methods=["get"])
+    def delete_info(self, request, pk=None):
+        agent = self.get_object()
+        customers_count = agent.customers.count()
+        orders_count = Order.objects.filter(agent=agent).count()
+        other_agents = Agent.objects.filter(is_active=True).exclude(id=agent.id)
+        transferable_agents = [
+            {"id": a.id, "name": a.user.username} for a in other_agents
+        ]
+        return Response({
+            "customers_count": customers_count,
+            "orders_count": orders_count,
+            "transferable_agents": transferable_agents,
+        })
 
     def destroy(self, request, *args, **kwargs):
         pin_error = check_admin_pin(request)
         if pin_error:
             return pin_error
-        return super().destroy(request, *args, **kwargs)
+
+        agent = self.get_object()
+        action = request.data.get("action", "deactivate")
+
+        if action == "transfer":
+            transfer_to_id = request.data.get("transfer_to_id")
+            if not transfer_to_id:
+                return Response(
+                    {"error": "transfer_to_id is required for transfer action."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            try:
+                target_agent = Agent.objects.get(id=transfer_to_id, is_active=True)
+            except Agent.DoesNotExist:
+                return Response(
+                    {"error": "Target agent not found."},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+
+            agent.customers.all().update(agent=target_agent)
+            agent.hard_delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+
+        agent.soft_delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class AgentDetail(APIView):

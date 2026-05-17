@@ -66,3 +66,7 @@ export interface BulkImportResponse {
   failed: number;
   errors?: { row: number; error: string }[];
 }
+
+export interface CustomerDeleteInfo {
+  orders_count: number;
+}

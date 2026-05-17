@@ -113,7 +113,7 @@ class OrderSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True, read_only=True)
 
     customer = serializers.PrimaryKeyRelatedField(
-        queryset=Customer.objects.all(),
+        queryset=Customer.objects.filter(is_active=True),
         write_only=True
     )
 
