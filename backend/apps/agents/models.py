@@ -12,6 +12,10 @@ class Agent(models.Model):
     def soft_delete(self):
         self.is_active = False
         self.deactivated_at = timezone.now()
+
+        self.user.is_active = False
+
+        self.user.save(update_fields=["is_active"])
         self.save(update_fields=["is_active", "deactivated_at"])
 
     def hard_delete(self, *args, **kwargs):
