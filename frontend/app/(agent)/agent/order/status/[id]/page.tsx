@@ -23,10 +23,11 @@ export default function Page() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [startingEdit, setStartingEdit] = useState(false);
+
   useBackButton({
-    onBack: () => {
-      router.push("/agent");
-    },
+    onBack: useCallback(() => {
+      router.push("/agent/");
+    }, [router]),
   });
 
   const [transports, setTransports] = useState<

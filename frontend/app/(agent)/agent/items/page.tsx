@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
 import { ItemList } from "@/components/items";
 import { ItemType, UIItem } from "@/types/item";
+import { useBackButton } from "@/util/useBackButton";
 
 function normalizeAgentItem(item: AssignedItem): UIItem {
   return {
@@ -32,6 +33,12 @@ export default function MyItemsPage() {
   const [items, setItems] = useState<UIItem[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+
+  useBackButton({
+    onBack: useCallback(() => {
+      router.push("/agent/");
+    }, [router]),
+  });
 
   const fetchData = useCallback(async () => {
     if (!user?.id) return;
