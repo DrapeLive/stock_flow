@@ -20,7 +20,8 @@ const ENTITY_CONFIGS: Record<EntityType, EntityConfig> = {
   agent: {
     title: "Delete Agent",
     description: "This will also delete their user account.",
-    summaryLine: (c) => `This agent has ${c.customers_count} customers and ${c.orders_count} orders.`,
+    summaryLine: (c) =>
+      `This agent has ${c.customers_count} customers and ${c.orders_count} orders.`,
     counts: [
       { key: "customers_count", label: "Customers" },
       { key: "orders_count", label: "Orders" },
@@ -33,9 +34,7 @@ const ENTITY_CONFIGS: Record<EntityType, EntityConfig> = {
     title: "Delete Customer",
     description: "This customer will be deactivated. Orders will be preserved.",
     summaryLine: (c) => `This customer has ${c.orders_count} orders.`,
-    counts: [
-      { key: "orders_count", label: "Orders" },
-    ],
+    counts: [{ key: "orders_count", label: "Orders" }],
     showTransfer: false,
     transferLabel: "",
     deactivateLabel: "Keep historical references (Deactivate customer)",
@@ -43,7 +42,8 @@ const ENTITY_CONFIGS: Record<EntityType, EntityConfig> = {
   brand: {
     title: "Delete Brand",
     description: "Items and users referencing this brand will be affected.",
-    summaryLine: (c) => `This brand has ${c.items_count} items and ${c.users_count} users.`,
+    summaryLine: (c) =>
+      `This brand has ${c.items_count} items and ${c.users_count} users.`,
     counts: [
       { key: "items_count", label: "Items" },
       { key: "users_count", label: "Users" },
@@ -61,11 +61,14 @@ interface DeleteWithTransferDialogProps {
   entityId: number;
   entityName: string;
   onFetchDeleteInfo: (id: number) => Promise<Record<string, any>>;
-  onDelete: (id: number, payload: {
-    pin: string;
-    action: "transfer" | "deactivate";
-    transfer_to_id?: number;
-  }) => Promise<void>;
+  onDelete: (
+    id: number,
+    payload: {
+      pin: string;
+      action: "transfer" | "deactivate";
+      transfer_to_id?: number;
+    },
+  ) => Promise<void>;
   isSuperuser?: boolean;
 }
 
@@ -84,7 +87,9 @@ export default function DeleteWithTransferDialog({
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [counts, setCounts] = useState<Record<string, number>>({});
-  const [transferOptions, setTransferOptions] = useState<{ value: string; label: string }[]>([]);
+  const [transferOptions, setTransferOptions] = useState<
+    { value: string; label: string }[]
+  >([]);
   const [action, setAction] = useState<"transfer" | "deactivate">("deactivate");
   const [transferToId, setTransferToId] = useState("");
   const [pin, setPin] = useState(["", "", "", "", "", ""]);
@@ -103,7 +108,10 @@ export default function DeleteWithTransferDialog({
       .then((data) => {
         setCounts(data);
         if (config.showTransfer) {
-          const transferKey = entityType === "agent" ? "transferable_agents" : "transferable_brands";
+          const transferKey =
+            entityType === "agent"
+              ? "transferable_agents"
+              : "transferable_brands";
           const nameKey = entityType === "agent" ? "name" : "name";
           const opts = (data[transferKey] || []).map((t: any) => ({
             value: t.id.toString(),
@@ -131,7 +139,10 @@ export default function DeleteWithTransferDialog({
     }
   };
 
-  const handlePinKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handlePinKeyDown = (
+    index: number,
+    e: React.KeyboardEvent<HTMLInputElement>,
+  ) => {
     if (e.key === "Backspace") {
       if (pin[index]) {
         const next = [...pin];
@@ -169,7 +180,10 @@ export default function DeleteWithTransferDialog({
       });
       onClose();
     } catch (e: any) {
-      const msg = e?.response?.data?.error || e?.response?.data?.detail || "An error occurred.";
+      const msg =
+        e?.response?.data?.error ||
+        e?.response?.data?.detail ||
+        "An error occurred.";
       setError(msg);
       setPin(["", "", "", "", "", ""]);
     } finally {
@@ -181,20 +195,24 @@ export default function DeleteWithTransferDialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm px-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4"
       onClick={(e) => {
         if (e.target === e.currentTarget && !loading) onClose();
       }}
     >
-      <div className="w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl pb-safe overflow-hidden animate-in slide-in-from-bottom-4 sm:slide-in-from-bottom-0 duration-200">
+      <div className="w-full sm:max-w-md bg-white rounded-3xl shadow-2xl pb-safe overflow-hidden animate-in slide-in-from-bottom-4 sm:slide-in-from-bottom-0 duration-200">
         <div className="flex items-start justify-between px-6 pt-6 pb-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-red-50 flex items-center justify-center flex-shrink-0">
               <ShieldAlert className="w-5 h-5 text-red-500" />
             </div>
             <div>
-              <h2 className="text-base font-black text-gray-900">{config.title}</h2>
-              <p className="text-xs text-gray-400 mt-0.5">{config.description}</p>
+              <h2 className="text-base font-black text-gray-900">
+                {config.title}
+              </h2>
+              <p className="text-xs text-gray-400 mt-0.5">
+                {config.description}
+              </p>
             </div>
           </div>
           <button
@@ -215,8 +233,8 @@ export default function DeleteWithTransferDialog({
         ) : (
           <div className="px-6 pt-5 pb-6 space-y-5">
             <p className="text-sm font-semibold text-gray-700">
-              <span className="font-black text-gray-900">{entityName}</span>{" "}
-              — {config.summaryLine(counts)}
+              <span className="font-black text-gray-900">{entityName}</span> —{" "}
+              {config.summaryLine(counts)}
             </p>
 
             {config.showTransfer && (
@@ -277,49 +295,51 @@ export default function DeleteWithTransferDialog({
             )}
 
             <div className="h-px bg-gray-100" />
+            {!isSuperuser && (
+              <div className="flex flex-col gap-4">
+                <p className="text-xs font-bold uppercase tracking-widest text-gray-400 text-center">
+                  Enter your 6-digit PIN to confirm
+                </p>
 
-            <p className="text-xs font-bold uppercase tracking-widest text-gray-400 text-center">
-              Enter your 6-digit PIN to confirm
-            </p>
-
-            <div className="flex gap-2 justify-center">
-              {pin.map((digit, i) => (
-                <input
-                  key={i}
-                  id={`pin-${entityType}-${i}`}
-                  type="password"
-                  inputMode="numeric"
-                  maxLength={1}
-                  value={digit}
-                  onChange={(e) => handlePinInput(i, e.target.value)}
-                  onKeyDown={(e) => handlePinKeyDown(i, e)}
-                  disabled={loading}
-                  className={`w-11 h-14 rounded-2xl border-2 text-center text-xl font-black bg-gray-50 outline-none transition-all
-                    ${
-                      pinError
-                        ? "border-red-300 bg-red-50 text-red-600"
-                        : digit
-                          ? "border-primary bg-primary/5 text-primary"
-                          : "border-gray-200 text-gray-800"
-                    }
-                    focus:border-primary focus:bg-primary/5
-                    disabled:opacity-50`}
-                />
-              ))}
-            </div>
-
-            <div className="flex justify-center gap-1.5">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <div
-                  key={i}
-                  className={`rounded-full transition-all duration-150 ${
-                    i < filledCount
-                      ? "w-2 h-2 bg-primary"
-                      : "w-1.5 h-1.5 bg-gray-200"
-                  }`}
-                />
-              ))}
-            </div>
+                <div className="flex gap-2 justify-center">
+                  {pin.map((digit, i) => (
+                    <input
+                      key={i}
+                      id={`pin-${entityType}-${i}`}
+                      type="password"
+                      inputMode="numeric"
+                      maxLength={1}
+                      value={digit}
+                      onChange={(e) => handlePinInput(i, e.target.value)}
+                      onKeyDown={(e) => handlePinKeyDown(i, e)}
+                      disabled={loading}
+                      className={`w-11 h-14 rounded-2xl border-2 text-center text-xl font-black bg-gray-50 outline-none transition-all
+                          ${
+                            pinError
+                              ? "border-red-300 bg-red-50 text-red-600"
+                              : digit
+                                ? "border-primary bg-primary/5 text-primary"
+                                : "border-gray-200 text-gray-800"
+                          }
+                          focus:border-primary focus:bg-primary/5
+                          disabled:opacity-50`}
+                    />
+                  ))}
+                </div>
+                <div className="flex justify-center gap-1.5">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <div
+                      key={i}
+                      className={`rounded-full transition-all duration-150 ${
+                        i < filledCount
+                          ? "w-2 h-2 bg-primary"
+                          : "w-1.5 h-1.5 bg-gray-200"
+                      }`}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
 
             {error && (
               <p className="text-center text-xs font-semibold text-red-500 bg-red-50 py-2 px-3 rounded-xl">
@@ -343,7 +363,13 @@ export default function DeleteWithTransferDialog({
               </button>
               <button
                 onClick={handleConfirm}
-                disabled={loading || filledCount < 6 || (action === "transfer" && config.showTransfer && !transferToId)}
+                disabled={
+                  loading ||
+                  (!isSuperuser && filledCount < 6) ||
+                  (action === "transfer" &&
+                    config.showTransfer &&
+                    !transferToId)
+                }
                 className="flex-1 h-12 rounded-2xl bg-red-500 text-sm font-bold text-white flex items-center justify-center gap-2 hover:bg-red-600 transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-red-500/20"
               >
                 {loading ? (

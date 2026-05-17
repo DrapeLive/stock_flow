@@ -49,7 +49,7 @@ class CustomerViewSet(ModelViewSet):
     def delete_info(self, request, pk=None):
         customer = self.get_object()
         orders_count = Order.objects.filter(customer=customer).count()
-        return Response({
+        return JsonResponse({
             "orders_count": orders_count,
         })
 
@@ -62,7 +62,7 @@ class CustomerViewSet(ModelViewSet):
         customer.is_active = False
         customer.deactivated_at = timezone.now()
         customer.save(update_fields=["is_active", "deactivated_at"])
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return JsonResponse(status=status.HTTP_204_NO_CONTENT)
 
 
 @csrf_exempt

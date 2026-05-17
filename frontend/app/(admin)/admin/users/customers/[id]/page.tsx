@@ -15,7 +15,7 @@ import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 import StockFlowSelect from "@/components/ui/custom/stockFlowSelect";
 import { Trash2, ArrowLeft, User, Pencil, Eye, Package } from "lucide-react";
 import Pagination from "@/components/ui/Pagination";
-import PinDeleteDialog from "@/components/ui/pinDeleteDialog";
+import DeleteWithTransferDialog from "@/components/ui/deleteWithTransferDialog";
 import { useAuth } from "@/context/AuthContext";
 
 function getColorFromId(id: number): string {
@@ -42,7 +42,7 @@ export default function CustomerDetailPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [pinDialogOpen, setPinDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isEditing, setIsEditing] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -141,24 +141,24 @@ export default function CustomerDetailPage() {
   // ── Delete ────────────────────────────────────────────────────────────────
 
   const handleDeleteClick = () => {
-    if (isSuperuser) {
-      if (!confirm("Delete this customer? This cannot be undone.")) return;
-      handleDeleteConfirm("");
-      return;
-    }
-    setPinDialogOpen(true);
+    setDeleteDialogOpen(true);
   };
 
-  const handleDeleteConfirm = async (pin: string) => {
-    const numericId = parseInt(id as string, 10);
+  const handleDeleteConfirm = async (
+    _id: number,
+    payload: {
+      pin: string;
+      action: "transfer" | "deactivate";
+      transfer_to_id?: number;
+    },
+  ) => {
     setDeleting(true);
     try {
-      await customerApi.delete(numericId, pin);
+      await customerApi.delete(_id, payload.pin, payload.action);
       toastSuccess("Customer deleted successfully");
       router.push("/admin/users/");
     } catch (error) {
       setDeleting(false);
-      // Re-throw so PinDeleteDialog shows the error inline
       throw error;
     }
   };
@@ -188,12 +188,15 @@ export default function CustomerDetailPage() {
 
   return (
     <div className="w-full px-4 py-8 flex flex-col min-h-screen bg-white">
-      <PinDeleteDialog
-        open={pinDialogOpen}
-        onClose={() => setPinDialogOpen(false)}
-        onConfirm={handleDeleteConfirm}
-        title="Delete Customer"
-        description="All orders linked to this customer will also be affected."
+      <DeleteWithTransferDialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        entityType="customer"
+        entityId={parseInt(id as string, 10)}
+        entityName={customer.name}
+        onFetchDeleteInfo={customerApi.getDeleteInfo}
+        onDelete={handleDeleteConfirm}
+        isSuperuser={isSuperuser}
       />
 
       {/* Header */}

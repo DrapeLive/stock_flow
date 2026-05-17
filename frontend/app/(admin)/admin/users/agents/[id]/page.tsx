@@ -178,11 +178,20 @@ export default function AgentDetailPage() {
 
   const handleDeleteConfirm = async (
     _id: number,
-    payload: { pin: string; action: "transfer" | "deactivate"; transfer_to_id?: number },
+    payload: {
+      pin: string;
+      action: "transfer" | "deactivate";
+      transfer_to_id?: number;
+    },
   ) => {
     setDeleting(true);
     try {
-      await agentApi.delete(_id, payload.pin, payload.action, payload.transfer_to_id);
+      await agentApi.delete(
+        _id,
+        payload.pin,
+        payload.action,
+        payload.transfer_to_id,
+      );
       toastSuccess("Agent deleted successfully");
       router.push("/admin/users/");
     } catch (error) {
