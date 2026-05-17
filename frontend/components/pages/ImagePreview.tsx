@@ -79,7 +79,7 @@ export function ImagePreview({
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogPortal>
           <DialogOverlay className="bg-white" />
-          <DialogContent className="bg-transparent border-none shadow-none p-0 w-screen h-[90vh] flex items-center justify-center">
+          <DialogContent className="bg-transparent border-none shadow-none p-0 w-screen h-screen max-w-none flex items-center justify-center">
             <DialogTitle className="sr-only">{alt}</DialogTitle>
             <div className="relative w-full h-full">
               <Image

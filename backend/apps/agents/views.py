@@ -39,11 +39,13 @@ class AgentViewSet(ModelViewSet):
         transferable_agents = [
             {"id": a.id, "name": a.user.username} for a in other_agents
         ]
-        return Response({
-            "customers_count": customers_count,
-            "orders_count": orders_count,
-            "transferable_agents": transferable_agents,
-        })
+        return Response(
+            {
+                "customers_count": customers_count,
+                "orders_count": orders_count,
+                "transferable_agents": transferable_agents,
+            }
+        )
 
     def destroy(self, request, *args, **kwargs):
         pin_error = check_admin_pin(request)
@@ -108,13 +110,23 @@ class AgentItemsView(APIView):
             )
 
         biz = admin_business(request.user)
+
         if biz:
-            agent.assigned_items.filter(item__type=biz).delete()
+            existing_qs = agent.assigned_items.filter(item__type=biz)
         else:
-            agent.assigned_items.all().delete()
+            existing_qs = agent.assigned_items.all()
+
+        existing_item_ids = set(existing_qs.values_list("item_id", flat=True))
+        incoming_item_ids = set(item_ids)
+
+        ids_to_remove = existing_item_ids - incoming_item_ids
+        if ids_to_remove:
+            agent.assigned_items.filter(item_id__in=ids_to_remove).delete()
+
+        ids_to_add = incoming_item_ids - existing_item_ids
 
         assigned_count = 0
-        for item_id in item_ids:
+        for item_id in ids_to_add:
             try:
                 if biz:
                     item = Item.objects.get(id=item_id, type=biz)
@@ -135,6 +147,7 @@ class AgentItemsView(APIView):
 
         if assigned_count > 0:
             try:
+                print(assigned_count)
                 send_push_to_user.delay(
                     agent.user_id,
                     "Items Assigned",
@@ -142,6 +155,7 @@ class AgentItemsView(APIView):
                 )
             except Exception as e:
                 print("Failed to queue notification:", str(e))
+
         return Response(result)
 
 
