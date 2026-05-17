@@ -33,6 +33,7 @@ export default function CustomerDetailPage() {
     address: "",
     contact: "",
     agent: "",
+    gst: "",
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -67,6 +68,7 @@ export default function CustomerDetailPage() {
           address: customerData.address,
           contact: customerData.contact,
           agent: customerData.agent.toString(),
+          gst: customerData.gst,
         });
         setAgents(
           agentsData.map((a) => ({
@@ -93,6 +95,15 @@ export default function CustomerDetailPage() {
     if (!formData.name.trim()) newErrors.name = "Name is required";
     if (!formData.address.trim()) newErrors.address = "Address is required";
     if (!formData.contact.trim()) newErrors.contact = "Contact is required";
+    if (!formData.gst.trim()) {
+      newErrors.gst = "GST number is required";
+    } else if (
+      !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(
+        formData.gst.toUpperCase(),
+      )
+    ) {
+      newErrors.gst = "Invalid GST format (e.g. 29ABCDE1234F1Z5)";
+    }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -107,6 +118,7 @@ export default function CustomerDetailPage() {
         address: formData.address,
         contact: formData.contact,
         agent: parseInt(formData.agent),
+        gst: formData.gst.toUpperCase(),
       };
       await customerApi.update(numericId, payload);
       toastSuccess("Customer updated successfully");
@@ -124,7 +136,7 @@ export default function CustomerDetailPage() {
     if (confirm("Are you sure you want to delete this customer?")) {
       try {
         const numericId = parseInt(id as string, 10);
-        await customerApi.delete(numericId);
+        await customerApi.agentDelete(numericId);
         toastSuccess("Customer deleted successfully");
         router.push("/agent/customers/");
       } catch (error) {
@@ -275,6 +287,23 @@ export default function CustomerDetailPage() {
                   </p>
                 )}
               </Field>
+              <Field>
+                <FieldLabel className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 block">
+                  GST Number
+                </FieldLabel>
+                <Input
+                  value={formData.gst}
+                  onChange={(e) =>
+                    handleChange("gst", e.target.value.toUpperCase())
+                  }
+                  className="bg-white border-gray-100 rounded-xl h-12 font-bold"
+                />
+                {errors.gst && (
+                  <p className="text-[10px] text-red-500 font-bold mt-1">
+                    {errors.gst}
+                  </p>
+                )}
+              </Field>
             </FieldGroup>
           </div>
 
@@ -315,6 +344,14 @@ export default function CustomerDetailPage() {
                 </span>
                 <span className="text-sm font-medium text-gray-900">
                   {customer.agent_name || "—"}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-xs font-bold text-gray-400 uppercase">
+                  GST
+                </span>
+                <span className="text-sm font-medium text-gray-900 text-right max-w-[60%]">
+                  {customer.gst || "—"}
                 </span>
               </div>
             </div>

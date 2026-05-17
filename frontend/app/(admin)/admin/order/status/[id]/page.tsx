@@ -104,7 +104,7 @@ export default function Page() {
           : null,
         lr_number: lrNumber,
       });
-      await fetchData();
+      router.push("/admin");
     } catch (err) {
       console.error("Error dispatching order:", err);
     }
@@ -247,7 +247,7 @@ export default function Page() {
                 Cancel
               </button>
               <button
-                onClick={handleDeleteOrder}
+                onClick={handleDeleteClick}
                 disabled={deleting}
                 className="flex-1 py-3 px-4 rounded-xl bg-red-500 text-white font-medium hover:bg-red-600 transition-colors disabled:opacity-50"
               >

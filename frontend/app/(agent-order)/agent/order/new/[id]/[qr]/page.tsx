@@ -331,6 +331,7 @@ export default function ProductDetailPage() {
     } catch (e) {
       console.error("Error adding item to order:", e);
       toastError("Failed to add item", e);
+      router.push(`/agent/order/new/${id}`);
     }
   };
 

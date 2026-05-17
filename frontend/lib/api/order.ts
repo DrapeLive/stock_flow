@@ -112,6 +112,10 @@ export const orderApi = {
       .then((r) => r.data);
   },
 
+  agentDelete(id: number): Promise<void> {
+    return api.delete(`/api/orders/${id}/`).then((r) => r.data);
+  },
+
   deleteItem(orderId: number, itemId: number): Promise<void> {
     return api
       .delete(`/api/orders/${orderId}/delete-item/${itemId}/`)

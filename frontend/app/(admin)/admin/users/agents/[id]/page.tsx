@@ -108,7 +108,7 @@ export default function AgentDetailPage() {
       await agentApi.update(numericId, payload);
       toastSuccess("Agent details updated");
       setIsEditing(false);
-      router.refresh();
+      router.push("/admin/users/");
     } catch (error: any) {
       console.error("Error updating agent:", error);
       toastError("Failed to update agent details", error);
