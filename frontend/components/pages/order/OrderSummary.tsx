@@ -46,11 +46,11 @@ function DeliverySummary({
       </div>
       {/* Dispatch Card */}
       {(dispatchTransport || lrNumber) && (
-        <div className="w-full rounded-2xl border border-primary/20 bg-primary/5 p-4 flex flex-col gap-4">
+        <div className="w-full rounded-2xl border border-primary/20 bg-primary/5 p-4 flex flex-col gap-3">
           {dispatchTransport && (
-            <p className="text-[14px] text-gray-500 font-medium">
+            <p className="text-base text-gray-500 font-medium">
               Transported by{" "}
-              <span className="text-[14px] font-semibold text-gray-800">
+              <span className="text-base font-semibold text-gray-800">
                 {dispatchTransport}
               </span>
             </p>
