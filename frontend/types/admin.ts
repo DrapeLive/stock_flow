@@ -10,6 +10,7 @@ export interface Admin {
 }
 
 export interface AdminRequest {
+  pin: string;
   username: string;
   email: string;
   password: string;
@@ -19,6 +20,7 @@ export interface AdminRequest {
 }
 
 export interface AdminUpdateRequest {
+  pin?: string;
   username?: string;
   email?: string;
   password?: string;

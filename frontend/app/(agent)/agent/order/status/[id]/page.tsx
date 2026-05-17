@@ -63,7 +63,7 @@ export default function Page() {
     if (!id) return;
     setDeleting(true);
     try {
-      await orderApi.delete(Number(id));
+      await orderApi.agentDelete(Number(id));
       toastSuccess("Order deleted successfully");
       router.back();
     } catch (err) {

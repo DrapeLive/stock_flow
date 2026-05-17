@@ -56,6 +56,10 @@ export const customerApi = {
       .then((r) => r.data);
   },
 
+  agentDelete(id: number): Promise<void> {
+    return api.delete(`/api/customers/${id}/`).then((r) => r.data);
+  },
+
   bulkImport(data: BulkImportRequest): Promise<BulkImportResponse> {
     return api
       .post<BulkImportResponse>("/api/customers/bulk-import/", data)
