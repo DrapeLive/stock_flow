@@ -174,21 +174,23 @@ export default function Page() {
         />
 
         {isDeletable && (
-          <div className="mt-6 pt-4 border-t border-gray-100 space-y-3">
+          <div className="mt-6 pt-4 border-t border-gray-100 flex gap-3">
             <StockFlowButton
-              text="Edit Order"
+              text="Edit"
               icon={<Pencil size={16} />}
               onClick={handleEditOrder}
               variant="outline"
-              className="w-full shadow-lg border-blue-200 text-blue-500 hover:bg-blue-500 hover:text-white transition duration-300"
+              fullWidth
+              className="border-blue-200 text-blue-500 hover:bg-blue-500 hover:text-white transition duration-300"
               disabled={startingEdit}
             />
             <StockFlowButton
-              text="Delete Order"
-              icon={<Trash2 />}
+              text="Delete"
+              icon={<Trash2 size={16} />}
               onClick={() => setShowDeleteDialog(true)}
               variant="outline"
-              className="w-full shadow-lg border-red-200 text-red-500 hover:bg-red-500 hover:text-white transition duration-300"
+              fullWidth
+              className="border-red-200 text-red-500 hover:bg-red-500 hover:text-white transition duration-300"
             />
           </div>
         )}

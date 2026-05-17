@@ -19,20 +19,14 @@ interface SimpleAgent {
   username: string;
 }
 
-interface SimpleCustomer {
-  id: number;
-  name: string;
-}
-
 function AdminHomePageContent() {
   const searchParams = useSearchParams();
-  const [activeTab, setActiveTab] = useState<Tab>("Pending");
   const [currentPage, setCurrentPage] = useState(1);
 
-  useEffect(() => {
-    const saved = sessionStorage.getItem("adminOrdersActiveTab") as Tab | null;
-    if (saved) setActiveTab(saved);
-  }, []);
+  const [activeTab, setActiveTab] = useState<Tab>(() => {
+    if (typeof window === "undefined") return "Pending";
+    return (sessionStorage.getItem("adminOrdersActiveTab") as Tab) || "Pending";
+  });
 
   const handleTabChange = (tab: Tab) => {
     setActiveTab(tab);

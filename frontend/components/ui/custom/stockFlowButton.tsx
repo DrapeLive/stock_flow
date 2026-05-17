@@ -2,7 +2,7 @@ import React from "react";
 
 interface StockFlowButtonProps {
   variant?: "filled" | "outline";
-  text: string;
+  text?: string;
   icon?: React.ReactNode;
   onClick?: () => void;
   className?: string;
@@ -12,7 +12,7 @@ interface StockFlowButtonProps {
 
 const StockFlowButton: React.FC<StockFlowButtonProps> = ({
   variant = "filled",
-  text,
+  text = "",
   icon,
   onClick,
   className = "",
@@ -45,7 +45,7 @@ const StockFlowButton: React.FC<StockFlowButtonProps> = ({
       disabled={disabled}
     >
       {icon && <span className="flex items-center">{icon}</span>}
-      {text}
+      {text && text}
     </button>
   );
 };

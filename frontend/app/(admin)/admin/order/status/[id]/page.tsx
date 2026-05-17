@@ -40,6 +40,7 @@ export default function Page() {
     try {
       const response = await orderApi.getOne(Number(id));
       setData(response);
+      if (response.status === "PACKED") setActiveTab("Dispatching");
     } catch (error) {
       console.error("Error fetching data:", error);
     }
@@ -165,6 +166,24 @@ export default function Page() {
       <div className="px-4 pt-4 max-w-4xl mx-auto">
         <OrderTabs activeTab={activeTab} onTabChange={handleTabChange} />
 
+        {isDeletable && (
+          <div className="flex justify-end w-full p-2">
+            <StockFlowButton
+              icon={
+                deleting ? (
+                  <span className="w-4 h-4 border-2 border-red-300 border-t-red-500 rounded-full animate-spin block" />
+                ) : (
+                  <Trash2 size={16} />
+                )
+              }
+              onClick={handleDeleteClick}
+              disabled={deleting}
+              variant="outline"
+              className="border-red-200 text-red-500 hover:bg-red-500 hover:text-white transition duration-300"
+            />
+          </div>
+        )}
+
         <OrderSummary
           customerName={data?.customer_details.name ?? ""}
           agentName={data?.agent_details.username ?? ""}
@@ -197,25 +216,6 @@ export default function Page() {
           status={data?.status}
           orderId={Number(id)}
         />
-
-        {isDeletable && (
-          <div className="mt-6 pt-4 border-t border-gray-100">
-            <StockFlowButton
-              text={deleting ? "Deleting..." : "Delete Order"}
-              icon={
-                deleting ? (
-                  <span className="w-4 h-4 border-2 border-red-300 border-t-red-500 rounded-full animate-spin block" />
-                ) : (
-                  <Trash2 />
-                )
-              }
-              onClick={handleDeleteClick}
-              disabled={deleting}
-              variant="outline"
-              className="w-full shadow-lg border-red-200 text-red-500 hover:bg-red-500 hover:text-white disabled:opacity-40"
-            />
-          </div>
-        )}
 
         <OrderLogs orderId={Number(id)} />
       </div>
