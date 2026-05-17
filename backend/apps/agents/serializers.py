@@ -43,7 +43,6 @@ class AgentItemListSerializer(serializers.Serializer):
                 variants_by_image[image_key]["id"] = variant.id
                 variants_by_image[image_key]["image_obj"] = variant.image
                 variants_by_image[image_key]["qr_code"] = variant.qr_code
-
             for size_obj in variant.sizes.all():
                 variants_by_image[image_key]["sizes"][size_obj.size] += size_obj.stock
 
@@ -59,7 +58,6 @@ class AgentItemListSerializer(serializers.Serializer):
                     "stock": stock
                 }
                 for size, stock in data["sizes"].items()
-                if stock > 0
             ]
 
             result.append({

@@ -2,14 +2,12 @@
 
 import { Printer } from "lucide-react";
 import { ImagePreview } from "@/components/pages/ImagePreview";
-import {
-  SIZE_RANGE_TO_SIZES,
-  ItemType,
-  UIVariant,
-  FrontendSizeRange,
-  ORDER_CREATION_SIZES_BY_TYPE,
-} from "@/types/item";
+import { ItemType, UIVariant } from "@/types/item";
 import SizeRangeRow from "./SizeRangeRow";
+import {
+  getSizeRangesWithStock,
+  isVariantOutOfStock,
+} from "@/util/stockValidators";
 
 interface VariantCardProps {
   variant: UIVariant;
@@ -21,63 +19,6 @@ interface VariantCardProps {
   itemType: ItemType;
   isReadonly?: boolean;
 }
-
-function getSizeRangesWithStock(
-  variant: UIVariant,
-  itemType: ItemType,
-): { sizeRange: string; stock: number }[] {
-  const sizes = variant.sizes;
-
-  const result: { sizeRange: FrontendSizeRange; stock: number }[] = [];
-
-  // Convert sizes to map for quick lookup
-  const sizeMap: Record<string, number> = {};
-  for (const s of sizes) {
-    sizeMap[s.size] = s.stock;
-  }
-  const allowedRanges = ORDER_CREATION_SIZES_BY_TYPE[itemType];
-
-  for (const range of allowedRanges) {
-    const groupedSizes = SIZE_RANGE_TO_SIZES[range];
-
-    const matched = groupedSizes.filter((s) => sizeMap[s] !== undefined);
-
-    // ❌ skip if nothing matches
-    if (matched.length === 0) continue;
-
-    // require FULL match
-    if (matched.length !== groupedSizes.length) continue;
-
-    const stocks = groupedSizes.map((s) => sizeMap[s]);
-    const minStock = Math.min(...stocks);
-
-    result.push({
-      sizeRange: range,
-      stock: minStock,
-    });
-  }
-
-  if (itemType === "gents") {
-    return result.length
-      ? [
-          result.sort(
-            (a, b) =>
-              SIZE_RANGE_TO_SIZES[b.sizeRange].length -
-              SIZE_RANGE_TO_SIZES[a.sizeRange].length,
-          )[0],
-        ]
-      : [];
-  }
-
-  return result;
-}
-function isVariantOutOfStock(variant: UIVariant, itemType: ItemType): boolean {
-  const sizeRanges = getSizeRangesWithStock(variant, itemType);
-  return sizeRanges.every((s) => {
-    return s.stock === 0;
-  });
-}
-
 export default function VariantCard({
   variant,
   index,

@@ -10,9 +10,9 @@ import OrderItemsSection from "@/components/pages/order/OrderItemsSection";
 import OrderFooter from "@/components/pages/order/OrderFooter";
 import OrderDetailHeader from "@/components/pages/admin/order-item/OrderDetailHeader";
 import OrderLogs from "@/components/pages/order/OrderLogs";
-import { toastSuccess, toastError } from "@/lib/toast";
+import { toastSuccess } from "@/lib/toast";
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
-import { Trash2, Truck } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import PinDeleteDialog from "@/components/ui/pinDeleteDialog";
 import { useAuth } from "@/context/AuthContext";
 

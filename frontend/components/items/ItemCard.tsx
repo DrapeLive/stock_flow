@@ -4,6 +4,8 @@ import { ChevronDown, ChevronUp, Eye, Printer, Info } from "lucide-react";
 import { ImagePreview } from "@/components/pages/ImagePreview";
 import { ItemType, UIItem } from "@/types/item";
 import VariantCard from "./VariantCard";
+import { useEffect, useState } from "react";
+import { isItemOutOfStock } from "@/util/stockValidators";
 
 interface ItemCardProps {
   item: UIItem;
@@ -22,7 +24,6 @@ function getItemImage(item: UIItem): string | null {
 }
 
 function hasOutOfStockVariants(item: UIItem): boolean {
-  console.log(item);
   return item.variants.some((variant) =>
     variant.sizes.some((s) => s.stock === 0),
   );
@@ -43,12 +44,16 @@ export default function ItemCard({
   const image = getItemImage(item);
   const price = item.price;
 
+  const itemStockOut = isItemOutOfStock(item);
+
   return (
     <div
       className={`rounded-2xl overflow-hidden transition-all ${
-        isExpanded
-          ? "bg-gray-50 border border-gray-200"
-          : "bg-white border border-gray-100"
+        itemStockOut
+          ? "bg-red-50 border border-red-200"
+          : isExpanded
+            ? "bg-gray-50 border border-gray-200"
+            : "bg-white border border-gray-100"
       }`}
     >
       <div
@@ -95,7 +100,7 @@ export default function ItemCard({
               <>
                 <span className="text-gray-200">•</span>
                 <span className="text-xs text-red-500 font-medium">
-                  Some out
+                  {itemStockOut ? "All out" : "Some out"}
                 </span>
               </>
             )}
