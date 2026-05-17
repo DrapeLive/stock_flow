@@ -24,7 +24,6 @@ function getItemImage(item: UIItem): string | null {
 }
 
 function hasOutOfStockVariants(item: UIItem): boolean {
-  console.log(item);
   return item.variants.some((variant) =>
     variant.sizes.some((s) => s.stock === 0),
   );
