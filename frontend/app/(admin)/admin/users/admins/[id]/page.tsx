@@ -111,7 +111,7 @@ export default function AdminDetailPage() {
       });
       toastSuccess("Admin updated successfully");
       setIsEditing(false);
-      router.refresh();
+      router.push("/admin/users/");
     } catch (error: any) {
       console.error("Error updating admin:", error);
       toastError("Failed to update admin", error);

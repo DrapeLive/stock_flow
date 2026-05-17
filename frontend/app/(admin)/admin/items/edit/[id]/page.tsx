@@ -208,6 +208,7 @@ export default function ItemEditPage() {
     try {
       await updateItem(Number(id), common, variants);
       toastSuccess("Item updated successfully");
+      router.push("/admin/items");
     } catch (e: any) {
       toastError("Failed to update item", e);
     } finally {

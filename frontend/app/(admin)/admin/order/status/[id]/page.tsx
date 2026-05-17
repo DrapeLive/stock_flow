@@ -104,7 +104,7 @@ export default function Page() {
           : null,
         lr_number: lrNumber,
       });
-      await fetchData();
+      router.push("/admin");
     } catch (err) {
       console.error("Error dispatching order:", err);
     }

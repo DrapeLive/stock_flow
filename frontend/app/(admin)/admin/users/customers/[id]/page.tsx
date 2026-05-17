@@ -117,7 +117,7 @@ export default function CustomerDetailPage() {
       await customerApi.update(numericId, payload);
       toastSuccess("Customer updated successfully");
       setIsEditing(false);
-      router.refresh();
+      router.push("/admin/users/");
     } catch (error: any) {
       console.error("Error updating customer:", error);
       toastError("Failed to update customer", error);
