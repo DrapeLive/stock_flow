@@ -124,7 +124,11 @@ export default function Page() {
           expectedDeliveryDate={
             data?.expected_delivery_date?.slice(0, 10) ?? ""
           }
-          dispatchTransport={data?.transport_company_name ?? ""}
+          dispatchTransport={
+            transports.find(
+              (transport) => Number(transport.value) == data?.transport_company,
+            )?.label ?? ""
+          }
           lrNumber={data?.lr_number ?? ""}
         />
 

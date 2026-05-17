@@ -29,7 +29,7 @@ function filterItems(
   searchQuery: string,
   qrFilter: string | null,
 ): UIItem[] {
-  let filtered = items;
+  let filtered = [...items];
 
   if (tab === "in_stock") {
     filtered = filtered.filter((item) => !isItemOutOfStock(item));
@@ -94,10 +94,9 @@ export default function ItemList({
     setQrFilter(null);
   };
 
-  const filteredItems = useMemo(
-    () => filterItems(items, activeTab, searchQuery, qrFilter),
-    [items, activeTab, searchQuery, qrFilter],
-  );
+  const filteredItems = useMemo(() => {
+    return filterItems(items ?? [], activeTab, searchQuery, qrFilter);
+  }, [items, activeTab, searchQuery, qrFilter]);
 
   const inStockCount = items.filter((item) => !isItemOutOfStock(item)).length;
   const outOfStockCount = items.filter((item) => isItemOutOfStock(item)).length;

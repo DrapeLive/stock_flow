@@ -36,6 +36,8 @@ export function ImagePreview({
               src={src}
               alt={alt}
               fill
+              priority
+              loading="eager"
               className="object-cover"
               unoptimized
             />
@@ -52,11 +54,13 @@ export function ImagePreview({
           className="relative cursor-pointer group w-full h-full"
           aria-label={`View ${alt} larger`}
         >
-          <div className="relative w-full h-full">
+          <div className="relative w-full h-full touch-action-none">
             <Image
               src={src}
               alt={alt}
               fill
+              priority
+              loading="eager"
               className="object-cover"
               unoptimized
             />
@@ -75,7 +79,7 @@ export function ImagePreview({
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogPortal>
           <DialogOverlay className="bg-white" />
-          <DialogContent className="bg-transparent border-none shadow-none p-0 w-[90vw] h-[90vh] flex items-center justify-center">
+          <DialogContent className="bg-transparent border-none shadow-none p-0 w-screen h-[90vh] flex items-center justify-center">
             <DialogTitle className="sr-only">{alt}</DialogTitle>
             <div className="relative w-full h-full">
               <Image
