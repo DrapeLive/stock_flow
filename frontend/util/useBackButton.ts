@@ -1,6 +1,5 @@
 "use client";
-
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 type BackHandlerOptions = {
   onBack: () => void;
@@ -11,25 +10,26 @@ export function useBackButton({
   onBack,
   preventNavigation = true,
 }: BackHandlerOptions) {
+  const callbackRef = useRef(onBack);
+
+  useEffect(() => {
+    callbackRef.current = onBack;
+  }, [onBack]);
+
   useEffect(() => {
     if (!preventNavigation) return;
 
-    // Add one fake history entry
-    window.history.pushState({ trap: true }, "");
+    window.history.pushState({ backHandled: true }, "");
 
-    const handlePopState = () => {
-      onBack();
-
-      // Re-add history entry AFTER browser finishes navigation event
-      setTimeout(() => {
-        window.history.pushState({ trap: true }, "");
-      }, 0);
+    const handlePopState = (e: PopStateEvent) => {
+      e.stopImmediatePropagation();
+      window.history.pushState({ backHandled: true }, "");
+      callbackRef.current();
     };
 
-    window.addEventListener("popstate", handlePopState);
-
+    window.addEventListener("popstate", handlePopState, true);
     return () => {
-      window.removeEventListener("popstate", handlePopState);
+      window.removeEventListener("popstate", handlePopState, true);
     };
-  }, [onBack, preventNavigation]);
+  }, [preventNavigation]);
 }

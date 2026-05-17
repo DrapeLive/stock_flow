@@ -15,7 +15,7 @@ import {
   Package,
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { orderApi } from "@/lib/api/order";
 import { OrderResponse, OutOfStockItem, PlaceOrderError } from "@/types/order";
 import { PageLoading } from "@/components/ui/Loading";
@@ -49,9 +49,9 @@ export default function OrderDetailsPage() {
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
 
   useBackButton({
-    onBack: () => {
+    onBack: useCallback(() => {
       setShowLeaveConfirm(true);
-    },
+    }, []),
   });
 
   const isReady = useRef(false);

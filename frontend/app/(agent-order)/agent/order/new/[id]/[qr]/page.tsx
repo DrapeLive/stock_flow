@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Info } from "lucide-react";
 import { itemApi } from "@/lib/api/item";
@@ -47,9 +47,9 @@ export default function ProductDetailPage() {
   const [editingItemId, setEditingItemId] = useState<number | null>(null);
 
   useBackButton({
-    onBack: () => {
-      router.back();
-    },
+    onBack: useCallback(() => {
+      router.push(`/agent/order/new/${id}`);
+    }, [router, id]),
   });
 
   useEffect(() => {
