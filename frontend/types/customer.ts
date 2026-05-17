@@ -6,6 +6,7 @@ export interface Customer {
   address: string;
   contact: string;
   agent: number;
+  gst: string;
   preferred_transport: number | null;
   preferred_transport_name?: string;
   has_business_orders?: boolean | null;
@@ -16,6 +17,7 @@ export interface CustomerCreateRequest {
   address: string;
   contact: string;
   agent: number;
+  gst: string;
   preferred_transport?: number | null;
 }
 
@@ -24,6 +26,7 @@ export interface CustomerUpdateRequest {
   address?: string;
   contact?: string;
   agent?: number;
+  gst: string;
   preferred_transport?: number | null;
 }
 
