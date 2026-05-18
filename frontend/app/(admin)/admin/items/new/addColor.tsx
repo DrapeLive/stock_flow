@@ -48,7 +48,9 @@ export default function Step2AddColor({
 
     const availableSizes = getSizesForItemType(common.type, "item_creation");
 
-    const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+    const isMobile =
+        typeof window !== "undefined" &&
+        /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
 
     const set = <K extends keyof ColorVariant>(key: K, val: ColorVariant[K]) =>
         setVariant((v) => ({ ...v, [key]: val }));

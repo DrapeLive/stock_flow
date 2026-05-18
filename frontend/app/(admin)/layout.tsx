@@ -7,21 +7,25 @@ import { usePathname } from "next/navigation";
 import { SizeRangeProvider } from "@/context/SizeRangeContext";
 
 export default function AdminLayout({
-  children,
+    children,
 }: {
-  children: React.ReactNode;
+    children: React.ReactNode;
 }) {
-  const pathname = usePathname();
-  const isStatusPage = pathname.includes("/admin/order/status/");
+    const pathname = usePathname();
+    const isStatusPage = pathname.includes("/admin/order/status/");
+    const isFullscreenPage =
+        pathname.includes("/admin/items/new") || isStatusPage;
 
-  return (
-    <div className={`admin-order-layout ${isStatusPage ? "" : "pb-32"}`}>
-      <SizeRangeProvider>
-        <PushNotificationInit />
-        <AdminProfileButton />
-        {children}
-        {!isStatusPage && <AdminNavBar />}
-      </SizeRangeProvider>
-    </div>
-  );
+    return (
+        <div
+            className={`admin-order-layout ${isFullscreenPage ? "" : "pb-32"}`}
+        >
+            <SizeRangeProvider>
+                <PushNotificationInit />
+                <AdminProfileButton />
+                {children}
+                {!isFullscreenPage && <AdminNavBar />}
+            </SizeRangeProvider>
+        </div>
+    );
 }
