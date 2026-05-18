@@ -1,9 +1,10 @@
 "use client";
 import StatusBadge from "@/components/ui/custom/StatusBadge";
+import { SimpleAgent, SimpleCustomer } from "@/types/order";
 
 interface OrderSummaryProps {
-  customerName: string;
-  agentName: string;
+  customer: SimpleCustomer;
+  agent: SimpleAgent;
   orderDate: string;
   status: string;
   preferredTransport?: string;
@@ -84,8 +85,8 @@ function DeliverySummary({
 }
 
 export default function OrderSummary({
-  customerName,
-  agentName,
+  customer,
+  agent,
   orderDate,
   status,
   preferredTransport,
@@ -104,14 +105,28 @@ export default function OrderSummary({
             Customer
           </p>
           <h3 className="text-sm font-semibold text-gray-800">
-            {customerName}
+            {customer.name}
+          </h3>
+          <h3 className="text-sm font-semibold text-gray-800">
+            {customer.address}
+          </h3>
+          <h3 className="text-sm font-semibold text-gray-800">
+            {customer.contact}
+          </h3>
+          <h3 className="text-sm font-semibold text-gray-800">
+            {customer.gst}
           </h3>
         </div>
         <div>
           <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-1">
             Agent
           </p>
-          <h3 className="text-sm font-semibold text-gray-800">{agentName}</h3>
+          <h3 className="text-sm font-semibold text-gray-800">
+            {agent.username}
+          </h3>
+          <h3 className="text-sm font-semibold text-gray-800">
+            {agent.contact}
+          </h3>
         </div>
         <div>
           <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-1">

@@ -9,6 +9,7 @@ from rest_framework.decorators import action
 from rest_framework.filters import SearchFilter
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 
 from apps.accounts.permissions import check_admin_pin
@@ -49,9 +50,11 @@ class CustomerViewSet(ModelViewSet):
     def delete_info(self, request, pk=None):
         customer = self.get_object()
         orders_count = Order.objects.filter(customer=customer).count()
-        return JsonResponse({
-            "orders_count": orders_count,
-        })
+        return JsonResponse(
+            {
+                "orders_count": orders_count,
+            }
+        )
 
     def destroy(self, request, *args, **kwargs):
         pin_error = check_admin_pin(request)
@@ -62,7 +65,8 @@ class CustomerViewSet(ModelViewSet):
         customer.is_active = False
         customer.deactivated_at = timezone.now()
         customer.save(update_fields=["is_active", "deactivated_at"])
-        return JsonResponse(status=status.HTTP_204_NO_CONTENT)
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 @csrf_exempt

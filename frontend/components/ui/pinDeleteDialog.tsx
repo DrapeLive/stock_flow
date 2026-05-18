@@ -187,7 +187,6 @@ export default function PinDeleteDialog({
             ))}
           </div>
 
-          {/* Progress dots */}
           <div className="flex justify-center gap-1.5 mb-4">
             {Array.from({ length: 6 }).map((_, i) => (
               <div
