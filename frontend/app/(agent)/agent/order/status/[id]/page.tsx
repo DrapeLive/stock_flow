@@ -112,26 +112,29 @@ export default function Page() {
       />
 
       <div className="px-4 pt-4 max-w-4xl mx-auto">
-        <OrderSummary
-          customerName={data?.customer_details.name ?? ""}
-          agentName={data?.agent_details.username ?? ""}
-          orderDate={data?.created_at?.slice(0, 10) ?? ""}
-          status={data?.status ?? ""}
-          preferredTransport={
-            data?.preferred_transport
-              ? getPreferredTransport(data?.preferred_transport)
-              : undefined
-          }
-          expectedDeliveryDate={
-            data?.expected_delivery_date?.slice(0, 10) ?? ""
-          }
-          dispatchTransport={
-            transports.find(
-              (transport) => Number(transport.value) == data?.transport_company,
-            )?.label ?? ""
-          }
-          lrNumber={data?.lr_number ?? ""}
-        />
+        {data?.customer_details && data?.agent_details && (
+          <OrderSummary
+            customer={data?.customer_details}
+            agent={data?.agent_details}
+            orderDate={data?.created_at?.slice(0, 10) ?? ""}
+            status={data?.status ?? ""}
+            preferredTransport={
+              data?.preferred_transport
+                ? getPreferredTransport(data?.preferred_transport)
+                : undefined
+            }
+            expectedDeliveryDate={
+              data?.expected_delivery_date?.slice(0, 10) ?? ""
+            }
+            dispatchTransport={
+              transports.find(
+                (transport) =>
+                  Number(transport.value) == data?.transport_company,
+              )?.label ?? ""
+            }
+            lrNumber={data?.lr_number ?? ""}
+          />
+        )}
 
         {showPackingStatus && (
           <div className="bg-gray-50 rounded-xl p-4 mb-4 border border-gray-100">

@@ -184,25 +184,28 @@ export default function Page() {
           </div>
         )}
 
-        <OrderSummary
-          customerName={data?.customer_details.name ?? ""}
-          agentName={data?.agent_details.username ?? ""}
-          orderDate={data?.created_at?.slice(0, 10) ?? ""}
-          status={data?.status ?? ""}
-          preferredTransport={
-            transports.find(
-              (transport) =>
-                Number(transport.value) == data?.preferred_transport,
-            )?.label ?? ""
-          }
-          expectedDeliveryDate={data?.expected_delivery_date ?? ""}
-          dispatchTransport={
-            transports.find(
-              (transport) => Number(transport.value) == data?.transport_company,
-            )?.label ?? ""
-          }
-          lrNumber={data?.lr_number ?? ""}
-        />
+        {data?.customer_details && data?.agent_details && (
+          <OrderSummary
+            customer={data?.customer_details}
+            agent={data?.agent_details}
+            orderDate={data?.created_at?.slice(0, 10) ?? ""}
+            status={data?.status ?? ""}
+            preferredTransport={
+              transports.find(
+                (transport) =>
+                  Number(transport.value) == data?.preferred_transport,
+              )?.label ?? ""
+            }
+            expectedDeliveryDate={data?.expected_delivery_date ?? ""}
+            dispatchTransport={
+              transports.find(
+                (transport) =>
+                  Number(transport.value) == data?.transport_company,
+              )?.label ?? ""
+            }
+            lrNumber={data?.lr_number ?? ""}
+          />
+        )}
 
         <OrderItemsSection
           items={data?.items}

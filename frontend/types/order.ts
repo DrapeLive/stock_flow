@@ -31,6 +31,8 @@ export interface SimpleCustomer {
   id: number;
   name: string;
   contact: string;
+  address: string;
+  gst: string;
 }
 
 export interface OrderItem {
