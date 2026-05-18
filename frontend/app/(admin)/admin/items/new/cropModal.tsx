@@ -89,7 +89,7 @@ export default function CropModal({ src, onConfirm, onCancel }: Props) {
             </div>
 
             {/* Aspect ratio picker + zoom */}
-            <div className="flex flex-col gap-3 px-6 pb-8">
+            <div className="flex flex-col gap-3 px-6 py-8">
                 {/* Zoom slider — only when cropping */}
                 {aspect !== null && (
                     <div className="flex items-center gap-3">
