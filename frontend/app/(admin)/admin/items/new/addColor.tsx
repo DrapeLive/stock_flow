@@ -18,6 +18,7 @@ import CommonDetailsBadge from "./commonDetailsBadge";
 import { ColorVariant, CommonDetails, FrontendSizeRange } from "@/types/item";
 import { getSizesForItemType } from "@/types/item";
 import imageCompression from "browser-image-compression";
+import { Modal, ModalButton } from "@/components/ui/custom/Modals";
 
 interface Props {
     initial: ColorVariant;
@@ -39,9 +40,15 @@ export default function Step2AddColor({
     const [variant, setVariant] = useState<ColorVariant>(initial);
     const [cropSrc, setCropSrc] = useState<string | null>(null);
     const [stockInput, setStockInput] = useState(String(initial.stock));
-    const fileRef = useRef<HTMLInputElement>(null);
+
+    const galleryRef = useRef<HTMLInputElement>(null);
+    const cameraRef = useRef<HTMLInputElement>(null);
+
+    const [showPicker, setShowPicker] = useState(false);
 
     const availableSizes = getSizesForItemType(common.type, "item_creation");
+
+    const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
 
     const set = <K extends keyof ColorVariant>(key: K, val: ColorVariant[K]) =>
         setVariant((v) => ({ ...v, [key]: val }));
@@ -76,6 +83,14 @@ export default function Step2AddColor({
 
     const handleStockBlur = () => {
         setStockInput(String(variant.stock));
+    };
+
+    const handlePickerOpen = () => {
+        if (!isMobile) {
+            galleryRef.current?.click();
+        } else {
+            setShowPicker(true);
+        }
     };
 
     return (
@@ -117,7 +132,7 @@ export default function Step2AddColor({
                         <FieldLabel>Product Image</FieldLabel>
                         <button
                             type="button"
-                            onClick={() => fileRef.current?.click()}
+                            onClick={handlePickerOpen}
                             className="relative w-full rounded-2xl border-2 border-dashed border-gray-200 overflow-hidden flex items-center justify-center transition-colors hover:border-primary hover:bg-primary/5"
                             style={{ height: variant.imagePreview ? 220 : 120 }}
                         >
@@ -145,7 +160,7 @@ export default function Step2AddColor({
                             <div className="flex gap-4 mt-2">
                                 <button
                                     type="button"
-                                    onClick={() => fileRef.current?.click()}
+                                    onClick={handlePickerOpen}
                                     className="text-xs text-primary font-medium"
                                 >
                                     Change
@@ -166,10 +181,21 @@ export default function Step2AddColor({
                             </div>
                         )}
                     </Field>
+                    {/* Gallery */}
                     <input
-                        ref={fileRef}
+                        ref={galleryRef}
                         type="file"
                         accept="image/*"
+                        className="hidden"
+                        onChange={handleFile}
+                    />
+
+                    {/* Camera */}
+                    <input
+                        ref={cameraRef}
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
                         className="hidden"
                         onChange={handleFile}
                     />
@@ -281,6 +307,38 @@ export default function Step2AddColor({
                     />
                 </div>
             </div>
+            {showPicker && (
+                <Modal
+                    icon={<ImagePlus className="text-black/20" />}
+                    iconBg="bg-yellow-100"
+                    title="Select Image Source"
+                    description="Choose how you want to add the product image."
+                    onClose={() => setShowPicker(false)}
+                    actions={
+                        <div className="flex gap-2 w-full">
+                            <ModalButton
+                                variant="ghost"
+                                onClick={() => {
+                                    setShowPicker(false);
+                                    cameraRef.current?.click();
+                                }}
+                            >
+                                Open Camera
+                            </ModalButton>
+
+                            <ModalButton
+                                variant="ghost"
+                                onClick={() => {
+                                    setShowPicker(false);
+                                    galleryRef.current?.click();
+                                }}
+                            >
+                                Choose from Gallery
+                            </ModalButton>
+                        </div>
+                    }
+                />
+            )}
         </>
     );
 }
