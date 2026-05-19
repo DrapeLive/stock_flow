@@ -79,7 +79,6 @@ def bulk_import_customers(request):
 
         created_objs, errors = [], []
         existing_names = set(Customer.objects.values_list("name", flat=True))
-        existing_addresses = set(Customer.objects.values_list("address", flat=True))
 
         for i, row in enumerate(customers, 1):
             name = str(row.get("name", "")).strip()
@@ -94,7 +93,6 @@ def bulk_import_customers(request):
                 for f, v in [
                     ("name", name),
                     ("address", address),
-                    ("contact", contact),
                     ("agent", agent_username),
                 ]
                 if not v
@@ -111,16 +109,6 @@ def bulk_import_customers(request):
                         "row": i,
                         "name": name,
                         "error": f"Customer '{name}' already exists.",
-                    }
-                )
-                continue
-
-            if address in existing_addresses:
-                errors.append(
-                    {
-                        "row": i,
-                        "name": name,
-                        "error": "Address already registered for another customer.",
                     }
                 )
                 continue
@@ -156,7 +144,6 @@ def bulk_import_customers(request):
                     continue
 
             existing_names.add(name)
-            existing_addresses.add(address)
             created_objs.append(
                 Customer(
                     name=name,
