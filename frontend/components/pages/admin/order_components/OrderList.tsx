@@ -11,6 +11,7 @@ import {
     markOrderAsViewed,
     getUnreadIds,
     fetchViewedOrderIds,
+    clearViewedCache,
 } from "@/lib/viewedOrders";
 import Pagination from "@/components/ui/Pagination";
 import useSessionStorage from "@/hooks/useSessionStorage";
@@ -71,6 +72,7 @@ const OrderList: React.FC<Props> = ({
 
     useEffect(() => {
         fetchViewedOrderIds().then(setViewedIds).catch(console.error);
+        return () => clearViewedCache();
     }, []);
 
     useEffect(() => {
@@ -94,7 +96,7 @@ const OrderList: React.FC<Props> = ({
                 setTotalCount(response.count);
                 setTotalPages(Math.ceil(response.count / pageSize));
                 onTotalCountChange?.(
-                    showUnreadOnly
+                    showUnreadOnly && status !== "DISPATCHED"
                         ? getUnreadIds(
                               results.map((o) => o.id),
                               viewedIds,
@@ -143,9 +145,10 @@ const OrderList: React.FC<Props> = ({
         };
     }, [key]);
 
-    const filtered = showUnreadOnly
-        ? data.filter((o) => getUnreadIds([o.id], viewedIds).length > 0)
-        : data;
+    const filtered =
+        showUnreadOnly && status !== "DISPATCHED"
+            ? data.filter((o) => getUnreadIds([o.id], viewedIds).length > 0)
+            : data;
 
     const handlePageChange = (page: number) => {
         setCurrentPage(page);
@@ -186,7 +189,9 @@ const OrderList: React.FC<Props> = ({
                     key={`${order.id}-${refreshKey}`}
                     order={order}
                     viewed={
-                        status === "DISPATCHED" ? true : viewedIds.has(order.id)
+                        order.status === "DISPATCHED"
+                            ? true
+                            : viewedIds.has(order.id)
                     }
                     onClick={() => {
                         markOrderAsViewed(order.id);
