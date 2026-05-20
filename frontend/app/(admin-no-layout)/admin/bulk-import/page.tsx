@@ -727,7 +727,7 @@ export default function BulkImportPage(): React.ReactElement {
                           {COLUMNS.map((col) => (
                             <td key={col.key} className="px-1.5 py-1.5">
                               <EditableCell
-                                value={row[col.key]}
+                                value={row[col.key] ?? ""}
                                 onChange={(v) =>
                                   updateCell(row._id, col.key, v)
                                 }
