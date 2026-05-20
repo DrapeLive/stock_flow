@@ -35,7 +35,7 @@ export type CustomerResponse = Customer;
 
 export interface BulkCustomerRequest {
   name: string;
-  address: string;
+  address?: string;
   contact: string;
   agent: string;
   gst: string;

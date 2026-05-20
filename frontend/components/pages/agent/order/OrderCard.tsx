@@ -52,7 +52,7 @@ export default function OrderCard({ order, onClick }: OrderCardProps) {
           <StockflowAvatar user={order.customer_details} />
           <div className="min-w-0">
             <h6
-              className={`font-bold text-sm truncate leading-tight ${!viewed ? "text-gray-900" : "text-gray-700"}`}
+              className={`font-bold text-xs ${!viewed ? "text-gray-900" : "text-gray-700"}`}
             >
               {order.customer_details?.name || "Unknown Customer"}
             </h6>

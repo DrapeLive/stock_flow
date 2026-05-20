@@ -62,7 +62,7 @@ const COLUMNS: ColumnDef[] = [
   {
     key: "address",
     label: "Address",
-    required: true,
+    required: false,
     placeholder: "123 Main St…",
   },
   {
@@ -304,7 +304,7 @@ export default function BulkImportPage(): React.ReactElement {
     rowList.forEach((r) => {
       const rowErr: RowErrors = {};
       COLUMNS.forEach((c) => {
-        if (c.required && !r[c.key].trim()) rowErr[c.key] = true;
+        if (c.required && !(r[c.key] ?? "").trim()) rowErr[c.key] = true;
       });
       if (Object.keys(rowErr).length) errs[r._id] = rowErr;
     });
@@ -833,7 +833,7 @@ export default function BulkImportPage(): React.ReactElement {
           <div className="mt-3 bg-white border border-gray-100 rounded-3xl p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 shadow-sm">
             {[
               { sheet: "name / customer name", field: "Name *" },
-              { sheet: "address", field: "Address *" },
+              { sheet: "address", field: "Address" },
               { sheet: "contact / phone / mobile", field: "Contact *" },
               { sheet: "agent / agent name", field: "Agent *" },
               { sheet: "gst / gst no / gstin", field: "GST No." },
