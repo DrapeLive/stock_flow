@@ -96,9 +96,11 @@ const OrderList: React.FC<Props> = ({
                 setTotalCount(response.count);
                 setTotalPages(Math.ceil(response.count / pageSize));
                 onTotalCountChange?.(
-                    showUnreadOnly && status !== "DISPATCHED"
+                    showUnreadOnly
                         ? getUnreadIds(
-                              results.map((o) => o.id),
+                              results
+                                  .filter((o) => o.status !== "DISPATCHED")
+                                  .map((o) => o.id),
                               viewedIds,
                           ).length
                         : response.count,
@@ -145,10 +147,13 @@ const OrderList: React.FC<Props> = ({
         };
     }, [key]);
 
-    const filtered =
-        showUnreadOnly && status !== "DISPATCHED"
-            ? data.filter((o) => getUnreadIds([o.id], viewedIds).length > 0)
-            : data;
+    const filtered = showUnreadOnly
+        ? data.filter(
+              (o) =>
+                  o.status !== "DISPATCHED" &&
+                  getUnreadIds([o.id], viewedIds).length > 0,
+          )
+        : data;
 
     const handlePageChange = (page: number) => {
         setCurrentPage(page);

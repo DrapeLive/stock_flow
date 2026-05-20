@@ -23,12 +23,17 @@ function AdminHomePageContent() {
     const searchParams = useSearchParams();
     const [currentPage, setCurrentPage] = useState(1);
 
-    const [activeTab, setActiveTab] = useState<Tab>(() => {
-        if (typeof window === "undefined") return "Pending";
-        return (
-            (sessionStorage.getItem("adminOrdersActiveTab") as Tab) || "Pending"
-        );
-    });
+    const [activeTab, setActiveTab] = useState<Tab>("Pending");
+
+    const [mounted, setMounted] = useState(false);
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    useEffect(() => {
+        const saved = sessionStorage.getItem("adminOrdersActiveTab") as Tab;
+        if (saved) setActiveTab(saved);
+    }, []);
 
     const handleTabChange = (tab: Tab) => {
         setActiveTab(tab);
@@ -88,7 +93,10 @@ function AdminHomePageContent() {
         orderApi
             .getAllIds()
             .then((orderIds) => {
-                setAllOrderIds(orderIds.map((o) => o.id));
+                const nonDispatched = orderIds.filter(
+                    (o) => o.status !== "DISPATCHED",
+                );
+                setAllOrderIds(nonDispatched.map((o) => o.id));
                 setPendingOrderIds(
                     orderIds
                         .filter((o) => o.status === "PENDING")
@@ -105,17 +113,9 @@ function AdminHomePageContent() {
 
     useEffect(() => {
         setOrderCounts({
-            all: getViewedOrdersCount(allOrderIds, viewedOrderIds, "ALL"),
-            pending: getViewedOrdersCount(
-                pendingOrderIds,
-                viewedOrderIds,
-                "PENDING",
-            ),
-            packed: getViewedOrdersCount(
-                packedOrderIds,
-                viewedOrderIds,
-                "PACKED",
-            ),
+            all: getViewedOrdersCount(allOrderIds, viewedOrderIds),
+            pending: getViewedOrdersCount(pendingOrderIds, viewedOrderIds),
+            packed: getViewedOrdersCount(packedOrderIds, viewedOrderIds),
             dispatched: 0,
         });
     }, [allOrderIds, pendingOrderIds, packedOrderIds, viewedOrderIds]);
@@ -225,7 +225,7 @@ function AdminHomePageContent() {
                                 key={tab}
                                 onClick={() => handleTabChange(tab)}
                                 className={`shrink-0 rounded-md flex-1 min-w-fit px-3 py-2 font-bold text-xs transition-all duration-300 relative ${
-                                    activeTab === tab
+                                    mounted && activeTab === tab
                                         ? "bg-primary text-white ring-1 ring-primary/10"
                                         : "text-gray-500 hover:text-gray-700 hover:bg-gray-100/80"
                                 }`}
