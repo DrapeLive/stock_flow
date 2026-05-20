@@ -92,7 +92,6 @@ def bulk_import_customers(request):
                 f
                 for f, v in [
                     ("name", name),
-                    ("address", address),
                     ("agent", agent_username),
                 ]
                 if not v

@@ -290,8 +290,8 @@ export default function OrderDetailsPage() {
       <div className="max-w-lg mx-auto px-4 pt-6 space-y-6">
         {/* Customer Card */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="grid grid-cols-2 items-center gap-4 p-4">
-            <div className="flex items-center gap-4">
+          <div className="items-center gap-4 p-4">
+            <div className="flex pb-4 items-center gap-4">
               <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
                 <User size={20} className="text-primary" />
               </div>
