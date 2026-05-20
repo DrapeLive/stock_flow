@@ -169,41 +169,41 @@ class AgentSerializer(serializers.ModelSerializer):
 
         return agent
 
-def update(self, instance, validated_data):
-    user = instance.user
+    def update(self, instance, validated_data):
+        user = instance.user
 
-    if (
-        'username' in validated_data
-        and validated_data['username'] != user.username
-    ):
-        user.username = validated_data['username']
+        if (
+            'username' in validated_data
+            and validated_data['username'] != user.username
+        ):
+            user.username = validated_data['username']
 
-    if (
-        'email' in validated_data
-        and validated_data['email'] != user.email
-    ):
-        user.email = validated_data['email']
+        if (
+            'email' in validated_data
+            and validated_data['email'] != user.email
+        ):
+            user.email = validated_data['email']
 
-    if 'password' in validated_data:
-        password = validated_data['password']
+        if 'password' in validated_data:
+            password = validated_data['password']
 
-        if password and not user.check_password(password):
-            user.password = make_password(password)
+            if password and not user.check_password(password):
+                user.password = make_password(password)
 
-    if (
-        'display_name' in validated_data
-        and validated_data['display_name'] != user.display_name
-    ):
-        user.display_name = validated_data['display_name']
+        if (
+            'display_name' in validated_data
+            and validated_data['display_name'] != user.display_name
+        ):
+            user.display_name = validated_data['display_name']
 
-    user.save()
+        user.save()
 
-    if (
-        'contact' in validated_data
-        and validated_data['contact'] != instance.contact
-    ):
-        instance.contact = validated_data['contact']
+        if (
+            'contact' in validated_data
+            and validated_data['contact'] != instance.contact
+        ):
+            instance.contact = validated_data['contact']
 
-    instance.save()
+        instance.save()
 
-    return instance
+        return instance
