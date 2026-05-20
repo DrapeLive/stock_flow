@@ -36,20 +36,27 @@ export default function Page() {
     >([]);
     const [pinDialogOpen, setPinDialogOpen] = useState(false);
 
-    const fetchData = useCallback(async () => {
-        try {
-            const response = await orderApi.getOne(Number(id));
-            setData(response);
-            if (response.status === "PACKED") setActiveTab("Dispatching");
-        } catch (error) {
-            console.error("Error fetching data:", error);
-        }
-    }, [id]);
+    const fetchData = useCallback(
+        async (setInitialTab = false) => {
+            try {
+                const response = await orderApi.getOne(Number(id));
+                setData(response);
+                if (setInitialTab && response.status === "PACKED") {
+                    setActiveTab("Dispatching");
+                }
+            } catch (error) {
+                console.error("Error fetching data:", error);
+            }
+        },
+        [id],
+    );
 
     useEffect(() => {
         setLoading(true);
-        fetchData().finally(() => setLoading(false));
+        fetchData(true).finally(() => setLoading(false));
+    }, [fetchData]);
 
+    useEffect(() => {
         const fetchTransports = async () => {
             try {
                 const response = await transportApi.getActive();
@@ -58,19 +65,21 @@ export default function Page() {
                     label: transport.name,
                 }));
                 setTransports(formattedTransports);
-                setDispatchTransport(
-                    formattedTransports.find(
-                        (t) =>
-                            t.value === data?.preferred_transport?.toString(),
-                    )?.value ?? "",
-                );
             } catch (error) {
                 console.error("Error fetching transports:", error);
             }
         };
-
         fetchTransports();
-    }, [fetchData]);
+    }, []);
+
+    // Set preferred transport only when both are available
+    useEffect(() => {
+        if (!data?.preferred_transport || transports.length === 0) return;
+        const match = transports.find(
+            (t) => t.value === data.preferred_transport?.toString(),
+        );
+        if (match) setDispatchTransport(match.value);
+    }, [data, transports]);
 
     const handlePackedChange = useCallback(async () => {
         await fetchData();
