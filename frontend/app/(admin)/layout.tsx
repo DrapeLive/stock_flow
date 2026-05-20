@@ -14,7 +14,10 @@ export default function AdminLayout({
     const pathname = usePathname();
     const isStatusPage = pathname.includes("/admin/order/status/");
     const isFullscreenPage =
-        pathname.includes("/admin/items/new") || isStatusPage;
+        pathname.includes("/admin/items/new") ||
+        pathname.includes("/admin/items/edit") ||
+        pathname.includes("/admin/settings/brands") ||
+        isStatusPage;
 
     return (
         <div

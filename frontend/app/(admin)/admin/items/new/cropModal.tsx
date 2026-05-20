@@ -43,20 +43,20 @@ export default function CropModal({ src, onConfirm, onCancel }: Props) {
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex flex-col bg-black overflow-hidden">
+        <div className="fixed inset-0 z-50 flex flex-col bg-white overflow-hidden">
             {/* Header */}
             <div className="flex items-center justify-between px-4 pt-12 pb-4 flex-shrink-0">
                 <button
                     type="button"
                     onClick={onCancel}
-                    className="w-12 h-12 flex items-center justify-center rounded-full bg-white/10 text-white"
+                    className="w-12 h-12 flex items-center justify-center rounded-full bg-black/10 text-black"
                 >
                     <X size={24} />
                 </button>
                 <button
                     type="button"
                     onClick={handleConfirm}
-                    className="flex items-center gap-1.5 bg-white text-black rounded-md px-4 py-1.5 text-lg font-bold"
+                    className="flex items-center gap-1.5 bg-black text-white rounded-md px-4 py-1.5 text-lg font-bold"
                 >
                     <Check size={24} />
                     Use Photo
@@ -83,7 +83,7 @@ export default function CropModal({ src, onConfirm, onCancel }: Props) {
                         onCropChange={setCrop}
                         onZoomChange={setZoom}
                         onCropComplete={onCropComplete}
-                        style={{ containerStyle: { background: "#000" } }}
+                        style={{ containerStyle: { background: "#ffffff" } }}
                     />
                 )}
             </div>
@@ -92,7 +92,7 @@ export default function CropModal({ src, onConfirm, onCancel }: Props) {
             <div className="flex flex-col gap-3 px-6 py-8">
                 {/* Zoom slider — only when cropping */}
                 {aspect !== null && (
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 py-2">
                         <button
                             type="button"
                             onClick={() =>
@@ -100,7 +100,7 @@ export default function CropModal({ src, onConfirm, onCancel }: Props) {
                                     Math.max(1, +(z - 0.1).toFixed(2)),
                                 )
                             }
-                            className="text-white/60 active:text-white"
+                            className="text-black/60 active:text-black"
                         >
                             <span className="text-lg leading-none">−</span>
                         </button>
@@ -111,7 +111,7 @@ export default function CropModal({ src, onConfirm, onCancel }: Props) {
                             step={0.05}
                             value={zoom}
                             onChange={(e) => setZoom(Number(e.target.value))}
-                            className="flex-1 accent-white h-1"
+                            className="flex-1 accent-black h-1"
                         />
                         <button
                             type="button"
@@ -120,7 +120,7 @@ export default function CropModal({ src, onConfirm, onCancel }: Props) {
                                     Math.min(3, +(z + 0.1).toFixed(2)),
                                 )
                             }
-                            className="text-white/60 active:text-white"
+                            className="text-black/60 active:text-black"
                         >
                             <span className="text-lg leading-none">+</span>
                         </button>
@@ -136,8 +136,8 @@ export default function CropModal({ src, onConfirm, onCancel }: Props) {
                             onClick={() => setAspect(a.value)}
                             className={`px-4 py-1.5 rounded-md text-lg font-semibold transition-colors ${
                                 aspect === a.value
-                                    ? "bg-white text-black"
-                                    : "bg-white/10 text-white/60"
+                                    ? "bg-black text-white"
+                                    : "bg-black/10 text-black/60"
                             }`}
                         >
                             {a.label}
