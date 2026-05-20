@@ -107,13 +107,13 @@ export default function OrderSummary({
           <h3 className="text-sm font-semibold text-gray-800">
             {customer.name}
           </h3>
-          <h3 className="text-sm font-semibold text-gray-800">
+          <h3 className="text-sm font-semibold text-gray-500">
             {customer.address}
           </h3>
-          <h3 className="text-sm font-semibold text-gray-800">
+          <h3 className="text-sm font-semibold text-gray-500">
             {customer.contact}
           </h3>
-          <h3 className="text-sm font-semibold text-gray-800">
+          <h3 className="text-sm font-semibold text-gray-500">
             {customer.gst}
           </h3>
         </div>
@@ -124,7 +124,7 @@ export default function OrderSummary({
           <h3 className="text-sm font-semibold text-gray-800">
             {agent.username}
           </h3>
-          <h3 className="text-sm font-semibold text-gray-800">
+          <h3 className="text-sm font-semibold text-gray-500">
             {agent.contact}
           </h3>
         </div>
