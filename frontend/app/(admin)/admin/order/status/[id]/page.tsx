@@ -58,6 +58,12 @@ export default function Page() {
                     label: transport.name,
                 }));
                 setTransports(formattedTransports);
+                setDispatchTransport(
+                    formattedTransports.find(
+                        (t) =>
+                            t.value === data?.preferred_transport?.toString(),
+                    )?.value ?? "",
+                );
             } catch (error) {
                 console.error("Error fetching transports:", error);
             }
