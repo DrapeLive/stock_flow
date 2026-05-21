@@ -43,8 +43,20 @@ export default function ProductDetailPage() {
             quantity: number;
         }>
     >([]);
-    const [isEditMode, setIsEditMode] = useState(false);
-    const [editingItemId, setEditingItemId] = useState<number | null>(null);
+
+    const existingSelectedItem = useMemo(
+        () =>
+            selectedVariant && selectedSizeGroup
+                ? (existingOrderItems.find(
+                      (item) =>
+                          item.variant_id === selectedVariant.id &&
+                          item.size_group === selectedSizeGroup,
+                  ) ?? null)
+                : null,
+        [selectedVariant, selectedSizeGroup, existingOrderItems],
+    );
+    const isEditMode = existingSelectedItem !== null;
+    const editingItemId = existingSelectedItem?.id ?? null;
 
     useBackButton({
         onBack: useCallback(() => {
@@ -211,21 +223,9 @@ export default function ProductDetailPage() {
         const existingForThisVariant = existingOrderItems.find(
             (item) => item.variant_id === variant.id,
         );
-
-        if (
-            existingForThisVariant &&
-            selectedSizeGroup === existingForThisVariant.size_group &&
-            selectedSizeGroup !== null
-        ) {
-            setIsEditMode(true);
-            setEditingItemId(existingForThisVariant.id);
-            setQuantity(existingForThisVariant.quantity);
-        } else {
-            setIsEditMode(false);
-            setEditingItemId(null);
-            setQuantity(1);
-        }
         setSelectedVariant(variant);
+        setSelectedSizeGroup(null); // let auto-select effect pick the right group
+        setQuantity(existingForThisVariant?.quantity ?? 1);
         setValidationError(null);
     };
 
@@ -236,11 +236,7 @@ export default function ProductDetailPage() {
                 item.variant_id === selectedVariant.id &&
                 item.size_group === value,
         );
-        if (existingForSize && !isEditMode) {
-            setIsEditMode(true);
-            setEditingItemId(existingForSize.id);
-            setQuantity(existingForSize.quantity);
-        }
+        setQuantity(existingForSize?.quantity ?? 1);
         setSelectedSizeGroup(value);
         setValidationError(null);
     };
