@@ -13,6 +13,8 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 from datetime import timedelta
 from pathlib import Path
 
+from celery.schedules import crontab
+
 from decouple import config
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -136,6 +138,13 @@ DATABASES = {
 CELERY_BROKER_URL = config("CELERY_BROKER_URL", "redis://localhost:6379/0")
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
+
+CELERY_BEAT_SCHEDULE = {
+    "cleanup-orphaned-media-daily": {
+        "task": "apps.items.tasks.cleanup_orphaned_media_task",
+        "schedule": crontab(hour=0, minute=0),
+    },
+}
 
 
 # Password validation
