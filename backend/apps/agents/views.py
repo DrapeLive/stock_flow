@@ -26,9 +26,9 @@ class AgentViewSet(ModelViewSet):
         user = self.request.user
 
         if user.role == "ADMIN":
-            return Agent.objects.filter(is_active=True)
+            return Agent.objects.filter(is_active=True).order_by('-id')
 
-        return Agent.objects.filter(user=user, is_active=True)
+        return Agent.objects.filter(user=user, is_active=True).order_by('-id')
 
     @action(detail=True, methods=["get"])
     def delete_info(self, request, pk=None):
@@ -96,7 +96,8 @@ class AgentItemsView(APIView):
         )
         if biz:
             qs = qs.filter(item__type=biz)
-        items = [ai.item for ai in qs.all()]
+        qs = qs.order_by('-id')
+        items = [ai.item for ai in qs]  # .all() is redundant here too
         result = [AgentItemListSerializer.from_item(item, request) for item in items]
         return Response(result)
 

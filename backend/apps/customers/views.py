@@ -37,8 +37,8 @@ class CustomerViewSet(ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         if user.role == "ADMIN":
-            return Customer.objects.filter(is_active=True)
-        return Customer.objects.filter(agent__user=user, is_active=True)
+            return Customer.objects.filter(is_active=True).order_by('-id')
+        return Customer.objects.filter(agent__user=user, is_active=True).order_by('-id')
 
     def perform_create(self, serializer):
         if self.request.user.role == "AGENT":

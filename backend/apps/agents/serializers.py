@@ -149,7 +149,7 @@ class AgentSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         return [
             AgentItemListSerializer.from_item(ai.item, request)
-            for ai in obj.assigned_items.select_related('item').prefetch_related('item__variants__sizes').filter(item__is_deleted=False).all()
+            for ai in obj.assigned_items.select_related('item').prefetch_related('item__variants__sizes').filter(item__is_deleted=False).order_by('-id')
         ]
 
     def create(self, validated_data):

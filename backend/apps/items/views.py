@@ -104,6 +104,7 @@ class ItemViewSet(ModelViewSet):
             )
             .filter(is_deleted=False)
             .exclude(out_of_stock_since__isnull=False, out_of_stock_since__lte=cutoff)
+            .order_by('-id')
         )
 
     def get_serializer_class(self):
@@ -135,7 +136,7 @@ class ItemViewSet(ModelViewSet):
         items = filter_items_by_business(
             Item.objects.prefetch_related("variants__sizes"),
             request.user,
-        ).filter(is_deleted=False)
+        ).filter(is_deleted=False).order_by('-id')
 
         boost = get_agent_reservation_boost(request.user)
 
