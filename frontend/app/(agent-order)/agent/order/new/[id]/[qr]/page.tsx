@@ -373,7 +373,7 @@ export default function ProductDetailPage() {
                 <QuantitySelector
                     quantity={quantity}
                     availableStock={availableStock}
-                    disabled={isAlreadyAdded}
+                    isEditMode={isEditMode}
                     onChange={setQuantity}
                 />
 
