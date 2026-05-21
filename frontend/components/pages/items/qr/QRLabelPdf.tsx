@@ -55,7 +55,6 @@ export const QRLabelPdf = ({ item, qrImages }: QRLabelPdfProps) => (
     <Document>
         {item.variants.map((variant, index) => (
             <Page key={variant.id} size={[70.87, 141.73]} style={styles.page}>
-                {" "}
                 <Text style={styles.name}>{item.name}</Text>
                 <Text style={styles.variant}>Variant #{index + 1}</Text>
                 <View>
