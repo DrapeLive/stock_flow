@@ -154,15 +154,6 @@ export default function ProductDetailPage() {
         editingItemId,
     ]);
 
-    const isAlreadyAdded =
-        !!selectedSizeGroup &&
-        !isEditMode &&
-        existingOrderItems.some(
-            (item) =>
-                item.variant_id === selectedVariant?.id &&
-                item.size_group === selectedSizeGroup,
-        );
-
     useEffect(() => {
         if (sizeGroups.length > 0 && !selectedSizeGroup) {
             const firstAvailable = sizeGroups.find((group) => {

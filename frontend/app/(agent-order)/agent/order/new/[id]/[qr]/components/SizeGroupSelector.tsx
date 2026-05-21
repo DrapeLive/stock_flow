@@ -76,8 +76,7 @@ export default function SizeGroupSelector({
                                                 </span>
                                             ) : alreadyAdded ? (
                                                 <span className="text-xs text-amber-500 font-medium">
-                                                    Edit · {meta?.stock} sets
-                                                    left
+                                                    Already added · Edit
                                                 </span>
                                             ) : (
                                                 <span className="text-xs text-gray-400">
