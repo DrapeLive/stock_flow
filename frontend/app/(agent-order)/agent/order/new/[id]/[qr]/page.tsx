@@ -165,26 +165,23 @@ export default function ProductDetailPage() {
 
     useEffect(() => {
         if (sizeGroups.length > 0 && !selectedSizeGroup) {
-            const bestGroup = sizeGroups.reduce((best, group) => {
+            const firstAvailable = sizeGroups.find((group) => {
                 const reservedItems = existingOrderItems
                     .filter((item) => item.variant_id === selectedVariant?.id)
                     .map((item) => ({
                         size_group: item.size_group,
                         quantity: item.quantity,
                     }));
-                const stock = getAvailableStockForSizeGroup(
-                    selectedVariant,
-                    group,
-                    reservedItems,
+                return (
+                    getAvailableStockForSizeGroup(
+                        selectedVariant,
+                        group,
+                        reservedItems,
+                    ) > 0
                 );
-                const bestStock = getAvailableStockForSizeGroup(
-                    selectedVariant,
-                    best,
-                    reservedItems,
-                );
-                return stock > bestStock ? group : best;
             });
-            setSelectedSizeGroup(bestGroup);
+
+            setSelectedSizeGroup(firstAvailable ?? sizeGroups[0]);
         }
     }, [sizeGroups, selectedSizeGroup]);
 
