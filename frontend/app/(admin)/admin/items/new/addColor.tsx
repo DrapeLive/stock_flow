@@ -5,6 +5,8 @@ import { ArrowLeft, ImagePlus, X } from "lucide-react";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import Image from "next/image";
+import heic2any from "heic2any";
+
 import {
     Select,
     SelectContent,
@@ -17,8 +19,8 @@ import CropModal from "./cropModal";
 import CommonDetailsBadge from "./commonDetailsBadge";
 import { ColorVariant, CommonDetails, FrontendSizeRange } from "@/types/item";
 import { getSizesForItemType } from "@/types/item";
-import imageCompression from "browser-image-compression";
 import { Modal, ModalButton } from "@/components/ui/custom/Modals";
+import { normalizeImageFile } from "@/lib/image-utils";
 
 interface Props {
     initial: ColorVariant;
@@ -55,24 +57,21 @@ export default function Step2AddColor({
     const set = <K extends keyof ColorVariant>(key: K, val: ColorVariant[K]) =>
         setVariant((v) => ({ ...v, [key]: val }));
 
-    const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const f = e.target.files?.[0];
         if (!f) return;
-        setCropSrc(URL.createObjectURL(f));
+
+        const normalisedFile = await normalizeImageFile(f);
+
+        setCropSrc(URL.createObjectURL(normalisedFile));
         e.target.value = "";
     };
 
     const handleCropDone = async (file: File) => {
-        const compressedFile = await imageCompression(file, {
-            maxSizeMB: 0.3, // 🔥 target size (300KB)
-            maxWidthOrHeight: 1024, // 🔥 resize
-            useWebWorker: true,
-        });
-
         setVariant((v) => ({
             ...v,
-            image: compressedFile,
-            imagePreview: URL.createObjectURL(compressedFile),
+            image: file,
+            imagePreview: URL.createObjectURL(file),
         }));
         setCropSrc(null);
     };
