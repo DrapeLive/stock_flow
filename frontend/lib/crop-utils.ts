@@ -12,7 +12,7 @@ const toFile = (canvas: HTMLCanvasElement, suffix: string): Promise<File> =>
                       )
                     : reject(new Error("Canvas is empty")),
             "image/webp",
-            0.85,
+            1,
         ),
     );
 

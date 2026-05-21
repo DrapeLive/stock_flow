@@ -152,7 +152,7 @@ class CreateItemSerializer(serializers.Serializer):
 
         # Compress
         buffer = BytesIO()
-        img.save(buffer, format="JPEG", quality=70)  # 🔥 adjust quality (60–80 sweet spot)
+        img.save(buffer, format="JPEG", quality=80)  # 🔥 adjust quality (60–80 sweet spot)
 
         file_name = f"{uuid.uuid4().hex}.jpg"
 
