@@ -54,11 +54,7 @@ const ScannerPage: React.FC<ScannerPageProps> = ({
                     return;
                   }
 
-                  const item = await itemApi.byqr(qrValue);
-                  toastSuccess(
-                    "QR code scanned successfully",
-                    `Scanned Item: ${item.name}`,
-                  );
+                  // await itemApi.byqr(qrValue);
                   router.push(`${basePath}/${id}/${qrValue}`);
                 } catch (e) {
                   toastError("Invalid QR code", e);
