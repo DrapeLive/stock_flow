@@ -16,7 +16,6 @@ import {
   AlertCircle,
   ImagePlus,
   X,
-  ImageMinus,
   ChevronDown,
 } from "lucide-react";
 import { Field, FieldLabel } from "@/components/ui/field";
@@ -588,16 +587,12 @@ export default function ItemEditPage() {
                       <button
                         type="button"
                         onClick={() =>
-                          updateVariantGroupImage(group.backendId, {
-                            newImage: null,
-                            imagePreview: null,
-                            imageUrl: null,
-                          })
+                          fileRefs.current[group.backendId]?.click()
                         }
-                        className="shrink-0 p-2 rounded-md text-red-400 hover:text-white hover:bg-red-400 transition-colors"
-                        title="Remove image"
+                        className="shrink-0 p-2 rounded-md text-blue-400 hover:text-white hover:bg-blue-400 transition-colors"
+                        title="Replace image"
                       >
-                        <ImageMinus size={16} />
+                        <ImagePlus size={16} />
                       </button>
                     )}
 
