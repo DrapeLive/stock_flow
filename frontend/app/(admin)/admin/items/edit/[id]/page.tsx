@@ -387,13 +387,10 @@ export default function ItemEditPage() {
                         onValueChange={(values) => setOpenAccordions(values)}
                         className="space-y-2"
                     >
-                        {variantGroups.map((group) => {
+                        {variantGroups.map((group, index) => {
                             const currentImage =
                                 group.imagePreview ?? group.imageUrl;
-                            const variantLabel =
-                                group.backendId < 0
-                                    ? `New Variant`
-                                    : `Variant #${group.backendId}`;
+                            const variantLabel = `Variant #${index + 1}`;
                             return (
                                 <AccordionItem
                                     key={group.backendId}
