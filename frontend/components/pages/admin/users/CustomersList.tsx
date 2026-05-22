@@ -103,7 +103,7 @@ const CustomerList: React.FC = () => {
               <StockflowAvatar user={customer} />
 
               <div className="flex-1 min-w-0">
-                <h6 className="font-bold text-gray-900 text-[16px]">
+                <h6 className="font-bold text-gray-900 text-xs">
                   {customer.name}
                 </h6>
                 <p className="text-xs text-gray-400 truncate mt-1 leading-tight font-medium">
@@ -202,7 +202,7 @@ const CustomerList: React.FC = () => {
                 <StockflowAvatar user={item} />
 
                 <div className="flex-1 min-w-0">
-                  <h6 className="font-bold text-gray-900 text-[16px]">
+                  <h6 className="font-bold text-gray-900 text-xs">
                     {item.name}
                   </h6>
                   <p className="text-xs text-gray-400 truncate mt-1 leading-tight font-medium">
