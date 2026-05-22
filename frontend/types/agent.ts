@@ -54,3 +54,9 @@ export interface AgentUpdateRequest {
 
 export type AgentAllResponse = Agent[];
 export type AgentResponse = Agent;
+
+export interface AgentDeleteInfo {
+  customers_count: number;
+  orders_count: number;
+  transferable_agents: { id: number; name: string }[];
+}

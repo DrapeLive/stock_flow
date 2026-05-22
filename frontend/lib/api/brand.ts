@@ -2,6 +2,7 @@ import type {
   BrandAllResponse,
   BrandResponse,
   BrandFormData,
+  BrandDeleteInfo,
 } from "@/types/brand";
 import { api } from "./axios";
 
@@ -42,7 +43,13 @@ export const brandApi = {
     }).then((r) => r.data);
   },
 
-  delete(id: number): Promise<void> {
-    return api.delete(`/api/business/${id}/`).then((r) => r.data);
+  getDeleteInfo(id: number): Promise<BrandDeleteInfo> {
+    return api.get<BrandDeleteInfo>(`/api/business/${id}/delete_info/`).then((r) => r.data);
+  },
+
+  delete(id: number, pin?: string, action?: string, transfer_to_id?: number): Promise<void> {
+    return api
+      .delete(`/api/business/${id}/`, { data: { pin, action, transfer_to_id } })
+      .then((r) => r.data);
   },
 };

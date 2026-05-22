@@ -21,7 +21,9 @@ export default function SizeRangeRow({
   return (
     <div
       className={`flex-shrink-0 px-3 py-2 rounded-lg min-w-[80px] ${
-        isDisabled && !isReadonly ? "bg-gray-100 opacity-50" : "bg-gray-50"
+        isDisabled && !isReadonly
+          ? "bg-red-100 border border-red-700"
+          : "bg-gray-50"
       }`}
     >
       <span

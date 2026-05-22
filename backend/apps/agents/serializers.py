@@ -43,7 +43,6 @@ class AgentItemListSerializer(serializers.Serializer):
                 variants_by_image[image_key]["id"] = variant.id
                 variants_by_image[image_key]["image_obj"] = variant.image
                 variants_by_image[image_key]["qr_code"] = variant.qr_code
-
             for size_obj in variant.sizes.all():
                 variants_by_image[image_key]["sizes"][size_obj.size] += size_obj.stock
 
@@ -59,7 +58,6 @@ class AgentItemListSerializer(serializers.Serializer):
                     "stock": stock
                 }
                 for size, stock in data["sizes"].items()
-                if stock > 0
             ]
 
             result.append({
@@ -151,7 +149,7 @@ class AgentSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         return [
             AgentItemListSerializer.from_item(ai.item, request)
-            for ai in obj.assigned_items.select_related('item').prefetch_related('item__variants__sizes').filter(item__is_deleted=False).all()
+            for ai in obj.assigned_items.select_related('item').prefetch_related('item__variants__sizes').filter(item__is_deleted=False).order_by('-id')
         ]
 
     def create(self, validated_data):
@@ -171,41 +169,41 @@ class AgentSerializer(serializers.ModelSerializer):
 
         return agent
 
-def update(self, instance, validated_data):
-    user = instance.user
+    def update(self, instance, validated_data):
+        user = instance.user
 
-    if (
-        'username' in validated_data
-        and validated_data['username'] != user.username
-    ):
-        user.username = validated_data['username']
+        if (
+            'username' in validated_data
+            and validated_data['username'] != user.username
+        ):
+            user.username = validated_data['username']
 
-    if (
-        'email' in validated_data
-        and validated_data['email'] != user.email
-    ):
-        user.email = validated_data['email']
+        if (
+            'email' in validated_data
+            and validated_data['email'] != user.email
+        ):
+            user.email = validated_data['email']
 
-    if 'password' in validated_data:
-        password = validated_data['password']
+        if 'password' in validated_data:
+            password = validated_data['password']
 
-        if password and not user.check_password(password):
-            user.password = make_password(password)
+            if password and not user.check_password(password):
+                user.password = make_password(password)
 
-    if (
-        'display_name' in validated_data
-        and validated_data['display_name'] != user.display_name
-    ):
-        user.display_name = validated_data['display_name']
+        if (
+            'display_name' in validated_data
+            and validated_data['display_name'] != user.display_name
+        ):
+            user.display_name = validated_data['display_name']
 
-    user.save()
+        user.save()
 
-    if (
-        'contact' in validated_data
-        and validated_data['contact'] != instance.contact
-    ):
-        instance.contact = validated_data['contact']
+        if (
+            'contact' in validated_data
+            and validated_data['contact'] != instance.contact
+        ):
+            instance.contact = validated_data['contact']
 
-    instance.save()
+        instance.save()
 
-    return instance
+        return instance

@@ -15,7 +15,7 @@ import {
   Package,
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { orderApi } from "@/lib/api/order";
 import { OrderResponse, OutOfStockItem, PlaceOrderError } from "@/types/order";
 import { PageLoading } from "@/components/ui/Loading";
@@ -49,18 +49,15 @@ export default function OrderDetailsPage() {
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
 
   useBackButton({
-    onBack: () => {
+    onBack: useCallback(() => {
       setShowLeaveConfirm(true);
-    },
+    }, []),
   });
 
-  const isFirstRender = useRef(true);
+  const isReady = useRef(false);
 
   useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      return;
-    }
+    if (!isReady.current) return; // skip until data is loaded
 
     const key = localStorage.getItem("orderKey");
     if (!key) return;
@@ -150,7 +147,7 @@ export default function OrderDetailsPage() {
         preferred_transport: preferredTransportID || null,
       });
       toastSuccess("Order placed successfully!");
-      router.push("/agent/order/invoice");
+      router.push("/agent/order/orderform");
     } catch (error) {
       const axiosError = error as AxiosError<PlaceOrderError>;
       if (axiosError.response?.data?.out_of_stock_items) {
@@ -181,7 +178,7 @@ export default function OrderDetailsPage() {
       setOrders(res);
       await orderApi.placeOrder(Number(orderKey));
       toastSuccess("Order placed successfully!");
-      router.push("/agent/order/invoice");
+      router.push("/agent/order/orderform");
     } catch (error) {
       const axiosError = error as AxiosError<PlaceOrderError>;
       if (axiosError.response?.data?.out_of_stock_items) {
@@ -209,6 +206,8 @@ export default function OrderDetailsPage() {
           setPreferredTransportID(
             res2.preferred_transport || response.preferred_transport,
           );
+          setExpectedDeliveryDate(res2.expected_delivery_date || "");
+          isReady.current = true;
         }
       } catch (e) {
         console.error("Error fetching order details:", e);
@@ -291,8 +290,8 @@ export default function OrderDetailsPage() {
       <div className="max-w-lg mx-auto px-4 pt-6 space-y-6">
         {/* Customer Card */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="grid grid-cols-2 items-center gap-4 p-4">
-            <div className="flex items-center gap-4">
+          <div className="items-center gap-4 p-4">
+            <div className="flex pb-4 items-center gap-4">
               <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
                 <User size={20} className="text-primary" />
               </div>
@@ -332,6 +331,7 @@ export default function OrderDetailsPage() {
                     type="date"
                     value={expectedDeliveryDate}
                     onChange={(e) => setExpectedDeliveryDate(e.target.value)}
+                    min={new Date().toISOString().split("T")[0]}
                     className="w-full px-2 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/10 text-sm"
                   />
                 </div>

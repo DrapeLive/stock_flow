@@ -1,4 +1,6 @@
 node_modules/
 tmux-dev.sh
+tunnels.sh
 dump.rdb
 .opencode/
+.env*

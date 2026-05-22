@@ -23,10 +23,11 @@ export default function Page() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [startingEdit, setStartingEdit] = useState(false);
+
   useBackButton({
-    onBack: () => {
-      router.push("/agent");
-    },
+    onBack: useCallback(() => {
+      router.push("/agent/");
+    }, [router]),
   });
 
   const [transports, setTransports] = useState<
@@ -56,14 +57,14 @@ export default function Page() {
 
   const handleViewInvoice = () => {
     localStorage.setItem("orderKey", id);
-    router.push("/agent/order/invoice");
+    router.push("/agent/order/orderform");
   };
 
   const handleDeleteOrder = async () => {
     if (!id) return;
     setDeleting(true);
     try {
-      await orderApi.delete(Number(id));
+      await orderApi.agentDelete(Number(id));
       toastSuccess("Order deleted successfully");
       router.back();
     } catch (err) {
@@ -111,22 +112,29 @@ export default function Page() {
       />
 
       <div className="px-4 pt-4 max-w-4xl mx-auto">
-        <OrderSummary
-          customerName={data?.customer_details.name ?? ""}
-          agentName={data?.agent_details.username ?? ""}
-          orderDate={data?.created_at?.slice(0, 10) ?? ""}
-          status={data?.status ?? ""}
-          preferredTransport={
-            data?.preferred_transport
-              ? getPreferredTransport(data?.preferred_transport)
-              : undefined
-          }
-          expectedDeliveryDate={
-            data?.expected_delivery_date?.slice(0, 10) ?? ""
-          }
-          dispatchTransport={data?.transport_company_name ?? ""}
-          lrNumber={data?.lr_number ?? ""}
-        />
+        {data?.customer_details && data?.agent_details && (
+          <OrderSummary
+            customer={data?.customer_details}
+            agent={data?.agent_details}
+            orderDate={data?.created_at?.slice(0, 10) ?? ""}
+            status={data?.status ?? ""}
+            preferredTransport={
+              data?.preferred_transport
+                ? getPreferredTransport(data?.preferred_transport)
+                : undefined
+            }
+            expectedDeliveryDate={
+              data?.expected_delivery_date?.slice(0, 10) ?? ""
+            }
+            dispatchTransport={
+              transports.find(
+                (transport) =>
+                  Number(transport.value) == data?.transport_company,
+              )?.label ?? ""
+            }
+            lrNumber={data?.lr_number ?? ""}
+          />
+        )}
 
         {showPackingStatus && (
           <div className="bg-gray-50 rounded-xl p-4 mb-4 border border-gray-100">
@@ -169,21 +177,23 @@ export default function Page() {
         />
 
         {isDeletable && (
-          <div className="mt-6 pt-4 border-t border-gray-100 space-y-3">
+          <div className="mt-6 pt-4 border-t border-gray-100 flex gap-3">
             <StockFlowButton
-              text="Edit Order"
+              text="Edit"
               icon={<Pencil size={16} />}
               onClick={handleEditOrder}
               variant="outline"
-              className="w-full shadow-lg border-blue-200 text-blue-500 hover:bg-blue-500 hover:text-white transition duration-300"
+              fullWidth
+              className="border-blue-200 text-blue-500 hover:bg-blue-500 hover:text-white transition duration-300"
               disabled={startingEdit}
             />
             <StockFlowButton
-              text="Delete Order"
-              icon={<Trash2 />}
+              text="Delete"
+              icon={<Trash2 size={16} />}
               onClick={() => setShowDeleteDialog(true)}
               variant="outline"
-              className="w-full shadow-lg border-red-200 text-red-500 hover:bg-red-500 hover:text-white transition duration-300"
+              fullWidth
+              className="border-red-200 text-red-500 hover:bg-red-500 hover:text-white transition duration-300"
             />
           </div>
         )}

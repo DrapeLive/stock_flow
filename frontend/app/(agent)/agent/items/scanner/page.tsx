@@ -24,6 +24,8 @@ import {
   getSizesForItemType,
 } from "@/types/item";
 import type { CustomerAllResponse } from "@/types/customer";
+import ListCustomer from "@/components/pages/ListCustomer";
+import CustomerList from "@/components/pages/admin/users/CustomersList";
 
 function getAvailableSizeRanges(
   variant: ItemVariant | null,
@@ -167,7 +169,7 @@ export default function PriceCheckScannerPage() {
           </div>
         </div>
 
-        <div className="max-w-md mx-auto px-6 pt-6">
+        <div className="max-w-md mx-auto pt-6">
           {customers.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-gray-300">
               <p className="text-sm text-gray-400">No customers found</p>
@@ -185,9 +187,11 @@ export default function PriceCheckScannerPage() {
                       {customer.name.charAt(0).toUpperCase()}
                     </span>
                   </div>
-                  <div className="flex-1">
-                    <h6 className="font-bold text-gray-900">{customer.name}</h6>
-                    <p className="text-xs text-gray-400 truncate">
+                  <div className="flex-1 min-w-0">
+                    <h6 className="font-bold text-gray-900 text-[16px]">
+                      {customer.name}
+                    </h6>
+                    <p className="text-xs text-gray-400 truncate mt-1 leading-tight font-medium">
                       {customer.address || "No address"}
                     </p>
                   </div>

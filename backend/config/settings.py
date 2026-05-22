@@ -13,6 +13,8 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 from datetime import timedelta
 from pathlib import Path
 
+from celery.schedules import crontab
+
 from decouple import config
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -137,6 +139,13 @@ CELERY_BROKER_URL = config("CELERY_BROKER_URL", "redis://localhost:6379/0")
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 
+CELERY_BEAT_SCHEDULE = {
+    "cleanup-orphaned-media-daily": {
+        "task": "apps.items.tasks.cleanup_orphaned_media_task",
+        "schedule": crontab(hour=0, minute=0),
+    },
+}
+
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
@@ -242,10 +251,10 @@ STORAGES = {
 
 CSRF_TRUSTED_ORIGINS = [o for o in CORS_ALLOWED_ORIGINS if o.startswith("https://")]
 
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+USE_X_FORWARDED_HOST = True
 # Production security
 if not DEBUG:
-    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-    USE_X_FORWARDED_HOST = True
     SECURE_SSL_REDIRECT = True
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True

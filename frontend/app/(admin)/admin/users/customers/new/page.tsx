@@ -20,6 +20,7 @@ export default function NewCustomerPage() {
     customerName: "",
     address: "",
     contactNumber: "",
+    gst: "",
     preferredTransport: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -96,6 +97,15 @@ export default function NewCustomerPage() {
     } else if (!/^\+?[\d\s-]{10,}$/.test(formData.contactNumber)) {
       newErrors.contactNumber = "Invalid contact number format";
     }
+    if (!formData.gst.trim()) {
+      newErrors.gst = "GST number is required";
+    } else if (
+      !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(
+        formData.gst.toUpperCase(),
+      )
+    ) {
+      newErrors.gst = "Invalid GST format (e.g. 29ABCDE1234F1Z5)";
+    }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -110,6 +120,7 @@ export default function NewCustomerPage() {
         address: formData.address,
         contact: formData.contactNumber,
         agent: parseInt(formData.agent),
+        gst: formData.gst.toUpperCase(),
         preferred_transport: formData.preferredTransport
           ? parseInt(formData.preferredTransport)
           : null,
@@ -213,6 +224,31 @@ export default function NewCustomerPage() {
               value={formData.contactNumber}
               onChange={(e) => handleChange("contactNumber", e.target.value)}
               className={`bg-white border-gray-100 rounded-xl h-12 focus:ring-primary/10 ${errors.contactNumber ? "border-red-200 focus:border-red-300" : "focus:border-primary"}`}
+            />
+          </Field>
+
+          <Field>
+            <div className="flex justify-between items-center mb-1.5">
+              <FieldLabel className="text-xs font-bold uppercase tracking-widest text-gray-400">
+                GST Number
+              </FieldLabel>
+              {errors.gst && (
+                <span className="text-[10px] text-red-500 font-bold">
+                  {errors.gst}
+                </span>
+              )}
+            </div>
+            <Input
+              placeholder="e.g. 29ABCDE1234F1Z5"
+              value={formData.gst}
+              onChange={(e) =>
+                handleChange("gst", e.target.value.toUpperCase())
+              }
+              className={`bg-white border-gray-100 rounded-xl h-12 focus:ring-primary/10 ${
+                errors.gst
+                  ? "border-red-200 focus:border-red-300"
+                  : "focus:border-primary"
+              }`}
             />
           </Field>
 

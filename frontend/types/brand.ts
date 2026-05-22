@@ -24,3 +24,9 @@ export interface BrandFormData {
 
 export type BrandAllResponse = Brand[];
 export type BrandResponse = Brand;
+
+export interface BrandDeleteInfo {
+  items_count: number;
+  users_count: number;
+  transferable_brands: { id: number; name: string }[];
+}

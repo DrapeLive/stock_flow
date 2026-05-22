@@ -87,8 +87,10 @@ export const itemApi = {
       .then((r) => r.data);
   },
 
-  delete(id: number): Promise<void> {
-    return api.delete(`/api/items/${id}/`).then((r) => r.data);
+  delete(id: number, pin: string): Promise<void> {
+    return api
+      .delete(`/api/items/${id}/`, { data: { pin } })
+      .then((r) => r.data);
   },
 
   getSizeRanges(): Promise<SizeRangeResponse> {

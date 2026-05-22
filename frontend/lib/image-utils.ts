@@ -10,7 +10,7 @@ export const createImage = (url: string): Promise<HTMLImageElement> =>
 export async function getCroppedImg(
     imageSrc: string,
     pixelCrop: { x: number; y: number; width: number; height: number },
-    fileName: string = "cropped-image.jpg"
+    fileName: string = "cropped-image.jpg",
 ): Promise<File> {
     const image = await createImage(imageSrc);
     const canvas = document.createElement("canvas");
@@ -32,7 +32,7 @@ export async function getCroppedImg(
         0,
         0,
         pixelCrop.width,
-        pixelCrop.height
+        pixelCrop.height,
     );
 
     return new Promise((resolve, reject) => {
@@ -45,3 +45,25 @@ export async function getCroppedImg(
         }, "image/jpeg");
     });
 }
+
+export const normalizeImageFile = async (file: File): Promise<File> => {
+    if (
+        file.type === "image/heic" ||
+        file.type === "image/heif" ||
+        file.name.toLowerCase().endsWith(".heic") ||
+        file.name.toLowerCase().endsWith(".heif")
+    ) {
+        const heic2any = (await import("heic2any")).default;
+        const converted = await heic2any({
+            blob: file,
+            toType: "image/jpeg",
+            quality: 0.92,
+        });
+        return new File(
+            [converted as Blob],
+            file.name.replace(/\.(heic|heif)$/i, ".jpg"),
+            { type: "image/jpeg" },
+        );
+    }
+    return file;
+};

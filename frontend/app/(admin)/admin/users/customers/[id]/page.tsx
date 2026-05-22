@@ -15,6 +15,8 @@ import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 import StockFlowSelect from "@/components/ui/custom/stockFlowSelect";
 import { Trash2, ArrowLeft, User, Pencil, Eye, Package } from "lucide-react";
 import Pagination from "@/components/ui/Pagination";
+import DeleteWithTransferDialog from "@/components/ui/deleteWithTransferDialog";
+import { useAuth } from "@/context/AuthContext";
 
 function getColorFromId(id: number): string {
   if (!id) return "hsl(0, 0%, 85%)";
@@ -25,6 +27,8 @@ function getColorFromId(id: number): string {
 export default function CustomerDetailPage() {
   const { id } = useParams();
   const router = useRouter();
+  const { isSuperuser } = useAuth();
+
   const [customer, setCustomer] = useState<CustomerResponse | null>(null);
   const [agents, setAgents] = useState<{ value: string; label: string }[]>([]);
   const [orders, setOrders] = useState<OrderResponse[]>([]);
@@ -32,10 +36,13 @@ export default function CustomerDetailPage() {
     name: "",
     address: "",
     contact: "",
+    gst: "",
     agent: "",
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isEditing, setIsEditing] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -56,7 +63,7 @@ export default function CustomerDetailPage() {
           }),
         ]);
         const filteredOrders = ordersData.results.filter(
-          (eachOrder) => eachOrder.status != "DRAFT",
+          (eachOrder) => eachOrder.status !== "DRAFT",
         );
         setCustomer(customerData);
         setOrders(filteredOrders);
@@ -67,6 +74,7 @@ export default function CustomerDetailPage() {
           address: customerData.address,
           contact: customerData.contact,
           agent: customerData.agent.toString(),
+          gst: customerData.gst,
         });
         setAgents(
           agentsData.map((a) => ({
@@ -93,6 +101,15 @@ export default function CustomerDetailPage() {
     if (!formData.name.trim()) newErrors.name = "Name is required";
     if (!formData.address.trim()) newErrors.address = "Address is required";
     if (!formData.contact.trim()) newErrors.contact = "Contact is required";
+    if (!formData.gst.trim()) {
+      newErrors.gst = "GST number is required";
+    } else if (
+      !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(
+        formData.gst.toUpperCase(),
+      )
+    ) {
+      newErrors.gst = "Invalid GST format (e.g. 29ABCDE1234F1Z5)";
+    }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -107,11 +124,12 @@ export default function CustomerDetailPage() {
         address: formData.address,
         contact: formData.contact,
         agent: parseInt(formData.agent),
+        gst: formData.gst,
       };
       await customerApi.update(numericId, payload);
       toastSuccess("Customer updated successfully");
       setIsEditing(false);
-      router.refresh();
+      router.push("/admin/users/");
     } catch (error: any) {
       console.error("Error updating customer:", error);
       toastError("Failed to update customer", error);
@@ -120,18 +138,32 @@ export default function CustomerDetailPage() {
     }
   };
 
-  const handleDelete = async () => {
-    if (confirm("Are you sure you want to delete this customer?")) {
-      try {
-        const numericId = parseInt(id as string, 10);
-        await customerApi.delete(numericId);
-        toastSuccess("Customer deleted successfully");
-        router.push("/admin/users/");
-      } catch (error) {
-        console.error("Error deleting customer:", error);
-      }
+  // ── Delete ────────────────────────────────────────────────────────────────
+
+  const handleDeleteClick = () => {
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async (
+    _id: number,
+    payload: {
+      pin: string;
+      action: "transfer" | "deactivate";
+      transfer_to_id?: number;
+    },
+  ) => {
+    setDeleting(true);
+    try {
+      await customerApi.delete(_id, payload.pin, payload.action);
+      toastSuccess("Customer deleted successfully");
+      router.push("/admin/users/");
+    } catch (error) {
+      setDeleting(false);
+      throw error;
     }
   };
+
+  // ── Pagination ────────────────────────────────────────────────────────────
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
@@ -142,6 +174,8 @@ export default function CustomerDetailPage() {
     void size;
     setCurrentPage(1);
   };
+
+  // ── Render ────────────────────────────────────────────────────────────────
 
   if (loading)
     return (
@@ -154,6 +188,17 @@ export default function CustomerDetailPage() {
 
   return (
     <div className="w-full px-4 py-8 flex flex-col min-h-screen bg-white">
+      <DeleteWithTransferDialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        entityType="customer"
+        entityId={parseInt(id as string, 10)}
+        entityName={customer.name}
+        onFetchDeleteInfo={customerApi.getDeleteInfo}
+        onDelete={handleDeleteConfirm}
+        isSuperuser={isSuperuser}
+      />
+
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <button
@@ -183,10 +228,15 @@ export default function CustomerDetailPage() {
             )}
           </button>
           <button
-            onClick={handleDelete}
-            className="p-2 rounded-xl text-red-500 hover:bg-red-50 transition-colors"
+            onClick={handleDeleteClick}
+            disabled={deleting}
+            className="p-2 rounded-xl text-red-500 hover:bg-red-50 transition-colors disabled:opacity-40"
           >
-            <Trash2 size={20} />
+            {deleting ? (
+              <span className="w-5 h-5 border-2 border-red-300 border-t-red-500 rounded-full animate-spin block" />
+            ) : (
+              <Trash2 size={20} />
+            )}
           </button>
         </div>
       </div>
@@ -275,6 +325,23 @@ export default function CustomerDetailPage() {
                   </p>
                 )}
               </Field>
+              <Field>
+                <FieldLabel className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 block">
+                  GST
+                </FieldLabel>
+                <Input
+                  value={formData.gst}
+                  onChange={(e) =>
+                    handleChange("gst", e.target.value.toUpperCase())
+                  }
+                  className="bg-white border-gray-100 rounded-xl h-12 font-bold"
+                />
+                {errors.gst && (
+                  <p className="text-[10px] text-red-500 font-bold mt-1">
+                    {errors.gst}
+                  </p>
+                )}
+              </Field>
             </FieldGroup>
           </div>
 
@@ -290,7 +357,7 @@ export default function CustomerDetailPage() {
         </>
       ) : (
         <>
-          {/* View Mode - Compact Details */}
+          {/* View Mode */}
           <div className="bg-gray-50 border border-gray-100 rounded-2xl p-4 mb-6 w-full">
             <div className="space-y-3">
               <div className="flex justify-between items-center">
@@ -307,6 +374,14 @@ export default function CustomerDetailPage() {
                 </span>
                 <span className="text-sm font-medium text-gray-900 text-right max-w-[60%]">
                   {customer.address || "—"}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-xs font-bold text-gray-400 uppercase">
+                  GST
+                </span>
+                <span className="text-sm font-medium text-gray-900 text-right max-w-[60%]">
+                  {customer.gst || "—"}
                 </span>
               </div>
               <div className="flex justify-between items-center">

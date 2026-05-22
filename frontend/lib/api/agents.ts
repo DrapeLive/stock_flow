@@ -3,6 +3,7 @@ import type {
   AgentResponse,
   AgentRequest,
   AgentUpdateRequest,
+  AgentDeleteInfo,
   AssignedItem,
 } from "@/types/agent";
 import { api } from "./axios";
@@ -32,8 +33,14 @@ export const agentApi = {
       .then((r) => r.data);
   },
 
-  delete(id: number): Promise<void> {
-    return api.delete(`/api/agents/${id}/`).then((r) => r.data);
+  getDeleteInfo(id: number): Promise<AgentDeleteInfo> {
+    return api.get<AgentDeleteInfo>(`/api/agents/${id}/delete_info/`).then((r) => r.data);
+  },
+
+  delete(id: number, pin: string, action?: string, transfer_to_id?: number): Promise<void> {
+    return api
+      .delete(`/api/agents/${id}/`, { data: { pin, action, transfer_to_id } })
+      .then((r) => r.data);
   },
 
   getItems(agentId: number): Promise<AssignedItem[]> {

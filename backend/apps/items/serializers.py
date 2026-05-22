@@ -142,19 +142,22 @@ class CreateItemSerializer(serializers.Serializer):
             return
 
         img = Image.open(image_file)
+        has_transparency = img.mode in ("RGBA", "P", "LA")
 
-        # Convert to RGB (important for PNGs with transparency)
-        if img.mode in ("RGBA", "P"):
+        if has_transparency:
+            img = img.convert("RGBA")
+            img.thumbnail((1024, 1024))
+            buffer = BytesIO()
+            img.save(buffer, format="PNG", optimize=True)
+            ext = "png"
+        else:
             img = img.convert("RGB")
+            img.thumbnail((1024, 1024))
+            buffer = BytesIO()
+            img.save(buffer, format="JPEG", quality=80)
+            ext = "jpg"
 
-        # Resize
-        img.thumbnail((1024, 1024))
-
-        # Compress
-        buffer = BytesIO()
-        img.save(buffer, format="JPEG", quality=70)  # 🔥 adjust quality (60–80 sweet spot)
-
-        file_name = f"{uuid.uuid4().hex}.jpg"
+        file_name = f"{uuid.uuid4().hex}.{ext}"
 
         if variant.image:
             variant.image.delete(save=False)

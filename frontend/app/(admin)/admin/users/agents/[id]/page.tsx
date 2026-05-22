@@ -25,6 +25,8 @@ import {
   Scan,
 } from "lucide-react";
 import QRScanModal from "@/components/items/QRScanModal";
+import DeleteWithTransferDialog from "@/components/ui/deleteWithTransferDialog";
+import { useAuth } from "@/context/AuthContext";
 
 function getColorFromId(id: number): string {
   if (!id) return "hsl(0, 0%, 85%)";
@@ -35,6 +37,8 @@ function getColorFromId(id: number): string {
 export default function AgentDetailPage() {
   const { id } = useParams();
   const router = useRouter();
+  const { isSuperuser } = useAuth();
+
   const [agent, setAgent] = useState<AgentResponse | null>(null);
   const [formData, setFormData] = useState({
     username: "",
@@ -44,12 +48,22 @@ export default function AgentDetailPage() {
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isEditing, setIsEditing] = useState(false);
   const [showQRScanner, setShowQRScanner] = useState(false);
 
   const [items, setItems] = useState<Item[]>([]);
+
+  // Single source of truth: mirrors exactly what is checked in the UI.
+  // Seeded from the backend on load and re-synced after every save.
   const [selectedItemIds, setSelectedItemIds] = useState<number[]>([]);
+
+  // Snapshot of what the backend last confirmed.
+  // Used only to compute hasChanges — never rendered directly.
+  const [savedItemIds, setSavedItemIds] = useState<number[]>([]);
+
   const [searchQuery, setSearchQuery] = useState("");
   const [savingItems, setSavingItems] = useState(false);
 
@@ -63,9 +77,12 @@ export default function AgentDetailPage() {
         ]);
         setAgent(agentData);
         setItems(itemsData);
-        setSelectedItemIds(
-          (agentData.assigned_items || []).map((item: AssignedItem) => item.id),
+        const ids = (agentData.assigned_items || []).map(
+          (item: AssignedItem) => item.id,
         );
+        // Both states start equal — no unsaved changes on first load
+        setSelectedItemIds(ids);
+        setSavedItemIds(ids);
         setFormData({
           username: agentData.user.username,
           display_name: agentData.user.display_name || "",
@@ -102,7 +119,7 @@ export default function AgentDetailPage() {
       await agentApi.update(numericId, payload);
       toastSuccess("Agent details updated");
       setIsEditing(false);
-      router.refresh();
+      router.push("/admin/users/");
     } catch (error: any) {
       console.error("Error updating agent:", error);
       toastError("Failed to update agent details", error);
@@ -115,10 +132,18 @@ export default function AgentDetailPage() {
     setSavingItems(true);
     try {
       const numericId = parseInt(id as string, 10);
+      // Send the full current selection — backend does delete-then-insert,
+      // so this correctly handles both additions and removals.
       await agentApi.updateItems(numericId, selectedItemIds);
       const updatedAgent = await agentApi.getOne(numericId);
       setAgent(updatedAgent);
-      toastSuccess("Items assigned successfully");
+      const confirmedIds = (updatedAgent.assigned_items || []).map(
+        (item: AssignedItem) => item.id,
+      );
+      // Sync both states to what the backend confirmed
+      setSelectedItemIds(confirmedIds);
+      setSavedItemIds(confirmedIds);
+      toastSuccess("Items updated successfully");
     } catch (error) {
       console.error("Error saving items:", error);
       toastError("Failed to save item assignments", error);
@@ -127,10 +152,11 @@ export default function AgentDetailPage() {
     }
   };
 
+  // Toggling any item simply adds or removes it from selectedItemIds
   const toggleItem = (itemId: number) => {
     setSelectedItemIds((prev) =>
       prev.includes(itemId)
-        ? prev.filter((id) => id !== itemId)
+        ? prev.filter((i) => i !== itemId)
         : [...prev, itemId],
     );
   };
@@ -147,7 +173,7 @@ export default function AgentDetailPage() {
         setSelectedItemIds((prev) => [...prev, item.id]);
         toastSuccess(`${item.name} added`);
       } else {
-        toastSuccess(`${item.name} already assigned`);
+        toastSuccess(`${item.name} already selected`);
       }
       setShowQRScanner(false);
     } else {
@@ -156,29 +182,51 @@ export default function AgentDetailPage() {
     }
   };
 
+  // True when the checked items differ from the last confirmed backend state
+  const hasChanges =
+    [...selectedItemIds].sort().join(",") !==
+    [...savedItemIds].sort().join(",");
+
   const filteredItems = items.filter((item) =>
     item.name.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
-  const assignedItems = items.filter((item) =>
+  // Items currently checked — shown in the horizontal strip
+  const selectedItems = items.filter((item) =>
     selectedItemIds.includes(item.id),
   );
 
-  const handleDelete = async () => {
-    if (
-      confirm(
-        "Are you sure you want to delete this agent? This will also delete their user account.",
-      )
-    ) {
-      try {
-        const numericId = parseInt(id as string, 10);
-        await agentApi.delete(numericId);
-        router.push("/admin/users/");
-      } catch (error) {
-        console.error("Error deleting agent:", error);
-      }
+  // ── Delete ────────────────────────────────────────────────────────────────
+
+  const handleDeleteClick = () => {
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async (
+    _id: number,
+    payload: {
+      pin: string;
+      action: "transfer" | "deactivate";
+      transfer_to_id?: number;
+    },
+  ) => {
+    setDeleting(true);
+    try {
+      await agentApi.delete(
+        _id,
+        payload.pin,
+        payload.action,
+        payload.transfer_to_id,
+      );
+      toastSuccess("Agent deleted successfully");
+      router.push("/admin/users/");
+    } catch (error) {
+      setDeleting(false);
+      throw error;
     }
   };
+
+  // ── Render ────────────────────────────────────────────────────────────────
 
   if (loading)
     return (
@@ -189,6 +237,17 @@ export default function AgentDetailPage() {
 
   return (
     <div className="w-full px-4 py-8 flex flex-col min-h-screen bg-white">
+      <DeleteWithTransferDialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        entityType="agent"
+        entityId={parseInt(id as string, 10)}
+        entityName={agent?.user.display_name || agent?.user.username || ""}
+        onFetchDeleteInfo={agentApi.getDeleteInfo}
+        onDelete={handleDeleteConfirm}
+        isSuperuser={isSuperuser}
+      />
+
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <button
@@ -218,10 +277,15 @@ export default function AgentDetailPage() {
             )}
           </button>
           <button
-            onClick={handleDelete}
-            className="p-2 rounded-xl text-red-500 hover:bg-red-50 transition-colors"
+            onClick={handleDeleteClick}
+            disabled={deleting}
+            className="p-2 rounded-xl text-red-500 hover:bg-red-50 transition-colors disabled:opacity-40"
           >
-            <Trash2 size={20} />
+            {deleting ? (
+              <span className="w-5 h-5 border-2 border-red-300 border-t-red-500 rounded-full animate-spin block" />
+            ) : (
+              <Trash2 size={20} />
+            )}
           </button>
         </div>
       </div>
@@ -247,7 +311,7 @@ export default function AgentDetailPage() {
         </span>
       </div>
 
-      {/* User Details Section - View Mode (Compact) / Edit Mode */}
+      {/* User Details Section */}
       {isEditing ? (
         <>
           <div className="bg-gray-50/50 border border-gray-100 rounded-[2rem] p-6 space-y-6 mb-6">
@@ -319,61 +383,63 @@ export default function AgentDetailPage() {
           </div>
         </>
       ) : (
-        <>
-          {/* View Mode - Compact Details */}
-          <div className="bg-gray-50 border border-gray-100 rounded-2xl p-4 mb-6 w-full">
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-xs font-bold text-gray-400 uppercase">
-                  Display Name
-                </span>
-                <span className="text-sm font-medium text-gray-900">
-                  {agent.user.display_name || "—"}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-xs font-bold text-gray-400 uppercase">
-                  Username
-                </span>
-                <span className="text-sm font-medium text-gray-900">
-                  {agent.user.username}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-xs font-bold text-gray-400 uppercase">
-                  Email
-                </span>
-                <span className="text-sm font-medium text-gray-900">
-                  {agent.user.email}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-xs font-bold text-gray-400 uppercase">
-                  Contact
-                </span>
-                <span className="text-sm font-medium text-gray-900">
-                  {agent.contact || "—"}
-                </span>
-              </div>
+        <div className="bg-gray-50 border border-gray-100 rounded-2xl p-4 mb-6 w-full">
+          <div className="space-y-3">
+            <div className="flex justify-between items-center">
+              <span className="text-xs font-bold text-gray-400 uppercase">
+                Display Name
+              </span>
+              <span className="text-sm font-medium text-gray-900">
+                {agent.user.display_name || "—"}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-xs font-bold text-gray-400 uppercase">
+                Username
+              </span>
+              <span className="text-sm font-medium text-gray-900">
+                {agent.user.username}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-xs font-bold text-gray-400 uppercase">
+                Email
+              </span>
+              <span className="text-sm font-medium text-gray-900">
+                {agent.user.email}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-xs font-bold text-gray-400 uppercase">
+                Contact
+              </span>
+              <span className="text-sm font-medium text-gray-900">
+                {agent.contact || "—"}
+              </span>
             </div>
           </div>
-        </>
+        </div>
       )}
 
-      {/* Item Assignment Section - Mobile-Friendly with Sticky Header */}
+      {/* Item Assignment Section */}
       <div className="border-t border-gray-100 pt-6 mt-2">
-        {/* Sticky Header */}
         <div className="sticky top-0 z-10 bg-white pt-2 pb-3 -mt-2 mb-3 border-b border-gray-100">
           <div className="flex items-center gap-2">
             <div className="flex-1 flex items-center gap-2">
-              <h3 className="text-lg font-black text-gray-900">Assigned</h3>
+              <h3 className="text-lg font-black text-gray-900">Items</h3>
               <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
                 {selectedItemIds.length}
               </span>
+              {/* Amber badge when UI state differs from last backend save */}
+              {hasChanges && (
+                <span className="text-xs font-bold text-amber-500 bg-amber-50 px-2 py-0.5 rounded-full">
+                  Unsaved
+                </span>
+              )}
             </div>
             <button
               onClick={handleSaveItems}
-              disabled={savingItems}
+              disabled={savingItems || !hasChanges}
               className="flex items-center justify-center gap-1.5 px-6 py-3 bg-green-600 text-white rounded-xl font-bold shadow-lg shadow-green-600/20 active:scale-95 transition-all disabled:opacity-50 min-w-[100px]"
             >
               {savingItems ? "Saving..." : "Save"}
@@ -404,18 +470,18 @@ export default function AgentDetailPage() {
           </button>
         </div>
 
-        {/* Assigned Items - Horizontal Scrollable */}
-        {assignedItems.length > 0 && (
-          <div className="mb-3">
+        {/* Selected Items strip — shows current UI selection, tap to deselect */}
+        {selectedItems.length > 0 && (
+          <div className="mb-4">
             <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">
-              Currently Assigned
+              Selected ({selectedItems.length}) — tap to remove
             </p>
             <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
-              {assignedItems.map((item) => (
+              {selectedItems.map((item) => (
                 <button
                   key={item.id}
                   onClick={() => toggleItem(item.id)}
-                  className="relative flex-shrink-0 w-16 h-16 rounded-xl border border-gray-200 bg-white overflow-hidden active:scale-95 transition-all group"
+                  className="relative flex-shrink-0 w-16 h-16 rounded-xl border-2 border-primary bg-white overflow-hidden active:scale-95 transition-all group"
                 >
                   {item.variants?.[0]?.image ? (
                     <ImagePreview
@@ -437,7 +503,7 @@ export default function AgentDetailPage() {
           </div>
         )}
 
-        {/* Available Items - Mobile Card Style */}
+        {/* Available Items List */}
         <div className="space-y-2">
           {filteredItems.map((item) => {
             const isSelected = selectedItemIds.includes(item.id);

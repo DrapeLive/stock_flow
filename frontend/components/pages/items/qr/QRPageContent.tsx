@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { PDFDocument, degrees } from "pdf-lib";
 
 import { itemApi } from "@/lib/api/item";
 import type { ItemQRResponse, ItemVariant } from "@/types/item";
@@ -103,11 +104,21 @@ export default function QRPrintPageContent() {
       }
       setQrImages(qrMap);
 
-      // Always generate blob — needed for share + print on mobile too
-      const blob = await pdf(
+      // Generate initial blob
+      const rawBlob = await pdf(
         <QRLabelPdf item={parsedItem} qrImages={qrMap} />,
       ).toBlob();
 
+      // Bake 90° rotation into each page using pdf-lib
+      const arrayBuffer = await rawBlob.arrayBuffer();
+      const pdfDoc = await PDFDocument.load(arrayBuffer);
+      for (const page of pdfDoc.getPages()) {
+        page.setRotation(degrees(90));
+      }
+      const rotatedBytes = await pdfDoc.save();
+      const blob = new Blob([new Uint8Array(rotatedBytes)], {
+        type: "application/pdf",
+      });
       setPdfBlob(blob);
 
       if (!isMobile) {
@@ -211,21 +222,21 @@ export default function QRPrintPageContent() {
             {item.variants.map((variant, index) => (
               <div
                 key={variant.id}
-                className="bg-white border shadow-sm flex flex-col items-center justify-center w-full max-w-sm min-h-[90mm] px-4 py-6"
+                className="gap-4 bg-white border shadow-sm flex flex-col items-center justify-center w-full max-w-sm min-h-[150mm] px-4 py-6"
               >
-                <p className="text-[11px] font-bold text-center">{item.name}</p>
-                <p className="text-[9px] bg-gray-100 px-2 py-1 rounded mt-1">
+                <p className="text-[24px] font-bold text-center">{item.name}</p>
+                <p className="text-[18px] bg-gray-100 px-2 py-1 rounded">
                   Variant #{index + 1}
                 </p>
                 <Image
                   src={qrImages[variant.id]}
                   unoptimized
                   alt="QR Code"
-                  width={130}
-                  height={130}
+                  width={150}
+                  height={150}
                   className="mt-3"
                 />
-                <p className="text-sm font-extrabold mt-2">
+                <p className="text-[24px] font-extrabold">
                   Rs. {Number(item.price).toFixed(2)}
                 </p>
               </div>

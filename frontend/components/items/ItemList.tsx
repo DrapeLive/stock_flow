@@ -6,6 +6,7 @@ import { UIItem } from "@/types/item";
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 import ItemCard from "./ItemCard";
 import QRScanModal from "./QRScanModal";
+import { isItemOutOfStock } from "@/util/stockValidators";
 
 type StockTab = "in_stock" | "out_of_stock";
 
@@ -22,18 +23,13 @@ interface ItemListProps {
   title?: string;
 }
 
-function isItemOutOfStock(item: UIItem): boolean {
-  return item.variants.every((variant) =>
-    variant.sizes.every((s) => s.stock === 0),
-  );
-}
 function filterItems(
   items: UIItem[],
   tab: StockTab,
   searchQuery: string,
   qrFilter: string | null,
 ): UIItem[] {
-  let filtered = items;
+  let filtered = [...items];
 
   if (tab === "in_stock") {
     filtered = filtered.filter((item) => !isItemOutOfStock(item));
@@ -98,10 +94,9 @@ export default function ItemList({
     setQrFilter(null);
   };
 
-  const filteredItems = useMemo(
-    () => filterItems(items, activeTab, searchQuery, qrFilter),
-    [items, activeTab, searchQuery, qrFilter],
-  );
+  const filteredItems = useMemo(() => {
+    return filterItems(items ?? [], activeTab, searchQuery, qrFilter);
+  }, [items, activeTab, searchQuery, qrFilter]);
 
   const inStockCount = items.filter((item) => !isItemOutOfStock(item)).length;
   const outOfStockCount = items.filter((item) => isItemOutOfStock(item)).length;
