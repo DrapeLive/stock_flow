@@ -98,4 +98,9 @@ export const itemApi = {
       .get<SizeRangeResponse>("/api/items/size-ranges")
       .then((r) => r.data);
   },
+
+  createVariant: async (formData: FormData) => {
+    const res = await api.post("/items/variants/", formData);
+    return res.data;
+  },
 };
