@@ -148,15 +148,16 @@ const ListCustomer: React.FC = () => {
   const handleSubmit = async (id: number) => {
     try {
       setLoading(true);
+      router.push(`/agent/order/new/${id}`);
       const res = await agentApi.getProfile(user!.id);
       const res1 = await orderApi.create({
         customer: id,
         status: "DRAFT",
         agent: res.id,
       });
-      if (res1.id) localStorage.setItem("orderKey", String(res1.id));
       clearCache(); // order created — customer data may change, bust cache
-      router.push(`/agent/order/new/${id}`);
+
+      if (res1.id) localStorage.setItem("orderKey", String(res1.id));
     } catch {
       toastError("Error creating order. Please try again.");
       setLoading(false);

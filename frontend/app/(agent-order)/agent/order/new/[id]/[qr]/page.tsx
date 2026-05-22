@@ -33,7 +33,11 @@ export default function ProductDetailPage() {
   const [selectedSizeGroup, setSelectedSizeGroup] = useState<string | null>(
     null,
   );
-  const [loading, setLoading] = useState(false);
+
+  // ─── Separated loading states ──────────────────────────────────────────────
+  const [pageLoading, setPageLoading] = useState(true); // initial data fetch
+  const [submitting, setSubmitting] = useState(false); // submit button only
+
   const [validationError, setValidationError] = useState<string | null>(null);
   const [existingOrderItems, setExistingOrderItems] = useState<
     Array<{
@@ -64,8 +68,9 @@ export default function ProductDetailPage() {
     }, [router, id]),
   });
 
+  // ─── Initial data fetch (pageLoading only) ─────────────────────────────────
   useEffect(() => {
-    setLoading(true);
+    setPageLoading(true);
     const fetchData = async () => {
       try {
         const [itemResponse, orderResponse] = await Promise.all([
@@ -99,10 +104,9 @@ export default function ProductDetailPage() {
           );
         }
       } catch (e) {
-        setLoading(false);
         console.error("Error fetching product details:", e);
       } finally {
-        setLoading(false);
+        setPageLoading(false);
       }
     };
     fetchData();
@@ -164,7 +168,6 @@ export default function ProductDetailPage() {
           0
         );
       });
-
       setSelectedSizeGroup(firstAvailable ?? sizeGroups[0]);
     }
   }, [sizeGroups, selectedSizeGroup]);
@@ -205,7 +208,7 @@ export default function ProductDetailPage() {
       (item) => item.variant_id === variant.id,
     );
     setSelectedVariant(variant);
-    setSelectedSizeGroup(null); // let auto-select effect pick the right group
+    setSelectedSizeGroup(null);
     setQuantity(existingForThisVariant?.quantity ?? 1);
     setValidationError(null);
   };
@@ -222,6 +225,7 @@ export default function ProductDetailPage() {
     setValidationError(null);
   };
 
+  // ─── Submit: only setSubmitting, page stays intact ─────────────────────────
   const handleSubmit = async () => {
     if (!selectedVariant) {
       setValidationError("Please select a color/variant");
@@ -235,7 +239,6 @@ export default function ProductDetailPage() {
       setValidationError("Quantity must be at least 1");
       return;
     }
-
     if (quantity > availableStock) {
       setValidationError(
         `Only ${availableStock} items available for selected size group`,
@@ -245,81 +248,52 @@ export default function ProductDetailPage() {
 
     setValidationError(null);
 
+    const orderKey = localStorage.getItem("orderKey");
+    if (!orderKey) {
+      setValidationError("Order session not found. Please restart the order.");
+      return;
+    }
+
+    setSubmitting(true);
     try {
-      setLoading(true);
-      const orderKey = localStorage.getItem("orderKey");
-      if (orderKey) {
-        const orderId = parseInt(orderKey, 10);
-        const qrCode = selectedVariant.qr_code;
+      const orderId = parseInt(orderKey, 10);
 
-        const existingSameVariant = existingOrderItems.find(
-          (item) =>
-            item.variant_id === selectedVariant.id &&
-            item.size_group === selectedSizeGroup,
-        );
+      const existingSameVariant = existingOrderItems.find(
+        (item) =>
+          item.variant_id === selectedVariant.id &&
+          item.size_group === selectedSizeGroup,
+      );
 
-        if (existingSameVariant && !isEditMode) {
-          const newQty = existingSameVariant.quantity + quantity;
-          await orderApi.updateItem(existingSameVariant.id, {
-            quantity: newQty,
-          });
-          setExistingOrderItems((prev) =>
-            prev.map((item) =>
-              item.id === existingSameVariant.id
-                ? { ...item, quantity: newQty }
-                : item,
-            ),
-          );
-          toastSuccess("Quantity Updated");
-        } else if (isEditMode && editingItemId) {
-          await orderApi.updateItem(editingItemId, { quantity });
-          setExistingOrderItems((prev) =>
-            prev.map((item) =>
-              item.id === editingItemId ? { ...item, quantity } : item,
-            ),
-          );
-          toastSuccess("Item Updated");
-        } else {
-          await orderApi.addItem(orderId, {
-            qr_code: qrCode,
-            quantity,
-            size_group: selectedSizeGroup,
-          });
-          const order = await orderApi.getOne(orderId);
-          const newItem = order.items.find(
-            (i) =>
-              (i.variant || 0) === selectedVariant.id &&
-              (i.size_group || "") === selectedSizeGroup,
-          );
-          if (newItem) {
-            setExistingOrderItems((prev) => [
-              ...prev,
-              {
-                id: newItem.id,
-                variant_id: newItem.variant || 0,
-                size_group: newItem.size_group || "",
-                quantity: newItem.quantity,
-              },
-            ]);
-          }
-          toastSuccess("Item Added Successfully");
-        }
-        router.push(`/agent/order/new/${id}`);
+      if (existingSameVariant && !isEditMode) {
+        // ── Update quantity for duplicate variant+size ────────────────────────
+        await orderApi.updateItem(existingSameVariant.id, {
+          quantity: existingSameVariant.quantity + quantity,
+        });
+        toastSuccess("Quantity Updated");
+      } else if (isEditMode && editingItemId) {
+        // ── Edit existing item ───────────────────────────────────────────────
+        await orderApi.updateItem(editingItemId, { quantity });
+        toastSuccess("Item Updated");
       } else {
-        setLoading(false);
-        setValidationError(
-          "Order session not found. Please restart the order.",
-        );
+        // ── Add new item — no extra getOne() round-trip ──────────────────────
+        await orderApi.addItem(orderId, {
+          qr_code: selectedVariant.qr_code,
+          quantity,
+          size_group: selectedSizeGroup,
+        });
       }
+
+      // Navigate once all branches succeed — no setSubmitting(false) needed
+      router.push(`/agent/order/new/${id}`);
     } catch (e) {
-      setLoading(false);
       console.error("Error adding item to order:", e);
       toastError("Failed to add item", e);
-      router.push(`/agent/order/new/${id}`);
+      setSubmitting(false); // only reset on error; navigation handles success
     }
   };
 
-  if (loading) return <PageLoading />;
+  // ─── Only the initial fetch blocks the full page ────────────────────────────
+  if (pageLoading) return <PageLoading />;
 
   return (
     <div className="min-h-screen bg-gray-50/50 pb-32">
@@ -370,10 +344,11 @@ export default function ProductDetailPage() {
           </div>
         )}
 
+        {/* submitting → spinner on button only, not full-page takeover */}
         <SubmitButton
           isEditMode={isEditMode}
-          loading={loading}
-          disabled={availableStock === 0 || !!validationError}
+          loading={submitting}
+          disabled={submitting || availableStock === 0 || !!validationError}
           onClick={handleSubmit}
         />
       </div>
