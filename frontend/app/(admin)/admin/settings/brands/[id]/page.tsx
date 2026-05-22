@@ -15,6 +15,7 @@ import { Trash2, ArrowLeft, Store, Pencil, Eye, X, Camera } from "lucide-react";
 import CropModal from "@/app/(admin)/admin/items/new/cropModal";
 import DeleteWithTransferDialog from "@/components/ui/deleteWithTransferDialog";
 import { normalizeImageFile } from "@/lib/image-utils";
+import { PageLoading } from "@/components/ui/Loading";
 
 export default function BrandDetailPage() {
     const { id } = useParams();
@@ -145,12 +146,7 @@ export default function BrandDetailPage() {
         setDeleteDialogOpen(true);
     };
 
-    if (loading)
-        return (
-            <div className="p-8 text-center text-gray-400">
-                Loading details...
-            </div>
-        );
+    if (loading) return <PageLoading />;
     if (!brand)
         return (
             <div className="p-8 text-center text-red-400">Brand not found.</div>

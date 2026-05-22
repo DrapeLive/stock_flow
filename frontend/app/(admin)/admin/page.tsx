@@ -11,6 +11,7 @@ import { OrderFilters } from "@/components/pages/admin/order_components/types";
 import { fetchViewedOrderIds, getViewedOrdersCount } from "@/lib/viewedOrders";
 import useSessionStorage from "@/hooks/useSessionStorage";
 import OrderList from "@/components/pages/admin/order_components/OrderList";
+import { PageLoading } from "@/components/ui/Loading";
 
 type Tab = "All" | "Packed" | "Pending" | "Dispatched";
 
@@ -326,7 +327,7 @@ function AdminHomePageContent() {
 
 export default function AdminHomePage() {
     return (
-        <Suspense fallback={<div>Loading...</div>}>
+        <Suspense fallback={<PageLoading />}>
             <AdminHomePageContent />
         </Suspense>
     );

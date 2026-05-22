@@ -15,6 +15,7 @@ import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 import { Trash2 } from "lucide-react";
 import PinDeleteDialog from "@/components/ui/pinDeleteDialog";
 import { useAuth } from "@/context/AuthContext";
+import { PageLoading } from "@/components/ui/Loading";
 
 export default function Page() {
     const { isSuperuser } = useAuth();
@@ -164,8 +165,7 @@ export default function Page() {
     );
     const isDeletable = data?.status === "PENDING" || data?.status === "PACKED";
 
-    if (loading && !data)
-        return <h2 className="flex justify-center mt-10">Loading...</h2>;
+    if (loading && !data) return <PageLoading />;
 
     return (
         <div className="min-h-screen bg-white pb-20">
