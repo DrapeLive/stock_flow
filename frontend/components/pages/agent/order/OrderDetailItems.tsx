@@ -62,7 +62,7 @@ export default function OrderDetailItems({
       <div className="bg-white rounded-2xl overflow-hidden">
         <OrderItem
           items={items}
-          isDeletable={isEditable}
+          isDeletable={false}
           orderId={orderId}
           onDeleteItem={handleDeleteClick}
         />

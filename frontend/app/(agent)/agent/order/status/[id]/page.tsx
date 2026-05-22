@@ -154,7 +154,7 @@ export default function Page() {
                     key={item.id}
                     className="flex items-center justify-between text-xs"
                   >
-                    <span className="text-gray-600 truncate flex-1">
+                    <span className="text-black truncate flex-1">
                       {item.item_name}
                     </span>
                     <span
