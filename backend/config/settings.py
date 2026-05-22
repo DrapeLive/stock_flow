@@ -14,7 +14,6 @@ from datetime import timedelta
 from pathlib import Path
 
 from celery.schedules import crontab
-
 from decouple import config
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
