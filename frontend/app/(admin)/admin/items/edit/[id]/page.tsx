@@ -12,6 +12,7 @@ import {
     ImagePlus,
     X,
     ImageMinus,
+    ChevronDown,
 } from "lucide-react";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -396,117 +397,174 @@ export default function ItemEditPage() {
                                 <AccordionItem
                                     key={group.backendId}
                                     value={String(group.backendId)}
-                                    className="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm"
+                                    className="bg-white border border-gray-300 rounded-md overflow-hidden shadow-sm"
                                 >
-                                    <AccordionTrigger className="px-4 py-3 hover:no-underline [&[data-state=open]>svg]:rotate-180">
-                                        <div className="flex items-center gap-3 w-full">
-                                            {/* Variant Image */}
-                                            <div
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    fileRefs.current[
-                                                        group.backendId
-                                                    ]?.click();
-                                                }}
-                                                className="shrink-0 w-10 h-10 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center group relative"
-                                            >
-                                                {currentImage ? (
-                                                    <>
-                                                        <Image
-                                                            src={currentImage}
-                                                            fill
-                                                            className="object-cover"
-                                                            alt=""
-                                                            unoptimized
-                                                        />
-                                                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-                                                            <ImagePlus
-                                                                size={12}
-                                                                className="text-white opacity-0 group-hover:opacity-100 transition-opacity"
-                                                            />
-                                                        </div>
-                                                    </>
-                                                ) : (
-                                                    <ImagePlus
-                                                        size={14}
-                                                        className="text-gray-300"
+                                    {/* Plain div — toggles accordion manually, no button nesting */}
+                                    <div className="flex items-center gap-3 px-4 py-3">
+                                        {/* Thumbnail — triggers file input */}
+                                        <div
+                                            onClick={() =>
+                                                fileRefs.current[
+                                                    group.backendId
+                                                ]?.click()
+                                            }
+                                            className="shrink-0 w-10 h-10 rounded-lg overflow-hidden bg-gray-100
+                                                       flex items-center justify-center group relative cursor-pointer"
+                                        >
+                                            {currentImage ? (
+                                                <>
+                                                    <Image
+                                                        src={currentImage}
+                                                        fill
+                                                        className="object-cover"
+                                                        alt=""
+                                                        unoptimized
                                                     />
-                                                )}
-                                            </div>
-                                            <input
-                                                ref={(el) => {
-                                                    fileRefs.current[
-                                                        group.backendId
-                                                    ] = el;
-                                                }}
-                                                type="file"
-                                                accept=".jpg,.jpeg,.png,.webp,.gif,.avif,.bmp,.tiff,.tif,.svg"
-                                                className="hidden"
-                                                onChange={(e) =>
-                                                    handleVariantImageUpload(
-                                                        group.backendId,
-                                                        e,
-                                                    )
-                                                }
-                                            />
-
-                                            {/* Variant Info */}
-                                            <div className="flex-1 text-left">
-                                                <p className="text-sm font-semibold">
-                                                    {variantLabel}
-                                                </p>
-                                                <p className="text-xs text-gray-400">
-                                                    {group.sizes.length} size
-                                                    {group.sizes.length !== 1
-                                                        ? "s"
-                                                        : ""}
-                                                </p>
-                                            </div>
-
-                                            {/* Remove Image */}
-                                            {currentImage && (
-                                                <button
-                                                    type="button"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        updateVariantGroupImage(
-                                                            group.backendId,
-                                                            {
-                                                                newImage: null,
-                                                                imagePreview:
-                                                                    null,
-                                                                imageUrl: null,
-                                                            },
-                                                        );
-                                                    }}
-                                                    className="shrink-0 p-2 rounded-md text-red-500 hover:text-white hover:bg-red-500 transition-colors"
-                                                    title="Remove image"
-                                                >
-                                                    <ImageMinus size={20} />
-                                                </button>
-                                            )}
-
-                                            {/* Delete Variant Group */}
-                                            {variantGroups.length > 1 && (
-                                                <button
-                                                    type="button"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        deleteVariantGroup(
-                                                            group.backendId,
-                                                        );
-                                                    }}
-                                                    className="shrink-0 p-2 rounded-md text-red-500 hover:text-white hover:bg-red-500 transition-colors"
-                                                    aria-label="Delete variant"
-                                                >
-                                                    <Trash2 size={20} />
-                                                </button>
+                                                    <div
+                                                        className="absolute inset-0 bg-black/0 group-hover:bg-black/20
+                                                                    transition-colors flex items-center justify-center"
+                                                    >
+                                                        <ImagePlus
+                                                            size={12}
+                                                            className="text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                                                        />
+                                                    </div>
+                                                </>
+                                            ) : (
+                                                <ImagePlus
+                                                    size={14}
+                                                    className="text-gray-300"
+                                                />
                                             )}
                                         </div>
-                                    </AccordionTrigger>
+
+                                        <input
+                                            ref={(el) => {
+                                                fileRefs.current[
+                                                    group.backendId
+                                                ] = el;
+                                            }}
+                                            type="file"
+                                            accept=".jpg,.jpeg,.png,.webp,.gif,.avif,.bmp,.tiff,.tif,.svg"
+                                            className="hidden"
+                                            onChange={(e) =>
+                                                handleVariantImageUpload(
+                                                    group.backendId,
+                                                    e,
+                                                )
+                                            }
+                                        />
+
+                                        {/* Label — clicking this area toggles open/close */}
+                                        <div
+                                            className="flex-1 cursor-pointer select-none"
+                                            onClick={() =>
+                                                setOpenAccordions((prev) =>
+                                                    prev.includes(
+                                                        String(group.backendId),
+                                                    )
+                                                        ? prev.filter(
+                                                              (v) =>
+                                                                  v !==
+                                                                  String(
+                                                                      group.backendId,
+                                                                  ),
+                                                          )
+                                                        : [
+                                                              ...prev,
+                                                              String(
+                                                                  group.backendId,
+                                                              ),
+                                                          ],
+                                                )
+                                            }
+                                        >
+                                            <p className="text-sm font-semibold">
+                                                {variantLabel}
+                                            </p>
+                                            <p className="text-xs text-gray-400">
+                                                {group.sizes.length} size
+                                                {group.sizes.length !== 1
+                                                    ? "s"
+                                                    : ""}
+                                            </p>
+                                        </div>
+
+                                        {/* Chevron — also toggles */}
+                                        <div
+                                            className="cursor-pointer text-gray-400 transition-transform duration-200"
+                                            style={{
+                                                transform:
+                                                    openAccordions.includes(
+                                                        String(group.backendId),
+                                                    )
+                                                        ? "rotate(180deg)"
+                                                        : "rotate(0deg)",
+                                            }}
+                                            onClick={() =>
+                                                setOpenAccordions((prev) =>
+                                                    prev.includes(
+                                                        String(group.backendId),
+                                                    )
+                                                        ? prev.filter(
+                                                              (v) =>
+                                                                  v !==
+                                                                  String(
+                                                                      group.backendId,
+                                                                  ),
+                                                          )
+                                                        : [
+                                                              ...prev,
+                                                              String(
+                                                                  group.backendId,
+                                                              ),
+                                                          ],
+                                                )
+                                            }
+                                        >
+                                            <ChevronDown size={16} />
+                                        </div>
+
+                                        {/* Remove image */}
+                                        {currentImage && (
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    updateVariantGroupImage(
+                                                        group.backendId,
+                                                        {
+                                                            newImage: null,
+                                                            imagePreview: null,
+                                                            imageUrl: null,
+                                                        },
+                                                    )
+                                                }
+                                                className="shrink-0 p-2 rounded-md text-red-400 hover:text-white hover:bg-red-400 transition-colors"
+                                                title="Remove image"
+                                            >
+                                                <ImageMinus size={16} />
+                                            </button>
+                                        )}
+
+                                        {/* Delete variant group */}
+                                        {variantGroups.length > 1 && (
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    deleteVariantGroup(
+                                                        group.backendId,
+                                                    )
+                                                }
+                                                className="shrink-0 p-2 rounded-md text-red-400 hover:text-white hover:bg-red-400 transition-colors"
+                                                aria-label="Delete variant"
+                                            >
+                                                <Trash2 size={14} />
+                                            </button>
+                                        )}
+                                    </div>
 
                                     <AccordionContent className="px-4 pb-3 space-y-2">
-                                        {group.sizes.map((v, i) => (
+                                        {group.sizes.map((v) => (
                                             <EditVariantRow
                                                 key={v.localId}
                                                 variant={v}
