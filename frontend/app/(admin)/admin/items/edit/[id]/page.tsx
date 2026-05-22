@@ -11,6 +11,7 @@ import {
     AlertCircle,
     ImagePlus,
     X,
+    ImageMinus,
 } from "lucide-react";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -478,10 +479,10 @@ export default function ItemEditPage() {
                                                             },
                                                         );
                                                     }}
-                                                    className="shrink-0 p-1.5 rounded-full text-gray-300 hover:text-red-400 transition-colors"
+                                                    className="shrink-0 p-2 rounded-md text-red-500 hover:text-white hover:bg-red-500 transition-colors"
                                                     title="Remove image"
                                                 >
-                                                    <X size={12} />
+                                                    <ImageMinus size={20} />
                                                 </button>
                                             )}
 
@@ -495,10 +496,10 @@ export default function ItemEditPage() {
                                                             group.backendId,
                                                         );
                                                     }}
-                                                    className="shrink-0 p-1.5 rounded-full text-gray-300 hover:text-red-400 transition-colors"
+                                                    className="shrink-0 p-2 rounded-md text-red-500 hover:text-white hover:bg-red-500 transition-colors"
                                                     aria-label="Delete variant"
                                                 >
-                                                    <Trash2 size={14} />
+                                                    <Trash2 size={20} />
                                                 </button>
                                             )}
                                         </div>
