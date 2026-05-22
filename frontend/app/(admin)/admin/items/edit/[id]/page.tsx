@@ -305,7 +305,7 @@ export default function ItemEditPage() {
     return (
       <Step2AddColor
         initial={variantDraft}
-        common={common}
+        common={{ ...common, brand_id: undefined }}
         isEdit={false}
         variantIndex={variantGroups.length + 1}
         onSave={saveNewVariant}
