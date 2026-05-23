@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Plus, ShoppingBag, Search, QrCode, X } from "lucide-react";
 import { UIItem } from "@/types/item";
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
@@ -17,7 +17,7 @@ interface ItemListProps {
   onAddItem?: () => void;
   onEdit?: (id: number) => void;
   onPrintAll?: (id: number) => void;
-  onPrintQR?: (qr: string) => void;
+  onPrintQR?: (qr: string, id: number) => void;
   onOrder?: (variantId: number) => void;
   onPriceCheck?: () => void;
   title?: string;
@@ -71,6 +71,11 @@ export default function ItemList({
   const [qrFilter, setQrFilter] = useState<string | null>(null);
   const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set());
   const [showQRScanner, setShowQRScanner] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(40);
+
+  // useEffect(() => {
+  //   setVisibleCount(40);
+  // }, []);
 
   const toggleExpanded = (itemId: number) => {
     setExpandedItems((prev) => {
@@ -97,6 +102,8 @@ export default function ItemList({
   const filteredItems = useMemo(() => {
     return filterItems(items ?? [], activeTab, searchQuery, qrFilter);
   }, [items, activeTab, searchQuery, qrFilter]);
+
+  const visibleItems = filteredItems.slice(0, visibleCount);
 
   const inStockCount = items.filter((item) => !isItemOutOfStock(item)).length;
   const outOfStockCount = items.filter((item) => isItemOutOfStock(item)).length;
@@ -144,7 +151,7 @@ export default function ItemList({
               {context === "agent" && onPriceCheck && (
                 <button
                   onClick={onPriceCheck}
-                  className="flex items-center gap-1.5 px-2.5 py-1 bg-black  hover:bg-black/80 rounded-md transition-colors"
+                  className="flex items-center gap-1.5 px-2.5 py-1 bg-black hover:bg-black/80 rounded-md transition-colors"
                 >
                   <QrCode size={20} className="text-white" />
                   <span className="text-[12px] font-bold text-white">
@@ -248,19 +255,30 @@ export default function ItemList({
             )}
           </div>
         ) : (
-          filteredItems.map((item) => (
-            <ItemCard
-              key={item.id}
-              item={item}
-              context={context}
-              isExpanded={expandedItems.has(item.id)}
-              onToggle={() => toggleExpanded(item.id)}
-              onEdit={context === "admin" ? onEdit : undefined}
-              onPrintAll={context === "admin" ? onPrintAll : undefined}
-              onPrintQR={context === "admin" ? onPrintQR : undefined}
-              onOrder={context === "agent" ? onOrder : undefined}
-            />
-          ))
+          <>
+            {visibleItems.map((item) => (
+              <ItemCard
+                key={item.id}
+                item={item}
+                context={context}
+                isExpanded={expandedItems.has(item.id)}
+                onToggle={() => toggleExpanded(item.id)}
+                onEdit={context === "admin" ? onEdit : undefined}
+                onPrintAll={context === "admin" ? onPrintAll : undefined}
+                onPrintQR={context === "admin" ? onPrintQR : undefined}
+                onOrder={context === "agent" ? onOrder : undefined}
+              />
+            ))}
+
+            {visibleCount < filteredItems.length && (
+              <button
+                onClick={() => setVisibleCount((prev) => prev + 40)}
+                className="w-full py-3 text-sm font-semibold text-primary border border-primary/20 rounded-xl bg-primary/5 hover:bg-primary/10 transition-colors"
+              >
+                Show More ({filteredItems.length - visibleCount} remaining)
+              </button>
+            )}
+          </>
         )}
       </div>
     </div>

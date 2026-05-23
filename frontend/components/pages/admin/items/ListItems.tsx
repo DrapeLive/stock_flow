@@ -65,8 +65,8 @@ const ListItems: React.FC = () => {
     router.push(`/admin/items/qr-print?item=${id}`);
   };
 
-  const handlePrintQR = (qr: string) => {
-    router.push(`/admin/items/qr-print?qr=${qr}`);
+  const handlePrintQR = (qr: string, id: number) => {
+    router.push(`/admin/items/qr-print?qr=${qr}&id=${id}`);
   };
 
   return (

@@ -738,7 +738,7 @@ class AddOrderItemView(APIView):
 
         order = get_object_or_404(Order, id=order_id)
 
-        if order.status not in ("DRAFT", "EDITING"):
+        if order.status not in ("DRAFT", "EDITING", "PENDING"):
             return Response(
                 {"error": "Items can only be added to DRAFT or EDITING orders"},
                 status=status.HTTP_400_BAD_REQUEST,
