@@ -28,6 +28,7 @@ export default function QRPrintPageContent() {
 
   const itemId = searchParams.get("item");
   const qrId = searchParams.get("qr");
+  const variantId = searchParams.get("id");
 
   const router = useRouter();
 
@@ -106,7 +107,7 @@ export default function QRPrintPageContent() {
 
       // Generate initial blob
       const rawBlob = await pdf(
-        <QRLabelPdf item={parsedItem} qrImages={qrMap} />,
+        <QRLabelPdf item={parsedItem} qrImages={qrMap} id={variantId!} />,
       ).toBlob();
 
       // Bake 90° rotation into each page using pdf-lib

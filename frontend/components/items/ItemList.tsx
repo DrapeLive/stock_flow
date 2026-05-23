@@ -17,7 +17,7 @@ interface ItemListProps {
   onAddItem?: () => void;
   onEdit?: (id: number) => void;
   onPrintAll?: (id: number) => void;
-  onPrintQR?: (qr: string) => void;
+  onPrintQR?: (qr: string, id: number) => void;
   onOrder?: (variantId: number) => void;
   onPriceCheck?: () => void;
   title?: string;
