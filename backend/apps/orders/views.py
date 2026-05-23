@@ -269,7 +269,6 @@ class StartEditView(APIView):
 
         order.reservation_snapshot = _build_snapshot(order)
         order.editing_started_at = timezone.now()
-        order.status = "EDITING"
         order.save()
         # Remove viewed entries for non-pending/packed orders
         UserViewedOrder.objects.filter(order=order).delete()
@@ -289,12 +288,6 @@ class SaveEditView(APIView):
 
     def post(self, request, order_id):
         order = get_object_or_404(Order, id=order_id)
-
-        if order.status != "EDITING":
-            return Response(
-                {"error": "Order is not in editing mode"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
 
         if order.agent.user != request.user:
             return Response({"error": "Unauthorized"}, status=403)

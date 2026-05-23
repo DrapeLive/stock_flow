@@ -36,6 +36,8 @@ def admin_business(user):
 def check_admin_pin(request):
     if request.user.is_superuser:
         return None
+    if request.user.role == "AGENT":
+        return None
     if request.user.role != "ADMIN":
         return Response({"error": "Forbidden"}, status=403)
     raw_pin = request.data.get("pin")
