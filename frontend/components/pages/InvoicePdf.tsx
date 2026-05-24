@@ -345,9 +345,9 @@ export const InvoicePDF = ({ invoice }: { invoice: InvoiceResponse }) => {
             {invoice.customer.address ? (
               <Text style={styles.partyDetail}>{invoice.customer.address}</Text>
             ) : null}
-            {invoice.customer.contact ? (
+            {/*{invoice.customer.contact ? (
               <Text style={styles.partyDetail}>{invoice.customer.contact}</Text>
-            ) : null}
+            ) : null}*/}
           </View>
 
           <View style={styles.partyBox}>
