@@ -106,9 +106,9 @@ export default function OrderForm({
           {customer.address && (
             <p className="text-xs text-gray-600">{customer.address}</p>
           )}
-          {customer.contact && (
+          {/*{customer.contact && (
             <p className="text-xs text-gray-600">{customer.contact}</p>
-          )}
+          )}*/}
         </div>
         <div className="flex-1 pl-4">
           <span className="bg-[#0f1f3d] text-white text-[10px] font-bold uppercase px-1.5 py-0.5">

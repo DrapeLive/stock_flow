@@ -143,7 +143,7 @@ export default function AgentCustomersPage() {
                 <StockflowAvatar user={item} />
 
                 <div className="flex-1 min-w-0">
-                  <h6 className="font-bold text-gray-900 text-base truncate leading-tight">
+                  <h6 className="font-bold text-gray-900 text-sm">
                     {item.name}
                   </h6>
                   <p className="text-xs text-gray-400 truncate mt-1 leading-tight font-medium">

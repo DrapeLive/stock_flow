@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useCallback } from "react"; // ✅ added useCallback
 import { Plus, ShoppingBag, Search, QrCode, X } from "lucide-react";
 import { UIItem } from "@/types/item";
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
@@ -73,11 +73,8 @@ export default function ItemList({
   const [showQRScanner, setShowQRScanner] = useState(false);
   const [visibleCount, setVisibleCount] = useState(40);
 
-  // useEffect(() => {
-  //   setVisibleCount(40);
-  // }, []);
-
-  const toggleExpanded = (itemId: number) => {
+  // ✅ memoized
+  const toggleExpanded = useCallback((itemId: number) => {
     setExpandedItems((prev) => {
       const next = new Set(prev);
       if (next.has(itemId)) {
@@ -87,17 +84,34 @@ export default function ItemList({
       }
       return next;
     });
-  };
+  }, []);
 
-  const handleQRScan = (qr: string) => {
+  // ✅ memoized
+  const handleQRScan = useCallback((qr: string) => {
     setQrFilter(qr);
     setShowQRScanner(false);
-  };
+  }, []);
 
-  const clearFilters = () => {
+  // ✅ memoized
+  const clearFilters = useCallback(() => {
     setSearchQuery("");
     setQrFilter(null);
-  };
+  }, []);
+
+  // ✅ memoized
+  const handleCloseScanner = useCallback(() => {
+    setShowQRScanner(false);
+  }, []);
+
+  // ✅ memoized
+  const handleShowScanner = useCallback(() => {
+    setShowQRScanner(true);
+  }, []);
+
+  // ✅ memoized
+  const handleShowMore = useCallback(() => {
+    setVisibleCount((prev) => prev + 40);
+  }, []);
 
   const filteredItems = useMemo(() => {
     return filterItems(items ?? [], activeTab, searchQuery, qrFilter);
@@ -105,8 +119,14 @@ export default function ItemList({
 
   const visibleItems = filteredItems.slice(0, visibleCount);
 
-  const inStockCount = items.filter((item) => !isItemOutOfStock(item)).length;
-  const outOfStockCount = items.filter((item) => isItemOutOfStock(item)).length;
+  const inStockCount = useMemo(
+    () => items.filter((item) => !isItemOutOfStock(item)).length,
+    [items],
+  );
+  const outOfStockCount = useMemo(
+    () => items.filter((item) => isItemOutOfStock(item)).length,
+    [items],
+  );
 
   const headerTitle = title || (context === "admin" ? "Inventory" : "My Items");
   const headerSubtitle =
@@ -126,7 +146,7 @@ export default function ItemList({
     <div>
       <QRScanModal
         isOpen={showQRScanner}
-        onClose={() => setShowQRScanner(false)}
+        onClose={handleCloseScanner}
         onScan={handleQRScan}
       />
 
@@ -188,7 +208,7 @@ export default function ItemList({
             />
           </div>
           <button
-            onClick={() => setShowQRScanner(true)}
+            onClick={handleShowScanner}
             className="p-2.5 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
           >
             <QrCode size={18} className="text-gray-500" />
@@ -272,7 +292,7 @@ export default function ItemList({
 
             {visibleCount < filteredItems.length && (
               <button
-                onClick={() => setVisibleCount((prev) => prev + 40)}
+                onClick={handleShowMore}
                 className="w-full py-3 text-sm font-semibold text-primary border border-primary/20 rounded-xl bg-primary/5 hover:bg-primary/10 transition-colors"
               >
                 Show More ({filteredItems.length - visibleCount} remaining)

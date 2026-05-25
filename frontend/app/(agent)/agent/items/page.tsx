@@ -1,5 +1,4 @@
 "use client";
-
 import { useAuth } from "@/context/AuthContext";
 import { agentApi } from "@/lib/api/agents";
 import { AssignedItem } from "@/types/agent";
@@ -33,6 +32,7 @@ export default function MyItemsPage() {
   const [items, setItems] = useState<UIItem[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const [initialLoading, setInitialLoading] = useState(true);
 
   useBackButton({
     onBack: useCallback(() => {
@@ -42,50 +42,43 @@ export default function MyItemsPage() {
 
   const fetchData = useCallback(async () => {
     if (!user?.id) return;
-    setLoading(true);
+
     try {
       const agent = await agentApi.getProfile(user.id);
       setItems((agent.assigned_items || []).map(normalizeAgentItem));
     } catch (error) {
       console.error("Error fetching items:", error);
     } finally {
-      setLoading(false);
+      setInitialLoading(false);
     }
-  }, [user]);
+  }, [user?.id]);
 
   useEffect(() => {
     if (!user?.id) return;
-
     fetchData();
-
-    const handleFocus = () => {
-      fetchData();
-    };
-
+    const handleFocus = () => fetchData();
     window.addEventListener("focus", handleFocus);
-
     const interval = setInterval(fetchData, 30000);
-
     return () => {
       window.removeEventListener("focus", handleFocus);
       clearInterval(interval);
     };
-  }, [user, fetchData]);
+  }, [user?.id, fetchData]);
 
-  const handleOrder = () => {
+  const handleOrder = useCallback(() => {
     router.push("/agent/order/new");
-  };
+  }, [router]);
 
-  const handlePriceCheck = () => {
+  const handlePriceCheck = useCallback(() => {
     router.push("/agent/items/scanner");
-  };
+  }, [router]);
 
-  if (loading) return <PageLoading />;
+  if (initialLoading) return <PageLoading />;
 
   return (
     <ItemList
       items={items}
-      loading={loading}
+      loading={false}
       context="agent"
       onOrder={handleOrder}
       onPriceCheck={handlePriceCheck}
