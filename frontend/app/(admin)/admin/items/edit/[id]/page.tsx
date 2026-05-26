@@ -39,6 +39,7 @@ import type {
   EditCommonDetails,
   EditableVariant,
   ItemType,
+  FrontendSizeRange,
 } from "@/types/item";
 import { useAuth } from "@/context/AuthContext";
 import PinDeleteDialog from "@/components/ui/pinDeleteDialog";
@@ -108,17 +109,38 @@ export default function ItemEditPage() {
 
   const saveNewVariant = (saved: ColorVariant) => {
     const tempBackendId = nextTempId.current--;
-    const sizes = SIZE_RANGE_TO_SIZES[saved.sizeRange] ?? [];
 
-    const newRows: EditableVariant[] = sizes.map((size) => ({
-      backendId: tempBackendId,
-      localId: uid(),
-      size,
-      stock: saved.perSizeStock[saved.sizeRange] ?? saved.stock,
-      imageUrl: null,
-      newImage: saved.image,
-      imagePreview: saved.imagePreview,
-    }));
+    let sizeStockPairs: { size: string; stock: number }[] = [];
+
+    if (common.type === "kids") {
+      // Each key in perSizeStock is a FrontendSizeRange like "26-36"
+      // Expand it to actual sizes via SIZE_RANGE_TO_SIZES
+      (Object.keys(saved.perSizeStock) as FrontendSizeRange[]).forEach(
+        (rangeKey) => {
+          const stock =
+            (saved.perSizeStock as Record<string, number>)[rangeKey] ?? 0;
+          const expandedSizes = SIZE_RANGE_TO_SIZES[rangeKey] ?? [rangeKey];
+          expandedSizes.forEach((size) => {
+            sizeStockPairs.push({ size, stock });
+          });
+        },
+      );
+    } else {
+      const sizes = SIZE_RANGE_TO_SIZES[saved.sizeRange] ?? [];
+      sizeStockPairs = sizes.map((size) => ({ size, stock: saved.stock }));
+    }
+
+    const newRows: EditableVariant[] = sizeStockPairs.map(
+      ({ size, stock }) => ({
+        backendId: tempBackendId,
+        localId: uid(),
+        size,
+        stock,
+        imageUrl: null,
+        newImage: saved.image,
+        imagePreview: saved.imagePreview,
+      }),
+    );
 
     setVariants((prev) => [...prev, ...newRows]);
     setAddingVariant(false);
