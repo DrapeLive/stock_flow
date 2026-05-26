@@ -44,6 +44,7 @@ ORDER_CREATION_SIZES_BY_TYPE = {
         "M,L,XL",
     ],
     "kids": [
+        "20-24",
         "20-36",
         "20-30",
         "26-36",
@@ -104,7 +105,7 @@ class ItemViewSet(ModelViewSet):
             )
             .filter(is_deleted=False)
             .exclude(out_of_stock_since__isnull=False, out_of_stock_since__lte=cutoff)
-            .order_by('-id')
+            .order_by("-id")
         )
 
     def get_serializer_class(self):
@@ -133,10 +134,14 @@ class ItemViewSet(ModelViewSet):
 
     @action(detail=False, methods=["get"], url_path="stock-list")
     def get_stock_list(self, request):
-        items = filter_items_by_business(
-            Item.objects.prefetch_related("variants__sizes"),
-            request.user,
-        ).filter(is_deleted=False).order_by('-id')
+        items = (
+            filter_items_by_business(
+                Item.objects.prefetch_related("variants__sizes"),
+                request.user,
+            )
+            .filter(is_deleted=False)
+            .order_by("-id")
+        )
 
         boost = get_agent_reservation_boost(request.user)
 

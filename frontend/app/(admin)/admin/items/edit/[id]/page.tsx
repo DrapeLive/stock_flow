@@ -113,8 +113,6 @@ export default function ItemEditPage() {
     let sizeStockPairs: { size: string; stock: number }[] = [];
 
     if (common.type === "kids") {
-      // Each key in perSizeStock is a FrontendSizeRange like "26-36"
-      // Expand it to actual sizes via SIZE_RANGE_TO_SIZES
       (Object.keys(saved.perSizeStock) as FrontendSizeRange[]).forEach(
         (rangeKey) => {
           const stock =
