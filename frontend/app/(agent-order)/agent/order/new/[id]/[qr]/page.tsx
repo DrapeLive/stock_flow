@@ -168,7 +168,9 @@ export default function ProductDetailPage() {
           0
         );
       });
-      setSelectedSizeGroup(firstAvailable ?? sizeGroups[0]);
+      if (data?.type == "kids")
+        setSelectedSizeGroup(sizeGroups[1] ?? firstAvailable);
+      else setSelectedSizeGroup(firstAvailable ?? sizeGroups[0]);
     }
   }, [sizeGroups, selectedSizeGroup]);
 
