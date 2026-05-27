@@ -403,6 +403,7 @@ export default function AgentDetailPage() {
 
             <ItemAssignment
                 agentId={parseInt(id as string, 10)}
+                agentName={agent?.user.display_name || agent?.user.username || ""}
                 items={items}
                 selectedItemIds={selectedItemIds}
                 savedItemIds={savedItemIds}

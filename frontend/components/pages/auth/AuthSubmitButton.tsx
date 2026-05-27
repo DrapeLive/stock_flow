@@ -1,4 +1,3 @@
-import { PageLoading } from "@/components/ui/Loading";
 import { cn } from "@/lib/utils";
 import { ReactNode } from "react";
 
@@ -29,7 +28,10 @@ export function AuthSubmitButton({
             )}
         >
             {loading ? (
-                <PageLoading />
+                <>
+                    <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                    {loadingLabel}
+                </>
             ) : (
                 <>
                     {icon}
