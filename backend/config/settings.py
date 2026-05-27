@@ -261,6 +261,8 @@ if not DEBUG:
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
 
+GST_RATE = config("GST_RATE", default=5, cast=float)
+
 TIME_ZONE = "Asia/Kolkata"
 LOGGING = {
     "version": 1,

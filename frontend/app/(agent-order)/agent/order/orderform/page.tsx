@@ -311,6 +311,7 @@ export default function InvoicePage() {
                             brand={invoice.brand}
                             created_at={invoice.created_at}
                             items={invoice.items}
+                            gst_rate={invoice.gst_rate}
                             total_price={invoice.total_price}
                             invoiceRef={invoiceRef}
                             status={invoice.status}
