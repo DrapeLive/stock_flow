@@ -262,6 +262,11 @@ export default function OrderItemRow({
         </div>
 
         <div className="text-right flex-shrink-0">
+          <div
+            className={`text-xs font-black ${isOutOfStock ? "text-red-700" : "text-gray-900"}`}
+          >
+            ₹{(Number(item.item_price) || 0).toLocaleString("en-IN")}
+          </div>
           <span
             className={`text-base font-black ${isOutOfStock ? "text-red-700" : "text-gray-900"}`}
           >
