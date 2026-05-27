@@ -8,8 +8,9 @@ export interface AgentUser {
   display_name?: string;
 }
 
-export interface SizeRange {
-  size_range: string;
+export interface VariantSize {
+  id: number;
+  size: string;
   stock: number;
 }
 
@@ -17,7 +18,7 @@ export interface AgentItemVariant {
   id: number;
   image: string | null;
   qr_code: string | null;
-  size_ranges: SizeRange[];
+  sizes: VariantSize[];
 }
 
 export interface AssignedItem {
