@@ -27,9 +27,9 @@ type QRPrintItem = {
 export default function QRPrintPageContent() {
     const searchParams = useSearchParams();
 
-  const itemId = searchParams.get("item");
-  const qrId = searchParams.get("qr");
-  const variantId = searchParams.get("id");
+    const itemId = searchParams.get("item");
+    const qrId = searchParams.get("qr");
+    const variantId = searchParams.get("id");
 
     const router = useRouter();
 
@@ -45,125 +45,46 @@ export default function QRPrintPageContent() {
         typeof window !== "undefined" &&
         /Mobi|Android/i.test(navigator.userAgent);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        if (itemId) {
-          const data = await itemApi.getOne(Number(itemId));
-          const variants = data.variants.map((v) => ({
-            id: v.id,
-            qr_code: v.qr_code,
-            image: v.image,
-            sizes: v.sizes,
-          }));
-          const parsedItem: QRPrintItem = {
-            id: data.id,
-            name: data.name,
-            type: data.type || "gents",
-            price: data.price,
-            image: variants[0]?.image || null,
-            variants,
-          };
-          await prepareItem(parsedItem);
-        } else if (qrId) {
-          const data: ItemQRResponse = await itemApi.byqr(qrId);
-          const matchedVariant =
-            data.variants.find((v) => v.qr_code === qrId) || data.variants[0];
-          const parsedItem: QRPrintItem = {
-            id: data.id,
-            name: data.name,
-            type: "gents",
-            price: data.price,
-            image: matchedVariant?.image || null,
-            variants: [matchedVariant],
-          };
-          await prepareItem(parsedItem);
-        }
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [itemId, qrId]);
-
-  useEffect(() => {
-    return () => {
-      if (pdfBlobUrl) URL.revokeObjectURL(pdfBlobUrl);
-    };
-  }, [pdfBlobUrl]);
-
-  const prepareItem = useCallback(
-    async (parsedItem: QRPrintItem) => {
-      setItem(parsedItem);
-
-      const qrMap: Record<number, string> = {};
-      for (const variant of parsedItem.variants) {
-        qrMap[variant.id] = await QRCode.toDataURL(
-          variant.qr_code || String(variant.id),
-        );
-      }
-      setQrImages(qrMap);
-
-      // Generate initial blob
-      const rawBlob = await pdf(
-        <QRLabelPdf item={parsedItem} qrImages={qrMap} id={variantId!} />,
-      ).toBlob();
-
-      // Bake 90° rotation into each page using pdf-lib
-      const arrayBuffer = await rawBlob.arrayBuffer();
-      const pdfDoc = await PDFDocument.load(arrayBuffer);
-      for (const page of pdfDoc.getPages()) {
-        page.setRotation(degrees(90));
-      }
-      const rotatedBytes = await pdfDoc.save();
-      const blob = new Blob([new Uint8Array(rotatedBytes)], {
-        type: "application/pdf",
-      });
-      setPdfBlob(blob);
-
-      if (!isMobile) {
-        setPdfBlobUrl(URL.createObjectURL(blob));
-      }
-    },
-    [isMobile],
-  );
-
-  const handleDownload = () => {
-    if (!pdfBlob || !item) return;
-    const url = URL.createObjectURL(pdfBlob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${item.name}-${item.id}.pdf`;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-  };
-
-  const handlePrint = async () => {
-    if (!pdfBlob) return;
-    setPrinting(true);
-    try {
-      const url = URL.createObjectURL(pdfBlob);
-
-      if (isMobile) {
-        // Mobile — open in new tab, user prints from browser menu
-        window.open(url, "_blank");
-        setTimeout(() => URL.revokeObjectURL(url), 60000);
-      } else {
-        // Desktop — silent print via hidden iframe
-        const iframe = document.createElement("iframe");
-        iframe.style.display = "none";
-        iframe.src = url;
-        document.body.appendChild(iframe);
-        iframe.onload = () => {
-          iframe.contentWindow?.focus();
-          iframe.contentWindow?.print();
-          setTimeout(() => {
-            document.body.removeChild(iframe);
-            URL.revokeObjectURL(url);
-          }, 3000);
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                if (itemId) {
+                    const data = await itemApi.getOne(Number(itemId));
+                    const variants = data.variants.map((v) => ({
+                        id: v.id,
+                        qr_code: v.qr_code,
+                        image: v.image,
+                        sizes: v.sizes,
+                    }));
+                    const parsedItem: QRPrintItem = {
+                        id: data.id,
+                        name: data.name,
+                        type: data.type || "gents",
+                        price: data.price,
+                        image: variants[0]?.image || null,
+                        variants,
+                    };
+                    await prepareItem(parsedItem);
+                } else if (qrId) {
+                    const data: ItemQRResponse = await itemApi.byqr(qrId);
+                    const matchedVariant =
+                        data.variants.find((v) => v.qr_code === qrId) ||
+                        data.variants[0];
+                    const parsedItem: QRPrintItem = {
+                        id: data.id,
+                        name: data.name,
+                        type: "gents",
+                        price: data.price,
+                        image: matchedVariant?.image || null,
+                        variants: [matchedVariant],
+                    };
+                    await prepareItem(parsedItem);
+                }
+            } catch (e) {
+                console.error(e);
+            } finally {
+                setLoading(false);
+            }
         };
 
         fetchData();
@@ -189,7 +110,11 @@ export default function QRPrintPageContent() {
 
             // Generate initial blob
             const rawBlob = await pdf(
-                <QRLabelPdf item={parsedItem} qrImages={qrMap} />,
+                <QRLabelPdf
+                    item={parsedItem}
+                    qrImages={qrMap}
+                    id={variantId!}
+                />,
             ).toBlob();
 
             // Bake 90° rotation into each page using pdf-lib

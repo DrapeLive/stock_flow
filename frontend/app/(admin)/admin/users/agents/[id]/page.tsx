@@ -7,7 +7,6 @@ import { itemApi } from "@/lib/api/item";
 import { toastSuccess, toastError } from "@/lib/toast";
 import { AgentResponse, AgentUpdateRequest, AssignedItem } from "@/types/agent";
 import { Item } from "@/types/item";
-import { ImagePreview } from "@/components/pages/ImagePreview";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
@@ -16,15 +15,10 @@ import {
     Trash2,
     ArrowLeft,
     ShieldCheck,
-    Search,
-    Check,
-    X,
-    Package,
     Pencil,
     Eye,
-    Scan,
 } from "lucide-react";
-import QRScanModal from "@/components/items/QRScanModal";
+import ItemAssignment from "@/components/pages/agent/ItemAssignment";
 import DeleteWithTransferDialog from "@/components/ui/deleteWithTransferDialog";
 import { useAuth } from "@/context/AuthContext";
 import { PageLoading } from "@/components/ui/Loading";
@@ -53,7 +47,6 @@ export default function AgentDetailPage() {
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [isEditing, setIsEditing] = useState(false);
-    const [showQRScanner, setShowQRScanner] = useState(false);
 
     const [items, setItems] = useState<Item[]>([]);
 
@@ -65,7 +58,6 @@ export default function AgentDetailPage() {
     // Used only to compute hasChanges — never rendered directly.
     const [savedItemIds, setSavedItemIds] = useState<number[]>([]);
 
-    const [searchQuery, setSearchQuery] = useState("");
     const [savingItems, setSavingItems] = useState(false);
 
     useEffect(() => {
@@ -162,40 +154,10 @@ export default function AgentDetailPage() {
         );
     };
 
-    const handleQRScan = (qr: string) => {
-        const trimmed = qr.trim();
-        const item = items.find(
-            (i) =>
-                i.variants?.some((v) => v.qr_code === trimmed) ||
-                i.id.toString() === trimmed,
-        );
-        if (item) {
-            if (!selectedItemIds.includes(item.id)) {
-                setSelectedItemIds((prev) => [...prev, item.id]);
-                toastSuccess(`${item.name} added`);
-            } else {
-                toastSuccess(`${item.name} already selected`);
-            }
-            setShowQRScanner(false);
-        } else {
-            toastError("Item not found with this QR code");
-            setShowQRScanner(false);
-        }
-    };
-
     // True when the checked items differ from the last confirmed backend state
     const hasChanges =
         [...selectedItemIds].sort().join(",") !==
         [...savedItemIds].sort().join(",");
-
-    const filteredItems = items.filter((item) =>
-        item.name.toLowerCase().includes(searchQuery.toLowerCase()),
-    );
-
-    // Items currently checked — shown in the horizontal strip
-    const selectedItems = items.filter((item) =>
-        selectedItemIds.includes(item.id),
-    );
 
     // ── Delete ────────────────────────────────────────────────────────────────
 
@@ -439,172 +401,16 @@ export default function AgentDetailPage() {
                 </div>
             )}
 
-            {/* Item Assignment Section */}
-            <div className="border-t border-gray-100 pt-6 mt-2">
-                <div className="sticky top-0 z-10 bg-white pt-2 pb-3 -mt-2 mb-3 border-b border-gray-100">
-                    <div className="flex items-center gap-2">
-                        <div className="flex-1 flex items-center gap-2">
-                            <h3 className="text-lg font-black text-gray-900">
-                                Items
-                            </h3>
-                            <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
-                                {selectedItemIds.length}
-                            </span>
-                            {/* Amber badge when UI state differs from last backend save */}
-                            {hasChanges && (
-                                <span className="text-xs font-bold text-amber-500 bg-amber-50 px-2 py-0.5 rounded-full">
-                                    Unsaved
-                                </span>
-                            )}
-                        </div>
-                        <button
-                            onClick={handleSaveItems}
-                            disabled={savingItems || !hasChanges}
-                            className="flex items-center justify-center gap-1.5 px-6 py-3 bg-green-600 text-white rounded-xl font-bold shadow-lg shadow-green-600/20 active:scale-95 transition-all disabled:opacity-50 min-w-[100px]"
-                        >
-                            {savingItems ? "Saving..." : "Save"}
-                        </button>
-                    </div>
-                </div>
-
-                {/* Search + Scan QR Row */}
-                <div className="flex items-center gap-2 mb-3">
-                    <div className="relative flex-[1]">
-                        <Search
-                            size={18}
-                            className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
-                        />
-                        <Input
-                            placeholder="Search items..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-11 bg-white border-gray-100 rounded-xl h-12 font-bold"
-                        />
-                    </div>
-                    <button
-                        onClick={() => setShowQRScanner(true)}
-                        className="flex-[0.4] flex items-center justify-center gap-2 px-4 py-3 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 active:scale-[0.98] transition-all"
-                    >
-                        <Scan size={18} className="text-gray-600" />
-                        <span className="font-bold text-sm text-gray-700">
-                            Scan
-                        </span>
-                    </button>
-                </div>
-
-                {/* Selected Items strip — shows current UI selection, tap to deselect */}
-                {selectedItems.length > 0 && (
-                    <div className="mb-4">
-                        <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">
-                            Selected ({selectedItems.length}) — tap to remove
-                        </p>
-                        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
-                            {selectedItems.map((item) => (
-                                <button
-                                    key={item.id}
-                                    onClick={() => toggleItem(item.id)}
-                                    className="relative flex-shrink-0 w-16 h-16 rounded-xl border-2 border-primary bg-white overflow-hidden active:scale-95 transition-all group"
-                                >
-                                    {item.variants?.[0]?.image ? (
-                                        <ImagePreview
-                                            enlargeDisabled={true}
-                                            src={item.variants[0].image}
-                                            alt={item.name}
-                                        />
-                                    ) : (
-                                        <div className="w-full h-full bg-gray-100 flex items-center justify-center">
-                                            <Package
-                                                size={16}
-                                                className="text-gray-300"
-                                            />
-                                        </div>
-                                    )}
-                                    <div className="absolute inset-0 bg-red-500/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-xl">
-                                        <X size={16} className="text-white" />
-                                    </div>
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                )}
-
-                {/* Available Items List */}
-                <div className="space-y-2">
-                    {filteredItems.map((item) => {
-                        const isSelected = selectedItemIds.includes(item.id);
-                        return (
-                            <button
-                                key={item.id}
-                                onClick={() => toggleItem(item.id)}
-                                className={`w-full flex items-center gap-3 p-2.5 rounded-2xl border-2 transition-all active:scale-[0.98] ${
-                                    isSelected
-                                        ? "border-primary bg-primary/5 shadow-md shadow-primary/10"
-                                        : "border-gray-100 bg-white hover:border-gray-200 hover:shadow-md"
-                                }`}
-                            >
-                                <div
-                                    className={`w-10 h-10 rounded-lg flex-shrink-0 overflow-hidden ${
-                                        isSelected
-                                            ? "ring-2 ring-primary"
-                                            : "ring-1 ring-gray-100"
-                                    }`}
-                                >
-                                    {item.variants?.[0]?.image ? (
-                                        <ImagePreview
-                                            enlargeDisabled={true}
-                                            src={item.variants[0].image}
-                                            alt={item.name}
-                                        />
-                                    ) : (
-                                        <div className="w-full h-full bg-gray-100 flex items-center justify-center">
-                                            <Package
-                                                size={16}
-                                                className="text-gray-300"
-                                            />
-                                        </div>
-                                    )}
-                                </div>
-                                <div className="flex-1 text-left min-w-0">
-                                    <p className="font-bold text-gray-900 text-sm truncate">
-                                        {item.name}
-                                    </p>
-                                    <p className="text-xs text-gray-400 truncate">
-                                        ₹{item.price}
-                                    </p>
-                                </div>
-                                <div
-                                    className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${
-                                        isSelected
-                                            ? "bg-primary"
-                                            : "border-2 border-gray-200"
-                                    }`}
-                                >
-                                    {isSelected && (
-                                        <Check
-                                            size={12}
-                                            className="text-white"
-                                        />
-                                    )}
-                                </div>
-                            </button>
-                        );
-                    })}
-                    {filteredItems.length === 0 && (
-                        <p className="text-center text-gray-400 py-8 text-sm">
-                            No items found
-                        </p>
-                    )}
-                </div>
-            </div>
-
-            {/* QR Scanner Modal */}
-            <QRScanModal
-                isOpen={showQRScanner}
-                onClose={() => setShowQRScanner(false)}
-                onScan={handleQRScan}
+            <ItemAssignment
+                agentId={parseInt(id as string, 10)}
+                items={items}
+                selectedItemIds={selectedItemIds}
+                savedItemIds={savedItemIds}
+                onToggleItem={toggleItem}
+                onSaveItems={handleSaveItems}
+                savingItems={savingItems}
+                hasChanges={hasChanges}
             />
-
-            <div className="h-20"></div>
         </div>
     );
 }
