@@ -150,4 +150,5 @@ export interface InvoiceResponse {
   status: OrderStatus;
   items: OrderItem[];
   total_price: number;
+  gst_rate: number;
 }
