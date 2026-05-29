@@ -36,15 +36,15 @@ class AgentItem(models.Model):
         related_name="assigned_items",
         on_delete=models.CASCADE
     )
-    item = models.ForeignKey(
-        "items.Item",
+    variant = models.ForeignKey(
+        "items.ItemVariant",
         related_name="assigned_agents",
-        on_delete=models.CASCADE
+        on_delete=models.CASCADE,
     )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = ("agent", "item")
+        unique_together = ("agent", "variant")
 
     def __str__(self):
-        return f"{self.agent.user.username} - {self.item.name}"
+        return f"{self.agent.user.username} - {self.variant.item.name} ({self.variant.qr_code})"

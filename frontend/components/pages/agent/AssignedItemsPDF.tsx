@@ -7,17 +7,18 @@ import {
     StyleSheet,
 } from "@react-pdf/renderer";
 
-export interface PDFItem {
-    id: number;
-    name: string;
-    type?: string;
-    price: string;
+export interface PDFVariant {
+    variantId: number;
+    itemName: string;
+    itemType?: string;
+    itemPrice: string;
     imageDataUrl: string | null;
-    variantCount: number;
+    qrCode: string | null;
+    sizes: { size: string; stock: number }[];
 }
 
 interface AssignedItemsPDFProps {
-    items: PDFItem[];
+    variants: PDFVariant[];
     agentName: string;
     tabLabel: string;
     generatedAt: string;
@@ -85,7 +86,7 @@ const styles = StyleSheet.create({
         fontWeight: "bold",
     },
     typeCell: {
-        width: 60,
+        width: 50,
         paddingRight: 8,
     },
     typeText: {
@@ -94,20 +95,21 @@ const styles = StyleSheet.create({
         textTransform: "capitalize",
     },
     priceCell: {
-        width: 60,
+        width: 50,
         paddingRight: 8,
         textAlign: "right",
     },
     priceText: {
         fontSize: 10,
     },
-    variantsCell: {
-        width: 50,
-        textAlign: "center",
+    qrCell: {
+        width: 70,
+        paddingRight: 8,
     },
-    variantsText: {
-        fontSize: 9,
-        color: "#666",
+    qrText: {
+        fontSize: 7,
+        color: "#999",
+        fontFamily: "Courier",
     },
     footer: {
         marginTop: 20,
@@ -127,7 +129,7 @@ const styles = StyleSheet.create({
 });
 
 export default function AssignedItemsPDF({
-    items,
+    variants,
     agentName,
     tabLabel,
     generatedAt,
@@ -150,15 +152,15 @@ export default function AssignedItemsPDF({
                         <Text style={styles.nameCell}>Item</Text>
                         <Text style={styles.typeCell}>Type</Text>
                         <Text style={styles.priceCell}>Price</Text>
-                        <Text style={styles.variantsCell}>Variants</Text>
+                        <Text style={styles.qrCell}>QR Code</Text>
                     </View>
 
-                    {items.map((item, i) => (
-                        <View style={styles.tableRow} key={item.id ?? i}>
+                    {variants.map((v, i) => (
+                        <View style={styles.tableRow} key={v.variantId ?? i}>
                             <View style={styles.imageCell}>
-                                {item.imageDataUrl ? (
+                                {v.imageDataUrl ? (
                                     <Image
-                                        src={item.imageDataUrl}
+                                        src={v.imageDataUrl}
                                         style={styles.itemImage}
                                     />
                                 ) : (
@@ -166,21 +168,32 @@ export default function AssignedItemsPDF({
                                 )}
                             </View>
                             <View style={styles.nameCell}>
-                                <Text style={styles.nameText}>{item.name}</Text>
+                                <Text style={styles.nameText}>
+                                    {v.itemName}
+                                </Text>
+                                {v.sizes.length > 0 && (
+                                    <Text style={{ fontSize: 8, color: "#999", marginTop: 2 }}>
+                                        {v.sizes.map((s) => `${s.size}:${s.stock}`).join(", ")}
+                                    </Text>
+                                )}
                             </View>
                             <View style={styles.typeCell}>
                                 <Text style={styles.typeText}>
-                                    {item.type || "—"}
+                                    {v.itemType || "—"}
                                 </Text>
                             </View>
                             <View style={styles.priceCell}>
                                 <Text style={styles.priceText}>
-                                    Rs. {item.price}
+                                    Rs. {v.itemPrice}
                                 </Text>
                             </View>
-                            <View style={styles.variantsCell}>
-                                <Text style={styles.variantsText}>
-                                    {item.variantCount}
+                            <View style={styles.qrCell}>
+                                <Text style={styles.qrText}>
+                                    {v.qrCode
+                                        ? v.qrCode.length > 16
+                                            ? v.qrCode.slice(0, 16) + "…"
+                                            : v.qrCode
+                                        : "—"}
                                 </Text>
                             </View>
                         </View>
@@ -188,7 +201,7 @@ export default function AssignedItemsPDF({
                 </View>
 
                 <View style={styles.footer}>
-                    <Text>Total items: {items.length}</Text>
+                    <Text>Total variants: {variants.length}</Text>
                 </View>
             </Page>
         </Document>

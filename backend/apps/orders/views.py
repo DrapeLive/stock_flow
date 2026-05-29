@@ -751,7 +751,9 @@ class AddOrderItemView(APIView):
         qty = serializer.validated_data["quantity"]
         size_group = serializer.validated_data["size_group"]
 
-        if not AgentItem.objects.filter(agent=agent, item=item).exists():
+        if not AgentItem.objects.filter(
+            agent=agent, variant__item=item, variant=variant
+        ).exists():
             return Response(
                 {
                     "error": "This item is not assigned to you. Please contact admin for assignment."

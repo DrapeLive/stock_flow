@@ -4,13 +4,14 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
+from collections import defaultdict
 
 from apps.accounts.permissions import (
     IsAdminOrSelfAgent,
     admin_business,
     check_admin_pin,
 )
-from apps.items.models import Item
+from apps.items.models import ItemVariant
 from apps.notification.tasks import send_push_to_user
 from apps.orders.models import Order
 
@@ -53,9 +54,9 @@ class AgentViewSet(ModelViewSet):
             return pin_error
 
         agent = self.get_object()
-        action = request.data.get("action", "deactivate")
+        action_param = request.data.get("action", "deactivate")
 
-        if action == "transfer":
+        if action_param == "transfer":
             transfer_to_id = request.data.get("transfer_to_id")
             if not transfer_to_id:
                 return Response(
@@ -91,64 +92,84 @@ class AgentItemsView(APIView):
     def get(self, request, agent_id):
         agent = get_object_or_404(Agent, id=agent_id)
         biz = admin_business(request.user)
-        qs = agent.assigned_items.select_related("item").prefetch_related(
-            "item__variants__sizes"
+        qs = (
+            agent.assigned_items
+            .select_related("variant__item")
+            .prefetch_related("variant__sizes")
         )
         if biz:
-            qs = qs.filter(item__type=biz)
+            qs = qs.filter(variant__item__type=biz)
         qs = qs.order_by('-id')
-        items = [ai.item for ai in qs]  # .all() is redundant here too
-        result = [AgentItemListSerializer.from_item(item, request) for item in items]
+
+        item_groups = defaultdict(list)
+        for ai in qs:
+            item_groups[ai.variant.item_id].append(ai)
+
+        result = []
+        for item_id, agent_items in item_groups.items():
+            item_obj = agent_items[0].variant.item
+            result.append(
+                AgentItemListSerializer.from_assigned_variants(
+                    item_obj, agent_items, request
+                )
+            )
         return Response(result)
 
     def post(self, request, agent_id):
         agent = get_object_or_404(Agent, id=agent_id)
-        item_ids = request.data.get("item_ids", [])
+        variant_ids = request.data.get("variant_ids", [])
 
-        if not isinstance(item_ids, list):
+        if not isinstance(variant_ids, list):
             return Response(
-                {"error": "item_ids must be a list"}, status=status.HTTP_400_BAD_REQUEST
+                {"error": "variant_ids must be a list"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         biz = admin_business(request.user)
+        existing_qs = agent.assigned_items.all()
+        existing_variant_ids = set(
+            existing_qs.values_list("variant_id", flat=True)
+        )
+        incoming_variant_ids = set(variant_ids)
 
-        if biz:
-            existing_qs = agent.assigned_items.filter(item__type=biz)
-        else:
-            existing_qs = agent.assigned_items.all()
-
-        existing_item_ids = set(existing_qs.values_list("item_id", flat=True))
-        incoming_item_ids = set(item_ids)
-
-        ids_to_remove = existing_item_ids - incoming_item_ids
+        ids_to_remove = existing_variant_ids - incoming_variant_ids
         if ids_to_remove:
-            agent.assigned_items.filter(item_id__in=ids_to_remove).delete()
+            agent.assigned_items.filter(variant_id__in=ids_to_remove).delete()
 
-        ids_to_add = incoming_item_ids - existing_item_ids
-
+        ids_to_add = incoming_variant_ids - existing_variant_ids
         assigned_count = 0
-        for item_id in ids_to_add:
+        for variant_id in ids_to_add:
             try:
                 if biz:
-                    item = Item.objects.get(id=item_id, type=biz)
+                    variant = ItemVariant.objects.get(id=variant_id, item__type=biz)
                 else:
-                    item = Item.objects.get(id=item_id)
-                AgentItem.objects.create(agent=agent, item=item)
+                    variant = ItemVariant.objects.get(id=variant_id)
+                AgentItem.objects.create(agent=agent, variant=variant)
                 assigned_count += 1
-            except Item.DoesNotExist:
+            except ItemVariant.DoesNotExist:
                 pass
 
-        items = [
-            ai.item
-            for ai in agent.assigned_items.select_related("item")
-            .prefetch_related("item__variants__sizes")
+        qs = (
+            agent.assigned_items
+            .select_related("variant__item")
+            .prefetch_related("variant__sizes")
             .all()
-        ]
-        result = [AgentItemListSerializer.from_item(item, request) for item in items]
+        )
+        item_groups = defaultdict(list)
+        for ai in qs:
+            item_groups[ai.variant.item_id].append(ai)
+
+        result = []
+        for item_id, agent_items in item_groups.items():
+            item_obj = agent_items[0].variant.item
+            result.append(
+                AgentItemListSerializer.from_assigned_variants(
+                    item_obj, agent_items, request
+                )
+            )
 
         if assigned_count > 0:
             try:
-                print(assigned_count)
                 send_push_to_user.delay(
                     agent.user_id,
                     "Items Assigned",
@@ -163,12 +184,14 @@ class AgentItemsView(APIView):
 class AgentItemDetailView(APIView):
     permission_classes = [IsAdminOrSelfAgent]
 
-    def delete(self, request, agent_id, item_id):
+    def delete(self, request, agent_id, variant_id):
         agent = get_object_or_404(Agent, id=agent_id)
-        agent_item = get_object_or_404(AgentItem, agent=agent, item_id=item_id)
+        agent_item = get_object_or_404(
+            AgentItem, agent=agent, variant_id=variant_id
+        )
 
         biz = admin_business(request.user)
-        if biz and agent_item.item.type != biz:
+        if biz and agent_item.variant.item.type != biz:
             return Response({"error": "Not found"}, status=404)
 
         agent_item.delete()
