@@ -156,21 +156,49 @@ export default function ProductDetailPage() {
 
   useEffect(() => {
     if (sizeGroups.length > 0 && !selectedSizeGroup) {
-      const firstAvailable = sizeGroups.find((group) => {
-        const reservedItems = existingOrderItems
-          .filter((item) => item.variant_id === selectedVariant?.id)
-          .map((item) => ({
-            size_group: item.size_group,
-            quantity: item.quantity,
-          }));
-        return (
-          getAvailableStockForSizeGroup(selectedVariant, group, reservedItems) >
-          0
-        );
-      });
-      if (data?.type == "kids")
-        setSelectedSizeGroup(sizeGroups[1] ?? firstAvailable);
-      else setSelectedSizeGroup(firstAvailable ?? sizeGroups[0]);
+      if (data?.type === "kids") {
+        const kidsPriority = ["20-36", "20-30"];
+
+        const getStock = (group: string) => {
+          const reservedItems = existingOrderItems
+            .filter((item) => item.variant_id === selectedVariant?.id)
+            .map((item) => ({
+              size_group: item.size_group,
+              quantity: item.quantity,
+            }));
+          return getAvailableStockForSizeGroup(
+            selectedVariant,
+            group,
+            reservedItems,
+          );
+        };
+
+        const defaultGroup =
+          kidsPriority.find(
+            (group) => sizeGroups.includes(group) && getStock(group) > 0,
+          ) ??
+          sizeGroups.find((group) => getStock(group) > 0) ??
+          sizeGroups[0];
+
+        setSelectedSizeGroup(defaultGroup);
+      } else {
+        const firstAvailable = sizeGroups.find((group) => {
+          const reservedItems = existingOrderItems
+            .filter((item) => item.variant_id === selectedVariant?.id)
+            .map((item) => ({
+              size_group: item.size_group,
+              quantity: item.quantity,
+            }));
+          return (
+            getAvailableStockForSizeGroup(
+              selectedVariant,
+              group,
+              reservedItems,
+            ) > 0
+          );
+        });
+        setSelectedSizeGroup(firstAvailable ?? sizeGroups[0]);
+      }
     }
   }, [sizeGroups, selectedSizeGroup]);
 
