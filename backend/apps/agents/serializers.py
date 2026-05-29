@@ -39,14 +39,13 @@ class AgentItemListSerializer(serializers.Serializer):
         for ai in agent_items:
             variant = ai.variant
             sizes = variant.sizes.all() if hasattr(variant, 'sizes') else []
-            size_ranges = [
-                {"size_range": s.size, "stock": s.stock} for s in sizes
-            ]
             variants_data.append({
                 "id": variant.id,
                 "image": cls.get_image_url(variant.image, request),
                 "qr_code": str(variant.qr_code),
-                "size_ranges": size_ranges,
+                "size_ranges": [
+                    {"size_range": s.size, "stock": s.stock} for s in sizes
+                ],
             })
 
         return cls({
