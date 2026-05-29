@@ -12,6 +12,7 @@ from rest_framework.viewsets import ModelViewSet
 
 from apps.accounts.permissions import IsAdmin, admin_business, check_admin_pin
 from apps.orders.models import OrderItem
+from apps.agents.models import Agent, AgentItem
 from apps.orders.utils import SIZE_MAPPING
 
 from .models import Item, ItemVariant, ItemVariantSize
@@ -215,6 +216,19 @@ class ItemViewSet(ModelViewSet):
 
         item = variant.item
         variants = item.variants.prefetch_related("sizes").all()
+        agent_id = request.query_params.get("agent_id")
+        assigned_variant_ids = None
+
+        if agent_id:
+            assigned_variant_ids = list(
+                AgentItem.objects.filter(agent_id=agent_id).values_list("variant_id", flat=True)
+            )
+            if variant.id not in assigned_variant_ids:
+                return Response(
+                    {"error": "This item is not assigned to you. Please contact admin for assignment."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            variants = variants.filter(id__in=assigned_variant_ids)
 
         boost = get_agent_reservation_boost(request.user)
 
