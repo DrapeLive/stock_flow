@@ -443,7 +443,7 @@ class OrderViewSet(ModelViewSet):
 
             from django.utils import timezone
 
-            cutoff = timezone.now() - timedelta(minutes=30)
+            cutoff = timezone.now() - timedelta(minutes=15)
             Order.objects.filter(
                 status="DRAFT", agent__user=self.request.user, created_at__lt=cutoff
             ).delete()
@@ -463,6 +463,10 @@ class OrderViewSet(ModelViewSet):
         )
 
         if self.action == "list":
+            from datetime import timedelta
+
+            from django.utils import timezone
+
             archive_cutoff = timezone.now() - timedelta(days=30)
             qs = qs.exclude(
                 status="DISPATCHED",
