@@ -220,8 +220,13 @@ class ItemViewSet(ModelViewSet):
         assigned_variant_ids = None
 
         if agent_id:
+            try:
+                agent = Agent.objects.get(user_id=agent_id)
+            except Agent.DoesNotExist:
+                return Response({"error": "Agent not found"}, status=404)
+
             assigned_variant_ids = list(
-                AgentItem.objects.filter(agent_id=agent_id).values_list("variant_id", flat=True)
+                AgentItem.objects.filter(agent=agent).values_list("variant_id", flat=True)
             )
             if variant.id not in assigned_variant_ids:
                 return Response(
