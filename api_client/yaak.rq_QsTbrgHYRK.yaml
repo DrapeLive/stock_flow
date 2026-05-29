@@ -2,11 +2,11 @@ type: http_request
 model: http_request
 id: rq_QsTbrgHYRK
 createdAt: 2025-12-24T15:17:02.971299413
-updatedAt: 2026-05-20T11:32:03.896744518
+updatedAt: 2026-05-29T15:05:32.632576151
 workspaceId: wk_Wx4mNs5A2J
 folderId: fl_R3n2mRa8qW
 authentication:
-  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzgxODY4NzA4LCJpYXQiOjE3NzkyNzY3MDgsImp0aSI6ImI3N2MzYzViOWE3ZTQ4Yzk4YTJmYzg4OTNmYzZkNzE1IiwidXNlcl9pZCI6IjMwIn0.lPMJUwsuTDbk0KIaKjmU3F-9uxOVw0o9saLJlnhs6vo
+  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzgyNjU5MTE5LCJpYXQiOjE3ODAwNjcxMTksImp0aSI6ImYxZGE3MjBiNTQyMzQ0YWE5ZWE5NTA0YzBiNDE0MjVmIiwidXNlcl9pZCI6IjEifQ.ju7n8xSAuNqQIZkVZY0as1Dy1Kbj8KfvZe53nwwJYQo
 authenticationType: bearer
 body: {}
 bodyType: null
