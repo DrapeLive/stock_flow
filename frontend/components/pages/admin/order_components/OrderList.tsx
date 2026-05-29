@@ -16,6 +16,7 @@ import {
 import Pagination from "@/components/ui/Pagination";
 import useSessionStorage from "@/hooks/useSessionStorage";
 import { PaginatedResponse } from "@/types/global";
+import { PageLoading } from "@/components/ui/Loading";
 
 type OrderStatus = "ALL" | "PENDING" | "PACKED" | "DISPATCHED";
 
@@ -166,12 +167,7 @@ const OrderList: React.FC<Props> = ({
         setCurrentPage(1);
     };
 
-    if (loading)
-        return (
-            <p className="text-center py-10 text-gray-400 font-medium">
-                Loading {LABELS[status]}...
-            </p>
-        );
+    if (loading) return <PageLoading text={`Loading ${LABELS[status]}...`} />;
 
     if (filtered.length === 0)
         return (

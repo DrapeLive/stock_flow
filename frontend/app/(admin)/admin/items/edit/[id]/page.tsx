@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import heic2any from "heic2any";
 
 import Step2AddColor from "../../new/addColor";
 import type { ColorVariant } from "@/types/item";
@@ -15,7 +14,6 @@ import {
   Trash2,
   AlertCircle,
   ImagePlus,
-  X,
   ChevronDown,
 } from "lucide-react";
 import { Field, FieldLabel } from "@/components/ui/field";
@@ -25,7 +23,6 @@ import {
   Accordion,
   AccordionContent,
   AccordionItem,
-  AccordionTrigger,
 } from "@/components/ui/accordion";
 import Image from "next/image";
 import { ImagePreview } from "@/components/pages/ImagePreview";
@@ -44,6 +41,7 @@ import type {
 import { useAuth } from "@/context/AuthContext";
 import PinDeleteDialog from "@/components/ui/pinDeleteDialog";
 import { normalizeImageFile } from "@/lib/image-utils";
+import { PageLoading } from "@/components/ui/Loading";
 
 const uid = () => Math.random().toString(36).slice(2, 9);
 
@@ -125,7 +123,10 @@ export default function ItemEditPage() {
       );
     } else {
       const sizes = SIZE_RANGE_TO_SIZES[saved.sizeRange] ?? [];
-      sizeStockPairs = sizes.map((size) => ({ size, stock: saved.stock }));
+      sizeStockPairs = sizes.map((size) => ({
+        size,
+        stock: saved.stock,
+      }));
     }
 
     const newRows: EditableVariant[] = sizeStockPairs.map(
@@ -338,11 +339,7 @@ export default function ItemEditPage() {
   }
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p className="text-gray-400 text-sm">Loading…</p>
-      </div>
-    );
+    return <PageLoading />;
   }
 
   return (

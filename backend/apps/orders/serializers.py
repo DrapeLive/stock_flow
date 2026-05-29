@@ -1,3 +1,5 @@
+from django.conf import settings
+
 from rest_framework import serializers
 
 from apps.agents.models import Agent
@@ -185,6 +187,7 @@ class InvoiceSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True)
     brand = serializers.SerializerMethodField()
     total_price = serializers.SerializerMethodField()
+    gst_rate = serializers.SerializerMethodField()
 
     class Meta:
         model = Order
@@ -197,7 +200,11 @@ class InvoiceSerializer(serializers.ModelSerializer):
             "status",
             "items",
             "total_price",
+            "gst_rate",
         ]
+
+    def get_gst_rate(self, obj):
+        return settings.GST_RATE
 
     def get_brand(self, obj):
         first_item = obj.items.first()
