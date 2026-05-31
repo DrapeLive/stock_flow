@@ -321,7 +321,7 @@ export default function ItemAssignment({
                         {displayVariants.map((variant) => (
                             <div
                                 key={variant.variantId}
-                                className="w-full flex items-center gap-3 p-2.5 rounded-md border-2 border-gray-100 bg-white"
+                                className={`w-full flex items-center gap-3 p-2.5 rounded-md border-2 ${variant.isUnsaved ? "border-amber-200 bg-amber-50" : " border-gray-100 bg-white "}`}
                             >
                                 <div className="w-10 h-10 rounded-md shrink-0 overflow-hidden ring-1 ring-gray-100">
                                     {variant.image ? (
