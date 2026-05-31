@@ -21,6 +21,8 @@ interface VariantDisplay {
     image: string | null;
     qrCode: string | null;
     sizes: { size: string; stock: number }[];
+    createdAt: string | null;
+    isUnsaved: boolean;
 }
 
 interface ItemAssignmentProps {
@@ -29,6 +31,7 @@ interface ItemAssignmentProps {
     items: Item[];
     selectedVariantIds: number[];
     savedVariantIds: number[];
+    variantCreatedAt: Map<number, string>;
     onToggleVariant: (variantId: number) => void;
     onSaveItems: () => void;
     savingItems: boolean;
@@ -70,6 +73,7 @@ export default function ItemAssignment({
     items,
     selectedVariantIds,
     savedVariantIds,
+    variantCreatedAt,
     onToggleVariant,
     onSaveItems,
     savingItems,
@@ -84,6 +88,7 @@ export default function ItemAssignment({
         const result: VariantDisplay[] = [];
         for (const item of items) {
             for (const variant of item.variants || []) {
+                const createdAt = variantCreatedAt.get(variant.id) ?? null;
                 result.push({
                     variantId: variant.id,
                     itemId: item.id,
@@ -93,29 +98,68 @@ export default function ItemAssignment({
                     image: variant.image ?? null,
                     qrCode: variant.qr_code ?? null,
                     sizes: variant.sizes || [],
+                    createdAt,
+                    isUnsaved:
+                        !savedVariantIds.includes(variant.id) &&
+                        selectedVariantIds.includes(variant.id),
                 });
             }
         }
         return result;
-    }, [items]);
+    }, [items, variantCreatedAt, savedVariantIds, selectedVariantIds]);
 
-    const recentIds = useMemo(
-        () => selectedVariantIds.filter((id) => !savedVariantIds.includes(id)),
-        [selectedVariantIds, savedVariantIds],
-    );
+    const recentIds = useMemo(() => {
+        const now = new Date();
+        const yesterdayStart = new Date(
+            now.getFullYear(),
+            now.getMonth(),
+            now.getDate() - 1,
+            0,
+            1,
+            0,
+            0,
+        );
 
-    const assignedIds = useMemo(
-        () => selectedVariantIds.filter((id) => savedVariantIds.includes(id)),
-        [selectedVariantIds, savedVariantIds],
-    );
+        const recentlySaved = savedVariantIds.filter((id) => {
+            const createdAt = variantCreatedAt.get(id);
+            return createdAt && new Date(createdAt) >= yesterdayStart;
+        });
 
-    const displayVariants = useMemo(
-        () =>
+        const unsaved = selectedVariantIds.filter(
+            (id) => !savedVariantIds.includes(id),
+        );
+
+        const combined = [...new Set([...recentlySaved, ...unsaved])];
+
+        // Sort by createdAt descending (most recent first), unsaved goes to top
+        return combined.sort((a, b) => {
+            const aDate = variantCreatedAt.get(a);
+            const bDate = variantCreatedAt.get(b);
+            if (!aDate && !bDate) return 0;
+            if (!aDate) return -1; // unsaved floats to top
+            if (!bDate) return 1;
+            return new Date(bDate).getTime() - new Date(aDate).getTime();
+        });
+    }, [savedVariantIds, selectedVariantIds, variantCreatedAt]);
+
+    const assignedIds = selectedVariantIds;
+
+    const displayVariants = useMemo(() => {
+        const filtered =
             activeTab === "Recent"
                 ? allVariants.filter((v) => recentIds.includes(v.variantId))
-                : allVariants.filter((v) => assignedIds.includes(v.variantId)),
-        [allVariants, activeTab, recentIds, assignedIds],
-    );
+                : allVariants.filter((v) => assignedIds.includes(v.variantId));
+
+        return filtered.sort((a, b) => {
+            if (!a.createdAt && !b.createdAt) return 0;
+            if (!a.createdAt) return -1;
+            if (!b.createdAt) return 1;
+            return (
+                new Date(b.createdAt).getTime() -
+                new Date(a.createdAt).getTime()
+            );
+        });
+    }, [allVariants, activeTab, recentIds, assignedIds]);
 
     const handleQRScan = (qr: string) => {
         const trimmed = qr.trim();
@@ -138,20 +182,22 @@ export default function ItemAssignment({
         setGeneratingPDF(true);
         try {
             const pdfVariants: PDFVariant[] = await Promise.all(
-                displayVariants.map(async (v) => {
-                    const imageDataUrl = v.image
-                        ? await urlToDataUrl(v.image)
-                        : null;
-                    return {
-                        variantId: v.variantId,
-                        itemName: v.itemName,
-                        itemType: v.itemType,
-                        itemPrice: v.itemPrice,
-                        imageDataUrl,
-                        qrCode: v.qrCode,
-                        sizes: v.sizes,
-                    };
-                }),
+                displayVariants
+                    .filter((v) => !v.isUnsaved)
+                    .map(async (v) => {
+                        const imageDataUrl = v.image
+                            ? await urlToDataUrl(v.image)
+                            : null;
+                        return {
+                            variantId: v.variantId,
+                            itemName: v.itemName,
+                            itemType: v.itemType,
+                            itemPrice: v.itemPrice,
+                            imageDataUrl,
+                            qrCode: v.qrCode,
+                            sizes: v.sizes,
+                        };
+                    }),
             );
 
             const now = new Date();
@@ -293,19 +339,21 @@ export default function ItemAssignment({
                                     )}
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <p className="font-bold text-gray-900 text-sm truncate">
-                                        {variant.itemName}
-                                    </p>
+                                    <div className="flex items-center gap-1.5">
+                                        <p className="font-bold text-gray-900 text-sm truncate">
+                                            {variant.itemName}
+                                        </p>
+                                        {variant.isUnsaved && (
+                                            <span className="shrink-0 text-[10px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded leading-none">
+                                                Unsaved
+                                            </span>
+                                        )}
+                                    </div>
                                     <p className="text-xs text-gray-400 truncate">
                                         Rs. {variant.itemPrice}
                                         {variant.itemType &&
                                             ` · ${variant.itemType}`}
                                     </p>
-                                    {variant.qrCode && (
-                                        <p className="text-[10px] text-gray-300 font-mono truncate">
-                                            {variant.qrCode}
-                                        </p>
-                                    )}
                                     {variant.sizes.length > 0 && (
                                         <div className="flex flex-wrap gap-1 mt-1">
                                             {variant.sizes.map((s) => (

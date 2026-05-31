@@ -25,6 +25,7 @@ export interface AgentItemVariant {
     image: string | null;
     qr_code: string | null;
     size_ranges: AssignedVariantSize[];
+    created_at: string;
 }
 
 export interface AssignedItem {

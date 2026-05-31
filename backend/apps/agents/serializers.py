@@ -16,6 +16,7 @@ class VariantColorSerializer(serializers.Serializer):
     image = serializers.CharField(allow_null=True)
     size_ranges = VariantSizeRangeSerializer(many=True)
     qr_code = serializers.CharField(allow_null=True)
+    created_at = serializers.CharField(allow_null=True)
 
 
 class AgentItemListSerializer(serializers.Serializer):
@@ -46,6 +47,7 @@ class AgentItemListSerializer(serializers.Serializer):
                 "size_ranges": [
                     {"size_range": s.size, "stock": s.stock} for s in sizes
                 ],
+                "created_at": ai.created_at.isoformat(),
             })
 
         return cls({
@@ -118,7 +120,7 @@ class AgentSerializer(serializers.ModelSerializer):
             .select_related('variant__item')
             .prefetch_related('variant__sizes')
             .filter(variant__item__is_deleted=False)
-            .order_by('-id')
+            .order_by('-created_at')
         )
         item_groups = defaultdict(list)
         for ai in qs:

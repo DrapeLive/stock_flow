@@ -11,13 +11,7 @@ import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 import { deriveUsername } from "@/lib/utils/deriveUsername";
-import {
-    Trash2,
-    ArrowLeft,
-    ShieldCheck,
-    Pencil,
-    Eye,
-} from "lucide-react";
+import { Trash2, ArrowLeft, ShieldCheck, Pencil, Eye } from "lucide-react";
 import ItemAssignment from "@/components/pages/agent/ItemAssignment";
 import DeleteWithTransferDialog from "@/components/ui/deleteWithTransferDialog";
 import { useAuth } from "@/context/AuthContext";
@@ -60,6 +54,10 @@ export default function AgentDetailPage() {
 
     const [savingItems, setSavingItems] = useState(false);
 
+    const [variantCreatedAt, setVariantCreatedAt] = useState<
+        Map<number, string>
+    >(new Map());
+
     useEffect(() => {
         const fetchData = async () => {
             try {
@@ -73,6 +71,16 @@ export default function AgentDetailPage() {
                 const ids = (agentData.assigned_items || []).flatMap(
                     (item: AssignedItem) => item.variants.map((v) => v.id),
                 );
+                // Build variantId → created_at map from backend
+                const createdAtMap = new Map<number, string>();
+                for (const item of agentData.assigned_items || []) {
+                    for (const v of item.variants) {
+                        if (v.created_at) {
+                            createdAtMap.set(v.id, v.created_at);
+                        }
+                    }
+                }
+                setVariantCreatedAt(createdAtMap);
                 // Both states start equal — no unsaved changes on first load
                 setSelectedVariantIds(ids);
                 setSavedVariantIds(ids);
@@ -133,6 +141,16 @@ export default function AgentDetailPage() {
             const confirmedIds = (updatedAgent.assigned_items || []).flatMap(
                 (item: AssignedItem) => item.variants.map((v) => v.id),
             );
+            // Rebuild createdAt map from refreshed agent data
+            const createdAtMap = new Map<number, string>();
+            for (const item of updatedAgent.assigned_items || []) {
+                for (const v of item.variants) {
+                    if (v.created_at) {
+                        createdAtMap.set(v.id, v.created_at);
+                    }
+                }
+            }
+            setVariantCreatedAt(createdAtMap);
             // Sync both states to what the backend confirmed
             setSelectedVariantIds(confirmedIds);
             setSavedVariantIds(confirmedIds);
@@ -403,10 +421,13 @@ export default function AgentDetailPage() {
 
             <ItemAssignment
                 agentId={parseInt(id as string, 10)}
-                agentName={agent?.user.display_name || agent?.user.username || ""}
+                agentName={
+                    agent?.user.display_name || agent?.user.username || ""
+                }
                 items={items}
                 selectedVariantIds={selectedVariantIds}
                 savedVariantIds={savedVariantIds}
+                variantCreatedAt={variantCreatedAt}
                 onToggleVariant={toggleVariant}
                 onSaveItems={handleSaveItems}
                 savingItems={savingItems}
