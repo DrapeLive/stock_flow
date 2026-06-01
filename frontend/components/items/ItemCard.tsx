@@ -95,14 +95,14 @@ export default function ItemCard({
                                 </span>
                             </>
                         )}
-                        {hasPartialOutOfStock && (
+                        {/*{hasPartialOutOfStock && (
                             <>
                                 <span className="text-gray-200">•</span>
                                 <span className="text-xs text-red-500 font-medium">
                                     {itemStockOut ? "All out" : "Some out"}
                                 </span>
                             </>
-                        )}
+                        )}*/}
                     </div>
                 </div>
 

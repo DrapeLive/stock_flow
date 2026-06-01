@@ -20,7 +20,6 @@ export function getAvailableStockForSizeGroup(
         const baseStock =
             variantSizes.find((s) => s.size_range === selectedSize)?.stock || 0;
 
-        console.log(baseStock, reservedItems);
         const reservedForThisSize = reservedItems.reduce((sum, item) => {
             const itemSizes =
                 SIZE_RANGE_TO_SIZES[item.size_group as FrontendSizeRange] || [];

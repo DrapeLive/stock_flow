@@ -13,6 +13,16 @@ export function isItemOutOfStock(item: UIItem): boolean {
     );
 }
 
+export function isItemPartiallyOutOfStock(item: UIItem): boolean {
+    const outOfStockVariants = item.variants.filter((variant) =>
+        isVariantOutOfStock(variant, item.type),
+    );
+    return (
+        outOfStockVariants.length > 0 &&
+        outOfStockVariants.length < item.variants.length
+    );
+}
+
 export function getSizeRangesWithStock(
     variant: UIVariant,
     itemType: ItemType,
@@ -22,7 +32,6 @@ export function getSizeRangesWithStock(
     const result: { sizeRange: FrontendSizeRange; stock: number }[] = [];
 
     const sizeMap = Object.fromEntries(sizes.map((s) => [s.size, s.stock]));
-    console.log(sizes, sizeMap);
     const allowedRanges = ORDER_CREATION_SIZES_BY_TYPE[itemType];
 
     for (const range of allowedRanges) {
