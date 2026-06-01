@@ -2,7 +2,7 @@
 import { itemApi } from "@/lib/api/item";
 import { toastError, toastSuccess } from "@/lib/toast";
 import { Scanner } from "@yudiel/react-qr-scanner";
-import { AlertTriangle, QrCode, Sparkles } from "lucide-react";
+import { AlertTriangle, ArchiveX, QrCode, Sparkles, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Modal, ModalButton } from "../ui/custom/Modals";
@@ -95,9 +95,9 @@ const ScannerPage: React.FC<ScannerPageProps> = ({
 
       {showLeaveConfirm && (
         <Modal
-          icon={<AlertTriangle size={18} className="text-amber-500" />}
-          iconBg="bg-amber-100"
-          title="Out of Stock?"
+          icon={<ArchiveX size={18} className="text-red-500" />}
+          iconBg="bg-red-100"
+          title="Out of Stock"
           description="This item is out of stock, you can add other items though."
           onClose={() => setShowLeaveConfirm(false)}
           actions={
@@ -121,8 +121,8 @@ const ScannerPage: React.FC<ScannerPageProps> = ({
             </>
           }
         >
-          <div className="bg-amber-50 rounded-xl p-3 border border-amber-100">
-            <p className="text-sm text-amber-800 font-medium">
+          <div className="bg-red-50 rounded-xl p-3 border border-amber-100">
+            <p className="text-sm text-red-600 font-medium">
               Continue adding other items?
             </p>
           </div>

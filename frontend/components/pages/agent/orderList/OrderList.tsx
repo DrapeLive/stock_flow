@@ -72,7 +72,7 @@ export default function AgentOrderList({
             search: debouncedSearch,
             status:
               pageOrderStatus === "PROCESSING"
-                ? ["PENDING", "PACKED"]
+                ? ["PENDING", "PACKED", "DRAFT"]
                 : ["DISPATCHED"],
             customer: selectedCustomer !== "all" ? selectedCustomer : undefined,
           });
@@ -99,10 +99,12 @@ export default function AgentOrderList({
     selectedCustomer,
   ]);
 
-  const sortedData = [...data].sort(
-    (a, b) =>
-      new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-  );
+  const sortedData = [...data]
+    .filter((order) => order.status !== "DRAFT" || order.items.length > 0)
+    .sort(
+      (a, b) =>
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+    );
 
   // Client-side filter by active tab — same logic as Home page
   const filteredData =
@@ -173,7 +175,7 @@ export default function AgentOrderList({
     <div className="min-h-screen min-w-full">
       <OrderListHeader
         title="Remaining Orders"
-        count={totalCount}
+        count={order_len}
         showFilters={showFilters}
         handleToggleFilters={handleToggleFilters}
         pageIndicator={
@@ -254,7 +256,13 @@ export default function AgentOrderList({
             <OrderCard
               key={order.id}
               order={order}
-              onClick={() => router.push(`/agent/order/status/${order.id}`)}
+              onClick={() => {
+                if (order.status == "DRAFT") {
+                  router.push(`/agent/order/new/${order.customer_details.id}`);
+                } else {
+                  router.push(`/agent/order/status/${order.id}`);
+                }
+              }}
             />
           ))}
         </div>
