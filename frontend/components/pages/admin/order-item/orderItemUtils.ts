@@ -43,7 +43,7 @@ export function getAvailableSizeGroups(
     variantSizes: VariantSize[],
     itemType: ItemType,
 ): string[] {
-    const variantSizeSet = new Set(variantSizes.map((s) => s.size));
+    const variantSizeSet = new Set(variantSizes.map((s) => s.size_range));
     return getSizesForItemType(itemType, "order_creation").filter((range) => {
         const requiredSizes = SIZE_RANGE_TO_SIZES[range];
         return requiredSizes.every((s) => variantSizeSet.has(s));

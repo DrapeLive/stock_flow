@@ -152,7 +152,7 @@ class ItemViewSet(ModelViewSet):
             for variant in item.variants.all():
                 sizes = [
                     {
-                        "size": s.size,
+                        "size_range": s.size,
                         "stock": s.stock + boost.get((variant.id, s.size), 0),
                     }
                     for s in variant.sizes.all()
@@ -246,7 +246,7 @@ class ItemViewSet(ModelViewSet):
                 "sizes": [
                     {
                         "id": s.id,
-                        "size": s.size,
+                        "size_range": s.size,
                         "stock": s.stock + boost.get((v.id, s.size), 0),
                     }
                     for s in v.sizes.all()

@@ -31,7 +31,9 @@ export function getSizeRangesWithStock(
 
     const result: { sizeRange: FrontendSizeRange; stock: number }[] = [];
 
-    const sizeMap = Object.fromEntries(sizes.map((s) => [s.size, s.stock]));
+    const sizeMap = Object.fromEntries(
+        sizes.map((s) => [s.size_range, s.stock]),
+    );
     const allowedRanges = ORDER_CREATION_SIZES_BY_TYPE[itemType];
 
     for (const range of allowedRanges) {

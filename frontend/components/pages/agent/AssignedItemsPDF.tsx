@@ -14,7 +14,7 @@ export interface PDFVariant {
     itemPrice: string;
     imageDataUrl: string | null;
     qrCode: string | null;
-    sizes: { size: string; stock: number }[];
+    sizes: { size_range: string; stock: number }[];
 }
 
 interface AssignedItemsPDFProps {
@@ -328,13 +328,13 @@ export default function AssignedItemsPDF({
                                     <View style={styles.sizesRow}>
                                         {v.sizes.map((s) => (
                                             <View
-                                                key={s.size}
+                                                key={s.size_range}
                                                 style={styles.sizeChip}
                                             >
                                                 <Text
                                                     style={styles.sizeChipText}
                                                 >
-                                                    {s.size}: {s.stock}
+                                                    {s.size_range}: {s.stock}
                                                 </Text>
                                             </View>
                                         ))}

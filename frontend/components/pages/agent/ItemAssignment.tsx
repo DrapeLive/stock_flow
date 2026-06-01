@@ -20,7 +20,7 @@ interface VariantDisplay {
     itemPrice: string;
     image: string | null;
     qrCode: string | null;
-    sizes: { size: string; stock: number }[];
+    sizes: { size_range: string; stock: number }[];
     createdAt: string | null;
     isUnsaved: boolean;
 }
@@ -358,10 +358,10 @@ export default function ItemAssignment({
                                         <div className="flex flex-wrap gap-1 mt-1">
                                             {variant.sizes.map((s) => (
                                                 <span
-                                                    key={s.size}
+                                                    key={s.size_range}
                                                     className="text-[10px] font-bold text-gray-500 bg-gray-50 px-1.5 py-0.5 rounded"
                                                 >
-                                                    {s.size}:{s.stock}
+                                                    {s.size_range}:{s.stock}
                                                 </span>
                                             ))}
                                         </div>

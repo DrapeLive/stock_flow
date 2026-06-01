@@ -20,7 +20,7 @@ function normalizeAgentItem(item: AssignedItem): UIItem {
             image: v.image,
             qr_code: v.qr_code,
             sizes: v.size_ranges.map((s) => ({
-                size: s.size_range,
+                size_range: s.size_range,
                 stock: s.stock,
             })),
         })),

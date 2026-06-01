@@ -4,7 +4,7 @@ export type ItemStatus = "PENDING" | "PACKED" | "DISPATCHED";
 
 export interface ItemVariantSize {
     id: number;
-    size: string;
+    size_range: string;
     stock: number;
 }
 
@@ -232,7 +232,7 @@ export interface UIVariant {
     qr_code: string | null;
 
     sizes: {
-        size: string;
+        size_range: string;
         stock: number;
     }[];
 }
