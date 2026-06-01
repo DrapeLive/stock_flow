@@ -6,7 +6,11 @@ import { UIItem } from "@/types/item";
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 import ItemCard from "./ItemCard";
 import QRScanModal from "./QRScanModal";
-import { isItemOutOfStock } from "@/util/stockValidators";
+import {
+    isItemOutOfStock,
+    isItemPartiallyOutOfStock,
+    isVariantOutOfStock,
+} from "@/util/stockValidators";
 import { PageLoading } from "../ui/Loading";
 
 type StockTab = "in_stock" | "out_of_stock";
@@ -34,8 +38,24 @@ function filterItems(
 
     if (tab === "in_stock") {
         filtered = filtered.filter((item) => !isItemOutOfStock(item));
+        filtered = filtered.map((item) => ({
+            ...item,
+            variants: item.variants.filter(
+                (v) => !isVariantOutOfStock(v, item.type),
+            ),
+        }));
     } else if (tab === "out_of_stock") {
-        filtered = filtered.filter((item) => isItemOutOfStock(item));
+        filtered = filtered.filter(
+            (item) =>
+                isItemOutOfStock(item) ||
+                item.variants.some((v) => isVariantOutOfStock(v, item.type)),
+        );
+        filtered = filtered.map((item) => ({
+            ...item,
+            variants: item.variants.filter((v) =>
+                isVariantOutOfStock(v, item.type),
+            ),
+        }));
     }
 
     if (searchQuery.trim()) {
@@ -125,7 +145,11 @@ export default function ItemList({
         [items],
     );
     const outOfStockCount = useMemo(
-        () => items.filter((item) => isItemOutOfStock(item)).length,
+        () =>
+            items.filter(
+                (item) =>
+                    isItemOutOfStock(item) || isItemPartiallyOutOfStock(item),
+            ).length,
         [items],
     );
 

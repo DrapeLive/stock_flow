@@ -49,17 +49,17 @@ export const agentApi = {
       .then((r) => r.data);
   },
 
-  updateItems(agentId: number, itemIds: number[]): Promise<AssignedItem[]> {
+  updateItems(agentId: number, variantIds: number[]): Promise<AssignedItem[]> {
     return api
       .post<AssignedItem[]>(`/api/agents/${agentId}/items/`, {
-        item_ids: itemIds,
+        variant_ids: variantIds,
       })
       .then((r) => r.data);
   },
 
-  removeItem(agentId: number, itemId: number): Promise<void> {
+  removeItem(agentId: number, variantId: number): Promise<void> {
     return api
-      .delete(`/api/agents/${agentId}/items/${itemId}/`)
+      .delete(`/api/agents/${agentId}/items/variants/${variantId}/`)
       .then((r) => r.data);
   },
 };

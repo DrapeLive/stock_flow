@@ -270,8 +270,8 @@ class Command(BaseCommand):
         for item in items:
             if item.type != "gents":
                 continue
-            if not AgentItem.objects.filter(agent=agent, item=item).exists():
-                AgentItem.objects.create(agent=agent, item=item)
+            for variant in item.variants.all():
+                AgentItem.objects.get_or_create(agent=agent, variant=variant)
                 self.stdout.write(self.style.SUCCESS(f"Assigned item '{item.name}' to agent"))
             else:
                 self.stdout.write(self.style.WARNING(f"Item '{item.name}' already assigned to agent"))

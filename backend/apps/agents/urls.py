@@ -9,6 +9,6 @@ urlpatterns = [
     path('', include(router.urls)),
     path('profile/<int:user_id>/', AgentDetail.as_view(), name='agent-by-user'),
     path('<int:agent_id>/items/', AgentItemsView.as_view(), name='agent-items'),
-    path('<int:agent_id>/items/<int:item_id>/', AgentItemDetailView.as_view(), name='agent-item-detail'),
+    path('<int:agent_id>/items/variants/<int:variant_id>/', AgentItemDetailView.as_view(), name='agent-item-detail'),
 ]
 

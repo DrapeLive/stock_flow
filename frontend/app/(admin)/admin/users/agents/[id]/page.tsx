@@ -11,13 +11,7 @@ import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 import { deriveUsername } from "@/lib/utils/deriveUsername";
-import {
-    Trash2,
-    ArrowLeft,
-    ShieldCheck,
-    Pencil,
-    Eye,
-} from "lucide-react";
+import { Trash2, ArrowLeft, ShieldCheck, Pencil, Eye } from "lucide-react";
 import ItemAssignment from "@/components/pages/agent/ItemAssignment";
 import DeleteWithTransferDialog from "@/components/ui/deleteWithTransferDialog";
 import { useAuth } from "@/context/AuthContext";
@@ -52,13 +46,17 @@ export default function AgentDetailPage() {
 
     // Single source of truth: mirrors exactly what is checked in the UI.
     // Seeded from the backend on load and re-synced after every save.
-    const [selectedItemIds, setSelectedItemIds] = useState<number[]>([]);
+    const [selectedVariantIds, setSelectedVariantIds] = useState<number[]>([]);
 
     // Snapshot of what the backend last confirmed.
     // Used only to compute hasChanges — never rendered directly.
-    const [savedItemIds, setSavedItemIds] = useState<number[]>([]);
+    const [savedVariantIds, setSavedVariantIds] = useState<number[]>([]);
 
     const [savingItems, setSavingItems] = useState(false);
+
+    const [variantCreatedAt, setVariantCreatedAt] = useState<
+        Map<number, string>
+    >(new Map());
 
     useEffect(() => {
         const fetchData = async () => {
@@ -70,12 +68,22 @@ export default function AgentDetailPage() {
                 ]);
                 setAgent(agentData);
                 setItems(itemsData);
-                const ids = (agentData.assigned_items || []).map(
-                    (item: AssignedItem) => item.id,
+                const ids = (agentData.assigned_items || []).flatMap(
+                    (item: AssignedItem) => item.variants.map((v) => v.id),
                 );
+                // Build variantId → created_at map from backend
+                const createdAtMap = new Map<number, string>();
+                for (const item of agentData.assigned_items || []) {
+                    for (const v of item.variants) {
+                        if (v.created_at) {
+                            createdAtMap.set(v.id, v.created_at);
+                        }
+                    }
+                }
+                setVariantCreatedAt(createdAtMap);
                 // Both states start equal — no unsaved changes on first load
-                setSelectedItemIds(ids);
-                setSavedItemIds(ids);
+                setSelectedVariantIds(ids);
+                setSavedVariantIds(ids);
                 setFormData({
                     username: agentData.user.username,
                     display_name: agentData.user.display_name || "",
@@ -127,15 +135,25 @@ export default function AgentDetailPage() {
             const numericId = parseInt(id as string, 10);
             // Send the full current selection — backend does delete-then-insert,
             // so this correctly handles both additions and removals.
-            await agentApi.updateItems(numericId, selectedItemIds);
+            await agentApi.updateItems(numericId, selectedVariantIds);
             const updatedAgent = await agentApi.getOne(numericId);
             setAgent(updatedAgent);
-            const confirmedIds = (updatedAgent.assigned_items || []).map(
-                (item: AssignedItem) => item.id,
+            const confirmedIds = (updatedAgent.assigned_items || []).flatMap(
+                (item: AssignedItem) => item.variants.map((v) => v.id),
             );
+            // Rebuild createdAt map from refreshed agent data
+            const createdAtMap = new Map<number, string>();
+            for (const item of updatedAgent.assigned_items || []) {
+                for (const v of item.variants) {
+                    if (v.created_at) {
+                        createdAtMap.set(v.id, v.created_at);
+                    }
+                }
+            }
+            setVariantCreatedAt(createdAtMap);
             // Sync both states to what the backend confirmed
-            setSelectedItemIds(confirmedIds);
-            setSavedItemIds(confirmedIds);
+            setSelectedVariantIds(confirmedIds);
+            setSavedVariantIds(confirmedIds);
             toastSuccess("Items updated successfully");
         } catch (error) {
             console.error("Error saving items:", error);
@@ -145,19 +163,19 @@ export default function AgentDetailPage() {
         }
     };
 
-    // Toggling any item simply adds or removes it from selectedItemIds
-    const toggleItem = (itemId: number) => {
-        setSelectedItemIds((prev) =>
-            prev.includes(itemId)
-                ? prev.filter((i) => i !== itemId)
-                : [...prev, itemId],
+    // Toggling any variant simply adds or removes it from selectedVariantIds
+    const toggleVariant = (variantId: number) => {
+        setSelectedVariantIds((prev) =>
+            prev.includes(variantId)
+                ? prev.filter((i) => i !== variantId)
+                : [...prev, variantId],
         );
     };
 
-    // True when the checked items differ from the last confirmed backend state
+    // True when the checked variants differ from the last confirmed backend state
     const hasChanges =
-        [...selectedItemIds].sort().join(",") !==
-        [...savedItemIds].sort().join(",");
+        [...selectedVariantIds].sort().join(",") !==
+        [...savedVariantIds].sort().join(",");
 
     // ── Delete ────────────────────────────────────────────────────────────────
 
@@ -403,11 +421,14 @@ export default function AgentDetailPage() {
 
             <ItemAssignment
                 agentId={parseInt(id as string, 10)}
-                agentName={agent?.user.display_name || agent?.user.username || ""}
+                agentName={
+                    agent?.user.display_name || agent?.user.username || ""
+                }
                 items={items}
-                selectedItemIds={selectedItemIds}
-                savedItemIds={savedItemIds}
-                onToggleItem={toggleItem}
+                selectedVariantIds={selectedVariantIds}
+                savedVariantIds={savedVariantIds}
+                variantCreatedAt={variantCreatedAt}
+                onToggleVariant={toggleVariant}
                 onSaveItems={handleSaveItems}
                 savingItems={savingItems}
                 hasChanges={hasChanges}

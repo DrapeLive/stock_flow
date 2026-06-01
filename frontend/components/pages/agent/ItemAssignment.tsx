@@ -7,18 +7,32 @@ import { toastSuccess, toastError } from "@/lib/toast";
 import { Package, Trash2, Scan, Download } from "lucide-react";
 import { pdf } from "@react-pdf/renderer";
 import AssignedItemsPDF from "@/components/pages/agent/AssignedItemsPDF";
-import type { PDFItem } from "@/components/pages/agent/AssignedItemsPDF";
+import type { PDFVariant } from "@/components/pages/agent/AssignedItemsPDF";
 import QRScanModal from "@/components/items/QRScanModal";
 
 type Tab = "Recent" | "Assigned";
+
+interface VariantDisplay {
+    variantId: number;
+    itemId: number;
+    itemName: string;
+    itemType?: string;
+    itemPrice: string;
+    image: string | null;
+    qrCode: string | null;
+    sizes: { size_range: string; stock: number }[];
+    createdAt: string | null;
+    isUnsaved: boolean;
+}
 
 interface ItemAssignmentProps {
     agentId: number;
     agentName: string;
     items: Item[];
-    selectedItemIds: number[];
-    savedItemIds: number[];
-    onToggleItem: (itemId: number) => void;
+    selectedVariantIds: number[];
+    savedVariantIds: number[];
+    variantCreatedAt: Map<number, string>;
+    onToggleVariant: (variantId: number) => void;
     onSaveItems: () => void;
     savingItems: boolean;
     hasChanges: boolean;
@@ -57,9 +71,10 @@ export default function ItemAssignment({
     agentId,
     agentName,
     items,
-    selectedItemIds,
-    savedItemIds,
-    onToggleItem,
+    selectedVariantIds,
+    savedVariantIds,
+    variantCreatedAt,
+    onToggleVariant,
     onSaveItems,
     savingItems,
     hasChanges,
@@ -68,43 +83,97 @@ export default function ItemAssignment({
     const [showQRScanner, setShowQRScanner] = useState(false);
     const [generatingPDF, setGeneratingPDF] = useState(false);
 
-    const recentIds = useMemo(
-        () => selectedItemIds.filter((id) => !savedItemIds.includes(id)),
-        [selectedItemIds, savedItemIds],
-    );
+    // Flatten items into a flat variant list
+    const allVariants = useMemo(() => {
+        const result: VariantDisplay[] = [];
+        for (const item of items) {
+            for (const variant of item.variants || []) {
+                const createdAt = variantCreatedAt.get(variant.id) ?? null;
+                result.push({
+                    variantId: variant.id,
+                    itemId: item.id,
+                    itemName: item.name,
+                    itemType: item.type,
+                    itemPrice: item.price,
+                    image: variant.image ?? null,
+                    qrCode: variant.qr_code ?? null,
+                    sizes: variant.sizes || [],
+                    createdAt,
+                    isUnsaved:
+                        !savedVariantIds.includes(variant.id) &&
+                        selectedVariantIds.includes(variant.id),
+                });
+            }
+        }
+        return result;
+    }, [items, variantCreatedAt, savedVariantIds, selectedVariantIds]);
 
-    const assignedIds = useMemo(
-        () => selectedItemIds.filter((id) => savedItemIds.includes(id)),
-        [selectedItemIds, savedItemIds],
-    );
+    const recentIds = useMemo(() => {
+        const now = new Date();
+        const yesterdayStart = new Date(
+            now.getFullYear(),
+            now.getMonth(),
+            now.getDate() - 1,
+            0,
+            1,
+            0,
+            0,
+        );
 
-    const recentItems = useMemo(
-        () => items.filter((item) => recentIds.includes(item.id)),
-        [items, recentIds],
-    );
+        const recentlySaved = savedVariantIds.filter((id) => {
+            const createdAt = variantCreatedAt.get(id);
+            return createdAt && new Date(createdAt) >= yesterdayStart;
+        });
 
-    const assignedItems = useMemo(
-        () => items.filter((item) => assignedIds.includes(item.id)),
-        [items, assignedIds],
-    );
+        const unsaved = selectedVariantIds.filter(
+            (id) => !savedVariantIds.includes(id),
+        );
+
+        const combined = [...new Set([...recentlySaved, ...unsaved])];
+
+        // Sort by createdAt descending (most recent first), unsaved goes to top
+        return combined.sort((a, b) => {
+            const aDate = variantCreatedAt.get(a);
+            const bDate = variantCreatedAt.get(b);
+            if (!aDate && !bDate) return 0;
+            if (!aDate) return -1; // unsaved floats to top
+            if (!bDate) return 1;
+            return new Date(bDate).getTime() - new Date(aDate).getTime();
+        });
+    }, [savedVariantIds, selectedVariantIds, variantCreatedAt]);
+
+    const assignedIds = selectedVariantIds;
+
+    const displayVariants = useMemo(() => {
+        const filtered =
+            activeTab === "Recent"
+                ? allVariants.filter((v) => recentIds.includes(v.variantId))
+                : allVariants.filter((v) => assignedIds.includes(v.variantId));
+
+        return filtered.sort((a, b) => {
+            if (!a.createdAt && !b.createdAt) return 0;
+            if (!a.createdAt) return -1;
+            if (!b.createdAt) return 1;
+            return (
+                new Date(b.createdAt).getTime() -
+                new Date(a.createdAt).getTime()
+            );
+        });
+    }, [allVariants, activeTab, recentIds, assignedIds]);
 
     const handleQRScan = (qr: string) => {
         const trimmed = qr.trim();
-        const item = items.find(
-            (i) =>
-                i.variants?.some((v) => v.qr_code === trimmed) ||
-                i.id.toString() === trimmed,
-        );
-        if (item) {
-            if (!selectedItemIds.includes(item.id)) {
-                onToggleItem(item.id);
-                toastSuccess(`${item.name} added`);
+        const variant = allVariants.find((v) => v.qrCode === trimmed);
+        if (variant) {
+            if (!selectedVariantIds.includes(variant.variantId)) {
+                onToggleVariant(variant.variantId);
+                toastSuccess(`${variant.itemName} added`);
             } else {
-                toastSuccess(`${item.name} already selected`);
+                toastSuccess(`${variant.itemName} already selected`);
             }
             setShowQRScanner(false);
         } else {
-            toastError("Item not found with this QR code");
+            toastError("Variant not found with this QR code");
             setShowQRScanner(false);
         }
     };
@@ -112,24 +181,23 @@ export default function ItemAssignment({
     const handleDownloadPDF = useCallback(async () => {
         setGeneratingPDF(true);
         try {
-            const targetItems =
-                activeTab === "Recent" ? recentItems : assignedItems;
-
-            const pdfItems: PDFItem[] = await Promise.all(
-                targetItems.map(async (item) => {
-                    const imageUrl = item.variants?.[0]?.image ?? null;
-                    const imageDataUrl = imageUrl
-                        ? await urlToDataUrl(imageUrl)
-                        : null;
-                    return {
-                        id: item.id,
-                        name: item.name,
-                        type: item.type,
-                        price: item.price,
-                        imageDataUrl,
-                        variantCount: item.variants?.length ?? 0,
-                    };
-                }),
+            const pdfVariants: PDFVariant[] = await Promise.all(
+                displayVariants
+                    .filter((v) => !v.isUnsaved)
+                    .map(async (v) => {
+                        const imageDataUrl = v.image
+                            ? await urlToDataUrl(v.image)
+                            : null;
+                        return {
+                            variantId: v.variantId,
+                            itemName: v.itemName,
+                            itemType: v.itemType,
+                            itemPrice: v.itemPrice,
+                            imageDataUrl,
+                            qrCode: v.qrCode,
+                            sizes: v.sizes,
+                        };
+                    }),
             );
 
             const now = new Date();
@@ -143,7 +211,7 @@ export default function ItemAssignment({
 
             const blob = await pdf(
                 <AssignedItemsPDF
-                    items={pdfItems}
+                    variants={pdfVariants}
                     agentName={agentName}
                     tabLabel={activeTab}
                     generatedAt={generatedAt}
@@ -162,11 +230,9 @@ export default function ItemAssignment({
         } finally {
             setGeneratingPDF(false);
         }
-    }, [activeTab, recentItems, assignedItems, agentName]);
+    }, [activeTab, displayVariants, agentName]);
 
-    const displayItems = activeTab === "Recent" ? recentItems : assignedItems;
-    const displayCount =
-        activeTab === "Recent" ? recentItems.length : assignedItems.length;
+    const displayCount = displayVariants.length;
 
     return (
         <>
@@ -178,7 +244,7 @@ export default function ItemAssignment({
                                 Items
                             </h3>
                             <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-md">
-                                {selectedItemIds.length}
+                                {selectedVariantIds.length}
                             </span>
                             {hasChanges && (
                                 <span className="text-xs font-bold text-amber-500 bg-amber-50 px-2 py-0.5 rounded-md">
@@ -223,7 +289,7 @@ export default function ItemAssignment({
                     </button>
                 </div>
 
-                {selectedItemIds.length > 0 && (
+                {selectedVariantIds.length > 0 && (
                     <div className="flex items-center gap-2 mb-4">
                         <div className="flex-1 bg-gray-100/50 p-1.5 flex items-center space-x-1 border border-gray-200 rounded-md">
                             <button
@@ -234,7 +300,7 @@ export default function ItemAssignment({
                                         : "text-gray-500 hover:text-gray-700"
                                 }`}
                             >
-                                Recent ({recentItems.length})
+                                Recent ({recentIds.length})
                             </button>
                             <button
                                 onClick={() => setActiveTab("Assigned")}
@@ -244,7 +310,7 @@ export default function ItemAssignment({
                                         : "text-gray-500 hover:text-gray-700"
                                 }`}
                             >
-                                Assigned ({assignedItems.length})
+                                Assigned ({assignedIds.length})
                             </button>
                         </div>
                     </div>
@@ -252,16 +318,16 @@ export default function ItemAssignment({
 
                 {displayCount > 0 ? (
                     <div className="space-y-2">
-                        {displayItems.map((item) => (
+                        {displayVariants.map((variant) => (
                             <div
-                                key={item.id}
-                                className="w-full flex items-center gap-3 p-2.5 rounded-md border-2 border-gray-100 bg-white"
+                                key={variant.variantId}
+                                className={`w-full flex items-center gap-3 p-2.5 rounded-md border-2 ${variant.isUnsaved ? "border-amber-200 bg-amber-50" : " border-gray-100 bg-white "}`}
                             >
                                 <div className="w-10 h-10 rounded-md shrink-0 overflow-hidden ring-1 ring-gray-100">
-                                    {item.variants?.[0]?.image ? (
+                                    {variant.image ? (
                                         <ImagePreview
-                                            src={item.variants[0].image}
-                                            alt={item.name}
+                                            src={variant.image}
+                                            alt={variant.itemName}
                                         />
                                     ) : (
                                         <div className="w-full h-full bg-gray-100 flex items-center justify-center">
@@ -273,16 +339,38 @@ export default function ItemAssignment({
                                     )}
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <p className="font-bold text-gray-900 text-sm truncate">
-                                        {item.name}
-                                    </p>
+                                    <div className="flex items-center gap-1.5">
+                                        <p className="font-bold text-gray-900 text-sm truncate">
+                                            {variant.itemName}
+                                        </p>
+                                        {variant.isUnsaved && (
+                                            <span className="shrink-0 text-[10px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded leading-none">
+                                                Unsaved
+                                            </span>
+                                        )}
+                                    </div>
                                     <p className="text-xs text-gray-400 truncate">
-                                        Rs. {item.price}
-                                        {item.type && ` · ${item.type}`}
+                                        Rs. {variant.itemPrice}
+                                        {variant.itemType &&
+                                            ` · ${variant.itemType}`}
                                     </p>
+                                    {variant.sizes.length > 0 && (
+                                        <div className="flex flex-wrap gap-1 mt-1">
+                                            {variant.sizes.map((s) => (
+                                                <span
+                                                    key={s.size_range}
+                                                    className="text-[10px] font-bold text-gray-500 bg-gray-50 px-1.5 py-0.5 rounded"
+                                                >
+                                                    {s.size_range}:{s.stock}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                                 <button
-                                    onClick={() => onToggleItem(item.id)}
+                                    onClick={() =>
+                                        onToggleVariant(variant.variantId)
+                                    }
                                     className="flex items-center gap-1 px-3 py-2 rounded-xl text-red-500 hover:bg-red-50 active:scale-95 transition-all"
                                 >
                                     <Trash2 size={16} />
@@ -296,8 +384,8 @@ export default function ItemAssignment({
                 ) : (
                     <p className="text-center text-gray-400 py-8 text-sm">
                         {activeTab === "Recent"
-                            ? "No recently added items"
-                            : "No assigned items"}
+                            ? "No recently added variants"
+                            : "No assigned variants"}
                     </p>
                 )}
             </div>
