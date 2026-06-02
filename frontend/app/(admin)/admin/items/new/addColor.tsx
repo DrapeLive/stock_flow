@@ -192,7 +192,7 @@ export default function Step2AddColor({
           <input
             ref={galleryRef}
             type="file"
-            accept="image/*"
+            accept="image/*,.heic,.heif"
             className="hidden"
             onChange={handleFile}
           />
@@ -201,7 +201,7 @@ export default function Step2AddColor({
           <input
             ref={cameraRef}
             type="file"
-            accept="image/*"
+            accept="image/*,.heic,.heif"
             capture="environment"
             className="hidden"
             onChange={handleFile}
