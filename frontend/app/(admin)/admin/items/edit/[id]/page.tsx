@@ -253,7 +253,9 @@ export default function ItemEditPage() {
             v.sizes.map((s) => ({
               backendId: v.id,
               localId: uid(),
-              size: s.size,
+              size: (
+                s as unknown as { id: number; size: string; stock: number }
+              ).size,
               stock: s.stock,
               imageUrl: v.image ?? null,
               newImage: null,
