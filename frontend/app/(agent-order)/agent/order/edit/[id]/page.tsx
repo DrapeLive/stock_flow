@@ -42,7 +42,7 @@ export default function EditOrderPage() {
   >([]);
 
   const [loadingTransports, setLoadingTransports] = useState(true);
-
+  const [notes, setNotes] = useState("");
   interface MergeGroup {
     item_name: string;
     size_group: string;
@@ -120,6 +120,7 @@ export default function EditOrderPage() {
         preferred_transport: preferredTransport
           ? parseInt(preferredTransport)
           : null,
+        notes: notes || null,
       });
       toastSuccess("Order saved successfully!");
       router.push(`/agent/order/status/${id}`);
@@ -156,6 +157,7 @@ export default function EditOrderPage() {
         preferred_transport: preferredTransport
           ? parseInt(preferredTransport)
           : null,
+        notes: notes || null,
       });
       toastSuccess("Order saved successfully!");
       router.push(`/agent/order/status/${id}`);
@@ -187,6 +189,7 @@ export default function EditOrderPage() {
         setPreferredTransport(
           res.preferred_transport ? String(res.preferred_transport) : "",
         );
+        setNotes(res.notes || "");
       } catch (e) {
         console.error("Error fetching order details:", e);
         setLoadError(true);
@@ -300,6 +303,18 @@ export default function EditOrderPage() {
                   ))}
                 </select>
               </div>
+            </div>
+            <div className="mt-4">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5 block">
+                Notes
+              </label>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Any special instructions or remarks..."
+                rows={3}
+                className="w-full px-3 py-2.5 bg-gray-50 border border-gray-100 rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/10 text-sm resize-none"
+              />
             </div>
           </div>
         )}

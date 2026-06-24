@@ -1,37 +1,46 @@
-from django.db import models
 from django.contrib.auth import get_user_model
-from apps.customers.models import Customer
+from django.db import models
+
 from apps.agents.models import Agent
+from apps.customers.models import Customer
 from apps.items.models import Item, ItemVariant
 from transports.models import Transport
 
 
 class Order(models.Model):
-
     STATUS_CHOICES = (
-        ('DRAFT', 'Draft'),
-        ('PENDING', 'Pending'),
-        ('EDITING', 'Editing'),
-        ('PACKED', 'Packed'),
-        ('DISPATCHED', 'Dispatched')
+        ("DRAFT", "Draft"),
+        ("PENDING", "Pending"),
+        ("EDITING", "Editing"),
+        ("PACKED", "Packed"),
+        ("DISPATCHED", "Dispatched"),
     )
 
     customer = models.ForeignKey(Customer, on_delete=models.PROTECT)
     agent = models.ForeignKey(Agent, on_delete=models.PROTECT, null=True)
 
-    status = models.CharField(
-        max_length=20,
-        choices=STATUS_CHOICES,
-        default='DRAFT'
-    )
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="DRAFT")
 
     expected_delivery_date = models.DateField(null=True, blank=True)
-    preferred_transport = models.ForeignKey(Transport, on_delete=models.SET_NULL, null=True, blank=True, related_name="orders")
-    transport_company = models.ForeignKey(Transport, on_delete=models.SET_NULL, null=True, blank=True, related_name="dispatched_orders")
+    preferred_transport = models.ForeignKey(
+        Transport,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="orders",
+    )
+    transport_company = models.ForeignKey(
+        Transport,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="dispatched_orders",
+    )
     lr_number = models.CharField(max_length=50, blank=True, default="")
 
     reservation_snapshot = models.JSONField(default=list, blank=True)
     editing_started_at = models.DateTimeField(null=True, blank=True)
+    notes = models.CharField(max_length=200, null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     dispatched_at = models.DateTimeField(null=True, blank=True)
@@ -41,29 +50,21 @@ class Order(models.Model):
 
 
 class OrderLog(models.Model):
-
     ACTION_CHOICES = (
-        ('ITEM_DELETED', 'Item Deleted'),
-        ('ORDER_DELETED', 'Order Deleted'),
-        ('ORDER_EDITED', 'Order Edited'),
-        ('DISPATCHED', 'Dispatched'),
-        ('EDIT_STARTED', 'Edit Started'),
-        ('EDIT_SAVED', 'Edit Saved'),
-        ('EDIT_CANCELLED', 'Edit Cancelled'),
+        ("ITEM_DELETED", "Item Deleted"),
+        ("ORDER_DELETED", "Order Deleted"),
+        ("ORDER_EDITED", "Order Edited"),
+        ("DISPATCHED", "Dispatched"),
+        ("EDIT_STARTED", "Edit Started"),
+        ("EDIT_SAVED", "Edit Saved"),
+        ("EDIT_CANCELLED", "Edit Cancelled"),
     )
 
-    order = models.ForeignKey(
-        Order,
-        on_delete=models.CASCADE,
-        related_name='logs'
-    )
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="logs")
     action = models.CharField(max_length=20, choices=ACTION_CHOICES)
     details = models.JSONField(default=dict, blank=True)
     performed_by = models.ForeignKey(
-        get_user_model(),
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True
+        get_user_model(), on_delete=models.SET_NULL, null=True, blank=True
     )
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -72,25 +73,12 @@ class OrderLog(models.Model):
 
 
 class OrderItem(models.Model):
+    order = models.ForeignKey(Order, related_name="items", on_delete=models.CASCADE)
 
-    order = models.ForeignKey(
-        Order,
-        related_name='items',
-        on_delete=models.CASCADE
-    )
-
-    item = models.ForeignKey(
-        Item,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True
-    )
+    item = models.ForeignKey(Item, on_delete=models.SET_NULL, null=True, blank=True)
 
     variant = models.ForeignKey(
-        ItemVariant,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True
+        ItemVariant, on_delete=models.SET_NULL, null=True, blank=True
     )
 
     size_group = models.CharField(max_length=50, default="NONE")

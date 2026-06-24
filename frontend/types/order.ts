@@ -69,6 +69,7 @@ export interface Order {
   transport_company: number | null;
   transport_company_name?: string;
   lr_number: string;
+  notes?: string;
 }
 
 export interface OrderItemDisplay {
@@ -97,6 +98,7 @@ export interface UpdateOrderRequest {
   agent?: number;
   expected_delivery_date?: string | null;
   preferred_transport?: number | null;
+  notes?: string | null;
 }
 
 export interface UpdateOrderRequest {

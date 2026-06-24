@@ -11,6 +11,7 @@ interface OrderSummaryProps {
   expectedDeliveryDate?: string;
   dispatchTransport?: string;
   lrNumber?: string;
+  notes?: string;
 }
 
 function DeliverySummary({
@@ -18,11 +19,13 @@ function DeliverySummary({
   preferredTransport,
   dispatchTransport,
   lrNumber,
+  notes,
 }: {
   expectedDeliveryDate?: string;
   preferredTransport?: string;
   dispatchTransport?: string;
   lrNumber?: string;
+  notes?: string;
 }) {
   return (
     <div className="flex flex-col items-center gap-5 w-full">
@@ -45,6 +48,16 @@ function DeliverySummary({
           </h3>
         </div>
       </div>
+      {notes && (
+        <div className="w-full flex flex-col gap-1">
+          <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">
+            Notes
+          </p>
+          <h3 className="text-sm font-semibold text-gray-800 break-words whitespace-pre-wrap w-full">
+            {notes}
+          </h3>
+        </div>
+      )}
       {/* Dispatch Card */}
       {(dispatchTransport || lrNumber) && (
         <div className="w-full rounded-2xl border border-primary/20 bg-primary/5 p-4 flex flex-col gap-4">
@@ -93,6 +106,7 @@ export default function OrderSummary({
   expectedDeliveryDate,
   dispatchTransport,
   lrNumber,
+  notes,
 }: OrderSummaryProps) {
   return (
     <div className="flex flex-col bg-white border border-gray-100 rounded-2xl p-5 mb-6 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] gap-y-4">
@@ -146,6 +160,7 @@ export default function OrderSummary({
         preferredTransport={preferredTransport}
         dispatchTransport={dispatchTransport}
         lrNumber={lrNumber}
+        notes={notes}
       />
     </div>
   );
