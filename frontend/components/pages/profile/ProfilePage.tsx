@@ -21,6 +21,7 @@ import {
   Archive,
   ShoppingBag,
   Users,
+  ScrollText,
 } from "lucide-react";
 import ItemCard from "@/components/items/ItemCard";
 import OrderCard from "@/components/order/OrderCard";
@@ -184,6 +185,17 @@ export default function ProfilePage() {
                       isAdmin ? "/admin/customers" : "/agent/customers",
                     )
                   }
+                />
+              )}
+            </div>
+
+            <div className="bg-white rounded-3xl border border-gray-100 shadow-sm divide-y divide-gray-50">
+              {isAdmin && (
+                <ActionRow
+                  icon={<ScrollText size={16} />}
+                  iconBg="bg-indigo-50 text-indigo-500"
+                  label="Summary"
+                  onClick={() => router.push("/admin/summary")}
                 />
               )}
             </div>
