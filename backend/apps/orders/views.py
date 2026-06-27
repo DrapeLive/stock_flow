@@ -107,6 +107,7 @@ class PlaceOrderView(APIView):
 
         expected_delivery_date = request.data.get("expected_delivery_date")
         preferred_transport = request.data.get("preferred_transport")
+        notes = request.data.get("notes")
 
         with transaction.atomic():
             for order_item in order.items.select_related("item", "variant"):
@@ -212,6 +213,8 @@ class PlaceOrderView(APIView):
                     )
                 except Transport.DoesNotExist:
                     pass
+            if notes:
+                order.notes = notes
 
             order.save()
             username = request.user.username
@@ -397,6 +400,7 @@ class SaveEditView(APIView):
 
             expected_delivery_date = request.data.get("expected_delivery_date")
             preferred_transport = request.data.get("preferred_transport")
+            notes = request.data.get("notes")
 
             order.reservation_snapshot = []
             order.editing_started_at = None
@@ -418,6 +422,9 @@ class SaveEditView(APIView):
                     pass
             else:
                 order.preferred_transport = None
+
+            if notes:
+                order.notes = notes
 
             order.save()
 

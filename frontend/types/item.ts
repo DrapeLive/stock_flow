@@ -4,7 +4,8 @@ export type ItemStatus = "PENDING" | "PACKED" | "DISPATCHED";
 
 export interface ItemVariantSize {
   id: number;
-  size_range: string;
+  size_range?: string;
+  size?: string;
   stock: number;
 }
 

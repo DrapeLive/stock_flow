@@ -47,6 +47,7 @@ export default function OrderDetailsPage() {
   >([]);
   const [loadingTransports, setLoadingTransports] = useState(true);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+  const [notes, setNotes] = useState<string>("");
 
   useBackButton({
     onBack: useCallback(() => {
@@ -67,12 +68,13 @@ export default function OrderDetailsPage() {
         .update(Number(key), {
           expected_delivery_date: expectedDeliveryDate || null,
           preferred_transport: preferredTransportID || null,
+          notes: notes || null,
         })
         .catch(console.error);
     }, 600);
 
     return () => clearTimeout(timer);
-  }, [expectedDeliveryDate, preferredTransportID]);
+  }, [expectedDeliveryDate, preferredTransportID, notes]);
 
   interface MergeGroup {
     item_name: string;
@@ -145,6 +147,7 @@ export default function OrderDetailsPage() {
       await orderApi.placeOrder(Number(orderKey), {
         expected_delivery_date: expectedDeliveryDate || null,
         preferred_transport: preferredTransportID || null,
+        notes: notes || null,
       });
       toastSuccess("Order placed successfully!");
       router.push("/agent/order/orderform");
@@ -207,6 +210,7 @@ export default function OrderDetailsPage() {
             res2.preferred_transport || response.preferred_transport,
           );
           setExpectedDeliveryDate(res2.expected_delivery_date || "");
+          setNotes(res2.notes || "");
           isReady.current = true;
         }
       } catch (e) {
@@ -360,6 +364,18 @@ export default function OrderDetailsPage() {
                   ))}
                 </select>
               </div>
+            </div>
+            <div>
+              <label className="text-[8px] md:text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5 block">
+                Notes
+              </label>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Any special instructions or remarks..."
+                rows={3}
+                className="w-full px-3 py-2.5 bg-gray-50 border border-gray-100 rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/10 text-sm resize-none"
+              />
             </div>
           </div>
         </div>

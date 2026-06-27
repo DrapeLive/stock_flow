@@ -133,6 +133,7 @@ export default function Page() {
               )?.label ?? ""
             }
             lrNumber={data?.lr_number ?? ""}
+            notes={data?.notes ?? ""}
           />
         )}
 

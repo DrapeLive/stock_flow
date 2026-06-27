@@ -133,6 +133,7 @@ export const orderApi = {
     data?: {
       expected_delivery_date?: string | null;
       preferred_transport?: number | null;
+      notes?: string | null;
     },
   ): Promise<{ message: string; order_id: number }> {
     return api
@@ -169,6 +170,7 @@ export const orderApi = {
     data?: {
       expected_delivery_date?: string | null;
       preferred_transport?: number | null;
+      notes?: string | null;
     },
   ): Promise<{ message: string; order_id: number }> {
     return api
