@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { Item } from "@/types/item";
 import { ImagePreview } from "@/components/pages/ImagePreview";
 import { toastSuccess, toastError } from "@/lib/toast";
@@ -24,6 +24,7 @@ interface VariantDisplay {
   sizes: { size: string; stock: number }[];
   createdAt: string | null;
   isUnsaved: boolean;
+  isPendingRemoval: boolean;
 }
 
 interface ItemAssignmentProps {
@@ -84,6 +85,14 @@ export default function ItemAssignment({
   const [scanMode, setScanMode] = useState<ScanMode>("add");
   const [showQRScanner, setShowQRScanner] = useState(false);
   const [generatingPDF, setGeneratingPDF] = useState(false);
+  const [pendingRemovalIds, setPendingRemovalIds] = useState<Set<number>>(
+    new Set(),
+  );
+
+  // Clear pending removals once the parent confirms a save (savedVariantIds reference changes)
+  useEffect(() => {
+    setPendingRemovalIds(new Set());
+  }, [savedVariantIds]);
 
   const allVariants = useMemo(() => {
     const result: VariantDisplay[] = [];
@@ -106,11 +115,18 @@ export default function ItemAssignment({
           isUnsaved:
             !savedVariantIds.includes(variant.id) &&
             selectedVariantIds.includes(variant.id),
+          isPendingRemoval: pendingRemovalIds.has(variant.id),
         });
       }
     }
     return result;
-  }, [items, variantCreatedAt, savedVariantIds, selectedVariantIds]);
+  }, [
+    items,
+    variantCreatedAt,
+    savedVariantIds,
+    selectedVariantIds,
+    pendingRemovalIds,
+  ]);
 
   const recentIds = useMemo(() => {
     const now = new Date();
@@ -191,8 +207,9 @@ export default function ItemAssignment({
         toastError(`${variant.itemName} is not assigned to this agent`);
         return;
       }
+      // Toggle immediately and mark red until Save is clicked
       onToggleVariant(variant.variantId);
-      toastSuccess(`${variant.itemName} removed`);
+      setPendingRemovalIds((prev) => new Set(prev).add(variant.variantId));
     }
   };
 
@@ -282,7 +299,7 @@ export default function ItemAssignment({
             className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-white border border-gray-200 rounded-md hover:bg-gray-50 active:scale-[0.98] transition-all"
           >
             <Scan size={18} className="text-gray-600" />
-            <span className="font-bold text-sm text-gray-700">Scan QR</span>
+            <span className="font-bold text-sm text-gray-700">Add</span>
           </button>
           <button
             onClick={() => openScanner("remove")}
@@ -290,7 +307,7 @@ export default function ItemAssignment({
             className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-white border border-red-200 rounded-md hover:bg-red-50 active:scale-[0.98] transition-all disabled:opacity-40"
           >
             <ScanLine size={18} className="text-red-500" />
-            <span className="font-bold text-sm text-red-500">Scan Remove</span>
+            <span className="font-bold text-sm text-red-500">Remove</span>
           </button>
           <button
             onClick={handleDownloadPDF}
@@ -339,10 +356,12 @@ export default function ItemAssignment({
             {displayVariants.map((variant) => (
               <div
                 key={variant.variantId}
-                className={`w-full flex items-center gap-3 p-2.5 rounded-md border-2 ${
-                  variant.isUnsaved
-                    ? "border-amber-200 bg-amber-50"
-                    : "border-gray-100 bg-white"
+                className={`w-full flex items-center gap-3 p-2.5 rounded-md border-2 transition-colors ${
+                  variant.isPendingRemoval
+                    ? "border-red-200 bg-red-50"
+                    : variant.isUnsaved
+                      ? "border-amber-200 bg-amber-50"
+                      : "border-gray-100 bg-white"
                 }`}
               >
                 <div className="w-10 h-10 rounded-md shrink-0 overflow-hidden ring-1 ring-gray-100">
@@ -359,7 +378,12 @@ export default function ItemAssignment({
                     <p className="font-bold text-gray-900 text-sm truncate">
                       {variant.itemName}
                     </p>
-                    {variant.isUnsaved && (
+                    {variant.isPendingRemoval && (
+                      <span className="shrink-0 text-[10px] font-bold text-red-600 bg-red-100 px-1.5 py-0.5 rounded leading-none">
+                        Removing
+                      </span>
+                    )}
+                    {variant.isUnsaved && !variant.isPendingRemoval && (
                       <span className="shrink-0 text-[10px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded leading-none">
                         Unsaved
                       </span>
