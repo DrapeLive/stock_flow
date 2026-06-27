@@ -32,7 +32,11 @@ function getAvailableSizeRanges(
   if (!variant || !type) return [];
 
   const variantSizes = Array.from(
-    new Set(variant.sizes.map((s) => s.size_range)),
+    new Set(
+      variant.sizes
+        .map((s) => s.size_range)
+        .filter((s): s is string => s !== undefined),
+    ),
   );
   const variantSizeSet = new Set(variantSizes);
 
