@@ -96,7 +96,15 @@ export default function ItemAssignment({
 
   const allVariants = useMemo(() => {
     const result: VariantDisplay[] = [];
-    for (const item of items) {
+
+    const sortedItems = [...items].sort((a, b) =>
+      a.name.localeCompare(b.name, undefined, {
+        numeric: true,
+        sensitivity: "base",
+      }),
+    );
+
+    for (const item of sortedItems) {
       for (const variant of item.variants || []) {
         const createdAt = variantCreatedAt.get(variant.id) ?? null;
         result.push({
@@ -170,6 +178,33 @@ export default function ItemAssignment({
         : allVariants.filter((v) => assignedIds.includes(v.variantId));
 
     return filtered.sort((a, b) => {
+      if (a.isPendingRemoval !== b.isPendingRemoval)
+        return a.isPendingRemoval ? 1 : -1;
+
+      if (activeTab === "Assigned") {
+        const getSortKey = (name: string) => name.split("-")[0];
+
+        const nameCompare = getSortKey(a.itemName).localeCompare(
+          getSortKey(b.itemName),
+          undefined,
+          { numeric: true, sensitivity: "base" },
+        );
+        if (nameCompare !== 0) return nameCompare;
+
+        // Same sort key → fall back to full name, then createdAt
+        const fullNameCompare = a.itemName.localeCompare(b.itemName, undefined, {
+          numeric: true,
+          sensitivity: "base",
+        });
+        if (fullNameCompare !== 0) return fullNameCompare;
+
+        if (!a.createdAt && !b.createdAt) return 0;
+        if (!a.createdAt) return -1;
+        if (!b.createdAt) return 1;
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      }
+
+      // Recent tab: unsaved float to top, then newest createdAt first
       if (!a.createdAt && !b.createdAt) return 0;
       if (!a.createdAt) return -1;
       if (!b.createdAt) return 1;
