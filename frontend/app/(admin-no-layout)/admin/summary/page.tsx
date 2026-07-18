@@ -83,6 +83,12 @@ function normalizeAdminItem(item: ItemStockEntry): UIItem {
   };
 }
 
+// Only the part before a "-" is used for sorting purposes.
+// e.g. "1040-02" sorts as "1040".
+function getSortName(name: string): string {
+  return name.split("-")[0];
+}
+
 function computeSummary(items: UIItem[]): ComputedSummary {
   let totalStock = 0;
   let totalUnits = 0;
@@ -220,7 +226,7 @@ type TypeFilter = "all" | "gents" | "kids";
 function SortIcon({ active, asc }: { active: boolean; asc: boolean }) {
   return (
     <span className={`ml-1 ${active ? "opacity-70" : "opacity-20"}`}>
-      {active ? (asc ? "↑" : "↓") : "↕"}
+      {active ? (asc ? "" : "") : ""}
     </span>
   );
 }
@@ -232,7 +238,7 @@ const Summary: React.FC = () => {
   const [data, setData] = useState<UIItem[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [sortKey, setSortKey] = useState<SortKey>("totalUnits");
+  const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortAsc, setSortAsc] = useState(false);
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
 
@@ -264,6 +270,13 @@ const Summary: React.FC = () => {
         : summary.itemSummaries.filter((i) => i.type === typeFilter);
 
     return [...filtered].sort((a, b) => {
+      if (sortKey === "name") {
+        const an = getSortName(a.name);
+        const bn = getSortName(b.name);
+        const cmp = an.localeCompare(bn, undefined, { numeric: true });
+        return sortAsc ? cmp : -cmp;
+      }
+
       const av = a[sortKey];
       const bv = b[sortKey];
       if (typeof av === "string" && typeof bv === "string") {
