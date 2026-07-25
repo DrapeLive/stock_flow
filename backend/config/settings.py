@@ -217,7 +217,7 @@ SPECTACULAR_SETTINGS = {
     },
 }
 
-_default_cors = "http://localhost:3000,https://stockflow-sigma.vercel.app"
+_default_cors = "http://localhost:3000,https://stockflow-sigma.vercel.app,http://192.168.0.107:3000"
 CORS_ALLOWED_ORIGINS = [
     o.strip()
     for o in config("CORS_ALLOWED_ORIGINS", default=_default_cors).split(",")
