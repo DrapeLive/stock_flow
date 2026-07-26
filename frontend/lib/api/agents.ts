@@ -62,4 +62,20 @@ export const agentApi = {
       .delete(`/api/agents/${agentId}/items/variants/${variantId}/`)
       .then((r) => r.data);
   },
+
+  transferItems(agentId: number, targetAgentId: number): Promise<void> {
+    return api
+      .post(`/api/agents/${agentId}/items/transfer/`, {
+        target_agent_id: targetAgentId,
+      })
+      .then((r) => r.data);
+  },
+
+  copyItems(agentId: number, targetAgentId: number): Promise<void> {
+    return api
+      .post(`/api/agents/${agentId}/items/copy/`, {
+        target_agent_id: targetAgentId,
+      })
+      .then((r) => r.data);
+  },
 };

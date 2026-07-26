@@ -5,6 +5,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 from collections import defaultdict
+from django.db import transaction
 
 from apps.accounts.permissions import (
     IsAdminOrSelfAgent,
@@ -196,3 +197,125 @@ class AgentItemDetailView(APIView):
 
         agent_item.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class AgentItemTransferView(APIView):
+    permission_classes = [IsAdminOrSelfAgent]
+
+    def post(self, request, agent_id):
+        source_agent = get_object_or_404(Agent, id=agent_id)
+        target_agent_id = request.data.get("target_agent_id")
+        
+        if not target_agent_id:
+            return Response(
+                {"error": "target_agent_id is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+            
+        target_agent = get_object_or_404(Agent, id=target_agent_id, is_active=True)
+        
+        if source_agent.id == target_agent.id:
+            return Response(
+                {"error": "Source and target agents cannot be the same."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        biz = admin_business(request.user)
+        source_items = source_agent.assigned_items.all()
+        
+        if biz:
+            source_items = source_items.filter(variant__item__type=biz)
+            
+        if not source_items.exists():
+            return Response(
+                {"message": "No items to transfer."},
+                status=status.HTTP_200_OK
+            )
+            
+        target_existing_variants = set(
+            target_agent.assigned_items.values_list("variant_id", flat=True)
+        )
+        
+        assigned_count = 0
+        with transaction.atomic():
+            for item in source_items:
+                if item.variant_id not in target_existing_variants:
+                    AgentItem.objects.create(agent=target_agent, variant_id=item.variant_id)
+                    assigned_count += 1
+                    
+            source_items.delete()
+
+        if assigned_count > 0:
+            try:
+                send_push_to_user.delay(
+                    target_agent.user_id,
+                    "Items Transferred",
+                    f"{assigned_count} item{'s' if assigned_count > 1 else ''} have been transferred to you",
+                )
+            except Exception as e:
+                print("Failed to queue notification:", str(e))
+                
+        return Response(
+            {"message": "Items successfully transferred."},
+            status=status.HTTP_200_OK
+        )
+
+
+class AgentItemCopyView(APIView):
+    permission_classes = [IsAdminOrSelfAgent]
+
+    def post(self, request, agent_id):
+        source_agent = get_object_or_404(Agent, id=agent_id)
+        target_agent_id = request.data.get("target_agent_id")
+        
+        if not target_agent_id:
+            return Response(
+                {"error": "target_agent_id is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+            
+        target_agent = get_object_or_404(Agent, id=target_agent_id, is_active=True)
+        
+        if source_agent.id == target_agent.id:
+            return Response(
+                {"error": "Source and target agents cannot be the same."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        biz = admin_business(request.user)
+        source_items = source_agent.assigned_items.all()
+        
+        if biz:
+            source_items = source_items.filter(variant__item__type=biz)
+            
+        if not source_items.exists():
+            return Response(
+                {"message": "No items to copy."},
+                status=status.HTTP_200_OK
+            )
+            
+        target_existing_variants = set(
+            target_agent.assigned_items.values_list("variant_id", flat=True)
+        )
+        
+        assigned_count = 0
+        with transaction.atomic():
+            for item in source_items:
+                if item.variant_id not in target_existing_variants:
+                    AgentItem.objects.create(agent=target_agent, variant_id=item.variant_id)
+                    assigned_count += 1
+                    
+        if assigned_count > 0:
+            try:
+                send_push_to_user.delay(
+                    target_agent.user_id,
+                    "Items Copied",
+                    f"{assigned_count} item{'s' if assigned_count > 1 else ''} have been copied to you",
+                )
+            except Exception as e:
+                print("Failed to queue notification:", str(e))
+                
+        return Response(
+            {"message": "Items successfully copied."},
+            status=status.HTTP_200_OK
+        )
