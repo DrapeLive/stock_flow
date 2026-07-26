@@ -53,7 +53,7 @@ function DialogContent({
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
     showCloseButton?: boolean;
-    src: string;
+    src?: string;
 }) {
   return (
     <DialogPortal data-slot="dialog-portal">
@@ -67,7 +67,7 @@ function DialogContent({
         {...props}
       >
         {children}
-        <ShareImageButton imageUrl={src} />
+        <ShareImageButton imageUrl={src!} />
         {showCloseButton && (
           <DialogPrimitive.Close
             data-slot="dialog-close"
