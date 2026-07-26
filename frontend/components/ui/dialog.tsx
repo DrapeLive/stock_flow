@@ -6,6 +6,7 @@ import { Dialog as DialogPrimitive } from "radix-ui";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import ShareImageButton from "./custom/ShareImageButton";
 
 function Dialog({
   ...props
@@ -45,12 +46,14 @@ function DialogOverlay({
 }
 
 function DialogContent({
+  src,
   className,
   children,
   showCloseButton = true,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
-  showCloseButton?: boolean;
+    showCloseButton?: boolean;
+    src?: string;
 }) {
   return (
     <DialogPortal data-slot="dialog-portal">
@@ -64,6 +67,7 @@ function DialogContent({
         {...props}
       >
         {children}
+        <ShareImageButton imageUrl={src!} />
         {showCloseButton && (
           <DialogPrimitive.Close
             data-slot="dialog-close"

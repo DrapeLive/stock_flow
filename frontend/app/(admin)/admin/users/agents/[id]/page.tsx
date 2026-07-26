@@ -11,9 +11,11 @@ import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 import { deriveUsername } from "@/lib/utils/deriveUsername";
-import { Trash2, ArrowLeft, ShieldCheck, Pencil, Eye } from "lucide-react";
+import { Trash2, ArrowLeft, ShieldCheck, Pencil, Eye, ArrowRightLeft, Copy, MoreVertical } from "lucide-react";
 import ItemAssignment from "@/components/pages/agent/ItemAssignment";
 import DeleteWithTransferDialog from "@/components/ui/deleteWithTransferDialog";
+import TransferCopyItemsDialog from "@/components/ui/transferItemsDialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useAuth } from "@/context/AuthContext";
 import { PageLoading } from "@/components/ui/Loading";
 
@@ -39,6 +41,8 @@ export default function AgentDetailPage() {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [actionDialogOpen, setActionDialogOpen] = useState(false);
+  const [actionDialogMode, setActionDialogMode] = useState<"transfer" | "copy">("transfer");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isEditing, setIsEditing] = useState(false);
 
@@ -207,6 +211,42 @@ export default function AgentDetailPage() {
     }
   };
 
+  const handleItemAction = async (targetAgentId: number) => {
+    try {
+      const numericId = parseInt(id as string, 10);
+      if (actionDialogMode === "transfer") {
+        await agentApi.transferItems(numericId, targetAgentId);
+        toastSuccess("Items transferred successfully");
+      } else {
+        await agentApi.copyItems(numericId, targetAgentId);
+        toastSuccess("Items copied successfully");
+      }
+
+      const updatedAgent = await agentApi.getOne(numericId);
+      setAgent(updatedAgent);
+
+      const confirmedIds = (updatedAgent.assigned_items || []).flatMap(
+        (item: AssignedItem) => item.variants.map((v) => v.id),
+      );
+
+      const createdAtMap = new Map<number, string>();
+      for (const item of updatedAgent.assigned_items || []) {
+        for (const v of item.variants) {
+          if (v.created_at) {
+            createdAtMap.set(v.id, v.created_at);
+          }
+        }
+      }
+      setVariantCreatedAt(createdAtMap);
+
+      setSelectedVariantIds(confirmedIds);
+      setSavedVariantIds(confirmedIds);
+    } catch (error) {
+      console.error(`Error ${actionDialogMode}ing items:`, error);
+      throw error;
+    }
+  };
+
   // ── Render ────────────────────────────────────────────────────────────────
 
   if (loading) return <PageLoading />;
@@ -224,6 +264,15 @@ export default function AgentDetailPage() {
         onFetchDeleteInfo={agentApi.getDeleteInfo}
         onDelete={handleDeleteConfirm}
         isSuperuser={isSuperuser}
+      />
+
+      <TransferCopyItemsDialog
+        open={actionDialogOpen}
+        onClose={() => setActionDialogOpen(false)}
+        mode={actionDialogMode}
+        sourceAgentId={parseInt(id as string, 10)}
+        sourceAgentName={agent?.user.display_name || agent?.user.username || ""}
+        onAction={handleItemAction}
       />
 
       {/* Header */}
@@ -254,17 +303,50 @@ export default function AgentDetailPage() {
               <Pencil size={20} className="text-gray-700" />
             )}
           </button>
-          <button
-            onClick={handleDeleteClick}
-            disabled={deleting}
-            className="p-2 rounded-xl text-red-500 hover:bg-red-50 transition-colors disabled:opacity-40"
-          >
-            {deleting ? (
-              <span className="w-5 h-5 border-2 border-red-300 border-t-red-500 rounded-full animate-spin block" />
-            ) : (
-              <Trash2 size={20} />
-            )}
-          </button>
+          <Popover>
+            <PopoverTrigger asChild>
+              <button className="p-2 rounded-xl hover:bg-gray-50 transition-colors data-[state=open]:bg-gray-50">
+                <MoreVertical size={20} className="text-gray-700" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-48 p-1.5 rounded-2xl shadow-xl border border-gray-100 bg-white">
+              <div className="flex flex-col gap-0.5">
+                <button
+                  onClick={() => {
+                    setActionDialogMode("copy");
+                    setActionDialogOpen(true);
+                  }}
+                  className="flex items-center gap-2.5 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 rounded-xl transition-colors w-full text-left"
+                >
+                  <Copy size={16} className="text-gray-400" />
+                  Copy Items
+                </button>
+                <button
+                  onClick={() => {
+                    setActionDialogMode("transfer");
+                    setActionDialogOpen(true);
+                  }}
+                  className="flex items-center gap-2.5 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 rounded-xl transition-colors w-full text-left"
+                >
+                  <ArrowRightLeft size={16} className="text-gray-400" />
+                  Transfer Items
+                </button>
+                <div className="h-px bg-gray-100 my-1 mx-2" />
+                <button
+                  onClick={handleDeleteClick}
+                  disabled={deleting}
+                  className="flex items-center gap-2.5 px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 rounded-xl transition-colors w-full text-left disabled:opacity-50"
+                >
+                  {deleting ? (
+                    <span className="w-4 h-4 border-2 border-red-300 border-t-red-500 rounded-full animate-spin block" />
+                  ) : (
+                    <Trash2 size={16} />
+                  )}
+                  Delete Agent
+                </button>
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
       </div>
 

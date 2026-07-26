@@ -10,6 +10,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Search } from "lucide-react";
+import ShareImageButton from "../ui/custom/ShareImageButton";
 
 interface ImagePreviewProps {
   src: string;
@@ -77,9 +78,9 @@ export function ImagePreview({
       )}
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogPortal>
+        <DialogPortal >
           <DialogOverlay className="bg-white" />
-          <DialogContent className="bg-transparent border-none shadow-none p-0 w-screen h-screen max-w-none flex items-center justify-center">
+          <DialogContent src={src} className="bg-transparent border-none shadow-none p-0 w-screen h-screen max-w-none flex items-center justify-center">
             <DialogTitle className="sr-only">{alt}</DialogTitle>
             <div className="relative w-full h-full">
               <Image
