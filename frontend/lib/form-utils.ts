@@ -58,11 +58,13 @@ export function itemToFormData(data: Record<string, any>): FormData {
     data.variants as Array<{
       image?: File;
       sizes: Array<{ size: string; stock: number }>;
+      display_order: string;
     }>
   ).forEach((variant, index: number) => {
     if (variant.image) {
       formData.append(`variants[${index}]image`, variant.image);
     }
+    formData.append(`variants[${index}]display_order`, variant.display_order);
     variant.sizes.forEach((size, sizeIndex: number) => {
       formData.append(`variants[${index}]sizes[${sizeIndex}]size`, size.size);
       formData.append(

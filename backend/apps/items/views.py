@@ -11,8 +11,8 @@ from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 
 from apps.accounts.permissions import IsAdmin, admin_business, check_admin_pin
-from apps.orders.models import OrderItem
 from apps.agents.models import Agent, AgentItem
+from apps.orders.models import OrderItem
 from apps.orders.utils import SIZE_MAPPING
 
 from .models import Item, ItemVariant, ItemVariantSize
@@ -166,6 +166,7 @@ class ItemViewSet(ModelViewSet):
                         else None,
                         "sizes": sizes,
                         "total_stock": sum(s["stock"] for s in sizes),
+                        "display_order": variant.display_order,
                     }
                 )
 
@@ -226,11 +227,15 @@ class ItemViewSet(ModelViewSet):
                 return Response({"error": "Agent not found"}, status=404)
 
             assigned_variant_ids = list(
-                AgentItem.objects.filter(agent=agent).values_list("variant_id", flat=True)
+                AgentItem.objects.filter(agent=agent).values_list(
+                    "variant_id", flat=True
+                )
             )
             if variant.id not in assigned_variant_ids:
                 return Response(
-                    {"error": "This item is not assigned to you. Please contact admin for assignment."},
+                    {
+                        "error": "This item is not assigned to you. Please contact admin for assignment."
+                    },
                     status=status.HTTP_400_BAD_REQUEST,
                 )
             variants = variants.filter(id__in=assigned_variant_ids)

@@ -49,7 +49,7 @@ export default function Step2AddColor({
       );
       return { ...initial, perSizeStock: fullyInitialized };
     }
-    return initial;
+    return { ...initial};
   });
   const [cropSrc, setCropSrc] = useState<string | null>(null);
   const [stockInput, setStockInput] = useState(String(initial.stock));
@@ -81,6 +81,7 @@ export default function Step2AddColor({
       ...v,
       image: file,
       imagePreview: URL.createObjectURL(file),
+      display_order: String(variantIndex)
     }));
     setCropSrc(null);
   };

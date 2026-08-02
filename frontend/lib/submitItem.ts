@@ -36,6 +36,7 @@ export async function submitItem(
     variantPayload.push({
       image: variant.image,
       sizes: sizesData,
+      display_order: variant.display_order
     });
   }
 

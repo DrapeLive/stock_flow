@@ -79,6 +79,7 @@ class ItemVariantRequestSerializer(serializers.Serializer):
     image = serializers.FileField(required=False)
     remove_image = serializers.BooleanField(required=False, default=False)  # ← new
     sizes = ItemVariantSizeRequestSerializer(many=True)
+    display_order = serializers.CharField(max_length=100, required=False)
 
 
 class CreateItemSerializer(serializers.Serializer):
@@ -149,8 +150,10 @@ class CreateItemSerializer(serializers.Serializer):
     def _create_variant(self, item, variant_data):
         image_file = variant_data.pop("image", None)
         variant_data.pop("remove_image", None)  # ← ignore on create
-
-        variant = ItemVariant.objects.create(item=item, qr_code=uuid.uuid4())
+        display_order = variant_data.pop("display_order", None)
+        variant = ItemVariant.objects.create(
+            item=item, qr_code=uuid.uuid4(), display_order=display_order
+        )
 
         if image_file:
             self._save_variant_image(variant, image_file)
