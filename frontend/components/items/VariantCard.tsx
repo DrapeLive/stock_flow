@@ -53,7 +53,7 @@ export default function VariantCard({
                 </div>
                 <div className="flex-1 min-w-0">
                     <p className="text-xs font-semibold text-gray-700 truncate">
-                        Variant #{index + 1}
+                        Variant #{variant.display_order != null ? variant.display_order : (index + 1)}
                     </p>
                     {qrCode && (
                         <p className="text-[10px] text-gray-400 truncate">

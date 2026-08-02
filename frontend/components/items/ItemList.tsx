@@ -164,6 +164,8 @@ export default function ItemList({
         return <PageLoading />;
     }
 
+    console.log("Item :", items);
+
     return (
         <div>
             <QRScanModal

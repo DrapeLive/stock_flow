@@ -18,6 +18,7 @@ function normalizeAdminItem(item: ItemStockEntry): UIItem {
       image: v.image,
       qr_code: v.qr_code,
       sizes: v.sizes,
+      display_order: v.display_order
     })),
   };
 }

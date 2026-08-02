@@ -20,11 +20,46 @@ export default function QRScanModal({
 
   if (!isOpen) return null;
 
+  const playBeep = () => {
+    try {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+
+      // Low, punchy fundamental tone
+      const osc1 = ctx.createOscillator();
+      const gain1 = ctx.createGain();
+      osc1.type = "square"; // fuller/heavier than sine
+      osc1.frequency.value = 440; // lower pitch = heavier feel
+      gain1.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain1.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
+      osc1.connect(gain1);
+      gain1.connect(ctx.destination);
+
+      // Slight higher layer for "click" presence
+      const osc2 = ctx.createOscillator();
+      const gain2 = ctx.createGain();
+      osc2.type = "square";
+      osc2.frequency.value = 660;
+      gain2.gain.setValueAtTime(0.15, ctx.currentTime);
+      gain2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+      osc2.connect(gain2);
+      gain2.connect(ctx.destination);
+
+      osc1.start();
+      osc2.start();
+      osc1.stop(ctx.currentTime + 0.2);
+      osc2.stop(ctx.currentTime + 0.15);
+    } catch (e) {
+      console.error("Beep failed:", e);
+    }
+  };
+
   const handleScan = (data: { rawValue: string }[]) => {
     if (data[0]?.rawValue) {
+      playBeep();
       onScan(data[0].rawValue);
     }
   };
+
 
   const handleManualSubmit = () => {
     if (manualInput.trim()) {
@@ -58,13 +93,12 @@ export default function QRScanModal({
               onScan={handleScan}
               constraints={{
                 facingMode: "environment",
+                width: { ideal: 1280 },
+                height: { ideal: 720 },
               }}
-              styles={{
-                container: { width: "100%", height: "100%" },
-                video: { width: "100%", height: "100%", objectFit: "cover" },
-              }}
-              components={{
-                torch: false,
+              classNames={{
+                container: "w-full h-full",
+                video: "w-full h-full object-cover",
               }}
             />
           </div>

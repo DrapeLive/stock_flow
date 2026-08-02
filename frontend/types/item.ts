@@ -14,6 +14,7 @@ export interface ItemVariant {
   qr_code: string;
   image: string | null;
   sizes: ItemVariantSize[];
+  display_order: string;
 }
 
 export interface Item {
@@ -78,6 +79,7 @@ export interface ItemVariantQR {
   image: string | null;
   sizes: VariantSize[];
   total_stock: number;
+  display_order?: string;
 }
 
 export interface ItemStockEntry {
@@ -123,6 +125,7 @@ export interface ColorVariant {
   id: string;
   sizeRange: FrontendSizeRange;
   stock: number;
+  display_order?: string;
 
   perSizeStock: Partial<Record<FrontendSizeRange, number>>;
 
@@ -231,6 +234,7 @@ export interface UIVariant {
   id: number;
   image: string | null;
   qr_code: string | null;
+  display_order?: string;
 
   sizes: {
     size_range: string;

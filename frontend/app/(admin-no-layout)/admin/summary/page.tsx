@@ -220,7 +220,7 @@ function StatCard({
   );
 }
 
-type SortKey = "name" | "type" | "totalStock" | "totalUnits" | "totalPrice";
+type SortKey = "name" | "type" | "totalUnits" | "totalPrice";
 type TypeFilter = "all" | "gents" | "kids";
 
 function SortIcon({ active, asc }: { active: boolean; asc: boolean }) {
@@ -264,10 +264,11 @@ const Summary: React.FC = () => {
   const summary = useMemo(() => computeSummary(data), [data]);
 
   const sortedItems = useMemo(() => {
-    const filtered =
+    const filtered = (
       typeFilter === "all"
         ? summary.itemSummaries
-        : summary.itemSummaries.filter((i) => i.type === typeFilter);
+        : summary.itemSummaries.filter((i) => i.type === typeFilter)
+    ).filter((i) => i.totalStock !== 0); // hide items with zero stock sets
 
     return [...filtered].sort((a, b) => {
       if (sortKey === "name") {
@@ -302,6 +303,19 @@ const Summary: React.FC = () => {
     else {
       setSortKey(key);
       setSortAsc(false);
+    }
+  };
+
+  // Dedicated toggle for the "Total Pieces: Low → High" filter button
+  const isUnitsAscActive = sortKey === "totalUnits" && sortAsc;
+  const toggleUnitsAscFilter = () => {
+    if (isUnitsAscActive) {
+      // turn it off, go back to default name sort
+      setSortKey("name");
+      setSortAsc(false);
+    } else {
+      setSortKey("totalUnits");
+      setSortAsc(true);
     }
   };
 
@@ -363,7 +377,19 @@ const Summary: React.FC = () => {
           <h2 className="text-sm font-semibold uppercase tracking-widest text-gray-500">
             Per-Item Breakdown
           </h2>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            {/* Total pieces ascending filter button */}
+            <button
+              onClick={toggleUnitsAscFilter}
+              className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
+                isUnitsAscActive
+                  ? "bg-black text-white"
+                  : "border border-gray-200 bg-white text-gray-500 hover:bg-gray-100"
+              }`}
+            >
+              Total Pieces: Low → High
+            </button>
+
             {business != "kids" &&
               business != "gents" &&
               (["all", "gents", "kids"] as const).map((t) => (
@@ -400,21 +426,14 @@ const Summary: React.FC = () => {
                   >
                     Type <SortIcon active={sortKey === "type"} asc={sortAsc} />
                   </th>
-                  <th className="px-5 py-3 text-center">Variants</th>
-                  <th
-                    className="cursor-pointer px-5 py-3 text-right hover:text-gray-700"
-                    onClick={() => handleSort("totalStock")}
-                  >
-                    Stock Sets{" "}
-                    <SortIcon active={sortKey === "totalStock"} asc={sortAsc} />
-                  </th>
                   <th
                     className="cursor-pointer px-5 py-3 text-right hover:text-gray-700"
                     onClick={() => handleSort("totalUnits")}
                   >
-                    Total Units{" "}
+                    Total Pieces{" "}
                     <SortIcon active={sortKey === "totalUnits"} asc={sortAsc} />
                   </th>
+                  <th className="px-5 py-3 text-center">Variants</th>
                   <th
                     className="cursor-pointer px-5 py-3 text-right hover:text-gray-700"
                     onClick={() => handleSort("totalPrice")}
@@ -449,14 +468,11 @@ const Summary: React.FC = () => {
                           {item.type}
                         </span>
                       </td>
-                      <td className="px-5 py-3.5 text-center text-gray-500">
-                        {item.variantCount}
-                      </td>
-                      <td className="px-5 py-3.5 text-right tabular-nums text-gray-700">
-                        {item.totalStock.toLocaleString()}
-                      </td>
                       <td className="px-5 py-3.5 text-right tabular-nums text-gray-700">
                         {item.totalUnits.toLocaleString()}
+                      </td>
+                      <td className="px-5 py-3.5 text-center text-gray-500">
+                        {item.variantCount}
                       </td>
                       <td className="px-5 py-3.5 text-right font-bold tabular-nums text-gray-900">
                         {formatCurrency(item.totalPrice)}
@@ -468,15 +484,13 @@ const Summary: React.FC = () => {
 
               <tfoot>
                 <tr className="border-t-2 border-gray-200 bg-gray-50 font-semibold">
-                  <td className="px-5 py-3.5 text-gray-700" colSpan={3}>
+                  <td className="px-5 py-3.5 text-gray-700" colSpan={2}>
                     Total ({sortedItems.length} items)
-                  </td>
-                  <td className="px-5 py-3.5 text-right tabular-nums text-gray-800">
-                    {filteredTotals.stock.toLocaleString()}
                   </td>
                   <td className="px-5 py-3.5 text-right tabular-nums text-gray-800">
                     {filteredTotals.units.toLocaleString()}
                   </td>
+                  <td className="px-5 py-3.5 text-center tabular-nums text-gray-800" />
                   <td className="px-5 py-3.5 text-right tabular-nums text-gray-900">
                     {formatCurrency(filteredTotals.price)}
                   </td>

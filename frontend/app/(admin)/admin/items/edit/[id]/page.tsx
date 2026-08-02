@@ -511,7 +511,7 @@ export default function ItemEditPage() {
           >
             {variantGroups.map((group, index) => {
               const currentImage = group.imagePreview ?? group.imageUrl;
-              const variantLabel = `Variant #${index + 1}`;
+              const variantLabel = `Variant #${ index + 1}`;
               return (
                 <AccordionItem
                   key={group.backendId}

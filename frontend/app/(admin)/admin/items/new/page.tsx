@@ -93,6 +93,7 @@ export default function NewItemPage() {
   const handleSubmit = async () => {
     setLoading(true);
     try {
+      console.log("Variants :", variants);
       await submitItem(common, variants);
       router.push("/admin/items");
     } catch (err) {

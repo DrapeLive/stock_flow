@@ -35,6 +35,7 @@ def item_variant_image_path(instance, filename):
 
 class ItemVariant(models.Model):
     item = models.ForeignKey(Item, related_name="variants", on_delete=models.CASCADE)
+    display_order = models.CharField(max_length=100, blank=True, null=True)
 
     qr_code = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
 
