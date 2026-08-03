@@ -32,7 +32,7 @@ class ItemVariantSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ItemVariant
-        fields = ["id", "qr_code", "image", "sizes"]
+        fields = ["id", "qr_code", "image", "sizes", "display_order"]
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -220,10 +220,14 @@ class CreateItemSerializer(serializers.Serializer):
 
         for variant_data in variants_data:
             variant_id = variant_data.get("id")
-            remove_image = variant_data.get("remove_image", False)  # ← new
+            remove_image = variant_data.get("remove_image", False)
 
             if variant_id and variant_id in existing_variants:
                 variant = existing_variants.pop(variant_id)  # ← pop so it's not deleted
+
+                display_order = variant_data.get("display_order")
+                if display_order is not None:
+                    variant.display_order = display_order
 
                 # Handle image removal
                 if remove_image and variant.image:
@@ -235,7 +239,7 @@ class CreateItemSerializer(serializers.Serializer):
                 image_file = variant_data.get("image")
                 if image_file:
                     self._save_variant_image(variant, image_file)
-
+                variant.save()
                 self._update_sizes(variant, variant_data.get("sizes", []))
 
             else:

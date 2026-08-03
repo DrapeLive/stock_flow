@@ -138,6 +138,7 @@ export default function ItemEditPage() {
         imageUrl: null,
         newImage: saved.image,
         imagePreview: saved.imagePreview,
+        display_order: saved.display_order ?? "",
       }),
     );
 
@@ -156,6 +157,7 @@ export default function ItemEditPage() {
         imageUrl: string | null;
         newImage: File | null;
         imagePreview: string | null;
+        display_order: string | undefined;
         sizes: EditableVariant[];
       }
     > = {};
@@ -167,6 +169,7 @@ export default function ItemEditPage() {
           imageUrl: v.imageUrl,
           newImage: v.newImage,
           imagePreview: v.imagePreview,
+          display_order: v.display_order,
           sizes: [],
         };
       }
@@ -178,7 +181,7 @@ export default function ItemEditPage() {
 
   // ── Variant group helpers ─────────────────────────────────────────────────
 
-  const updateVariantGroupImage = (
+  const updateVariantGroup = (
     backendId: number,
     updates: Partial<EditableVariant>,
   ) => {
@@ -228,7 +231,7 @@ export default function ItemEditPage() {
   };
 
   const handleVariantCropConfirm = async (backendId: number, file: File) => {
-    updateVariantGroupImage(backendId, {
+    updateVariantGroup(backendId, {
       newImage: file,
       imagePreview: URL.createObjectURL(file),
     });
@@ -260,6 +263,7 @@ export default function ItemEditPage() {
               imageUrl: v.image ?? null,
               newImage: null,
               imagePreview: null,
+              display_order: v.display_order !== null && v.display_order !== undefined ? String(v.display_order) : "",
             })),
           ),
         );
@@ -294,7 +298,6 @@ export default function ItemEditPage() {
   };
 
   // ── Delete ────────────────────────────────────────────────────────────────
-
   const handleDelete = () => {
     if (isSuperuser) {
       if (!confirm("Delete this item? This cannot be undone.")) return;
@@ -431,7 +434,7 @@ export default function ItemEditPage() {
         {/* ── Common Details ── */}
         <div className="bg-gray-50 border border-gray-100 rounded-2xl px-5 py-5 space-y-4">
           <p className="text-[10px] text-gray-400 uppercase tracking-widest">
-            Common Details
+            Item Details
           </p>
 
           <Field>
@@ -511,7 +514,7 @@ export default function ItemEditPage() {
           >
             {variantGroups.map((group, index) => {
               const currentImage = group.imagePreview ?? group.imageUrl;
-              const variantLabel = `Variant #${ index + 1}`;
+              const variantLabel = `Variant #${group.display_order != "" ? group.display_order : index + 1}`;
               return (
                 <AccordionItem
                   key={group.backendId}
@@ -634,6 +637,17 @@ export default function ItemEditPage() {
                   </div>
 
                   <AccordionContent className="px-4 pb-3 space-y-2">
+                    <div className="flex items-center gap-2 bg-gray-50 border border-gray-100 rounded-xl px-3 py-2 mb-2">
+                      <span className="text-xs text-gray-400 flex-shrink-0">Display Order</span>
+                      <Input
+                        type="number"
+                        min={0}
+                        value={group.display_order ?? ""}
+                        placeholder="0"
+                        onChange={(e) => updateVariantGroup(group.backendId, { display_order: e.target.value })}
+                        className="h-8 text-sm"
+                      />
+                    </div>
                     {group.sizes.map((v) => (
                       <EditVariantRow
                         key={v.localId}

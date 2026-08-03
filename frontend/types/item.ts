@@ -14,7 +14,7 @@ export interface ItemVariant {
   qr_code: string;
   image: string | null;
   sizes: ItemVariantSize[];
-  display_order: string;
+  display_order?: string;
 }
 
 export interface Item {
@@ -141,6 +141,7 @@ export interface EditableVariant {
   imageUrl: string | null;
   newImage: File | null;
   imagePreview: string | null;
+  display_order?: string;
 }
 
 export type SizeContext = "item_creation" | "order_creation";
