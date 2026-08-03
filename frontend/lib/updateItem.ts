@@ -17,6 +17,7 @@ export async function updateItem(
     sizes: { size: string; stock: number }[];
     newImage: File | null;
     imageRemoved: boolean;
+    display_order?: string;
   };
 
   const grouped = variants.reduce<Record<string, GroupEntry>>((acc, v) => {
@@ -29,6 +30,7 @@ export async function updateItem(
         newImage: v.newImage,
         imageRemoved:
           v.imageUrl === null && v.newImage === null && v.backendId > 0,
+        display_order: v.display_order,
       };
     }
     acc[key].sizes.push({ size: v.size, stock: v.stock });
@@ -45,6 +47,7 @@ export async function updateItem(
       ...(g.id ? { id: g.id } : {}), // existing variants carry their id
       sizes: g.sizes,
       ...(g.imageRemoved ? { remove_image: true } : {}),
+      ...(g.display_order !== undefined ? { display_order: g.display_order === "" ? null : g.display_order } : {}),
     })),
   };
 
