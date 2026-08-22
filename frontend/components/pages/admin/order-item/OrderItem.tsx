@@ -139,16 +139,12 @@ const OrderItem: React.FC<Props> = ({
   };
 
   const onDelete = async (itemId: number, orderId?: number) => {
-    if (onDeleteItem) {
-      await orderApi.deleteItem(orderId!, itemId);
-      onDeleteItem(itemId);
-      return;
-    }
     if (!orderId) return;
     try {
       setLoading(true);
       await orderApi.deleteItem(orderId, itemId);
       setOrderItems((prev) => prev?.filter((item) => item.id !== itemId));
+      if (onDeleteItem) onDeleteItem(itemId);
     } catch (err) {
       toastError("Failed to delete item", err);
     } finally {

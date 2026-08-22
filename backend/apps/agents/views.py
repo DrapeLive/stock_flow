@@ -181,6 +181,16 @@ class AgentItemsView(APIView):
 
         return Response(result)
 
+    def delete(self, request, agent_id):
+        agent = get_object_or_404(Agent, id=agent_id)
+        biz = admin_business(request.user)
+        
+        qs = agent.assigned_items.all()
+        if biz:
+            qs = qs.filter(variant__item__type=biz)
+            
+        qs.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 class AgentItemDetailView(APIView):
     permission_classes = [IsAdminOrSelfAgent]

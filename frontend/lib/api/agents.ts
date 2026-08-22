@@ -57,6 +57,10 @@ export const agentApi = {
       .then((r) => r.data);
   },
 
+  deleteAllItems(agentId: number): Promise<void> {
+    return api.delete(`/api/agents/${agentId}/items/`).then((r) => r.data);
+  },
+
   removeItem(agentId: number, variantId: number): Promise<void> {
     return api
       .delete(`/api/agents/${agentId}/items/variants/${variantId}/`)

@@ -45,6 +45,8 @@ export default function AgentDetailPage() {
   const [actionDialogMode, setActionDialogMode] = useState<"transfer" | "copy">("transfer");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isEditing, setIsEditing] = useState(false);
+  const [deletingAllItems, setDeletingAllItems] = useState(false);
+  const [deleteAllDialogOpen, setDeleteAllDialogOpen] = useState(false);
 
   const [items, setItems] = useState<Item[]>([]);
 
@@ -247,6 +249,29 @@ export default function AgentDetailPage() {
     }
   };
 
+  const handleDeleteAllItems = async () => {
+    setDeletingAllItems(true);
+    try {
+      const numericId = parseInt(id as string, 10);
+      await agentApi.deleteAllItems(numericId);
+      
+      const updatedAgent = await agentApi.getOne(numericId);
+      setAgent(updatedAgent);
+      
+      setSelectedVariantIds([]);
+      setSavedVariantIds([]);
+      setVariantCreatedAt(new Map());
+      
+      toastSuccess("All assigned items deleted successfully");
+      setDeleteAllDialogOpen(false);
+    } catch (error) {
+      console.error("Error deleting all items:", error);
+      toastError("Failed to delete all items", error);
+    } finally {
+      setDeletingAllItems(false);
+    }
+  };
+
   // ── Render ────────────────────────────────────────────────────────────────
 
   if (loading) return <PageLoading />;
@@ -274,6 +299,45 @@ export default function AgentDetailPage() {
         sourceAgentName={agent?.user.display_name || agent?.user.username || ""}
         onAction={handleItemAction}
       />
+
+      {deleteAllDialogOpen && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm px-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !deletingAllItems) setDeleteAllDialogOpen(false);
+          }}
+        >
+          <div className="w-full sm:max-w-sm bg-white rounded-3xl shadow-2xl p-6 overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col items-center text-center">
+            <div className="w-12 h-12 rounded-2xl bg-red-50 flex items-center justify-center mb-4">
+              <Trash2 className="w-6 h-6 text-red-500" />
+            </div>
+            <h2 className="text-lg font-black text-gray-900 mb-2">Delete All Items?</h2>
+            <p className="text-sm text-gray-500 mb-6">
+              This will unassign all items currently assigned to this agent. This action cannot be undone.
+            </p>
+            <div className="flex gap-3 w-full">
+              <button
+                onClick={() => setDeleteAllDialogOpen(false)}
+                disabled={deletingAllItems}
+                className="flex-1 h-12 rounded-2xl border-2 border-gray-200 text-sm font-bold text-gray-500 hover:bg-gray-50 transition-all active:scale-95 disabled:opacity-40"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteAllItems}
+                disabled={deletingAllItems}
+                className="flex-1 h-12 rounded-2xl bg-red-500 text-sm font-bold text-white flex items-center justify-center gap-2 hover:bg-red-600 transition-all active:scale-95 disabled:opacity-40 shadow-lg shadow-red-500/20"
+              >
+                {deletingAllItems ? (
+                  <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                ) : (
+                  "Delete All"
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
@@ -332,6 +396,18 @@ export default function AgentDetailPage() {
                   Transfer Items
                 </button>
                 <div className="h-px bg-gray-100 my-1 mx-2" />
+                <button
+                  onClick={() => setDeleteAllDialogOpen(true)}
+                  disabled={deletingAllItems}
+                  className="flex items-center gap-2.5 px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 rounded-xl transition-colors w-full text-left disabled:opacity-50"
+                >
+                  {deletingAllItems ? (
+                    <span className="w-4 h-4 border-2 border-red-300 border-t-red-500 rounded-full animate-spin block" />
+                  ) : (
+                    <Trash2 size={16} />
+                  )}
+                  Delete All Items
+                </button>
                 <button
                   onClick={handleDeleteClick}
                   disabled={deleting}
