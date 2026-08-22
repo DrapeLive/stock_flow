@@ -29,15 +29,22 @@ export default function TransferCopyItemsDialog({
   >([]);
   const [targetAgentId, setTargetAgentId] = useState("");
   const [error, setError] = useState("");
+  const [showAll, setShowAll] = useState(false);
+
+  const VISIBLE_LIMIT = 5;
+  const visibleOptions = showAll
+    ? transferOptions
+    : transferOptions.slice(0, VISIBLE_LIMIT);
+  const hiddenCount = transferOptions.length - VISIBLE_LIMIT;
 
   const isTransfer = mode === "transfer";
   const title = isTransfer ? "Transfer Items" : "Copy Items";
   const actionText = isTransfer ? "Transfer All" : "Copy All";
   const Icon = isTransfer ? ArrowRightLeft : Copy;
-  const description = isTransfer 
-    ? `Move all items from ${sourceAgentName}.` 
+  const description = isTransfer
+    ? `Move all items from ${sourceAgentName}.`
     : `Copy all items from ${sourceAgentName} to another agent.`;
-  const instruction = isTransfer 
+  const instruction = isTransfer
     ? `Select the destination agent to transfer all items currently assigned to `
     : `Select the destination agent to copy all items currently assigned to `;
 
@@ -46,7 +53,8 @@ export default function TransferCopyItemsDialog({
     setFetching(true);
     setError("");
     setTargetAgentId("");
-    
+    setShowAll(false);
+
     agentApi.getAll()
       .then((agents) => {
         const opts = agents
@@ -91,7 +99,7 @@ export default function TransferCopyItemsDialog({
         if (e.target === e.currentTarget && !loading) onClose();
       }}
     >
-      <div className="w-full sm:max-w-md bg-white rounded-3xl shadow-2xl pb-safe overflow-hidden animate-in slide-in-from-bottom-4 sm:slide-in-from-bottom-0 duration-200">
+      <div className="w-full sm:max-w-md bg-white rounded-3xl shadow-2xl pb-safe animate-in slide-in-from-bottom-4 sm:slide-in-from-bottom-0 duration-200">
         <div className="flex items-start justify-between px-6 pt-6 pb-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-blue-50 flex items-center justify-center flex-shrink-0">
@@ -133,11 +141,21 @@ export default function TransferCopyItemsDialog({
                   setTargetAgentId(val);
                   setError("");
                 }}
-                options={transferOptions}
+                options={visibleOptions}
                 placeholder="Select Target Agent..."
                 className="bg-white"
               />
-              
+
+              {!showAll && hiddenCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setShowAll(true)}
+                  className="text-xs font-bold text-blue-500 hover:text-blue-600 transition-colors"
+                >
+                  Show {hiddenCount} more agent{hiddenCount > 1 ? "s" : ""}
+                </button>
+              )}
+
               {error && (
                 <p className="text-center text-xs font-semibold text-red-500 bg-red-50 py-2 px-3 rounded-xl">
                   {error}

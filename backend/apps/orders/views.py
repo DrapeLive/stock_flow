@@ -13,7 +13,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 
-from apps.accounts.permissions import IsAgent, admin_business, check_admin_pin
+from apps.accounts.permissions import IsAdmin, IsAgent, admin_business, check_admin_pin
 from apps.agents.models import AgentItem
 from apps.items.models import ItemVariantSize
 from apps.notification.tasks import send_push_to_user
@@ -806,7 +806,7 @@ class AddOrderItemView(APIView):
 
 
 class DeleteOrderItemView(APIView):
-    permission_classes = [IsAgent]
+    permission_classes = [IsAuthenticated]
 
     def delete(self, request, order_id, item_id):
 

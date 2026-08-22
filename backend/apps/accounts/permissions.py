@@ -9,6 +9,8 @@ class IsAgent(BasePermission):
 
 class IsAdmin(BasePermission):
     def has_permission(self, request, view):
+
+        print(f"Role {request.user.role}")
         return request.user.is_authenticated and request.user.role == "ADMIN"
 
 

@@ -61,7 +61,7 @@ export const normalizeImageFile = async (file: File): Promise<File> => {
     const converted = await heic2any({
       blob: file,
       toType: "image/jpeg",
-      quality: 0.92,
+      quality: 1,
     });
     const blob = Array.isArray(converted) ? converted[0] : converted;
     return new File([blob], file.name.replace(/\.(heic|heif)$/i, ".jpg"), {
