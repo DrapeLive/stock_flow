@@ -78,7 +78,7 @@ export default function VariantCard({
             <div className="flex items-center justify-end gap-2 mt-2">
                 {context === "admin" && qrCode && !isReadonly && (
                     <button
-                        onClick={() => onPrintQR?.(qrCode, index + 1)}
+                        onClick={() => onPrintQR?.(qrCode, variant.display_order)}
                         className="p-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg transition-colors"
                     >
                         <QrCode size={12} />
