@@ -76,6 +76,9 @@ class OrderItemSerializer(serializers.ModelSerializer):
         source="item_price", max_digits=10, decimal_places=2, read_only=True
     )
     variant_image_display = serializers.URLField(source="variant_image", read_only=True)
+    variant_display_order = serializers.CharField(
+        source="variant.display_order", read_only=True
+    )
     size_display = serializers.CharField(source="size", read_only=True)
     piece_count = serializers.SerializerMethodField()
 
@@ -93,6 +96,7 @@ class OrderItemSerializer(serializers.ModelSerializer):
             "item_price_display",
             "variant_image",
             "variant_image_display",
+            "variant_display_order",
             "size",
             "size_display",
             "quantity",
