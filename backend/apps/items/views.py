@@ -256,6 +256,7 @@ class ItemViewSet(ModelViewSet):
                     }
                     for s in v.sizes.all()
                 ],
+                "display_order": v.display_order,
             }
             response_variants.append(variant_data)
 
