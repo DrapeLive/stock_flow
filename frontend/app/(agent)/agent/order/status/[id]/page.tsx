@@ -188,14 +188,14 @@ export default function Page() {
               className="border-blue-200 text-blue-500 hover:bg-blue-500 hover:text-white transition duration-300"
               disabled={startingEdit}
             />
-            <StockFlowButton
+            {/*<StockFlowButton
               text="Delete"
               icon={<Trash2 size={16} />}
               onClick={() => setShowDeleteDialog(true)}
               variant="outline"
               fullWidth
               className="border-red-200 text-red-500 hover:bg-red-500 hover:text-white transition duration-300"
-            />
+            />*/}
           </div>
         )}
 

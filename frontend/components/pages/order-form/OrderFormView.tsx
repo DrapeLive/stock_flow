@@ -183,7 +183,7 @@ export default function OrderForm({
                         >
                             <div className="w-[30%] text-center">
                                 <p className="text-[10px] text-gray-800">
-                                    {item.item_name}
+                                    {item.size_group}
                                 </p>
                             </div>
                             <p className="w-[22%] text-center text-[10px] text-gray-800">

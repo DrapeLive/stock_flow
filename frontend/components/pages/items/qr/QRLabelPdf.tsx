@@ -10,6 +10,7 @@ import {
 
 interface Variant {
   id: number;
+  display_order?: string | number;
 }
 interface Item {
   name: string;
@@ -54,16 +55,19 @@ const styles = StyleSheet.create({
 
 export const QRLabelPdf = ({ item, qrImages, id }: QRLabelPdfProps) => (
   <Document>
-    {item.variants.map((variant, index) => (
-      <Page key={variant.id} size={[70.87, 141.73]} style={styles.page}>
-        <Text style={styles.name}>{item.name}</Text>
-        <Text style={styles.variant}>Color #{id ? id : index + 1}</Text>
-        <View>
-          {/* eslint-disable-next-line*/}
-          <Image src={qrImages[variant.id]} style={styles.qr} />
-        </View>
-        <Text style={styles.price}>Rs. {Number(item.price).toFixed(2)}</Text>
-      </Page>
-    ))}
+    {item.variants.map((variant, index) => {
+      // console.log(variant.display_order);
+      return (
+        <Page key={variant.id} size={[70.87, 141.73]} style={styles.page}>
+          <Text style={styles.name}>{item.name}</Text>
+          <Text style={styles.variant}>Color #{variant.display_order}</Text>
+          <View>
+            {/* eslint-disable-next-line*/}
+            <Image src={qrImages[variant.id]} style={styles.qr} />
+          </View>
+          <Text style={styles.price}>Rs. {Number(item.price).toFixed(2)}</Text>
+        </Page>
+      );
+    })}
   </Document>
 );

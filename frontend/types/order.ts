@@ -50,6 +50,7 @@ export interface OrderItem {
   packed_quantity?: number;
   piece_count?: number;
   order: number;
+  variant_display_order: string;
 }
 
 export interface Order {

@@ -475,7 +475,7 @@ export const InvoicePDF = ({ invoice }: { invoice: InvoiceResponse }) => {
                             >
                                 <View style={styles.colItem}>
                                     <Text style={styles.cellText}>
-                                        {item.item_name}
+                                      {item.item_name} ({ item.variant_display_order})
                                     </Text>
                                 </View>
 
