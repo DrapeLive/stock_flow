@@ -34,11 +34,10 @@ export default function VariantCard({
 
     return (
         <div
-            className={`rounded-lg border p-3 ${
-                isOutOfStock && !isReadonly
+            className={`rounded-lg border p-3 ${isOutOfStock && !isReadonly
                     ? "bg-red-100 border border-red-200"
                     : "bg-white border-gray-100"
-            }`}
+                }`}
         >
             <div className="flex items-center gap-2 mb-2">
                 <div className="relative w-8 h-8 rounded bg-gray-200 overflow-hidden flex-shrink-0">
@@ -53,7 +52,7 @@ export default function VariantCard({
                 </div>
                 <div className="flex-1 min-w-0">
                     <p className="text-xs font-semibold text-gray-700 truncate">
-                        Variant #{variant.display_order != null ? variant.display_order : (index + 1)}
+                        Color #{variant.display_order != null ? variant.display_order : (index + 1)}
                     </p>
                     {qrCode && (
                         <p className="text-[10px] text-gray-400 truncate">
@@ -76,9 +75,9 @@ export default function VariantCard({
             </div>
 
             <div className="flex items-center justify-end gap-2 mt-2">
-                {context === "admin" && qrCode && !isReadonly && (
+                {context === "admin" && qrCode && !isReadonly && variant.display_order != null && (
                     <button
-                        onClick={() => onPrintQR?.(qrCode, variant.display_order)}
+                        onClick={() => onPrintQR?.(qrCode, Number(variant.display_order))}
                         className="p-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg transition-colors"
                     >
                         <QrCode size={12} />
@@ -88,11 +87,10 @@ export default function VariantCard({
                     <button
                         onClick={() => onOrder?.(variant.id)}
                         disabled={isOutOfStock}
-                        className={`px-3 py-1 rounded-md text-xs font-bold transition-colors ${
-                            isOutOfStock && !isReadonly
+                        className={`px-3 py-1 rounded-md text-xs font-bold transition-colors ${isOutOfStock && !isReadonly
                                 ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                                 : "bg-primary text-white hover:bg-primary/90"
-                        }`}
+                            }`}
                     >
                         Order
                     </button>

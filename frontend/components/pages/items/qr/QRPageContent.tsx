@@ -55,6 +55,7 @@ export default function QRPrintPageContent() {
                         qr_code: v.qr_code,
                         image: v.image,
                         sizes: v.sizes,
+                        display_order: v.display_order,
                     }));
                     const parsedItem: QRPrintItem = {
                         id: data.id,
@@ -66,11 +67,12 @@ export default function QRPrintPageContent() {
                     };
                     await prepareItem(parsedItem);
                 } else if (qrId) {
-                    const data: ItemQRResponse = await itemApi.byqr(qrId);
+                  const data: ItemQRResponse = await itemApi.byqr(qrId);
+                  console.log(data.variants[0].display_order);
                     const matchedVariant =
                         data.variants.find((v) => v.qr_code === qrId) ||
                         data.variants[0];
-                    const parsedItem: QRPrintItem = {
+                  const parsedItem: QRPrintItem = {
                         id: data.id,
                         name: data.name,
                         type: "gents",
@@ -232,7 +234,7 @@ export default function QRPrintPageContent() {
                                     {item.name}
                                 </p>
                                 <p className="text-[18px] bg-gray-100 px-2 py-1 rounded">
-                                    Variant #{index + 1}
+                                    Variant #{variant.display_order}
                                 </p>
                                 <Image
                                     src={qrImages[variant.id]}

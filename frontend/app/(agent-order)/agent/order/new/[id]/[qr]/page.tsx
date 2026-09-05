@@ -171,26 +171,48 @@ export default function ProductDetailPage() {
 
     useEffect(() => {
         if (sizeGroups.length > 0 && !selectedSizeGroup) {
-            const firstAvailable = sizeGroups.find((group) => {
-                const reservedItems = existingOrderItems
-                    .filter((item) => item.variant_id === selectedVariant?.id)
-                    .map((item) => ({
-                        size_group: item.size_group,
-                        quantity: item.quantity,
-                    }));
-                return (
-                    getAvailableStockForSizeGroup(
-                        selectedVariant,
-                        group,
-                        reservedItems,
-                    ) > 0
+            const reservedItems = existingOrderItems
+                .filter((item) => item.variant_id === selectedVariant?.id)
+                .map((item) => ({
+                    size_group: item.size_group,
+                    quantity: item.quantity,
+                }));
+
+            const stockFor = (group: string) =>
+                getAvailableStockForSizeGroup(
+                    selectedVariant,
+                    group,
+                    reservedItems,
                 );
-            });
-            if (data?.type == "kids")
-                setSelectedSizeGroup(sizeGroups[1] ?? firstAvailable);
-            else setSelectedSizeGroup(firstAvailable ?? sizeGroups[0]);
+            const isAvailable = (group: string) =>
+                sizeGroups.includes(group) && stockFor(group) > 0;
+
+            if (data?.type == "kids") {
+                if (isAvailable("20-36")) {
+                    setSelectedSizeGroup("20-36");
+                } else if (!isAvailable("20-24") && isAvailable("26-36")) {
+                    setSelectedSizeGroup("26-36");
+                } else if (!isAvailable("32-36") && isAvailable("20-30")) {
+                    setSelectedSizeGroup("20-30");
+                } else if (isAvailable("20-24")) {
+                    setSelectedSizeGroup("20-24");
+                } else if (isAvailable("32-36")) {
+                    setSelectedSizeGroup("32-36");
+                }
+            } else {
+                const firstAvailable =
+                    sizeGroups.find((group) => stockFor(group) > 0) ??
+                    sizeGroups[0];
+                setSelectedSizeGroup(firstAvailable);
+            }
         }
-    }, [sizeGroups, selectedSizeGroup]);
+    }, [
+        sizeGroups,
+        selectedSizeGroup,
+        existingOrderItems,
+        selectedVariant,
+        data?.type,
+    ]);
 
     const availableStock = (() => {
         if (!selectedVariant || !selectedSizeGroup) return 0;
