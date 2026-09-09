@@ -1,9 +1,12 @@
-from rest_framework import serializers
-from django.contrib.auth.hashers import make_password
 from collections import defaultdict
-from .models import Agent, AgentItem
+
+from django.contrib.auth.hashers import make_password
+from rest_framework import serializers
+
 from apps.accounts.models import User
 from apps.items.models import Item, ItemVariant
+
+from .models import Agent, AgentItem
 
 
 class VariantSizeRangeSerializer(serializers.Serializer):
@@ -17,6 +20,7 @@ class VariantColorSerializer(serializers.Serializer):
     size_ranges = VariantSizeRangeSerializer(many=True)
     qr_code = serializers.CharField(allow_null=True)
     created_at = serializers.CharField(allow_null=True)
+    display_order = serializers.CharField(allow_null=True)
 
 
 class AgentItemListSerializer(serializers.Serializer):
@@ -39,43 +43,48 @@ class AgentItemListSerializer(serializers.Serializer):
         variants_data = []
         for ai in agent_items:
             variant = ai.variant
-            sizes = variant.sizes.all() if hasattr(variant, 'sizes') else []
-            variants_data.append({
-                "id": variant.id,
-                "image": cls.get_image_url(variant.image, request),
-                "qr_code": str(variant.qr_code),
-                "size_ranges": [
-                    {"size_range": s.size, "stock": s.stock} for s in sizes
-                ],
-                "created_at": ai.created_at.isoformat(),
-            })
+            sizes = variant.sizes.all() if hasattr(variant, "sizes") else []
+            variants_data.append(
+                {
+                    "id": variant.id,
+                    "image": cls.get_image_url(variant.image, request),
+                    "qr_code": str(variant.qr_code),
+                    "size_ranges": [
+                        {"size_range": s.size, "stock": s.stock} for s in sizes
+                    ],
+                    "created_at": ai.created_at.isoformat(),
+                    "display_order": variant.display_order,
+                }
+            )
 
-        return cls({
-            "id": item.id,
-            "name": item.name,
-            "type": item.type,
-            "price": item.price,
-            "variants": variants_data,
-        }).data
+        return cls(
+            {
+                "id": item.id,
+                "name": item.name,
+                "type": item.type,
+                "price": item.price,
+                "variants": variants_data,
+            }
+        ).data
 
 
 class AgentItemSerializer(serializers.ModelSerializer):
     variant = VariantColorSerializer(read_only=True)
     variant_id = serializers.PrimaryKeyRelatedField(
         queryset=ItemVariant.objects.all(),
-        source='variant',
+        source="variant",
         write_only=True,
     )
 
     class Meta:
         model = AgentItem
-        fields = ('id', 'variant', 'variant_id', 'created_at')
+        fields = ("id", "variant", "variant_id", "created_at")
 
 
 class AgentUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ('id', 'username', 'email', 'role', 'display_name')
+        fields = ("id", "username", "email", "role", "display_name")
 
 
 class AgentSerializer(serializers.ModelSerializer):
@@ -83,14 +92,26 @@ class AgentSerializer(serializers.ModelSerializer):
     username = serializers.CharField(write_only=True)
     password = serializers.CharField(write_only=True)
     email = serializers.EmailField(write_only=True)
-    display_name = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    display_name = serializers.CharField(
+        write_only=True, required=False, allow_blank=True
+    )
 
     total_customers = serializers.SerializerMethodField()
     assigned_items = serializers.SerializerMethodField()
 
     class Meta:
         model = Agent
-        fields = ('id', 'username', 'user', 'email', 'password', 'contact', 'total_customers', 'assigned_items', 'display_name')
+        fields = (
+            "id",
+            "username",
+            "user",
+            "email",
+            "password",
+            "contact",
+            "total_customers",
+            "assigned_items",
+            "display_name",
+        )
 
     def validate_username(self, value):
         instance = self.instance
@@ -114,13 +135,12 @@ class AgentSerializer(serializers.ModelSerializer):
         return obj.customers.count()
 
     def get_assigned_items(self, obj):
-        request = self.context.get('request')
+        request = self.context.get("request")
         qs = (
-            obj.assigned_items
-            .select_related('variant__item')
-            .prefetch_related('variant__sizes')
+            obj.assigned_items.select_related("variant__item")
+            .prefetch_related("variant__sizes")
             .filter(variant__item__is_deleted=False)
-            .order_by('-created_at')
+            .order_by("-created_at")
         )
         item_groups = defaultdict(list)
         for ai in qs:
@@ -137,7 +157,7 @@ class AgentSerializer(serializers.ModelSerializer):
         return result
 
     def create(self, validated_data):
-        display_name = validated_data.pop('display_name', '')
+        display_name = validated_data.pop("display_name", "")
         user = User.objects.create(
             username=validated_data["username"],
             email=validated_data["email"],
@@ -145,26 +165,29 @@ class AgentSerializer(serializers.ModelSerializer):
             role="AGENT",
             display_name=display_name,
         )
-        agent = Agent.objects.create(
-            user=user,
-            contact=validated_data['contact']
-        )
+        agent = Agent.objects.create(user=user, contact=validated_data["contact"])
         return agent
 
     def update(self, instance, validated_data):
         user = instance.user
-        if 'username' in validated_data and validated_data['username'] != user.username:
-            user.username = validated_data['username']
-        if 'email' in validated_data and validated_data['email'] != user.email:
-            user.email = validated_data['email']
-        if 'password' in validated_data:
-            password = validated_data['password']
+        if "username" in validated_data and validated_data["username"] != user.username:
+            user.username = validated_data["username"]
+        if "email" in validated_data and validated_data["email"] != user.email:
+            user.email = validated_data["email"]
+        if "password" in validated_data:
+            password = validated_data["password"]
             if password and not user.check_password(password):
                 user.password = make_password(password)
-        if 'display_name' in validated_data and validated_data['display_name'] != user.display_name:
-            user.display_name = validated_data['display_name']
+        if (
+            "display_name" in validated_data
+            and validated_data["display_name"] != user.display_name
+        ):
+            user.display_name = validated_data["display_name"]
         user.save()
-        if 'contact' in validated_data and validated_data['contact'] != instance.contact:
-            instance.contact = validated_data['contact']
+        if (
+            "contact" in validated_data
+            and validated_data["contact"] != instance.contact
+        ):
+            instance.contact = validated_data["contact"]
         instance.save()
         return instance
