@@ -100,22 +100,43 @@ export default function OrderCard({
           </div>
         </div>
 
-        <span
-          className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide flex-shrink-0 ${status.bg} ${status.text}`}
-        >
-          {status.label}
-        </span>
+        <div>
+          <div
+            className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide flex-shrink-0 ${status.bg} ${status.text}`}
+          >
+            {status.label}
+          </div>
+          <div
+            className={`px-2 py-1 rounded-full text-[12px] text-gray-600 font-bold uppercase tracking-wide flex-shrink-0`}
+          >
+            ID #{order.id}
+          </div>
+        </div>
       </div>
 
       <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-50">
-        <div className="flex items-center gap-1.5">
-          <span className="text-base font-black text-gray-900">
-            {totalSets}
-          </span>
-          <span className="text-xs text-gray-400">Sets</span>
-          <span className="text-gray-300 mx-1">•</span>
-          <span className="text-sm font-bold text-gray-600">{totalPieces}</span>
-          <span className="text-xs text-gray-400">pcs</span>
+
+        <div className="flex flex-col items-start gap-1.5">
+
+          <div className="text-sm font-bold text-gray-600">
+            {new Date(order.created_at).toLocaleString("en-IN", {
+              day: "2-digit",
+              month: "short",
+              year: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+              hour12: true,
+            })}
+          </div>
+          <div>
+            <span className="text-base font-black text-gray-900">
+              {totalSets}
+            </span>
+            <span className="text-xs text-gray-400"> Sets</span>
+            <span className="text-gray-300 mx-1">•</span>
+            <span className="text-sm font-bold text-gray-600">{totalPieces}</span>
+            <span className="text-xs text-gray-400"> pcs</span>
+          </div>
         </div>
 
         <div className="text-right">

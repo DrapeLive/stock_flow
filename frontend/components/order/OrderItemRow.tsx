@@ -237,7 +237,7 @@ export default function OrderItemRow({
                   : "text-gray-900"
             }`}
           >
-            {item.item_name || "Unknown Item"}
+            {item.item_name || "Unknown Item"} ( Color #{item.variant_display_order} )
           </h6>
           <p className="text-[10px] text-gray-400 mt-0.5">
             Size: {item.size_group || "N/A"}

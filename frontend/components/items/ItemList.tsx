@@ -3,8 +3,10 @@
 import { useState, useMemo, useCallback } from "react"; // ✅ added useCallback
 import { Plus, ShoppingBag, Search, QrCode, X } from "lucide-react";
 import { UIItem } from "@/types/item";
+import { UnpackedOrderItem } from "@/lib/api/order";
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 import ItemCard from "./ItemCard";
+import OrderedItemList from "./OrderedItemList";
 import QRScanModal from "./QRScanModal";
 import {
     isItemOutOfStock,
@@ -13,7 +15,7 @@ import {
 } from "@/util/stockValidators";
 import { PageLoading } from "../ui/Loading";
 
-type StockTab = "in_stock" | "out_of_stock";
+type StockTab = "in_stock" | "out_of_stock" | "ordered";
 
 interface ItemListProps {
     items: UIItem[];
@@ -26,6 +28,8 @@ interface ItemListProps {
     onOrder?: (variantId: number) => void;
     onPriceCheck?: () => void;
     title?: string;
+    orderedItems?: UnpackedOrderItem[];
+    onOrderItemClick?: (itemId: number) => void;
 }
 
 function filterItems(
@@ -86,6 +90,8 @@ export default function ItemList({
     onOrder,
     onPriceCheck,
     title,
+    orderedItems = [],
+    onOrderItemClick,
 }: ItemListProps) {
     const [activeTab, setActiveTab] = useState<StockTab>("in_stock");
     const [searchQuery, setSearchQuery] = useState("");
@@ -137,6 +143,14 @@ export default function ItemList({
     const filteredItems = useMemo(() => {
         return filterItems(items ?? [], activeTab, searchQuery, qrFilter);
     }, [items, activeTab, searchQuery, qrFilter]);
+
+    const filteredOrderedItems = useMemo(() => {
+        if (!searchQuery.trim()) return orderedItems;
+        const query = searchQuery.toLowerCase();
+        return orderedItems.filter((item) =>
+            item.item_name.toLowerCase().includes(query),
+        );
+    }, [orderedItems, searchQuery]);
 
     const visibleItems = filteredItems.slice(0, visibleCount);
 
@@ -227,7 +241,11 @@ export default function ItemList({
                         />
                         <input
                             type="text"
-                            placeholder="Search items..."
+                            placeholder={
+                                activeTab === "ordered"
+                                    ? "Search ordered items..."
+                                    : "Search items..."
+                            }
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             className="w-full pl-9 pr-3 py-2.5 bg-white border border-gray-200 rounded-xl font-medium text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20"
@@ -278,10 +296,49 @@ export default function ItemList({
                     >
                         Stock Out ({outOfStockCount})
                     </button>
+                    {context === "admin" && (
+                        <button
+                            onClick={() => setActiveTab("ordered")}
+                            className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all ${
+                                activeTab === "ordered"
+                                    ? "bg-white text-gray-900 shadow-sm"
+                                    : "text-gray-500 hover:text-gray-700"
+                            }`}
+                        >
+                            Ordered ({searchQuery.trim() ? filteredOrderedItems.length : orderedItems.length})
+                        </button>
+                    )}
                 </div>
             </div>
             <div className="px-4 pb-8 space-y-2">
-                {filteredItems.length === 0 ? (
+                {activeTab === "ordered" ? (
+                    filteredOrderedItems.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-16 text-gray-300">
+                            <ShoppingBag size={48} className="mb-4" />
+                            <h2 className="text-lg font-bold text-gray-400">
+                                No items found
+                            </h2>
+                            <p className="text-sm text-gray-400 mt-1">
+                                {searchQuery.trim()
+                                    ? "Try a different search"
+                                    : "No unpacked items found"}
+                            </p>
+                            {searchQuery.trim() && (
+                                <button
+                                    onClick={() => setSearchQuery("")}
+                                    className="mt-3 text-primary text-sm font-medium hover:underline"
+                                >
+                                    Clear search
+                                </button>
+                            )}
+                        </div>
+                    ) : (
+                        <OrderedItemList
+                            items={filteredOrderedItems}
+                            onItemClick={onOrderItemClick || (() => {})}
+                        />
+                    )
+                ) : filteredItems.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-16 text-gray-300">
                         <ShoppingBag size={48} className="mb-4" />
                         <h2 className="text-lg font-bold text-gray-400">

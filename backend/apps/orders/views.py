@@ -23,6 +23,7 @@ from apps.orders.serializers import (
     InvoiceSerializer,
     OrderItemSerializer,
     OrderSerializer,
+    UnpackedOrderItemSerializer,
     get_piece_count,
 )
 from apps.orders.utils import SIZE_MAPPING
@@ -1007,3 +1008,14 @@ class OrderItemViewSet(ModelViewSet):
                     order_item.save()
 
         return super().update(request, *args, **kwargs)
+
+    @action(detail=False, methods=["get"], url_path="unpacked")
+    def unpacked(self, request):
+        qs = (
+            self.get_queryset()
+            .filter(packed_quantity=0, order__status="PENDING")
+            .select_related("variant")
+            .order_by("-id")
+        )
+        serializer = UnpackedOrderItemSerializer(qs, many=True, context={"request": request})
+        return Response(serializer.data)

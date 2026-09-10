@@ -185,6 +185,31 @@ class AddOrderItemSerializer(serializers.Serializer):
         return attrs
 
 
+class UnpackedOrderItemSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    item_name = serializers.CharField()
+    variant_display_order = serializers.CharField(
+        source="variant.display_order", default=""
+    )
+    quantity = serializers.IntegerField()
+    size_group = serializers.CharField()
+    item_type = serializers.CharField()
+    variant_image = serializers.SerializerMethodField()
+    piece_count = serializers.SerializerMethodField()
+
+    def get_variant_image(self, obj):
+        request = self.context.get("request")
+        image = obj.variant_image
+        if not image and obj.variant and obj.variant.image:
+            image = obj.variant.image.url
+        if image and request and not image.startswith("http"):
+            image = request.build_absolute_uri(image)
+        return image
+
+    def get_piece_count(self, obj):
+        return get_piece_count(obj.size_group, obj.item_type or "gents")
+
+
 class InvoiceSerializer(serializers.ModelSerializer):
     customer = SimpleCustomerSerializer()
     agent = SimpleAgentSerializer()

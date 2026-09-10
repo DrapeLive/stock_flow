@@ -144,6 +144,24 @@ export interface EditableVariant {
   display_order?: string;
 }
 
+export interface CustomerRequirementItem {
+  id: number;
+  name: string;
+}
+
+export interface CustomerRequirementCustomer {
+  customer_name: string;
+  variant_display_order: string;
+  quantity: number;
+  size_group: string;
+  variant_image: string;
+}
+
+export interface CustomerRequirementResponse {
+  item: CustomerRequirementItem;
+  customers: CustomerRequirementCustomer[];
+}
+
 export type SizeContext = "item_creation" | "order_creation";
 
 export let ITEM_CREATION_SIZES_BY_TYPE: Record<ItemType, FrontendSizeRange[]> =

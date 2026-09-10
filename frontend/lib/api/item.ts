@@ -7,6 +7,7 @@ import type {
     ItemStockEntry,
     FrontendSizeRange,
     ItemType,
+    CustomerRequirementResponse,
 } from "@/types/item";
 import { api } from "./axios";
 
@@ -106,5 +107,11 @@ export const itemApi = {
     createVariant: async (formData: FormData) => {
         const res = await api.post("/items/variants/", formData);
         return res.data;
+    },
+
+    getCustomerRequirements(id: number): Promise<CustomerRequirementResponse> {
+        return api
+            .get<CustomerRequirementResponse>(`/api/items/customer-requirements/?item_id=${id}`)
+            .then((r) => r.data);
     },
 };

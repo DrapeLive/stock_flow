@@ -30,6 +30,17 @@ export interface OrderFilters {
   status?: string[];
 }
 
+export interface UnpackedOrderItem {
+  id: number;
+  item_name: string;
+  variant_display_order: string;
+  quantity: number;
+  size_group: string;
+  item_type: string;
+  variant_image: string;
+  piece_count: number;
+}
+
 export const orderApi = {
   getAll(
     filters?: OrderFilters,
@@ -193,6 +204,12 @@ export const orderApi = {
 
   markAsViewed(orderId: number): Promise<void> {
     return api.post(`/api/orders/${orderId}/mark-viewed/`).then((r) => r.data);
+  },
+
+  getUnpackedOrderItems(): Promise<UnpackedOrderItem[]> {
+    return api
+      .get<UnpackedOrderItem[]>("/api/orders/order-items/unpacked/")
+      .then((r) => r.data);
   },
 
   getArchived(

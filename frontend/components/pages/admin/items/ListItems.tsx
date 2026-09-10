@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { itemApi } from "@/lib/api/item";
+import { orderApi, UnpackedOrderItem } from "@/lib/api/order";
 import { ItemStockEntry, UIItem } from "@/types/item";
 import { ItemList } from "@/components/items";
 
@@ -27,11 +28,16 @@ const ListItems: React.FC = () => {
   const router = useRouter();
   const [data, setData] = useState<UIItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [orderedItems, setOrderedItems] = useState<UnpackedOrderItem[]>([]);
 
   const fetchData = useCallback(async () => {
     try {
-      const result = await itemApi.getStockList();
-      setData(result.map(normalizeAdminItem));
+      const [stockResult, unpackedResult] = await Promise.all([
+        itemApi.getStockList(),
+        orderApi.getUnpackedOrderItems(),
+      ]);
+      setData(stockResult.map(normalizeAdminItem));
+      setOrderedItems(unpackedResult);
     } catch (e) {
       console.error("Error fetching items:", e);
     } finally {
@@ -70,6 +76,10 @@ const ListItems: React.FC = () => {
     router.push(`/admin/items/qr-print?qr=${qr}&id=${id}`);
   };
 
+  const handleOrderItemClick = (itemId: number) => {
+    router.push(`/admin/items/ordered/${itemId}`);
+  };
+
   return (
     <ItemList
       items={data}
@@ -79,6 +89,8 @@ const ListItems: React.FC = () => {
       onEdit={handleEdit}
       onPrintAll={handlePrintAll}
       onPrintQR={handlePrintQR}
+      orderedItems={orderedItems}
+      onOrderItemClick={handleOrderItemClick}
     />
   );
 };
