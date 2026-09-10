@@ -276,3 +276,22 @@ class CreateItemSerializer(serializers.Serializer):
 
 
 UpdateItemSerializer = CreateItemSerializer
+
+
+class CustomerRequirementSerializer(serializers.Serializer):
+    customer_name = serializers.CharField(source="order.customer.name")
+    variant_display_order = serializers.CharField(
+        source="variant.display_order", default=""
+    )
+    quantity = serializers.IntegerField()
+    size_group = serializers.CharField()
+    variant_image = serializers.SerializerMethodField()
+
+    def get_variant_image(self, obj):
+        request = self.context.get("request")
+        image = obj.variant_image
+        if not image and obj.variant and obj.variant.image:
+            image = obj.variant.image.url
+        if image and request and not image.startswith("http"):
+            image = request.build_absolute_uri(image)
+        return image

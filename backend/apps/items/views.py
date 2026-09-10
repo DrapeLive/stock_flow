@@ -18,6 +18,7 @@ from apps.orders.utils import SIZE_MAPPING
 from .models import Item, ItemVariant, ItemVariantSize
 from .serializers import (
     CreateItemSerializer,
+    CustomerRequirementSerializer,
     ItemSerializer,
     ItemVariantSerializer,
     UpdateItemSerializer,
@@ -347,6 +348,52 @@ class ItemViewSet(ModelViewSet):
             {
                 "out_of_stock": out_of_stock,
                 "group_stock": group_stock,
+            }
+        )
+
+    @action(detail=False, methods=["get"], url_path="customer-requirements")
+    def customer_requirements(self, request):
+        item_id = request.query_params.get("item_id")
+        if not item_id:
+            return Response(
+                {"detail": "item_id query parameter is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            order_item = OrderItem.objects.select_related("item").get(pk=item_id)
+        except (OrderItem.DoesNotExist, ValueError):
+            return Response(
+                {"detail": "OrderItem not found."}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        if order_item.item is None or order_item.item.is_deleted:
+            return Response(
+                {"detail": "Item not found."}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        item = order_item.item
+
+        biz = admin_business(request.user)
+        if biz and item.type != biz:
+            return Response(
+                {"detail": "Item not found."}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        order_items = (
+            OrderItem.objects.filter(item=item, packed_quantity=0)
+            .select_related("order__customer", "variant")
+            .order_by("-id")
+        )
+
+        serializer = CustomerRequirementSerializer(
+            order_items, many=True, context={"request": request}
+        )
+
+        return Response(
+            {
+                "item": {"id": item.id, "name": item.name},
+                "customers": serializer.data,
             }
         )
 
