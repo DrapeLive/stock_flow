@@ -220,7 +220,6 @@ export default function ItemAssignment({
   const handleQRScan = (qr: string) => {
     const trimmed = qr.trim();
     const variant = allVariants.find((v) => v.qrCode === trimmed);
-    setShowQRScanner(false);
 
     if (scanMode === "add") {
       if (!variant) {

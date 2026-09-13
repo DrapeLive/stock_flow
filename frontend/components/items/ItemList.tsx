@@ -15,12 +15,13 @@ import {
 } from "@/util/stockValidators";
 import { PageLoading } from "../ui/Loading";
 
-type StockTab = "in_stock" | "out_of_stock" | "ordered";
+export type StockTab = "in_stock" | "out_of_stock" | "ordered";
 
 interface ItemListProps {
     items: UIItem[];
     loading: boolean;
     context: "admin" | "agent";
+    initialTab?: StockTab;
     onAddItem?: () => void;
     onEdit?: (id: number) => void;
     onPrintAll?: (id: number) => void;
@@ -83,6 +84,7 @@ export default function ItemList({
     items,
     loading,
     context,
+    initialTab = "in_stock",
     onAddItem,
     onEdit,
     onPrintAll,
@@ -93,7 +95,7 @@ export default function ItemList({
     orderedItems = [],
     onOrderItemClick,
 }: ItemListProps) {
-    const [activeTab, setActiveTab] = useState<StockTab>("in_stock");
+    const [activeTab, setActiveTab] = useState<StockTab>(initialTab);
     const [searchQuery, setSearchQuery] = useState("");
     const [qrFilter, setQrFilter] = useState<string | null>(null);
     const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set());
