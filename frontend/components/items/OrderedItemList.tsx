@@ -50,7 +50,9 @@ export default function OrderedItemList({
         });
       }
     }
-    return Array.from(map.values());
+    return Array.from(map.values()).sort((a, b) =>
+      b.name.localeCompare(a.name, undefined, { numeric: true }),
+    );
   }, [items]);
 
   if (grouped.length === 0) {

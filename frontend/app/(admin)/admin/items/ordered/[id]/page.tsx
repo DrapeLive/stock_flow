@@ -44,7 +44,7 @@ export default function CustomerRequirementsPage() {
       <div className="min-h-screen flex flex-col">
         <div className="p-4">
           <button
-            onClick={() => router.back()}
+            onClick={() => router.replace("/admin/items?tab=ordered")}
             className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
           >
             <ArrowLeft size={20} />
@@ -55,7 +55,7 @@ export default function CustomerRequirementsPage() {
           <AlertTriangle size={48} className="mb-4" />
           <h2 className="text-lg font-bold">{error || "Item not found"}</h2>
           <button
-            onClick={() => router.back()}
+            onClick={() => router.replace("/admin/items?tab=ordered")}
             className="mt-3 text-primary text-sm font-medium hover:underline"
           >
             Go back
@@ -73,7 +73,7 @@ export default function CustomerRequirementsPage() {
       <div className="sticky top-0 z-10 bg-white border-b border-gray-100">
         <div className="p-4 flex items-center gap-3">
           <button
-            onClick={() => router.back()}
+            onClick={() => router.replace("/admin/items?tab=ordered")}
             className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <ArrowLeft size={20} className="text-gray-600" />

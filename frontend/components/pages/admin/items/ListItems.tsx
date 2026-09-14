@@ -6,7 +6,11 @@ import { useAuth } from "@/context/AuthContext";
 import { itemApi } from "@/lib/api/item";
 import { orderApi, UnpackedOrderItem } from "@/lib/api/order";
 import { ItemStockEntry, UIItem } from "@/types/item";
-import { ItemList } from "@/components/items";
+import { ItemList, StockTab } from "@/components/items";
+
+interface ListItemsProps {
+  initialTab?: StockTab;
+}
 
 function normalizeAdminItem(item: ItemStockEntry): UIItem {
   return {
@@ -23,7 +27,7 @@ function normalizeAdminItem(item: ItemStockEntry): UIItem {
     })),
   };
 }
-const ListItems: React.FC = () => {
+const ListItems: React.FC<ListItemsProps> = ({ initialTab }) => {
   const { isAuthenticated } = useAuth();
   const router = useRouter();
   const [data, setData] = useState<UIItem[]>([]);
@@ -85,6 +89,7 @@ const ListItems: React.FC = () => {
       items={data}
       loading={loading}
       context="admin"
+      initialTab={initialTab}
       onAddItem={() => router.push("/admin/items/new")}
       onEdit={handleEdit}
       onPrintAll={handlePrintAll}

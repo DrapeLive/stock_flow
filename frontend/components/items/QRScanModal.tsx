@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Scanner } from "@yudiel/react-qr-scanner";
 import { X, Camera } from "lucide-react";
 
@@ -10,6 +10,8 @@ interface QRScanModalProps {
   onScan: (qr: string) => void;
 }
 
+const SCAN_COOLDOWN_MS = 1500;
+
 export default function QRScanModal({
   isOpen,
   onClose,
@@ -17,6 +19,7 @@ export default function QRScanModal({
 }: QRScanModalProps) {
   const [manualInput, setManualInput] = useState("");
   const [showManualInput, setShowManualInput] = useState(false);
+  const lastScanRef = useRef({ code: "", at: 0 });
 
   if (!isOpen) return null;
 
@@ -53,17 +56,29 @@ export default function QRScanModal({
     }
   };
 
+  const acceptScan = (rawValue: string) => {
+    const now = Date.now();
+    if (
+      rawValue === lastScanRef.current.code &&
+      now - lastScanRef.current.at < SCAN_COOLDOWN_MS
+    ) {
+      return;
+    }
+    lastScanRef.current = { code: rawValue, at: now };
+    playBeep();
+    onScan(rawValue);
+  };
+
   const handleScan = (data: { rawValue: string }[]) => {
     if (data[0]?.rawValue) {
-      playBeep();
-      onScan(data[0].rawValue);
+      acceptScan(data[0].rawValue);
     }
   };
 
 
   const handleManualSubmit = () => {
     if (manualInput.trim()) {
-      onScan(manualInput.trim());
+      acceptScan(manualInput.trim());
     }
   };
 
