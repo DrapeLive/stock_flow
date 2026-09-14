@@ -52,6 +52,8 @@ export default function OrderCard({
 
   const totalSets = order.total_sets || 0;
   const totalPieces = order.total_pieces || 0;
+  const unpackedCount =
+    order.items?.filter((item) => (item.packed_quantity ?? 0) === 0).length ?? 0;
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -102,7 +104,7 @@ export default function OrderCard({
 
         <div>
           <div
-            className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide flex-shrink-0 ${status.bg} ${status.text}`}
+            className={`px-2 py-1 flex items-center justify-center rounded-full text-[10px] font-bold uppercase tracking-wide flex-shrink-0 ${status.bg} ${status.text}`}
           >
             {status.label}
           </div>
@@ -111,6 +113,11 @@ export default function OrderCard({
           >
             ID #{order.id}
           </div>
+          {unpackedCount > 0 && (
+            <div className="px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide flex-shrink-0 bg-green-100 text-green-700 mt-1">
+              <span className="text-xl " >{unpackedCount}</span> Unpacked
+            </div>
+          )}
         </div>
       </div>
 
