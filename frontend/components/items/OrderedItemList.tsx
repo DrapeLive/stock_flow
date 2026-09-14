@@ -104,20 +104,20 @@ export default function OrderedItemList({
               </div>
               <div className="flex items-center gap-2 mt-1 flex-wrap">
                 {sortedVariants.length > 0 && (
-                  <span className="text-[10px] text-gray-400">
+                  <span className="text-[12px] text-gray-900">
                     Color #{sortedVariants.join(", #")}
                   </span>
                 )}
                 {item.sizeGroup && (
                   <>
                     <span className="text-gray-200">·</span>
-                    <span className="text-[10px] text-gray-400">
+                    <span className="text-[12px] text-gray-900">
                       Size: {item.sizeGroup}
                     </span>
                   </>
                 )}
                 <span className="text-gray-200">·</span>
-                <span className="text-[10px] text-gray-400">
+                <span className="text-[12px] text-gray-900">
                   {item.totalQuantity} × {item.pieceCount} pcs
                 </span>
               </div>
