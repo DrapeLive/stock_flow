@@ -3,6 +3,7 @@ from django.conf.urls.static import serve
 from django.contrib import admin
 from django.http import JsonResponse
 from django.urls import include, path, re_path
+from django.views.decorators.cache import cache_control
 from drf_spectacular.views import (
     SpectacularAPIView,
     SpectacularRedocView,
@@ -39,7 +40,9 @@ urlpatterns = [
 urlpatterns += [
     re_path(
         r"^media/(?P<path>.*)$",
-        serve,
+        # Uploaded images get unique UUID filenames that are never overwritten,
+        # so they are immutable once written — safe to cache for a year.
+        cache_control(public=True, max_age=31536000, immutable=True)(serve),
         {
             "document_root": settings.MEDIA_ROOT,
         },

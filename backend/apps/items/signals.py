@@ -26,10 +26,15 @@ def delete_variant_image(sender, instance, **kwargs):
         item.out_of_stock_since = None
         item.save(update_fields=['out_of_stock_since'])
 
+    from .services import touch_catalog
+    touch_catalog(item)
+
 
 @receiver(post_save, sender=ItemVariantSize)
 def update_item_stock_status(sender, instance, **kwargs):
     """Update item's out_of_stock_since when stock changes."""
+    from .services import touch_catalog
+
     item = instance.item_variant.item
     total_stock = ItemVariantSize.objects.filter(
         item_variant__item=item
@@ -38,6 +43,8 @@ def update_item_stock_status(sender, instance, **kwargs):
     if total_stock == 0 and not item.out_of_stock_since:
         item.out_of_stock_since = timezone.now()
         item.save(update_fields=['out_of_stock_since'])
+        touch_catalog(item)
     elif total_stock > 0 and item.out_of_stock_since:
         item.out_of_stock_since = None
         item.save(update_fields=['out_of_stock_since'])
+        touch_catalog(item)

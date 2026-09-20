@@ -13,7 +13,7 @@ from apps.accounts.permissions import (
     check_admin_pin,
 )
 from apps.items.models import ItemVariant
-from apps.notification.tasks import send_push_to_user
+from apps.notification.utils import notify_user_safely
 from apps.orders.models import Order
 
 from .models import Agent, AgentItem
@@ -36,7 +36,9 @@ class AgentViewSet(ModelViewSet):
     def delete_info(self, request, pk=None):
         agent = self.get_object()
         customers_count = agent.customers.count()
-        orders_count = Order.objects.filter(agent=agent).count()
+        orders_count = (
+            Order.objects.filter(agent=agent).exclude(status="DRAFT").count()
+        )
         other_agents = Agent.objects.filter(is_active=True).exclude(id=agent.id)
         transferable_agents = [
             {"id": a.id, "name": a.user.username} for a in other_agents
@@ -170,14 +172,11 @@ class AgentItemsView(APIView):
             )
 
         if assigned_count > 0:
-            try:
-                send_push_to_user.delay(
-                    agent.user_id,
-                    "Items Assigned",
-                    f"{assigned_count} item{'s' if assigned_count > 1 else ''} have been assigned to you",
-                )
-            except Exception as e:
-                print("Failed to queue notification:", str(e))
+            notify_user_safely(
+                agent.user_id,
+                "Items Assigned",
+                f"{assigned_count} item{'s' if assigned_count > 1 else ''} have been assigned to you",
+            )
 
         return Response(result)
 
@@ -256,15 +255,12 @@ class AgentItemTransferView(APIView):
             source_items.delete()
 
         if assigned_count > 0:
-            try:
-                send_push_to_user.delay(
-                    target_agent.user_id,
-                    "Items Transferred",
-                    f"{assigned_count} item{'s' if assigned_count > 1 else ''} have been transferred to you",
-                )
-            except Exception as e:
-                print("Failed to queue notification:", str(e))
-                
+            notify_user_safely(
+                target_agent.user_id,
+                "Items Transferred",
+                f"{assigned_count} item{'s' if assigned_count > 1 else ''} have been transferred to you",
+            )
+
         return Response(
             {"message": "Items successfully transferred."},
             status=status.HTTP_200_OK
@@ -316,15 +312,12 @@ class AgentItemCopyView(APIView):
                     assigned_count += 1
                     
         if assigned_count > 0:
-            try:
-                send_push_to_user.delay(
-                    target_agent.user_id,
-                    "Items Copied",
-                    f"{assigned_count} item{'s' if assigned_count > 1 else ''} have been copied to you",
-                )
-            except Exception as e:
-                print("Failed to queue notification:", str(e))
-                
+            notify_user_safely(
+                target_agent.user_id,
+                "Items Copied",
+                f"{assigned_count} item{'s' if assigned_count > 1 else ''} have been copied to you",
+            )
+
         return Response(
             {"message": "Items successfully copied."},
             status=status.HTTP_200_OK

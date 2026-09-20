@@ -222,6 +222,10 @@ export default function ProfilePage() {
               <>
                 {/* Archived Items */}
                 <section>
+                  <p className="text-[11px] text-gray-400 px-1 mb-2 leading-relaxed">
+                    Archived items are permanently deleted 30 days after being
+                    archived. Existing orders keep their item details.
+                  </p>
                   <SectionHeader
                     icon={<Archive size={14} />}
                     label="Archived Items"
@@ -238,6 +242,7 @@ export default function ProfilePage() {
                           onToggle={() => setExpandedItem(item.id)}
                           context={isAdmin ? "admin" : "agent"}
                           isReadonly={true}
+                          countdownDays={item.days_until_purge}
                         />
                       ))}
                     </div>

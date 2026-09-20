@@ -49,7 +49,9 @@ class CustomerViewSet(ModelViewSet):
     @action(detail=True, methods=["get"])
     def delete_info(self, request, pk=None):
         customer = self.get_object()
-        orders_count = Order.objects.filter(customer=customer).count()
+        orders_count = (
+            Order.objects.filter(customer=customer).exclude(status="DRAFT").count()
+        )
         return JsonResponse(
             {
                 "orders_count": orders_count,

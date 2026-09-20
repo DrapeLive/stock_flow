@@ -1,6 +1,6 @@
-import os
 from datetime import timedelta
 
+from django.conf import settings
 from django.db.models import Sum
 from django.utils import timezone
 from rest_framework import status
@@ -9,6 +9,8 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
+
+from drf_spectacular.utils import OpenApiTypes, extend_schema
 
 from apps.accounts.permissions import IsAdmin, admin_business, check_admin_pin
 from apps.agents.models import Agent, AgentItem
@@ -23,6 +25,7 @@ from .serializers import (
     ItemVariantSerializer,
     UpdateItemSerializer,
 )
+from .services import delete_item_keep_history
 
 ITEM_CREATION_SIZES_BY_TYPE = {
     "gents": [
@@ -89,17 +92,90 @@ def filter_items_by_business(qs, user):
     return qs.filter(type=biz) if biz else qs
 
 
+def _clamp_int(raw, default, lo, hi):
+    try:
+        val = int(raw)
+    except (TypeError, ValueError):
+        return default
+    return max(lo, min(hi, val))
+
+
+def _sync_total_stock(qs):
+    return (
+        ItemVariantSize.objects.filter(item_variant__item__in=qs)
+        .aggregate(total=Sum("stock"))["total"]
+        or 0
+    )
+
+
+def _sync_items_payload(request, qs, page, page_size):
+    """Build sync item entries for a page of ``qs`` (constant query count)."""
+    start = (page - 1) * page_size
+    end = start + page_size
+    items = []
+    qs = qs.order_by("id")[start:end].prefetch_related("variants__sizes")
+    for item in qs:
+        first = item.variants.first()
+        items.append(
+            {
+                "id": item.id,
+                "rev": item.catalog_updated_at.isoformat(),
+                "name": item.name,
+                "type": item.type,
+                "price": str(item.price),
+                "thumb": (
+                    request.build_absolute_uri(first.image.url)
+                    if first is not None and first.image
+                    else None
+                ),
+                "out_of_stock_since": (
+                    item.out_of_stock_since.isoformat()
+                    if item.out_of_stock_since
+                    else None
+                ),
+                "variants": [
+                    {
+                        "id": variant.id,
+                        "qr_code": str(variant.qr_code) if variant.qr_code else None,
+                        "display_order": variant.display_order,
+                        "image": (
+                            request.build_absolute_uri(variant.image.url)
+                            if variant.image
+                            else None
+                        ),
+                        "sizes": [
+                            {"id": s.id, "size": s.size, "stock": s.stock}
+                            for s in variant.sizes.all()
+                        ],
+                    }
+                    for variant in item.variants.all()
+                ],
+            }
+        )
+    return items
+
+
+def _sync_stock_payload(since, active_ids):
+    rows = ItemVariantSize.objects.filter(
+        stock_updated_at__gt=since,
+        item_variant__item__in=active_ids,
+    ).values_list("id", "size", "stock")
+    return [{"id": rid, "size": sz, "stock": st} for rid, sz, st in rows]
+
+
 class ItemViewSet(ModelViewSet):
     queryset = Item.objects.prefetch_related("variants__sizes").all()
     serializer_class = ItemSerializer
 
     def get_permissions(self):
+        if self.action == "items_sync":
+            return [IsAdmin()]
         if self.request.method in ["POST", "PUT", "PATCH", "DELETE"]:
             return [IsAdmin()]
         return [IsAuthenticated()]
 
     def get_queryset(self):
-        cutoff = timezone.now() - timedelta(days=30)
+        cutoff = timezone.now() - timedelta(days=settings.ARCHIVE_AFTER_DAYS)
         return (
             filter_items_by_business(
                 Item.objects.prefetch_related("variants__sizes"),
@@ -122,16 +198,7 @@ class ItemViewSet(ModelViewSet):
         if pin_error:
             return pin_error
         instance = self.get_object()
-
-        for variant in instance.variants.all():
-            if variant.image:
-                is_referenced = OrderItem.objects.filter(variant=variant).exists()
-                if not is_referenced:
-                    if variant.image.path and os.path.exists(variant.image.path):
-                        os.remove(variant.image.path)
-
-        instance.is_deleted = True
-        instance.save()
+        delete_item_keep_history(instance)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=False, methods=["get"], url_path="stock-list")
@@ -185,6 +252,115 @@ class ItemViewSet(ModelViewSet):
             )
 
         return Response(result)
+
+    @extend_schema(
+        summary="Incremental sync feed for the mobile Inventory screen",
+        description=(
+            "Accepts an opaque cursor (?since=<ISO>) and returns either a delta "
+            " (catalog items, stock rows and removed ids since the cursor) or a "
+            "full snapshot (bootstrap / out-of-window / too-many-deltas). "
+            "Full snapshots are paged via page/page_size. The response also "
+            "carries `server_time` (UTC ISO) so clients can correct for "
+            "device-clock skew, `check` (an integrity fingerprint over the "
+            "server's visible item set) and `archive_after_days`. Delta "
+            "`stock` rows carry the ItemVariantSize `id` so clients can map "
+            "them onto the sizes returned in `items`."
+        ),
+        responses={200: OpenApiTypes.OBJECT},
+    )
+    @action(detail=False, methods=["get"], url_path="sync")
+    def items_sync(self, request):
+        since_raw = request.query_params.get("since", "").strip()
+        page = _clamp_int(request.query_params.get("page"), 1, 1, 10_000_000)
+        page_size = _clamp_int(request.query_params.get("page_size"), 100, 1, 500)
+
+        cutoff = timezone.now() - timedelta(days=settings.ARCHIVE_AFTER_DAYS)
+
+        active = (
+            filter_items_by_business(
+                Item.objects.prefetch_related("variants__sizes"),
+                request.user,
+            )
+            .filter(is_deleted=False)
+            .exclude(
+                out_of_stock_since__isnull=False, out_of_stock_since__lte=cutoff
+            )
+        )
+        active_ids = set(active.values_list("id", flat=True))
+
+        check = {"items": len(active_ids), "total_stock": _sync_total_stock(active)}
+
+        since = None
+        if since_raw:
+            try:
+                since = timezone.datetime.fromisoformat(since_raw)
+                if timezone.is_aware(since):
+                    since = timezone.localtime(since)
+                else:
+                    since = timezone.make_aware(since)
+            except ValueError:
+                since = None
+
+        cursor = timezone.now()
+
+        use_full = since is None
+        if since is not None and not use_full:
+            if since < timezone.now() - timedelta(days=settings.ITEM_SYNC_MAX_AGE_DAYS):
+                use_full = True
+
+        if not use_full:
+            catalog_changed = Item.objects.filter(
+                catalog_updated_at__gt=since
+            ).values_list("id", flat=True)
+            stock_rows = ItemVariantSize.objects.filter(
+                stock_updated_at__gt=since,
+                item_variant__item__in=active,
+            ).count()
+            changed_ids = set(catalog_changed)
+            if (
+                len(changed_ids) + stock_rows
+                > settings.ITEM_SYNC_MAX_DELTA_ITEMS
+            ):
+                use_full = True
+
+        if use_full:
+            items_data = _sync_items_payload(request, active, page, page_size)
+            page_has_more = (page * page_size) < check["items"]
+            return Response(
+                {
+                    "mode": "full",
+                    "cursor": cursor.isoformat(),
+                    "server_time": cursor.isoformat(),
+                    "archive_after_days": settings.ARCHIVE_AFTER_DAYS,
+                    "items": items_data,
+                    "stock": [],
+                    "removed_item_ids": [],
+                    "check": check,
+                    "next_page": page + 1 if page_has_more else None,
+                }
+            )
+
+        changed_ids = set(catalog_changed)
+        removed_ids = sorted(changed_ids - active_ids)
+
+        delta_active = active.filter(id__in=changed_ids & active_ids)
+        delta_items = _sync_items_payload(request, delta_active, 1, 500)
+
+        stock_rows_data = _sync_stock_payload(since, active_ids)
+
+        return Response(
+            {
+                "mode": "delta",
+                "cursor": cursor.isoformat(),
+                "server_time": cursor.isoformat(),
+                "archive_after_days": settings.ARCHIVE_AFTER_DAYS,
+                "items": delta_items,
+                "stock": stock_rows_data,
+                "removed_item_ids": removed_ids,
+                "check": check,
+                "next_page": None,
+            }
+        )
 
     @action(detail=False, methods=["get"], url_path="by-qr")
     def get_by_qr(self, request):
@@ -275,7 +451,7 @@ class ItemViewSet(ModelViewSet):
 
     @action(detail=False, methods=["get"], url_path="archived")
     def get_archived(self, request):
-        cutoff = timezone.now() - timedelta(days=30)
+        cutoff = timezone.now() - timedelta(days=settings.ARCHIVE_AFTER_DAYS)
         items = filter_items_by_business(
             Item.objects.prefetch_related("variants__sizes"),
             request.user,

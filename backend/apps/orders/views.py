@@ -1,22 +1,32 @@
+from datetime import timedelta
 from functools import partial
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.db.models import F, Q
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 
-from apps.accounts.permissions import IsAdmin, IsAgent, admin_business, check_admin_pin
-from apps.agents.models import AgentItem
+from apps.accounts.permissions import (
+    IsAdmin,
+    IsAgent,
+    IsAgentOrAdmin,
+    admin_business,
+    check_admin_pin,
+)
+from apps.agents.models import Agent, AgentItem
 from apps.items.models import ItemVariantSize
-from apps.notification.tasks import send_push_to_user
+from apps.notification.utils import notify_user_safely
 from apps.orders.models import Order, OrderItem, OrderLog, UserViewedOrder
 from apps.orders.serializers import (
     AddOrderItemSerializer,
@@ -24,9 +34,8 @@ from apps.orders.serializers import (
     OrderItemSerializer,
     OrderSerializer,
     UnpackedOrderItemSerializer,
-    get_piece_count,
 )
-from apps.orders.utils import SIZE_MAPPING
+from apps.orders.utils import SIZE_MAPPING, get_piece_count
 
 User = get_user_model()
 
@@ -55,6 +64,42 @@ def _build_snapshot(order):
     ]
 
 
+def _is_creator(user, order):
+    """Whether ``user`` is the creator/owner of a draft order.
+
+    Orders created after the ``created_by`` migration are owned strictly by
+    ``created_by``. Legacy drafts have ``created_by`` NULL and are owned by the
+    agent the order belongs to.
+    """
+    if order.created_by_id is not None:
+        return order.created_by_id == user.id
+    return bool(order.agent_id) and order.agent.user_id == user.id
+
+
+def _reap_stale_drafts(user):
+    """Delete stale DRAFT orders using role-based expiry (Option A lazy sweep).
+
+    * Agents: drafts they created (or legacy drafts owned via their agent FK)
+      older than 15 minutes.
+    * Admins: drafts they created older than ``ADMIN_DRAFT_EXPIRY_HOURS``.
+    """
+    if user.role == "ADMIN":
+        cutoff = timezone.now() - timedelta(
+            hours=getattr(settings, "ADMIN_DRAFT_EXPIRY_HOURS", 24)
+        )
+        Order.objects.filter(
+            status="DRAFT", created_by=user, created_at__lt=cutoff
+        ).delete()
+        return
+
+    cutoff = timezone.now() - timedelta(minutes=15)
+    Order.objects.filter(
+        status="DRAFT",
+        agent__user=user,
+        created_at__lt=cutoff,
+    ).filter(Q(created_by=user) | Q(created_by__isnull=True)).delete()
+
+
 def _revert_edit(order):
     """Restore OrderItems from reservation_snapshot and set status back to PENDING."""
     with transaction.atomic():
@@ -79,15 +124,35 @@ def _revert_edit(order):
 
 
 class PlaceOrderView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAgentOrAdmin]
 
+    @extend_schema(
+        summary="Place a DRAFT order",
+        request=None,
+        responses={200: None, 400: None, 403: None},
+    )
     def post(self, request, order_id):
         order = get_object_or_404(Order, id=order_id)
+
+        # Admins may only place a draft order they created themselves.
+        if request.user.role == "ADMIN" and (
+            order.status != "DRAFT" or not _is_creator(request.user, order)
+        ):
+            return Response(
+                {"error": "An admin can only place a draft order they created"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
 
         if order.status != "DRAFT":
             return Response(
                 {"error": "Only DRAFT orders can be placed"},
                 status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not _is_creator(request.user, order):
+            return Response(
+                {"error": "You can only place your own draft orders"},
+                status=status.HTTP_403_FORBIDDEN,
             )
 
         if not order.items.exists():
@@ -161,24 +226,18 @@ class PlaceOrderView(APIView):
             if out_of_stock_items:
                 agent_user_id = order.agent.user_id if order.agent else None
                 if agent_user_id:
-                    try:
-                        send_push_to_user.delay(
-                            agent_user_id,
-                            "Items Out of Stock",
-                            f"{len(out_of_stock_items)} item(s) in your order are out of stock",
-                        )
-                    except Exception as e:
-                        print("Failed to queue agent notification:", str(e))
+                    notify_user_safely(
+                        agent_user_id,
+                        "Items Out of Stock",
+                        f"{len(out_of_stock_items)} item(s) in your order are out of stock",
+                    )
 
                 for admin_id in admin_ids:
-                    try:
-                        send_push_to_user.delay(
-                            admin_id,
-                            "Stock Alert",
-                            f"Order #{order.id} has {len(out_of_stock_items)} out-of-stock item(s)",
-                        )
-                    except Exception as e:
-                        print("Failed to queue admin notification:", str(e))
+                    notify_user_safely(
+                        admin_id,
+                        "Stock Alert",
+                        f"Order #{order.id} has {len(out_of_stock_items)} out-of-stock item(s)",
+                    )
 
                 return Response(
                     {
@@ -199,7 +258,10 @@ class PlaceOrderView(APIView):
                     ItemVariantSize.objects.filter(
                         item_variant=order_item.variant,
                         size=size,
-                    ).update(stock=F("stock") - order_item.quantity)
+                    ).update(
+                        stock=F("stock") - order_item.quantity,
+                        stock_updated_at=timezone.now(),
+                    )
 
             order.status = "PENDING"
             if expected_delivery_date:
@@ -221,18 +283,15 @@ class PlaceOrderView(APIView):
             username = request.user.username
 
             for id in admin_ids:
-                try:
-                    transaction.on_commit(
-                        partial(
-                            send_push_to_user.delay,
-                            id,
-                            "New Order",
-                            f"Agent {username} placed Order",
-                        )
-                    )
-
-                except Exception as e:
-                    print("Failed to queue notifications:", str(e))
+                transaction.on_commit(
+                    partial(
+                        notify_user_safely,
+                        id,
+                        "New Order",
+                        f"Agent {username} placed Order",
+                    ),
+                    robust=True,
+                )
 
         return Response(
             {
@@ -253,12 +312,20 @@ def return_stock_for_item(order_item):
     for size in required_sizes:
         ItemVariantSize.objects.filter(
             item_variant=order_item.variant, size=size
-        ).update(stock=F("stock") + order_item.quantity)
+        ).update(
+            stock=F("stock") + order_item.quantity,
+            stock_updated_at=timezone.now(),
+        )
 
 
 class StartEditView(APIView):
     permission_classes = [IsAgent]
 
+    @extend_schema(
+        summary="Start editing a PENDING order",
+        request=None,
+        responses={200: None, 400: None, 403: None},
+    )
     def post(self, request, order_id):
         order = get_object_or_404(Order, id=order_id)
 
@@ -290,6 +357,11 @@ class StartEditView(APIView):
 class SaveEditView(APIView):
     permission_classes = [IsAgent]
 
+    @extend_schema(
+        summary="Save edits made to a PENDING order",
+        request=None,
+        responses={200: None, 400: None, 403: None},
+    )
     def post(self, request, order_id):
         order = get_object_or_404(Order, id=order_id)
 
@@ -303,7 +375,10 @@ class SaveEditView(APIView):
                 for size in required_sizes:
                     ItemVariantSize.objects.filter(
                         item_variant_id=snap["variant_id"], size=size
-                    ).update(stock=F("stock") + snap["quantity"])
+                    ).update(
+                        stock=F("stock") + snap["quantity"],
+                        stock_updated_at=timezone.now(),
+                    )
 
             out_of_stock_items = []
             for order_item in order.items.select_related("item", "variant"):
@@ -360,24 +435,18 @@ class SaveEditView(APIView):
 
                 agent_user_id = order.agent.user_id if order.agent else None
                 if agent_user_id:
-                    try:
-                        send_push_to_user.delay(
-                            agent_user_id,
-                            "Items Out of Stock",
-                            f"{len(out_of_stock_items)} item(s) in your edited order are out of stock",
-                        )
-                    except Exception as e:
-                        print("Failed to queue agent notification:", str(e))
+                    notify_user_safely(
+                        agent_user_id,
+                        "Items Out of Stock",
+                        f"{len(out_of_stock_items)} item(s) in your edited order are out of stock",
+                    )
 
                 for admin_id in admin_ids:
-                    try:
-                        send_push_to_user.delay(
-                            admin_id,
-                            "Stock Alert",
-                            f"Order #{order.id} has {len(out_of_stock_items)} out-of-stock item(s) after edit",
-                        )
-                    except Exception as e:
-                        print("Failed to queue admin notification:", str(e))
+                    notify_user_safely(
+                        admin_id,
+                        "Stock Alert",
+                        f"Order #{order.id} has {len(out_of_stock_items)} out-of-stock item(s) after edit",
+                    )
 
                 return Response(
                     {
@@ -397,7 +466,10 @@ class SaveEditView(APIView):
                 for size in required_sizes:
                     ItemVariantSize.objects.filter(
                         item_variant=order_item.variant, size=size
-                    ).update(stock=F("stock") - order_item.quantity)
+                    ).update(
+                        stock=F("stock") - order_item.quantity,
+                        stock_updated_at=timezone.now(),
+                    )
 
             expected_delivery_date = request.data.get("expected_delivery_date")
             preferred_transport = request.data.get("preferred_transport")
@@ -446,35 +518,25 @@ class OrderViewSet(ModelViewSet):
 
     def get_queryset(self):
 
-        if self.action == "list":
-            from datetime import timedelta
+        user = self.request.user
 
-            from django.utils import timezone
+        if self.action == "list":
+            _reap_stale_drafts(user)
 
             cutoff = timezone.now() - timedelta(minutes=15)
-            Order.objects.filter(
-                status="DRAFT", agent__user=self.request.user, created_at__lt=cutoff
-            ).delete()
-
             stale_editing = Order.objects.filter(
                 status="EDITING",
-                agent__user=self.request.user,
+                agent__user=user,
                 editing_started_at__lt=cutoff,
             )
             for o in stale_editing:
                 _revert_edit(o)
-
-        user = self.request.user
 
         qs = Order.objects.prefetch_related("items__variant", "items__item").order_by(
             "-created_at"
         )
 
         if self.action == "list":
-            from datetime import timedelta
-
-            from django.utils import timezone
-
             archive_cutoff = timezone.now() - timedelta(days=30)
             qs = qs.exclude(
                 status="DISPATCHED",
@@ -504,8 +566,20 @@ class OrderViewSet(ModelViewSet):
             qs = qs.filter(status__in=[s.upper() for s in statuses])
         if user.role == "ADMIN":
             biz = admin_business(user)
+
+            # D2: an admin only sees their own drafts; all non-draft orders
+            # remain visible as before.
+            own_draft = Q(status="DRAFT") & Q(created_by=user)
+
             if biz:
-                qs = qs.filter(items__item_type=biz).distinct()
+                # A draft may have no items yet, so the business-type filter
+                # must not hide an admin's own draft. Apply the type filter
+                # only to non-draft orders.
+                qs = qs.filter(
+                    own_draft | (~Q(status="DRAFT") & Q(items__item_type=biz))
+                ).distinct()
+            else:
+                qs = qs.filter(own_draft | ~Q(status="DRAFT"))
 
             search = self.request.query_params.get("search")
             if search:
@@ -527,9 +601,79 @@ class OrderViewSet(ModelViewSet):
 
         return qs.filter(agent__user=user)
 
-    def perform_create(self, serializer):
+    @extend_schema(
+        summary="Create an order (DRAFT)",
+        responses={201: OrderSerializer, 400: None},
+    )
+    def create(self, request, *args, **kwargs):
+        return super().create(request, *args, **kwargs)
 
-        serializer.save(agent=self.request.user.agent)
+    def perform_create(self, serializer):
+        user = self.request.user
+
+        if user.role == "ADMIN":
+            agent_id = self.request.data.get("agent")
+            if not agent_id:
+                raise ValidationError(
+                    {"agent": "An agent is required when an admin creates an order."}
+                )
+
+            agent = (
+                Agent.objects.filter(id=agent_id).select_related("user").first()
+            )
+            if agent is None:
+                raise ValidationError(
+                    {"agent": "The selected agent does not exist."}
+                )
+            if not agent.is_active:
+                raise ValidationError(
+                    {
+                        "agent": (
+                            "The selected agent is inactive and cannot be assigned orders."
+                        )
+                    }
+                )
+            if not agent.user.is_active:
+                raise ValidationError(
+                    {
+                        "agent": (
+                            "The selected agent's user account is inactive."
+                        )
+                    }
+                )
+
+            serializer.save(agent=agent, created_by=user)
+            return
+
+        serializer.save(agent=user.agent, created_by=user)
+
+    def update(self, request, *args, **kwargs):
+        order = self.get_object()
+        new_status = request.data.get("status")
+
+        # Dispatch must go through the dedicated endpoint so unpacked stock is
+        # returned to the warehouse.
+        if new_status == "DISPATCHED":
+            return Response(
+                {"error": "Use the dispatch endpoint to mark an order as dispatched"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if order.status == "DRAFT":
+            if not _is_creator(request.user, order):
+                return Response(
+                    {"error": "You can only edit your own draft orders"},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+            if new_status and new_status != "DRAFT":
+                return Response(
+                    {
+                        "error": "A draft order can only be placed via the place-order endpoint"
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+        return super().update(request, *args, **kwargs)
 
     def destroy(self, request, pk=None):
         pin_error = check_admin_pin(request)
@@ -557,6 +701,7 @@ class OrderViewSet(ModelViewSet):
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+    @extend_schema(summary="Dispatch a PENDING/PACKED order")
     @action(detail=True, methods=["post"], url_path="dispatch")
     def dispatch_order(self, request, pk=None):
         order = self.get_object()
@@ -591,7 +736,10 @@ class OrderViewSet(ModelViewSet):
                     for size in required_sizes:
                         ItemVariantSize.objects.filter(
                             item_variant=order_item.variant, size=size
-                        ).update(stock=F("stock") + unpacked_sets)
+                        ).update(
+                            stock=F("stock") + unpacked_sets,
+                            stock_updated_at=timezone.now(),
+                        )
 
             OrderLog.objects.create(
                 order=order,
@@ -624,26 +772,23 @@ class OrderViewSet(ModelViewSet):
             order.save()
 
             if agent_user_id:
-                try:
-                    customer_name = (
-                        order.customer.name if order.customer else "Customer"
-                    )
-                    transaction.on_commit(
-                        partial(
-                            send_push_to_user.delay,
-                            agent_user_id,
-                            "Order Dispatched",
-                            f"Order for {customer_name} has been dispatched",
-                        )
-                    )
-                except Exception as e:
-                    print("Failed to queue notification:", str(e))
+                customer_name = order.customer.name if order.customer else "Customer"
+                transaction.on_commit(
+                    partial(
+                        notify_user_safely,
+                        agent_user_id,
+                        "Order Dispatched",
+                        f"Order for {customer_name} has been dispatched",
+                    ),
+                    robust=True,
+                )
 
             # Remove viewed entries for non-pending/packed orders
             UserViewedOrder.objects.filter(order=order).delete()
 
         return Response({"message": "Order dispatched successfully"})
 
+    @extend_schema(summary="Cancel an in-progress order edit")
     @action(detail=True, methods=["post"], url_path="cancel-edit")
     def cancel_edit(self, request, pk=None):
         order = self.get_object()
@@ -668,6 +813,7 @@ class OrderViewSet(ModelViewSet):
 
         return Response({"message": "Edit cancelled"})
 
+    @extend_schema(summary="List order IDs viewed by the current user")
     @action(detail=False, methods=["get"], url_path="my-viewed-ids")
     def my_viewed_ids(self, request):
         """Return list of order IDs the current user has viewed."""
@@ -676,6 +822,7 @@ class OrderViewSet(ModelViewSet):
         )
         return Response(list(viewed))
 
+    @extend_schema(summary="Mark an order as viewed by the current user")
     @action(detail=True, methods=["post"], url_path="mark-viewed")
     def mark_viewed(self, request, pk=None):
         """Mark order as viewed by current user (only for PENDING/PACKED orders)."""
@@ -687,6 +834,7 @@ class OrderViewSet(ModelViewSet):
             UserViewedOrder.objects.filter(user=request.user, order=order).delete()
         return Response({"message": "Viewed status updated"})
 
+    @extend_schema(summary="List lightweight {id, status} pairs for the current user")
     @action(detail=False, methods=["get"], url_path="order-ids")
     def order_ids(self, request):
         """Return lightweight list of {id, status} for all orders (for unread count)."""
@@ -697,12 +845,16 @@ class OrderViewSet(ModelViewSet):
             biz = admin_business(user)
             if biz:
                 qs = qs.filter(items__item_type=biz).distinct()
+            # Admin clients hide DRAFTs entirely, so omit them here too to
+            # keep badge/"All" counts consistent with the visible list.
+            qs = qs.exclude(status="DRAFT")
         else:
             qs = qs.filter(agent__user=user)
 
         qs = qs.values_list("id", "status")
         return Response([{"id": oid, "status": stat} for oid, stat in qs])
 
+    @extend_schema(summary="List dispatched orders archived after 30 days")
     @action(detail=False, methods=["get"], url_path="archived")
     def get_archived(self, request):
         from datetime import timedelta
@@ -741,8 +893,13 @@ class OrderViewSet(ModelViewSet):
 
 
 class AddOrderItemView(APIView):
-    permission_classes = [IsAgent]
+    permission_classes = [IsAgentOrAdmin]
 
+    @extend_schema(
+        summary="Add an item to a DRAFT/EDITING/PENDING order",
+        request=AddOrderItemSerializer,
+        responses={201: None, 400: None, 403: None},
+    )
     def post(self, request, order_id):
 
         serializer = AddOrderItemSerializer(data=request.data)
@@ -750,21 +907,35 @@ class AddOrderItemView(APIView):
 
         order = get_object_or_404(Order, id=order_id)
 
+        # Admins may only add items to a draft order they created themselves.
+        if request.user.role == "ADMIN" and (
+            order.status != "DRAFT" or not _is_creator(request.user, order)
+        ):
+            return Response(
+                {"error": "An admin can only add items to a draft order they created"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
         if order.status not in ("DRAFT", "EDITING", "PENDING"):
             return Response(
                 {"error": "Items can only be added to DRAFT or EDITING orders"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        agent = request.user.agent
+        if order.status == "DRAFT" and not _is_creator(request.user, order):
+            return Response(
+                {"error": "You can only add items to your own draft orders"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
 
         item = serializer.validated_data["item"]
         variant = serializer.validated_data["variant"]
         qty = serializer.validated_data["quantity"]
         size_group = serializer.validated_data["size_group"]
 
-        if not AgentItem.objects.filter(
-            agent=agent, variant__item=item, variant=variant
+        # D1: admins can build their own drafts without item assignments.
+        if request.user.role == "AGENT" and not AgentItem.objects.filter(
+            agent=request.user.agent, variant__item=item, variant=variant
         ).exists():
             return Response(
                 {
@@ -809,9 +980,19 @@ class AddOrderItemView(APIView):
 class DeleteOrderItemView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        summary="Delete an item from an order",
+        responses={200: None, 403: None, 404: None},
+    )
     def delete(self, request, order_id, item_id):
 
         order = get_object_or_404(Order, id=order_id)
+
+        if order.status == "DRAFT" and not _is_creator(request.user, order):
+            return Response(
+                {"error": "You can only edit your own draft orders"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
 
         order_item = get_object_or_404(OrderItem, id=item_id, order=order)
 
@@ -824,7 +1005,10 @@ class DeleteOrderItemView(APIView):
                     for size in required_sizes:
                         ItemVariantSize.objects.filter(
                             item_variant=order_item.variant, size=size
-                        ).update(stock=F("stock") + order_item.quantity)
+                        ).update(
+                            stock=F("stock") + order_item.quantity,
+                            stock_updated_at=timezone.now(),
+                        )
 
                 OrderLog.objects.create(
                     order=order,
@@ -858,6 +1042,10 @@ class DeleteOrderItemView(APIView):
 class InvoiceView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        summary="Get the invoice for an order",
+        responses={200: InvoiceSerializer, 404: None},
+    )
     def get(self, request, order_id):
         order = get_object_or_404(
             Order.objects.prefetch_related("items__item__brand"), id=order_id
@@ -875,6 +1063,10 @@ class InvoiceView(APIView):
 class OrderLogsView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        summary="Get the audit log for an order",
+        responses={200: None, 403: None, 404: None},
+    )
     def get(self, request, order_id):
         order = get_object_or_404(Order, id=order_id)
 
@@ -927,6 +1119,12 @@ class OrderItemViewSet(ModelViewSet):
     def update(self, request, *args, **kwargs):
         order_item = self.get_object()
         order = order_item.order
+
+        if order.status == "DRAFT" and not _is_creator(request.user, order):
+            return Response(
+                {"error": "You can only edit your own draft orders"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
 
         if order.status not in ["DRAFT", "EDITING", "PENDING", "PACKED"]:
             return Response(
@@ -986,7 +1184,10 @@ class OrderItemViewSet(ModelViewSet):
                         for size in required_sizes:
                             ItemVariantSize.objects.filter(
                                 item_variant=order_item.variant, size=size
-                            ).update(stock=F("stock") - new_quantity)
+                            ).update(
+                                stock=F("stock") - new_quantity,
+                                stock_updated_at=timezone.now(),
+                            )
 
                     order_item.quantity = new_quantity
                     order_item.size_group = new_size_group
@@ -1009,6 +1210,7 @@ class OrderItemViewSet(ModelViewSet):
 
         return super().update(request, *args, **kwargs)
 
+    @extend_schema(summary="List unpacked items from PENDING orders")
     @action(detail=False, methods=["get"], url_path="unpacked")
     def unpacked(self, request):
         qs = (

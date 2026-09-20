@@ -82,7 +82,7 @@ export interface OrderItemDisplay {
 export interface OrderRegisterRequest {
   customer: number;
   status?: OrderStatus;
-  agent: number;
+  agent?: number;
 }
 
 export type OrderRegisterResponse = Order;

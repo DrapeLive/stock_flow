@@ -267,4 +267,6 @@ export interface UIItem {
   type: ItemType;
   price: string;
   variants: UIVariant[];
+  purge_on?: string | null;
+  days_until_purge?: number | null;
 }

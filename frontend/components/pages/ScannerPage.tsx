@@ -113,7 +113,7 @@ const ScannerPage: React.FC<ScannerPageProps> = ({
                 variant="primary"
                 onClick={() => {
                   setShowLeaveConfirm(false);
-                  router.push(`/agent/order/new/${id}`);
+                  router.push(`${basePath}/${id}`);
                 }}
               >
                 Back to Orders
