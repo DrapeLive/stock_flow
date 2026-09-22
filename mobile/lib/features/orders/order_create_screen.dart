@@ -9,6 +9,7 @@ import '../../core/router/route_observer.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/utils/perf.dart';
+import '../../core/utils/text_symbols.dart';
 import '../../data/repositories.dart';
 import '../../models/models.dart';
 import '../../shared/widgets.dart';
@@ -23,7 +24,7 @@ class _LoadError {
   final String? message;
 }
 
-/// Step 2 â€” order details + item list. Mirrors the agent
+/// Step 2 - order details + item list. Mirrors the agent
 /// `order/new/[id]/page.tsx` shared by the admin flow.
 class OrderCreateScreen extends ConsumerStatefulWidget {
   const OrderCreateScreen({super.key, required this.customerId});
@@ -460,7 +461,7 @@ Widget _header(int itemCount) {
                             fontSize: 17,
                             fontWeight: FontWeight.w900,
                             color: Color(0xFF111827))),
-                    Text('STEP 2 — ADD ITEMS',
+                    Text('STEP 2 $kEmDash ADD ITEMS',
                         style: TextStyle(
                             fontSize: 9,
                             fontWeight: FontWeight.w800,
@@ -500,7 +501,7 @@ Widget _header(int itemCount) {
             child: Row(
               children: [
                 Expanded(
-                  child: Text('Order for ${_customer?.name ?? '—'}',
+                  child: Text('Order for ${_customer?.name ?? kEmDash}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
@@ -508,7 +509,7 @@ Widget _header(int itemCount) {
                           fontWeight: FontWeight.w700,
                           color: Color(0xFF374151))),
                 ),
-                Text('Agent: ${_customer?.agentName ?? '—'}',
+                Text('Agent: ${_customer?.agentName ?? kEmDash}',
                     style: const TextStyle(
                         fontSize: 11, color: Color(0xFF9CA3AF))),
               ],
@@ -843,7 +844,7 @@ Widget _header(int itemCount) {
                     border: Border.all(color: const Color(0xFFFDE68A)),
                   ),
                   child: Text(
-                    '${group.itemName} Â· ${group.sizeGroup} â†’ ${group.total} sets',
+                    '${group.itemName} $kMiddleDot ${group.sizeGroup} $kArrow ${group.total} sets',
                     style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
@@ -1003,7 +1004,7 @@ class _OrderItemRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '${item.displayName} ( Color #${item.variantDisplayOrder} )',
+                  item.displayNameWithColor,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -1012,13 +1013,13 @@ class _OrderItemRow extends StatelessWidget {
                       color: Color(0xFF111827)),
                 ),
                 Text(
-                  'Size: ${item.displaySizeGroup ?? 'â€”'}',
+                  'Size: ${item.displaySizeGroup ?? kEmDash}',
                   style: const TextStyle(
                       fontSize: 10, color: Color(0xFF9CA3AF)),
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  '${item.quantity} Set${item.quantity == 1 ? '' : 's'} Ã— $pieceCount pcs = ${item.quantity * pieceCount} pcs',
+                  '${item.quantity} Set${item.quantity == 1 ? '' : 's'} $kMultiply $pieceCount pcs = ${item.quantity * pieceCount} pcs',
                   style: const TextStyle(
                       fontSize: 11, color: Color(0xFF4B5563)),
                 ),

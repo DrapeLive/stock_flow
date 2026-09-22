@@ -7,6 +7,7 @@ import 'package:intl/intl.dart' hide TextDirection;
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/utils/perf.dart';
+import '../../core/utils/text_symbols.dart';
 import '../../data/repositories.dart';
 import '../../models/models.dart';
 import '../../shared/admin_shell.dart';
@@ -49,6 +50,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
   AnalyticsData? _data;
   bool _loading = true;
   bool _refetching = false;
+  bool _valueUnlocked = false;
 
   @override
   void initState() {
@@ -110,6 +112,23 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
           _loading = false;
           _refetching = false;
         });
+      }
+    }
+  }
+
+  Future<void> _unlockValues() async {
+    if (_valueUnlocked) return;
+    final pin = await PinDialog.show(context,
+        title: 'Unlock Analytics',
+        message: 'Enter your 6-digit PIN to view the totals');
+    if (pin == null) return;
+    try {
+      await repos.auth.verifyPin(pin.trim());
+      if (!mounted) return;
+      setState(() => _valueUnlocked = true);
+    } catch (e) {
+      if (mounted) {
+        AppToast.error(context, e.toString().replaceFirst('Exception: ', ''));
       }
     }
   }
@@ -397,70 +416,28 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
     final sets = kpis.totalSets ?? 0;
     final pieces = kpis.totalPieces ?? 0;
     final setsFormat = NumberFormat.decimalPattern('en_IN');
-    return Row(
-      children: [
-        Expanded(
-          child: _statCard(
-            valueText: formatInrInt(value),
-            label: 'Total Order Value',
-          ),
-        ),
-        Expanded(
-          child: _statCard(
-            valueText: setsFormat.format(sets),
-            label: 'Total Sets Ordered',
-            subtext: formatPieces(pieces),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _statCard({
-    required String valueText,
-    required String label,
-    String? subtext,
-  }) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 2),
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    const masked = '$kBullet$kBullet$kBullet$kBullet';
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              valueText,
-              maxLines: 1,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-                color: Colors.black,
-              ),
+          Expanded(
+            child: _KpiTile(
+              valueText: _valueUnlocked ? formatInrInt(value) : masked,
+              label: 'Total Order Value',
+              locked: !_valueUnlocked,
+              onUnlock: _unlockValues,
             ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            label.toUpperCase(),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontSize: 9,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.6,
-              color: Color(0xFF9CA3AF),
+          Expanded(
+            child: _KpiTile(
+              valueText: _valueUnlocked ? setsFormat.format(sets) : masked,
+              label: 'Total Sets Ordered',
+              subtext: _valueUnlocked ? formatPieces(pieces) : null,
+              locked: !_valueUnlocked,
+              onUnlock: _unlockValues,
             ),
           ),
-          if (subtext != null)
-            Text(
-              subtext,
-              style: const TextStyle(fontSize: 10, color: Color(0xFF9CA3AF)),
-            ),
         ],
       ),
     );
@@ -470,8 +447,14 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
     return _card(
       title: 'Orders Trend',
       child: trend.isEmpty
-          ? const _EmptyCardBody('No data in range')
+          ? const _EmptyCardBody('No order activity in this period')
           : SizedBox(
+              // `width: double.infinity` is REQUIRED: a childless CustomPaint
+              // with loose width collapses to width 0 (constraints.smallest),
+              // so _TrendPainterP.paint bails on `size.width <= 0` and the
+              // chart renders as a blank white box. The donut card sets width
+              // explicitly; the trend card previously did not.
+              width: double.infinity,
               height: 80,
               child: _TrendPainter(points: trend, from: _from, to: _to),
             ),
@@ -484,65 +467,40 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
       (
         label: 'Avg Dispatch',
         value: m.avgDispatchHours == null
-            ? '—'
+            ? kEmDash
             : m.avgDispatchHours!.toStringAsFixed(1),
         unit: m.avgDispatchHours != null ? 'hrs' : '',
       ),
       (
         label: 'Median Dispatch',
         value: m.medianDispatchHours == null
-            ? '—'
+            ? kEmDash
             : m.medianDispatchHours!.toStringAsFixed(1),
         unit: m.medianDispatchHours != null ? 'hrs' : '',
       ),
       (
         label: 'Within 24h',
         value: m.dispatchedWithin24hPct == null
-            ? '—'
+            ? kEmDash
             : '${m.dispatchedWithin24hPct!.round()}%',
         unit: '',
       ),
     ];
-    return Row(
-      children: [
-        for (final c in cards)
-          Expanded(
-            child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 2),
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE5E7EB)),
-              ),
-              child: Column(
-                children: [
-                  Text.rich(TextSpan(children: [
-                    TextSpan(
-                        text: c.value,
-                        style: const TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w800,
-                            color: Color(0xFF2563EB))),
-                    if (c.unit.isNotEmpty)
-                      TextSpan(
-                          text: ' ${c.unit}',
-                          style: const TextStyle(
-                              fontSize: 10, color: Color(0xFF2563EB))),
-                  ])),
-                  const SizedBox(height: 4),
-                  Text(c.label.toUpperCase(),
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                          fontSize: 9,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 0.6,
-                          color: Color(0xFF9CA3AF))),
-                ],
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (final c in cards)
+            Expanded(
+              child: _KpiTile(
+                valueText: c.value,
+                label: c.label,
+                unit: c.unit,
+                centered: true,
               ),
             ),
-          ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -683,8 +641,8 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.cardBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -704,6 +662,128 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
 
   String _truncate(String s, int max) =>
       s.length > max ? '${s.substring(0, max)}...' : s;
+}
+
+class _KpiTile extends StatelessWidget {
+  const _KpiTile({
+    required this.valueText,
+    required this.label,
+    this.unit,
+    this.subtext,
+    this.centered = false,
+    this.locked = false,
+    this.onUnlock,
+  });
+
+  final String valueText;
+  final String label;
+  final String? unit;
+  final String? subtext;
+  final bool centered;
+  final bool locked;
+  final VoidCallback? onUnlock;
+
+  @override
+  Widget build(BuildContext context) {
+    final tile = Container(
+      margin: const EdgeInsets.fromLTRB(2, 0, 2, 12),
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: locked ? const Color(0xFFFEF3C7) : AppColors.cardBorder,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment:
+            centered ? CrossAxisAlignment.center : CrossAxisAlignment.start,
+        children: [
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(
+                    text: valueText,
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w800,
+                      color: locked
+                          ? const Color(0xFF9CA3AF)
+                          : const Color(0xFF2563EB),
+                    ),
+                  ),
+                  if (unit != null && unit!.isNotEmpty)
+                    TextSpan(
+                      text: ' $unit',
+                      style: const TextStyle(
+                          fontSize: 10, color: Color(0xFF2563EB)),
+                    ),
+                ],
+              ),
+              maxLines: 1,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label.toUpperCase(),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: centered ? TextAlign.center : TextAlign.start,
+            style: const TextStyle(
+              fontSize: 9,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.6,
+              color: Color(0xFF9CA3AF),
+            ),
+          ),
+          if (locked) ...[
+            const SizedBox(height: 8),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEF3C7),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.lock_outline, size: 12, color: Color(0xFFB45309)),
+                  SizedBox(width: 4),
+                  Flexible(
+                    child: Text('Tap to unlock',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFFB45309))),
+                  ),
+                ],
+              ),
+            ),
+          ] else if (subtext != null)
+            Text(
+              subtext!,
+              style: const TextStyle(fontSize: 10, color: Color(0xFF9CA3AF)),
+            ),
+        ],
+      ),
+    );
+    if (locked && onUnlock != null) {
+      return Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(10),
+          onTap: onUnlock,
+          child: tile,
+        ),
+      );
+    }
+    return tile;
+  }
 }
 
 class _EmptyCardBody extends StatelessWidget {
@@ -806,16 +886,58 @@ class _TrendPainterP extends CustomPainter {
     final min = filled.fold<int>(filled.first.count, (s, e) => math.min(s, e.count));
     final range = math.max(1, max - min);
 
-    final stepX = size.width / (filled.length - 1);
     final offset = 4.0;
 
+    // X axis labels (first / middle / last, "mmm d")
+    final labelStyle = const TextStyle(fontSize: 8, color: Color(0xFF9CA3AF));
+    void label(int i, double dx) {
+      final d = filled[i].day;
+      final txt = TextPainter(
+        text: TextSpan(
+            text: DateFormat('MMM d').format(DateTime.parse(d)), style: labelStyle),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      var x = dx - txt.width / 2;
+      x = x.clamp(0, math.max(0, size.width - txt.width));
+      txt.paint(canvas, Offset(x, size.height - 12));
+    }
+
+    double valueY(int count) =>
+        offset + (size.height - 2 * offset) * (1 - (count - min) / range);
+
+    // Single-day range (e.g. the "Today" preset): `stepX` would divide by
+    // `filled.length - 1 == 0` and produce NaN points; draw a flat line
+    // spanning the canvas instead.
+    if (filled.length == 1) {
+      final y = valueY(filled.first.count);
+      final flat = Path()
+        ..moveTo(0, y)
+        ..lineTo(size.width, y);
+      canvas.drawPath(
+        Path.from(flat)
+          ..lineTo(size.width, size.height)
+          ..lineTo(0, size.height)
+          ..close(),
+        Paint()..color = const Color(0xFF3B82F6).withValues(alpha: 0.10),
+      );
+      canvas.drawPath(
+        flat,
+        Paint()
+          ..color = const Color(0xFF3B82F6)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2
+          ..strokeCap = StrokeCap.round,
+      );
+      label(0, size.width / 2);
+      return;
+    }
+
+    final stepX = size.width / (filled.length - 1);
     final pts = <Offset>[
       for (var i = 0; i < filled.length; i++)
         Offset(
           i * stepX,
-          offset +
-              (size.height - 2 * offset) *
-                  (1 - (filled[i].count - min) / range),
+          valueY(filled[i].count),
         ),
     ];
 
@@ -841,24 +963,10 @@ class _TrendPainterP extends CustomPainter {
         ..strokeCap = StrokeCap.round,
     );
 
-    // X axis labels (first / middle / last, "mmm d")
-    final labelStyle = const TextStyle(fontSize: 8, color: Color(0xFF9CA3AF));
     final mid = filled.length ~/ 2;
-    void label(int i) {
-      final d = filled[i].day;
-      final txt = TextPainter(
-        text: TextSpan(
-            text: DateFormat('MMM d').format(DateTime.parse(d)), style: labelStyle),
-        textDirection: TextDirection.ltr,
-      )..layout();
-      var dx = pts[i].dx - txt.width / 2;
-      dx = dx.clamp(0, math.max(0, size.width - txt.width));
-      txt.paint(canvas, Offset(dx, size.height - 12));
-    }
-
-    label(0);
-    label(mid);
-    label(filled.length - 1);
+    label(0, pts.first.dx);
+    label(mid, pts[mid].dx);
+    label(filled.length - 1, pts.last.dx);
   }
 
   @override

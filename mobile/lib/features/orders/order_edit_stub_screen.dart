@@ -8,7 +8,7 @@ import '../../models/models.dart';
 import '../../shared/widgets.dart';
 
 /// Lightweight parity for the separate `/admin/order/status/:id/edit` route.
-/// Mirrors `app/(admin)/admin/order/status/[id]/edit/page.tsx` â€” shows the
+/// Mirrors `app/(admin)/admin/order/status/[id]/edit/page.tsx` - shows the
 /// ordered items with a Save header action; item-level edits live on the
 /// status screen.
 class OrderEditStubScreen extends StatefulWidget {
@@ -167,7 +167,7 @@ class _StubRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '${item.displayName} ( Color #${item.variantDisplayOrder} )',
+                  item.displayNameWithColor,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/api/api_client.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/text_symbols.dart';
 import '../../data/repositories.dart';
 import '../../models/models.dart';
 import '../../shared/admin_shell.dart';
@@ -384,7 +385,7 @@ class _CustomerRow extends StatelessWidget {
                           style: const TextStyle(
                               fontSize: 10, color: Color(0xFF9CA3AF))),
                     if (customer.sizeGroup.isNotEmpty) ...[
-                      const Text(' · ',
+                      const Text(' $kMiddleDot ',
                           style: TextStyle(
                               fontSize: 10, color: Color(0xFFE5E7EB))),
                       Text('Size: ${customer.sizeGroup}',

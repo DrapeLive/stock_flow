@@ -9,7 +9,7 @@ OrderItem line(int id, int quantity, int packed, {int pieceCount = 1}) =>
       quantity: quantity,
       packedQuantity: packed,
       pieceCount: pieceCount,
-      variantDisplayOrder: 1,
+      variantDisplayOrder: '1',
     );
 
 Order order(String? status, List<OrderItem> items) => Order(

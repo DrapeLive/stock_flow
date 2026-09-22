@@ -1,6 +1,6 @@
 import { toast as sonner } from "sonner";
 
-type ToastType = "success" | "error";
+type ToastType = "success" | "error" | "warning";
 interface ToastOptions {
   title: string;
   description?: string;
@@ -8,19 +8,43 @@ interface ToastOptions {
 
 function parseApiError(error: any): string {
   try {
+    const status = error?.response?.status;
+
+    // Reverse proxy rejected the body before it reached Django. Browsers
+    // surface this as a bare "Network Error" when CORS headers are missing.
+    if (status === 413) {
+      return "Image is too large. Please pick a smaller photo and try again.";
+    }
+
+    // Request never got a response (offline, server down, or proxy reset).
+    if (!error?.response && error?.request) {
+      if (error?.code === "ERR_NETWORK") {
+        return "Server unreachable. Check your connection and try again.";
+      }
+      if (error?.code === "ECONNABORTED") {
+        return "Request timed out. Try again.";
+      }
+      return "Could not reach the server. Check your connection and try again.";
+    }
+
     // Axios-style response
     const data = error?.response?.data;
 
     if (data) {
       // Django sent HTML (e.g. 500 debug page)
       if (typeof data === "string") {
-        return data.includes("<html") ? "Server error, please try again" : data;
+        const message = data.includes("<html")
+          ? "Server error, please try again"
+          : data;
+        return status ? `${message} (HTTP ${status})` : message;
       }
 
       if (typeof data === "object") {
         // { error: "..." } or { detail: "..." }
-        if (typeof data.error === "string") return data.error;
-        if (typeof data.detail === "string") return data.detail;
+        if (typeof data.error === "string")
+          return status ? `${data.error} (HTTP ${status})` : data.error;
+        if (typeof data.detail === "string")
+          return status ? `${data.detail} (HTTP ${status})` : data.detail;
 
         // DRF field errors: { username: ["..."], email: ["..."] }
         const messages = Object.entries(data)
@@ -30,7 +54,7 @@ function parseApiError(error: any): string {
             return [];
           })
           .join("\n");
-        if (messages) return messages;
+        if (messages) return status ? `${messages} (HTTP ${status})` : messages;
       }
     }
 
@@ -49,14 +73,20 @@ function parseApiError(error: any): string {
 
 function showToast(type: ToastType, { title, description }: ToastOptions) {
   const options = {
-    duration: 3000,
+    duration: type === "warning" ? 5000 : 3000,
     ...(description && { description }),
   };
   if (type === "success") {
     sonner.success(title, options);
+  } else if (type === "warning") {
+    sonner.warning(title, options);
   } else {
     sonner.error(title, options);
   }
+}
+
+export function toastWarning(title: string, description?: string) {
+  showToast("warning", { title, description });
 }
 
 export function toastSuccess(title: string, description?: string) {

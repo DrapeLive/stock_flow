@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../data/repositories.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/text_symbols.dart';
 import 'widgets.dart';
 
 /// Mirrors `app/(auth)/forgot-password/page.tsx`.
@@ -145,7 +146,7 @@ return Scaffold(
                         loading: _loading,
                         icon: const Icon(Icons.send, size: 16, color: Colors.white),
                         label: 'Send reset link',
-                        loadingLabel: 'Sendingâ€¦',
+                        loadingLabel: 'Sending$kEllipsis',
                         onPressed: _submit,
                       ),
                     ],

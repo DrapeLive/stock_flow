@@ -12,7 +12,7 @@ import '../../models/models.dart';
 import '../../shared/widgets.dart';
 import 'qr_label_pdf.dart';
 
-/// Mirrors `app/(admin-no-layout)/admin/items/qr/[id]/page.tsx` â€” a single
+/// Mirrors `app/(admin-no-layout)/admin/items/qr/[id]/page.tsx` - a single
 /// 58mm x 90mm QR label for one variant, auto-printable.
 class QrLabelScreen extends ConsumerStatefulWidget {
   const QrLabelScreen({super.key, required this.qr});

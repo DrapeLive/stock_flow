@@ -480,9 +480,16 @@ class OrderItem {
   final int? packedQuantity;
   final int? pieceCount;
   final int? order;
-  final int variantDisplayOrder;
+  final String variantDisplayOrder;
 
   String get displayName => item?.name ?? itemName ?? 'Item';
+
+  /// For order rows: `Name ( Color #N )` when the variant has a display_order,
+  /// otherwise just the name (never `( Color # )`).
+  String get displayNameWithColor {
+    final order = variantDisplayOrder.trim();
+    return order.isEmpty ? displayName : '$displayName ( Color #$order )';
+  }
   String get displayPrice => item?.price ?? itemPrice ?? '';
   String? get imageUrl => item?.variants.isEmpty == true ? null : (toVariantImage());
   String? toVariantImage() {
@@ -515,7 +522,24 @@ class OrderItem {
         packedQuantity: asInt(json['packed_quantity']),
         pieceCount: asInt(json['piece_count']),
         order: asInt(json['order']),
-        variantDisplayOrder: asInt(json['variant_display_order']) ?? 0,
+        variantDisplayOrder: s(json['variant_display_order']),
+      );
+
+  OrderItem copyWith({int? packedQuantity}) => OrderItem(
+        id: id,
+        item: item,
+        variant: variant,
+        sizeGroup: sizeGroup,
+        size: size,
+        itemName: itemName,
+        itemPrice: itemPrice,
+        variantImage: variantImage,
+        quantity: quantity,
+        originalQuantity: originalQuantity,
+        packedQuantity: packedQuantity ?? this.packedQuantity,
+        pieceCount: pieceCount,
+        variantDisplayOrder: variantDisplayOrder,
+        order: order,
       );
 }
 
@@ -578,6 +602,25 @@ class Order {
         transportCompanyName: json['transport_company_name'] as String?,
         lrNumber: s(json['lr_number']),
         notes: json['notes'] as String?,
+      );
+
+  Order copyWith({List<OrderItem>? items, String? status}) => Order(
+        id: id,
+        items: items ?? this.items,
+        agent: agent,
+        customer: customer,
+        totalQuantity: totalQuantity,
+        totalSets: totalSets,
+        totalPieces: totalPieces,
+        status: status ?? this.status,
+        createdAt: createdAt,
+        expectedDeliveryDate: expectedDeliveryDate,
+        preferredTransport: preferredTransport,
+        preferredTransportName: preferredTransportName,
+        transportCompany: transportCompany,
+        transportCompanyName: transportCompanyName,
+        lrNumber: lrNumber,
+        notes: notes,
       );
 }
 
@@ -872,18 +915,29 @@ class AnalyticsData {
   final List<LeaderboardEntry> topItems;
   final TimeMetrics? timeMetrics;
 
-  factory AnalyticsData.fromJson(Map<String, dynamic> json) => AnalyticsData(
-        kpis: json['kpis'] is Map<String, dynamic>
-            ? AnalyticsKpis.fromJson(json['kpis'] as Map<String, dynamic>)
-            : const AnalyticsKpis(),
-        trend: asList(json['trend'], TrendPoint.fromJson),
-        topCustomers: asList(json['top_customers'], LeaderboardEntry.fromJson),
-        topAgents: asList(json['top_agents'], LeaderboardEntry.fromJson),
-        topItems: asList(json['top_items'], LeaderboardEntry.fromJson),
-        timeMetrics: json['time_metrics'] is Map<String, dynamic>
-            ? TimeMetrics.fromJson(json['time_metrics'] as Map<String, dynamic>)
-            : null,
-      );
+  factory AnalyticsData.fromJson(Map<String, dynamic> json) {
+    final rawTrend = json['trend'];
+    assert(
+      rawTrend is List,
+      'Analytics payload mismatch: expected json["trend"] to be a list of '
+      '{"day": "YYYY-MM-DD", "count": int} points but got '
+      '${rawTrend == null ? 'null' : rawTrend.runtimeType}. Fix the backend '
+      'contract or update AnalyticsData parsing before shipping — otherwise '
+      'trend data is silently dropped.',
+    );
+    return AnalyticsData(
+      kpis: json['kpis'] is Map<String, dynamic>
+          ? AnalyticsKpis.fromJson(json['kpis'] as Map<String, dynamic>)
+          : const AnalyticsKpis(),
+      trend: asList(rawTrend, TrendPoint.fromJson),
+      topCustomers: asList(json['top_customers'], LeaderboardEntry.fromJson),
+      topAgents: asList(json['top_agents'], LeaderboardEntry.fromJson),
+      topItems: asList(json['top_items'], LeaderboardEntry.fromJson),
+      timeMetrics: json['time_metrics'] is Map<String, dynamic>
+          ? TimeMetrics.fromJson(json['time_metrics'] as Map<String, dynamic>)
+          : null,
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------

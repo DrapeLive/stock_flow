@@ -7,17 +7,20 @@ import '../../core/theme/app_theme.dart';
 import '../../core/utils/perf.dart';
 import '../../core/utils/piece_counts.dart';
 import '../../core/utils/stock_validators.dart';
+import '../../core/utils/text_symbols.dart';
 import '../../data/item_store.dart';
 import '../../data/repositories.dart';
 import '../../models/models.dart';
 import '../../shared/admin_shell.dart';
+import '../../shared/scan_beep.dart';
 import '../../shared/widgets.dart';
+import 'display_order.dart';
 import 'item_sync_service.dart';
 
 enum StockTab { inStock, outOfStock, ordered }
 
-class _UnpackedItem {
-  const _UnpackedItem({
+class UnpackedItem {
+  const UnpackedItem({
     required this.id,
     required this.itemName,
     required this.itemType,
@@ -36,7 +39,7 @@ class _UnpackedItem {
   final String? variantImage;
   final int pieceCount;
 
-  static _UnpackedItem fromJson(Map<String, dynamic> j) => _UnpackedItem(
+  static UnpackedItem fromJson(Map<String, dynamic> j) => UnpackedItem(
         id: asInt(j['id']) ?? 0,
         itemName: s(j['item_name']),
         itemType: s(j['item_type']),
@@ -65,7 +68,7 @@ class _ItemsScreenState extends ConsumerState<ItemsScreen> {
   String? _error;
 
   List<ItemStockEntry> _items = const [];
-  List<_UnpackedItem> _unpacked = const [];
+  List<UnpackedItem> _unpacked = const [];
   Map<String, List<String>> _orderGroups = const {};
 
   @override
@@ -117,7 +120,7 @@ class _ItemsScreenState extends ConsumerState<ItemsScreen> {
         repos.item.sizeRanges(),
       ]);
       final u = (results[0] as List)
-          .map((e) => _UnpackedItem.fromJson((e as Map).cast<String, dynamic>()))
+          .map((e) => UnpackedItem.fromJson((e as Map).cast<String, dynamic>()))
           .toList();
       final byType = (results[1] as Map<String, dynamic>)[
               'order_creation_sizes_by_type'] as Map<String, dynamic>? ??
@@ -230,7 +233,7 @@ class _ItemsScreenState extends ConsumerState<ItemsScreen> {
     return filtered;
   }
 
-  List<_UnpackedItem> get _filteredOrdered {
+  List<UnpackedItem> get _filteredOrdered {
     if (_search.trim().isEmpty) return _unpacked;
     final q = _search.trim().toLowerCase();
     return _unpacked.where((i) => i.itemName.toLowerCase().contains(q)).toList();
@@ -454,7 +457,7 @@ class _ItemsScreenState extends ConsumerState<ItemsScreen> {
     );
   }
 
-  List<Widget> _orderedContent(List<_UnpackedItem> ordered) {
+  List<Widget> _orderedContent(List<UnpackedItem> ordered) {
     return [if (ordered.isEmpty) _emptyBox('No ordered items', 'No unpacked items found') else _orderedList(ordered)];
   }
 
@@ -491,18 +494,18 @@ class _ItemsScreenState extends ConsumerState<ItemsScreen> {
     return result;
   }
 
-  Widget _orderedList(List<_UnpackedItem> ordered) {
-    final groups = <String, List<_UnpackedItem>>{};
+  Widget _orderedList(List<UnpackedItem> ordered) {
+    final groups = <String, List<UnpackedItem>>{};
     for (final item in ordered) {
       (groups[item.itemName] ??= []).add(item);
     }
-    final names = groups.keys.toList()..sort();
+    final names = groups.keys.toList()
+      ..sort(compareItemNamesDesc);
     return Column(
       children: [
         for (final name in names)
-          _OrderedGroupCard(
+          OrderedGroupCard(
             group: groups[name]!,
-            unavailable: !_items.any((i) => i.name == name),
             onTap: () =>
                 context.push('/admin/items/ordered/${groups[name]!.first.id}'),
           ),
@@ -668,11 +671,8 @@ class _ItemCardView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final variants = [...item.variants]
-      ..sort((a, b) {
-        final oa = int.tryParse(a.displayOrder ?? '') ?? 1 << 30;
-        final ob = int.tryParse(b.displayOrder ?? '') ?? 1 << 30;
-        return oa.compareTo(ob);
-      });
+      ..sort((a, b) => variantOrderValue(a.displayOrder)
+          .compareTo(variantOrderValue(b.displayOrder)));
 
     return Container(
       decoration: BoxDecoration(
@@ -857,7 +857,7 @@ class _VariantCardView extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Color #${variant.displayOrder ?? '${index + 1}'}',
+                      colorNumberLabel(variant.displayOrder, index + 1),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
@@ -892,7 +892,7 @@ class _VariantCardView extends StatelessWidget {
               ],
             ),
           ),
-          if ((variant.qrCode ?? '').isNotEmpty && variant.displayOrder != null)
+          if ((variant.qrCode ?? '').isNotEmpty)
             Align(
               alignment: Alignment.bottomRight,
               child: InkWell(
@@ -962,12 +962,18 @@ class _SizeStockChip extends StatelessWidget {
   }
 }
 
-class _OrderedGroupCard extends StatelessWidget {
-  const _OrderedGroupCard(
-      {required this.group, required this.onTap, this.unavailable = false});
-  final List<_UnpackedItem> group;
+/// One ordered-item group card.
+///
+/// Cards are always tappable. Availability is decided by the detail screen's
+/// live customer-requirements fetch (it shows "This item is no longer
+/// available" for genuinely deleted items). Never gate a card here: the order
+/// row's `item_name` is a snapshot captured at order time, so a local match
+/// against the sync store's *current* names falsely blocks still-existing
+/// items that were renamed after the order.
+class OrderedGroupCard extends StatelessWidget {
+  const OrderedGroupCard({super.key, required this.group, required this.onTap});
+  final List<UnpackedItem> group;
   final VoidCallback onTap;
-  final bool unavailable;
 
   @override
   Widget build(BuildContext context) {
@@ -982,7 +988,7 @@ class _OrderedGroupCard extends StatelessWidget {
 
     return InkWell(
       borderRadius: BorderRadius.circular(8),
-      onTap: unavailable ? null : onTap,
+      onTap: onTap,
       child: Container(
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.all(8),
@@ -1046,17 +1052,17 @@ class _OrderedGroupCard extends StatelessWidget {
                             style: const TextStyle(
                                 fontSize: 10, color: Color(0xFF9CA3AF))),
                       if (first.sizeGroup.isNotEmpty) ...[
-                        const Text('·',
+                        const Text(kMiddleDot,
                             style: TextStyle(
                                 fontSize: 10, color: Color(0xFFE5E7EB))),
                         Text('Size: ${first.sizeGroup}',
                             style: const TextStyle(
                                 fontSize: 10, color: Color(0xFF9CA3AF))),
                       ],
-                      const Text('·',
+                      const Text(kMiddleDot,
                           style: TextStyle(
                               fontSize: 10, color: Color(0xFFE5E7EB))),
-Text('$totalQty × $pieceCount pcs',
+Text('$totalQty $kMultiply $pieceCount pcs',
                             style: const TextStyle(
                                 fontSize: 10, color: Color(0xFF9CA3AF))),
                     ],
@@ -1064,12 +1070,8 @@ Text('$totalQty × $pieceCount pcs',
                 ],
               ),
             ),
-            if (unavailable)
-              const Text('Item no longer available',
-                  style: TextStyle(fontSize: 10, color: Color(0xFF9CA3AF)))
-            else
-              const Icon(Icons.chevron_right,
-                  size: 16, color: Color(0xFFD1D5DB)),
+            const Icon(Icons.chevron_right,
+                size: 16, color: Color(0xFFD1D5DB)),
           ],
         ),
       ),
@@ -1122,6 +1124,7 @@ class _QrScanSheetState extends State<_QrScanSheet> {
                           : null;
                       final raw = barcode?.rawValue;
                       if (raw != null && raw.isNotEmpty) {
+                        playScanBeep();
                         _done = true;
                         widget.onScanned(raw);
                       }

@@ -15,8 +15,8 @@ class AppColors {
   // StatusBadge.tsx colours.
   static const Color pendingBg = Color(0xFFFFFBEB);
   static const Color pendingFg = Color(0xFFD97706);
-  static const Color packedBg = Color(0xFFFFF7ED);
-  static const Color packedFg = Color(0xFFEA580C);
+  static const Color packedBg = Color(0xFFEFF6FF);
+  static const Color packedFg = Color(0xFF2563EB);
   static const Color dispatchedBg = Color(0xFFF0FDF4);
   static const Color dispatchedFg = Color(0xFF15803D);
   static const Color grayBg = Color(0xFFF9FAFB);
@@ -29,6 +29,11 @@ class AppColors {
   // unread dot, card tint/border and the "Unread" filter chip.
   static const Color unread = Color(0xFF16A34A);
   static const Color unreadTint = Color(0xFFF0FDF4);
+
+  // "Unpacked" badge on dashboard order cards (high-visibility fluorescent
+  // lime with a dark foreground for strong contrast).
+  static const Color unpackedBg = Color(0xFFB6FF00);
+  static const Color unpackedFg = Color(0xFF132A00);
 }
 
 /// Flutter ThemeData replicating the web app's visual language.

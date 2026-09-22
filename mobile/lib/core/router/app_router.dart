@@ -17,6 +17,7 @@ import '../../features/items/qr_print_select_screen.dart';
 import '../../features/orders/order_create_customer_screen.dart';
 import '../../features/orders/order_create_item_screen.dart';
 import '../../features/orders/order_create_scanner_screen.dart';
+import '../../features/orders/order_create_search_screen.dart';
 import '../../features/orders/order_create_screen.dart';
 import '../../features/orders/order_edit_stub_screen.dart';
 import '../../features/orders/order_status_screen.dart';
@@ -133,6 +134,19 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/admin/order/new/:id/scan',
         builder: (c, s) => OrderCreateScannerScreen(
           customerId: int.parse(s.pathParameters['id'] ?? '0'),
+        ),
+      ),
+      GoRoute(
+        path: '/admin/order/new/:id/search',
+        builder: (c, s) => OrderCreateSearchScreen(
+          customerId: int.parse(s.pathParameters['id'] ?? '0'),
+        ),
+      ),
+      GoRoute(
+        path: '/admin/order/new/:id/pick/:itemId',
+        builder: (c, s) => OrderCreateItemScreen(
+          customerId: int.parse(s.pathParameters['id'] ?? '0'),
+          itemId: int.parse(s.pathParameters['itemId'] ?? '0'),
         ),
       ),
       GoRoute(

@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/price_input.dart';
+import '../../core/utils/text_symbols.dart';
 import '../../data/repositories.dart';
 import '../../models/models.dart';
 import '../../providers.dart';
@@ -152,7 +153,7 @@ bool get _isValid {
       _itemSizes[(_type == 'kids' || _type == 'gents') ? _type : 'gents'] ??
       const [];
 
-  // â”€â”€ CRUD on groups â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ---- CRUD on groups ----------------------------------------------------------------------------------------------------------------
 
   void _startAdd() {
     final available = _sizesForType();
@@ -227,7 +228,7 @@ bool get _isValid {
     });
   }
 
-  // â”€â”€ Save â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ---- Save ------------------------------------------------------------------------------------------------------------------------------------
 
   Future<void> _save() async {
     setState(() => _saving = true);
@@ -298,7 +299,7 @@ bool get _isValid {
     }
   }
 
-  // â”€â”€ Delete â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ---- Delete --------------------------------------------------------------------------------------------------------------------------------
 
   Future<void> _handleDelete() async {
     final user = ref.read(sessionProvider.select((s) => s?.user));
@@ -339,8 +340,8 @@ bool get _isValid {
     return Scaffold(
       backgroundColor: Colors.white,
 body: SafeArea(
-        child: _loading
-            ? const PageLoading(label: 'Loading itemâ€¦')
+child: _loading
+            ? const PageLoading(label: 'Loading item$kEllipsis')
             : _loadError != null
                 ? EmptyState(
                     icon: Icons.error_outline,
@@ -443,7 +444,7 @@ child: image != null
                   size: 34, color: AppColors.primary),
         ),
         const SizedBox(height: 10),
-        Text(_name.isEmpty ? 'â€”' : _name,
+        Text(_name.isEmpty ? kEmDash : _name,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
@@ -510,7 +511,7 @@ const Text('ITEM DETAILS',
     return StockFlowTextField(
       label: 'Price *',
       hint: '0.00',
-      prefixText: '₹ ',
+      prefixText: '$kRupee ',
       initialText: _price,
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
       inputFormatters: const [PriceTextInputFormatter()],
@@ -661,16 +662,16 @@ Widget _variantsSection() {
                             size: 16, color: Color(0xFFD1D5DB)),
                   ),
                 ),
-                const SizedBox(width: 6),
-                InkWell(
-                  onTap: () => setState(() {
-                    if (isOpen) {
-                      _open.remove(g.backendId);
-                    } else {
-                      _open.add(g.backendId);
-                    }
-                  }),
-                  child: Expanded(
+const SizedBox(width: 6),
+                Expanded(
+                  child: InkWell(
+                    onTap: () => setState(() {
+                      if (isOpen) {
+                        _open.remove(g.backendId);
+                      } else {
+                        _open.add(g.backendId);
+                      }
+                    }),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -738,25 +739,24 @@ Widget _variantsSection() {
                     ),
                     child: Row(
                       children: [
-                        const Text('Display Order',
+const Text('Display Order',
                             style: TextStyle(
                                 fontSize: 11, color: Color(0xFF9CA3AF))),
                         const SizedBox(width: 10),
-Expanded(
-                          child: SizedBox(
-                            height: 32,
-                            child: StockFlowTextField(
+SizedBox(
+                          width: 96,
+                          height: 32,
+                          child: StockFlowTextField(
                               initialText: g.displayOrder,
                               keyboardType: TextInputType.number,
                               hint: '0',
                               fillColor: Colors.white,
-                              contentPadding:
-                                  const EdgeInsets.symmetric(horizontal: 10),
+                              contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 10),
                               borderRadius: 8,
                               onChanged: (v) =>
                                   _updateDisplayOrder(g.backendId, v),
                             ),
-                          ),
                         ),
                       ],
                     ),

@@ -1,5 +1,7 @@
 import 'package:intl/intl.dart';
 
+import 'text_symbols.dart';
+
 final NumberFormat _inr = NumberFormat.currency(
   locale: 'en_IN',
   symbol: '\u20B9',
@@ -19,7 +21,7 @@ String toApiDate(DateTime d) => _apiDate.format(d);
 final DateFormat _displayDate = DateFormat('dd MMM yyyy');
 
 String formatDate(String? iso) {
-  if (iso == null || iso.isEmpty) return '—';
+  if (iso == null || iso.isEmpty) return kEmDash;
   try {
     return _displayDate.format(DateTime.parse(iso));
   } catch (_) {
@@ -29,7 +31,7 @@ String formatDate(String? iso) {
 
 /// e.g. "12 Jan" — matches OrderCard's `day: "2-digit", month: "short"`.
 String formatDateShort(String? iso) {
-  if (iso == null || iso.isEmpty) return '—';
+  if (iso == null || iso.isEmpty) return kEmDash;
   try {
     return DateFormat('dd MMM').format(DateTime.parse(iso));
   } catch (_) {
@@ -38,7 +40,7 @@ String formatDateShort(String? iso) {
 }
 
 String formatDateTime(String? iso) {
-  if (iso == null || iso.isEmpty) return '—';
+  if (iso == null || iso.isEmpty) return kEmDash;
   try {
     return DateFormat('dd MMM yyyy, hh:mm a').format(DateTime.parse(iso));
   } catch (_) {

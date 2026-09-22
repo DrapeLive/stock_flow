@@ -11,17 +11,22 @@ import '../../models/models.dart';
 import '../../shared/widgets.dart';
 import 'order_flow_utils.dart';
 
-/// Step 4 â€” choose variant + size group + quantity, then add or update the
+/// Step 4 - choose variant + size group + quantity, then add or update the
 /// order item. Mirrors `agent/order/new/[id]/[qr]/page.tsx`.
 class OrderCreateItemScreen extends ConsumerStatefulWidget {
   const OrderCreateItemScreen({
     super.key,
     required this.customerId,
-    required this.qr,
+    this.qr = '',
+    this.itemId,
   });
 
   final int customerId;
   final String qr;
+
+  /// When set, the item is resolved from the stock list by [itemId] instead of
+  /// a scanned QR (the "search by name" flow).
+  final int? itemId;
 
   @override
   ConsumerState<OrderCreateItemScreen> createState() =>
@@ -56,41 +61,72 @@ class _OrderCreateItemScreenState
         _loading = false;
         _error = 'Order session not found. Please restart the order.';
       });
-      return;
+return;
     }
+
     try {
-      final results = await Future.wait([
-        repos.item.byQr(widget.qr),
+      final hasQr = widget.qr.isNotEmpty;
+      final results = await Future.wait<Object?>([
+        hasQr ? repos.item.byQr(widget.qr) : Future<ItemQR?>.value(null),
         repos.order.getOne(orderId),
         repos.item.sizeRanges(),
+        hasQr ? Future<List<ItemStockEntry>>.value(const []) : repos.item.stockList(),
       ]);
       if (!mounted) return;
-      final data = results[0] as ItemQR;
+      final resolved = results[0] as ItemQR?;
       final order = results[1] as Order;
       final sizeRanges = results[2] as Map<String, dynamic>;
+      final stockItems = results[3] as List<ItemStockEntry>;
+
+      ItemQR? data = resolved;
+      ItemVariantQR? variant;
+
+      if (widget.itemId != null) {
+        final matches = [
+          for (final entry in stockItems)
+            if (entry.id == widget.itemId) entry,
+        ];
+        if (matches.isEmpty) {
+          throw Exception('Item not found in stock. Please try again.');
+        }
+        final entry = matches.first;
+        data = ItemQR(
+          id: entry.id,
+          name: entry.name,
+          type: entry.type,
+          price: entry.price,
+          variants: entry.variants,
+          matchedVariantId: entry.variants.isNotEmpty
+              ? entry.variants.first.id
+              : null,
+        );
+        if (entry.variants.isNotEmpty) {
+          variant = entry.variants.first;
+        }
+      } else if (data != null && data.variants.isNotEmpty) {
+        final item = data;
+        final matched = item.matchedVariantId ?? 0;
+        variant = item.variants.firstWhere(
+          (v) => v.id == matched,
+          orElse: () => item.variants.first,
+        );
+      }
+
+      if (data == null) throw Exception('No item found.');
 
       final type = (data.type ?? 'gents').toLowerCase();
       final validType = (type == 'kids' || type == 'gents') ? type : 'gents';
-      final byType =
+final byType =
           (sizeRanges['order_creation_sizes_by_type'] as Map<String, dynamic>?) ??
               const {};
       final groups =
           List<String>.from(byType[validType] as List<dynamic>? ?? const []);
 
-      ItemVariantQR? variant;
-      if (data.variants.isNotEmpty) {
-        final matched = data.matchedVariantId ?? 0;
-        variant = data.variants.firstWhere(
-          (v) => v.id == matched,
-          orElse: () => data.variants.first,
-        );
-      }
-
       setState(() {
         _data = data;
         _order = order;
         _orderGroups = groups;
-_selectedVariant = variant;
+        _selectedVariant = variant;
         _loading = false;
         _error = null;
       });
@@ -145,17 +181,7 @@ _selectedVariant = variant;
         _selectedVariant,
         group,
         _reservedFor(_selectedVariant?.id ?? -1),
-      );
-
-  bool _alreadyAdded(String group) {
-    final variant = _selectedVariant;
-    if (variant == null) return false;
-    final editing = _editingItem;
-    return _items.any((item) =>
-        item.variant == variant.id &&
-        item.sizeGroup == group &&
-        item.id != editing?.id);
-  }
+);
 
   void _autoSelectSizeGroup() {
     final variant = _selectedVariant;
@@ -426,11 +452,11 @@ return Scaffold(
                 const SizedBox(height: 22),
                 _label('COLOR / VARIANT'),
                 const SizedBox(height: 10),
-                _variantRow(data),
+_variantRow(data),
                 const SizedBox(height: 22),
                 _label('SIZE GROUP'),
                 const SizedBox(height: 10),
-                _sizeGroupList(),
+                _sizeGroupDropdown(),
                 const SizedBox(height: 22),
                 _quantitySection(),
                 if (_validationError != null) ...[
@@ -543,7 +569,7 @@ return Scaffold(
                     ),
                   ),
                   const SizedBox(height: 3),
-                  Text('Color ${v.displayOrder ?? v.id}',
+                  Text('Color ${(v.displayOrder?.trim().isNotEmpty ?? false) ? v.displayOrder : v.id}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -558,105 +584,108 @@ return Scaffold(
           );
         },
       ),
-    );
+);
   }
 
-  Widget _sizeGroupList() {
+  Widget _sizeGroupDropdown() {
     final groups = _sizeGroups;
     if (groups.isEmpty) {
       return const Text('No size groups available for this color',
           style: TextStyle(fontSize: 13, color: Color(0xFF9CA3AF)));
     }
+    final selected = _selectedSizeGroup;
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        for (final group in groups) ...[
-          _sizeGroupTile(group),
+        Container(
+          constraints: const BoxConstraints(minHeight: 52),
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: selected != null
+                  ? AppColors.primary
+                  : const Color(0xFFE5E7EB),
+              width: selected != null ? 2 : 1,
+            ),
+          ),
+          child: DropdownButton<String>(
+            value: selected,
+            isExpanded: true,
+            isDense: true,
+            underline: const SizedBox.shrink(),
+            borderRadius: BorderRadius.circular(14),
+            hint: const Text('Select size group',
+                style: TextStyle(fontSize: 13, color: Color(0xFF9CA3AF))),
+            icon:
+                const Icon(Icons.keyboard_arrow_down, color: AppColors.primary),
+            style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF111827)),
+            items: [
+              for (final group in groups)
+                DropdownMenuItem(
+                  value: group,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(group,
+                            maxLines: 1, overflow: TextOverflow.ellipsis),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        _sizeGroupAvailabilityLabel(group),
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: _isSizeGroupOutOfStock(group)
+                              ? const Color(0xFFEF4444)
+                              : const Color(0xFF16A34A),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+            onChanged: (v) {
+              if (v == null) return;
+              if (_isSizeGroupOutOfStock(v)) {
+                setState(
+                    () => _validationError = '$v is out of stock, please pick another size group.');
+                return;
+              }
+              _selectSizeGroup(v);
+            },
+          ),
+        ),
+        if (selected != null) ...[
           const SizedBox(height: 8),
+          Row(
+            children: [
+              Text('${pieceCountFor(selected)} pcs per set',
+                  style:
+                      const TextStyle(fontSize: 11, color: Color(0xFF9CA3AF))),
+              const Spacer(),
+              Text('${_availableStock(selected)} available',
+                  style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF16A34A))),
+            ],
+          ),
         ],
       ],
     );
   }
 
-  Widget _sizeGroupTile(String group) {
-    final selected = group == _selectedSizeGroup;
-    final stock = _availableStock(group);
-    final already = _alreadyAdded(group);
-    final pcs = pieceCountFor(group);
-    final out = stock < 1;
-    return InkWell(
-      borderRadius: BorderRadius.circular(14),
-      onTap: out ? null : () => _selectSizeGroup(group),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(
-          color: out ? const Color(0xFFF9FAFB) : Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: selected ? AppColors.primary : const Color(0xFFE5E7EB),
-            width: selected ? 2 : 1,
-          ),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              selected
-                  ? Icons.radio_button_checked
-                  : Icons.radio_button_unchecked,
-              size: 18,
-              color: selected ? AppColors.primary : const Color(0xFFD1D5DB),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Text(group,
-                          style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w800,
-                              color: out
-                                  ? const Color(0xFF9CA3AF)
-                                  : const Color(0xFF111827))),
-                      if (already) ...[
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 1),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFECFDF5),
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                          child: const Text('Added',
-                              style: TextStyle(
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.w800,
-                                  color: Color(0xFF16A34A))),
-                        ),
-                      ],
-                    ],
-                  ),
-                  Text('$pcs pcs per set',
-                      style: const TextStyle(
-                          fontSize: 11, color: Color(0xFF9CA3AF))),
-                ],
-              ),
-            ),
-            Text(
-              out ? 'Out of stock' : '$stock available',
-              style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color: out
-                      ? const Color(0xFFEF4444)
-                      : const Color(0xFF16A34A)),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  bool _isSizeGroupOutOfStock(String group) => _availableStock(group) < 1;
+
+  String _sizeGroupAvailabilityLabel(String group) =>
+      _isSizeGroupOutOfStock(group)
+          ? 'Out of stock'
+          : '${_availableStock(group)} available';
 
   Widget _quantitySection() {
     final stock = _selectedSizeGroup == null

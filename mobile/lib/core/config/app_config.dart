@@ -5,10 +5,10 @@ class AppConfig {
   /// Backend base URL. Pass with `--dart-define=API_BASE_URL=https://...`.
   /// Defaults to the PC's LAN IP so a physical phone on the same Wi-Fi can
   /// reach the local Django dev server. For the Android emulator use
-  /// `--dart-define=API_BASE_URL=http://10.0.2.2:8000` (its host loopback).
+  /// `--dart-define=API_BASE_URL=http://10.0.2.2:8000 ,http://10.207.34.10:8000 ` (its host loopback).
   static const String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://10.207.34.10:8000',
+    defaultValue: 'https://backendtest.xlapparals.in',
   );
 
   /// Media domain for warehouse images, e.g. `api.xlapparals.in`.

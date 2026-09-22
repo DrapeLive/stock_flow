@@ -6,6 +6,7 @@ import { ItemType, UIItem } from "@/types/item";
 import { archiveCountdownLabel } from "@/util/archiveLabel";
 import VariantCard from "./VariantCard";
 import { isItemOutOfStock, isVariantOutOfStock } from "@/util/stockValidators";
+import { compareByVariantOrder } from "@/lib/sortVariants";
 
 interface ItemCardProps {
     item: UIItem;
@@ -163,11 +164,7 @@ export default function ItemCard({
                 <div className="px-4 pb-4 pt-2">
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                         {[...item.variants]
-                            .sort((a, b) => {
-                                const orderA = a.display_order ? parseInt(a.display_order, 10) : Infinity;
-                                const orderB = b.display_order ? parseInt(b.display_order, 10) : Infinity;
-                                return orderA - orderB;
-                            })
+                            .sort(compareByVariantOrder)
                             .map((variant, index) => (
                             <VariantCard
                                 key={variant.id}

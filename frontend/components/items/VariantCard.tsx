@@ -3,6 +3,7 @@
 import { QrCode } from "lucide-react";
 import { ImagePreview } from "@/components/pages/ImagePreview";
 import { ItemType, UIVariant } from "@/types/item";
+import { variantColorLabel } from "@/lib/colorLabel";
 import SizeRangeRow from "./SizeRangeRow";
 import {
     getSizeRangesWithStock,
@@ -52,7 +53,7 @@ export default function VariantCard({
                 </div>
                 <div className="flex-1 min-w-0">
                     <p className="text-xs font-semibold text-gray-700 truncate">
-                        Color #{variant.display_order != null ? variant.display_order : (index + 1)}
+                        {variantColorLabel(variant.display_order, index + 1)}
                     </p>
                     {qrCode && (
                         <p className="text-[10px] text-gray-400 truncate">
@@ -75,9 +76,9 @@ export default function VariantCard({
             </div>
 
             <div className="flex items-center justify-end gap-2 mt-2">
-                {context === "admin" && qrCode && !isReadonly && variant.display_order != null && (
+                {context === "admin" && qrCode && !isReadonly && (
                     <button
-                        onClick={() => onPrintQR?.(qrCode, Number(variant.display_order))}
+                        onClick={() => onPrintQR?.(qrCode, variant.id)}
                         className="p-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg transition-colors"
                     >
                         <QrCode size={12} />

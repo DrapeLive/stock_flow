@@ -1214,33 +1214,34 @@ class _OrderCardView extends StatelessWidget {
                         const SizedBox(height: 4),
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 3),
+                              horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFFFFBEB),
+                            color: AppColors.unpackedBg,
                             borderRadius: BorderRadius.circular(999),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
                               const Icon(Icons.inventory_2_outlined,
-                                  size: 11, color: Color(0xFFD97706)),
-                              const SizedBox(width: 3),
+                                  size: 14, color: AppColors.unpackedFg),
+                              const SizedBox(width: 4),
                               Text(
                                 '$unpackedCount',
                                 style: const TextStyle(
-                                  fontSize: 12,
+                                  fontSize: 13,
                                   fontWeight: FontWeight.w800,
-                                  color: Color(0xFFD97706),
+                                  color: AppColors.unpackedFg,
                                 ),
                               ),
-                              const SizedBox(width: 2),
+                              const SizedBox(width: 3),
                               const Text(
                                 'Unpacked',
                                 style: TextStyle(
-                                  fontSize: 10,
+                                  fontSize: 11,
                                   fontWeight: FontWeight.w700,
                                   letterSpacing: 0.4,
-                                  color: Color(0xFFD97706),
+                                  color: AppColors.unpackedFg,
                                 ),
                               ),
                             ],

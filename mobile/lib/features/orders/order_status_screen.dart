@@ -1,4 +1,5 @@
 ﻿import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -6,10 +7,11 @@ import '../../core/theme/app_theme.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/utils/order_item_sort.dart';
 import '../../core/utils/perf.dart';
-import '../../core/utils/piece_counts.dart';
 import '../../core/utils/status_maps.dart';
+import '../../core/utils/text_symbols.dart';
 import '../../data/repositories.dart';
 import '../../models/models.dart';
+import '../../shared/scan_beep.dart';
 import '../../shared/widgets.dart';
 
 enum _OrderTab { packing, dispatching }
@@ -27,6 +29,11 @@ class _OrderStatusScreenState extends ConsumerState<OrderStatusScreen> {
   Order? _order;
   bool _loading = true;
   bool _packingMode = false;
+  bool _packingBusy = false;
+  bool _completingPacking = false;
+  // Row order frozen at the start of a packing session (snapshot of the sorted
+  // server list). Ticking boxes updates checkbox state but never reshuffles.
+  List<OrderItem>? _packingItems;
   bool _deleting = false;
   bool _logsExpanded = false;
   bool _logsLoading = false;
@@ -70,16 +77,16 @@ class _OrderStatusScreenState extends ConsumerState<OrderStatusScreen> {
     } catch (_) {}
   }
 
-  Future<void> _load() async {
+Future<void> _load({bool keepTab = false}) async {
     try {
       final order = await repos.order.getOne(widget.orderId);
       if (mounted) {
         setState(() {
           _order = order;
-          if (_tab == _OrderTab.packing && order.status == 'PACKED') {
+          if (!keepTab && _tab == _OrderTab.packing && order.status == 'PACKED') {
             _tab = _OrderTab.dispatching;
           }
-final pref = order.preferredTransport;
+          final pref = order.preferredTransport;
           if (pref != null && _dispatchTransport == null) {
             _dispatchTransport = pref;
           }
@@ -106,17 +113,42 @@ final pref = order.preferredTransport;
     if (mounted) setState(() => _logsLoading = false);
   }
 
-  void _togglePackingMode() async {
-    await _load();
-    if (mounted) setState(() => _packingMode = !_packingMode);
+void _togglePackingMode() async {
+    if (_packingBusy) return;
+    final entering = !_packingMode;
+    setState(() => _packingBusy = true);
+    try {
+      // Reload fresh server state. When ENTERING packing mode keep the current
+      // tab; otherwise a PACKED order would be yanked to the Dispatching tab
+      // here (see _load) and the packing checkboxes would never appear.
+      await _load(keepTab: entering);
+      if (mounted) {
+        setState(() {
+          if (_tab == _OrderTab.packing) {
+            _packingMode = entering;
+            // Freeze the row order ONCE from the freshly saved server state.
+            // Per-toggle reloads are gone, so this snapshot is what keeps the
+            // list stable while the admin ticks / unticks boxes.
+            _packingItems = entering
+                ? sortOrderItemsUnpackedFirst(_order?.items ?? const [])
+                : null;
+          }
+        });
+      }
+    } finally {
+      if (mounted) setState(() => _packingBusy = false);
+    }
   }
 
-  Future<void> _togglePacked(OrderItem item) async {
+Future<void> _togglePacked(OrderItem item) async {
+    final order = _order;
+    if (order == null) return;
     final totalPieces = (item.pieceCount ?? 1) * item.quantity;
     final currentPacked = item.packedQuantity ?? 0;
     final newPacked = currentPacked >= totalPieces ? 0 : totalPieces;
+    final wasPacked = order.status == 'PACKED';
 
-    if (_order?.status == 'PACKED' && newPacked < currentPacked) {
+    if (wasPacked && newPacked < currentPacked) {
       final ok = await confirmDialog(
         context,
         title: 'Unpack Items?',
@@ -127,20 +159,44 @@ final pref = order.preferredTransport;
       if (!ok) return;
     }
 
-    try {
-      await repos.order.updateItem(
-        item.id,
-        {'packed_quantity': newPacked},
+    // Optimistic local toggle: the checkbox flips instantly and the list order
+    // stays put while the admin keeps ticking. The unpacked-first sort is only
+    // recomputed from server state when the packing session is saved/reloaded
+    // (leaving packing mode reloads; the screen also reloads on reopen).
+    setState(() {
+      _order = order.copyWith(
+        status: wasPacked ? 'PENDING' : order.status,
+        items: [
+          for (final it in order.items)
+            it.id == item.id ? it.copyWith(packedQuantity: newPacked) : it,
+        ],
       );
-      if (_order?.status == 'PACKED') {
+    });
+
+    try {
+      await repos.order.updateItem(item.id, {'packed_quantity': newPacked});
+      if (wasPacked) {
         await repos.order.update(widget.orderId, {'status': 'PENDING'});
         if (mounted) {
           AppToast.success(context, 'Order status changed to PENDING');
         }
       }
-      await _load();
     } catch (e) {
-      if (mounted) AppToast.error(context, e.toString());
+      // Save failed: roll the optimistic toggle back.
+      if (mounted) {
+        setState(() {
+          _order = order.copyWith(
+            status: order.status,
+            items: [
+              for (final it in order.items)
+                it.id == item.id
+                    ? it.copyWith(packedQuantity: currentPacked)
+                    : it,
+            ],
+          );
+        });
+        AppToast.error(context, e.toString());
+      }
     }
   }
 
@@ -154,22 +210,37 @@ final pref = order.preferredTransport;
     );
     if (!ok) return;
     try {
-      await repos.order.deleteItem(widget.orderId, item.id);
+await repos.order.deleteItem(widget.orderId, item.id);
       await _load();
+      if (mounted && _packingMode && _tab == _OrderTab.packing) {
+        setState(() {
+          _packingItems = sortOrderItemsUnpackedFirst(_order?.items ?? const []);
+        });
+      }
     } catch (e) {
       if (mounted) AppToast.error(context, e.toString());
     }
   }
 
-  Future<void> _updateStatus(String newStatus) async {
+Future<void> _completePacking() async {
+    if (_completingPacking) return;
+    playConfirmBeep();
+    HapticFeedback.mediumImpact();
+    setState(() => _completingPacking = true);
     try {
-      await repos.order.update(widget.orderId, {'status': newStatus});
+      await repos.order.update(widget.orderId, {'status': 'PACKED'});
       await _load();
-      if (mounted && newStatus == 'PACKED') {
-        setState(() => _packingMode = false);
+      if (mounted) {
+        setState(() {
+          _packingMode = false;
+          _packingItems = null;
+        });
+        AppToast.success(context, 'Order marked as packed');
       }
     } catch (e) {
       if (mounted) AppToast.error(context, e.toString());
+    } finally {
+      if (mounted) setState(() => _completingPacking = false);
     }
   }
 
@@ -261,6 +332,25 @@ final pref = order.preferredTransport;
     }
   }
 
+// Rows shown on the current tab. While in an active packing session the row
+  // order is the snapshot taken when the session started (sorted from the saved
+  // server state once); ticking checkboxes updates state, never positions.
+  List<OrderItem> _shownItems() {
+    final items = _order?.items ?? const <OrderItem>[];
+    if (_packingMode && _tab == _OrderTab.packing && _packingItems != null) {
+      return [
+        for (final snapshot in _packingItems!)
+          items.firstWhere(
+            (i) => i.id == snapshot.id,
+            orElse: () => snapshot,
+          ),
+      ];
+    }
+    final packedItems = items.where(isOrderItemFullyPacked).toList();
+    return sortOrderItemsUnpackedFirst(
+        _tab == _OrderTab.dispatching ? packedItems : items);
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_loading) {
@@ -291,10 +381,7 @@ expand: false,
         ),
       );
     }
-    final items = order.items;
-    final packedItems = items.where(isOrderItemFullyPacked).toList();
-    final shownItems = sortOrderItemsUnpackedFirst(
-        _tab == _OrderTab.dispatching ? packedItems : items);
+final shownItems = _shownItems();
 
 return Scaffold(
       backgroundColor: Colors.white,
@@ -308,11 +395,12 @@ return Scaffold(
             child: ListView(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 110),
               children: [
-                _OrderTabs(
+_OrderTabs(
                   active: _tab,
                   onChanged: (t) => setState(() {
                     _tab = t;
                     _packingMode = false;
+                    _packingItems = null;
                   }),
                 ),
                 if (_isDeletable)
@@ -327,22 +415,21 @@ return Scaffold(
                     ),
                   ),
                 _OrderSummaryCard(order: order, transports: _transports),
-                _ItemsHeader(
+_ItemsHeader(
                   title: 'Items to ${_tab == _OrderTab.packing ? 'Packing' : 'Dispatching'}',
                   activeTab: _tab,
                   status: order.status,
                   isPackingMode: _packingMode,
+                  busy: _packingBusy,
                   onTogglePackingMode: _togglePackingMode,
                 ),
                 ...shownItems.map(
                   (item) => _OrderItemRowView(
                     item: item,
                     isPacking: _packingMode && _tab == _OrderTab.packing,
-                    isEditable: _isEditable,
                     isDeletable: _isEditable,
                     onTogglePacked: () => _togglePacked(item),
                     onDelete: () => _deleteItem(item),
-                    onEdit: () => _openEdit(item),
                   ),
                 ),
                 _OrderLogsSection(
@@ -370,11 +457,12 @@ return Scaffold(
         _anyItemPacked &&
         order.status == 'PENDING' &&
         !_packingMode) {
-      content = StockFlowButton(
+content = StockFlowButton(
         label: 'Complete Packing',
+        loading: _completingPacking,
         icon: const Icon(Icons.assignment_turned_in_outlined,
             size: 18, color: Colors.white),
-        onPressed: () => _updateStatus('PACKED'),
+        onPressed: _completePacking,
       );
     } else if (_tab == _OrderTab.dispatching && canDispatch) {
       content = StockFlowButton(
@@ -413,23 +501,7 @@ return Scaffold(
     );
   }
 
-  void _openEdit(OrderItem item) async {
-    final result = await _OrderItemEditSheet.show(
-      context,
-      item: item,
-      otherItems: _order?.items ?? const [],
-    );
-    if (result != null) {
-      try {
-        await repos.order.updateItem(item.id, result);
-        await _load();
-      } catch (e) {
-        if (mounted) AppToast.error(context, e.toString());
-      }
-    }
-  }
-
-  InputDecoration _fieldDecoration(String label) => InputDecoration(
+InputDecoration _fieldDecoration(String label) => InputDecoration(
         labelText: label,
         labelStyle: const TextStyle(
           fontSize: 10,
@@ -874,12 +946,14 @@ class _ItemsHeader extends StatelessWidget {
     required this.activeTab,
     required this.status,
     required this.isPackingMode,
+    required this.busy,
     required this.onTogglePackingMode,
   });
   final String title;
   final _OrderTab activeTab;
   final String? status;
   final bool isPackingMode;
+  final bool busy;
   final VoidCallback onTogglePackingMode;
 
   @override
@@ -908,10 +982,10 @@ class _ItemsHeader extends StatelessWidget {
               ],
             ),
           ),
-          if (activeTab == _OrderTab.packing && status != 'DISPATCHED')
+if (activeTab == _OrderTab.packing && status != 'DISPATCHED')
             InkWell(
               borderRadius: BorderRadius.circular(10),
-              onTap: onTogglePackingMode,
+              onTap: busy ? null : onTogglePackingMode,
               child: Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
@@ -924,13 +998,21 @@ class _ItemsHeader extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
-                      isPackingMode
-                          ? Icons.check_circle_outline
-                          : Icons.inventory_2_outlined,
-                      size: 16,
-                      color: Colors.white,
-                    ),
+                    if (busy)
+                      const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white),
+                      )
+                    else
+                      Icon(
+                        isPackingMode
+                            ? Icons.check_circle_outline
+                            : Icons.inventory_2_outlined,
+                        size: 16,
+                        color: Colors.white,
+                      ),
                     const SizedBox(width: 6),
                     Text(
                       isPackingMode ? 'Done Selecting' : 'Update Packing',
@@ -954,19 +1036,15 @@ class _OrderItemRowView extends StatelessWidget {
   const _OrderItemRowView({
     required this.item,
     required this.isPacking,
-    required this.isEditable,
     required this.isDeletable,
     required this.onTogglePacked,
     required this.onDelete,
-    required this.onEdit,
   });
   final OrderItem item;
   final bool isPacking;
-  final bool isEditable;
   final bool isDeletable;
   final VoidCallback onTogglePacked;
   final VoidCallback onDelete;
-  final VoidCallback onEdit;
 
   @override
   Widget build(BuildContext context) {
@@ -1002,16 +1080,7 @@ class _OrderItemRowView extends StatelessWidget {
                 ),
               ),
             ),
-          if (isEditable)
-            InkWell(
-              onTap: onEdit,
-              child: const Padding(
-                padding: EdgeInsets.all(10),
-                child: Icon(Icons.edit_outlined,
-                    size: 17, color: AppColors.primary),
-              ),
-            ),
-          if (isDeletable)
+if (isDeletable)
             InkWell(
               onTap: onDelete,
               child: const Padding(
@@ -1043,7 +1112,7 @@ class _OrderItemRowView extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '${item.displayName} ( Color #${item.variantDisplayOrder} )',
+                  item.displayNameWithColor,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -1069,7 +1138,7 @@ class _OrderItemRowView extends StatelessWidget {
                         : const Color(0xFF4B5563),
                   ),
                   children: [
-                    TextSpan(text: '${formatSets(quantity)} Ã— ${formatPieces(pieceCount)} = '),
+                    TextSpan(text: '${formatSets(quantity)} $kMultiply ${formatPieces(pieceCount)} = '),
                     TextSpan(
                       text: '$totalPieces',
                       style: const TextStyle(fontWeight: FontWeight.w700),
@@ -1273,294 +1342,4 @@ class _FooterPill extends StatelessWidget {
       ),
     );
   }
-}
-
-// ---------------------------------------------------------------------------
-// Edit item sheet
-// ---------------------------------------------------------------------------
-
-class _OrderItemEditSheet extends StatefulWidget {
-  const _OrderItemEditSheet({required this.item, required this.otherItems});
-  final OrderItem item;
-  final List<OrderItem> otherItems;
-
-  static Future<Map<String, dynamic>?> show(BuildContext context,
-      {required OrderItem item, required List<OrderItem> otherItems}) {
-    return showModalBottomSheet<Map<String, dynamic>>(
-      context: context,
-      isScrollControlled: true,
-      builder: (ctx) =>
-          _OrderItemEditSheet(item: item, otherItems: otherItems),
-    );
-  }
-
-  @override
-  State<_OrderItemEditSheet> createState() => _OrderItemEditSheetState();
-}
-
-class _OrderItemEditSheetState extends State<_OrderItemEditSheet> {
-  int _quantity = 1;
-  String _sizeGroup = '';
-  List<String> _groups = [];
-  List<VariantSize> _variantSizes = [];
-  bool _loadingVariants = true;
-  String? _groupError;
-  String? _quantityError;
-  String _pieceCount = '1';
-
-  @override
-  void initState() {
-    super.initState();
-    final item = widget.item;
-    _quantity = item.quantity;
-    _sizeGroup = item.sizeGroup ?? '';
-    _pieceCount = (item.pieceCount ?? 1).toString();
-    _loadVariants();
-  }
-
-  Future<void> _loadVariants() async {
-    setState(() => _loadingVariants = true);
-    try {
-      final variants = await repos.item.allVariants();
-      final target = widget.item.variant;
-      final variant = variants.firstWhere(
-        (v) => v.id == target,
-        orElse: () => VariantAllItem(
-          id: target ?? -1,
-          itemId: 0,
-          itemName: '',
-          itemType: '',
-          itemPrice: '',
-          sizes: const [],
-          totalStock: 0,
-          uniqueSizes: const [],
-        ),
-      );
-
-      final itemType = (widget.item.item?.type ?? 'gents').toLowerCase();
-      final validType = (itemType == 'kids' || itemType == 'gents')
-          ? itemType
-          : 'gents';
-
-      final sizeRanges = await repos.item.sizeRanges();
-      final byType = (sizeRanges['order_creation_sizes_by_type']
-              as Map<String, dynamic>? ??
-          {});
-final orderGroups = List<String>.from(
-          byType[validType] as List<dynamic>? ?? const []);
-
-      final variantSizeSet = variant.sizes.map((s) => s.sizeRange).toSet();
-      final groups = orderGroups
-          .where((range) =>
-              (kSizeRangeToSizes[range] ?? const []).every(
-                  (bucket) => variantSizeSet.contains(bucket)))
-          .toList();
-
-      final groupedPieceCount = pieceCountFor(_sizeGroup);
-      final resolvedPieceCount = groupedPieceCount > 0
-          ? groupedPieceCount
-          : (widget.item.pieceCount ?? 1);
-      if (mounted) {
-        setState(() {
-          _groups = groups;
-          _variantSizes = variant.sizes;
-          _pieceCount = resolvedPieceCount.toString();
-          if (groups.isEmpty) {
-            _groupError = 'No sizes available for this variant';
-          } else if (_sizeGroup.isNotEmpty && !groups.contains(_sizeGroup)) {
-            _groupError = 'Current size group is no longer available';
-          }
-          _loadingVariants = false;
-        });
-      }
-    } catch (_) {
-      if (mounted) setState(() => _loadingVariants = false);
-    }
-  }
-
-  int _availableStock() {
-    final buckets = kSizeRangeToSizes[_sizeGroup] ?? const <String>[];
-    if (buckets.isEmpty) return 0;
-    final remaining = buckets.map((bucket) {
-      final base = _variantSizes
-              .firstWhere((s) => s.sizeRange == bucket,
-                  orElse: () => VariantSize(sizeRange: bucket, stock: 0))
-              .stock;
-      final reserved = widget.otherItems
-          .where((o) =>
-              o.id != widget.item.id &&
-              o.variant == widget.item.variant &&
-              o.item == widget.item.item)
-          .fold(0, (sum, o) {
-        final covers = kSizeRangeToSizes[o.sizeGroup] ?? const <String>[];
-        return sum + (covers.contains(bucket) ? o.quantity : 0);
-      });
-      return base - reserved;
-    }).toList();
-    final minRemaining =
-        remaining.isEmpty ? 0 : remaining.reduce((a, b) => a < b ? a : b);
-    return minRemaining < 0 ? 0 : minRemaining;
-  }
-
-  void _save() {
-    final errors = <String, String>{};
-    if (_quantity < 1) {
-      errors['qty'] = 'Quantity must be at least 1';
-    }
-    if (_sizeGroup.isEmpty) {
-      errors['group'] = 'Please select a size group';
-    } else if (_availableStock() < _quantity) {
-      errors['qty'] =
-          'Only ${_availableStock()} sets available for this size group';
-    }
-    setState(() {
-      _groupError = errors['group'];
-      _quantityError = errors['qty'];
-    });
-    if (errors.isNotEmpty) return;
-
-    final packed = (widget.item.packedQuantity ?? 0);
-    final newPacked = packed > _quantity * int.parse(_pieceCount)
-        ? _quantity * int.parse(_pieceCount)
-        : packed;
-    Navigator.pop(context, {
-      'quantity': _quantity,
-      'size_group': _sizeGroup,
-      'packed_quantity': newPacked,
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final bottom = MediaQuery.of(context).viewInsets.bottom;
-    return Padding(
-      padding: EdgeInsets.only(bottom: bottom),
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Edit ${widget.item.displayName}',
-                style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF111827)),
-              ),
-              const SizedBox(height: 16),
-              if (_loadingVariants)
-                const Center(
-                    child: Padding(
-                  padding: EdgeInsets.all(24),
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ))
-              else ...[
-                Row(
-                  children: [
-                    InkWell(
-                      onTap: _quantity > 1
-                          ? () => setState(() => _quantity--)
-                          : null,
-                      child: const CircleAvatar(
-                        radius: 16,
-                        backgroundColor: Color(0xFFF3F4F6),
-                        foregroundColor: Color(0xFF4B5563),
-                        child: Icon(Icons.remove, size: 18),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Text(
-                      '$_quantity',
-                      style: const TextStyle(
-                          fontSize: 18, fontWeight: FontWeight.w700),
-                    ),
-                    const SizedBox(width: 16),
-                    InkWell(
-                      onTap: () => setState(() => _quantity++),
-                      child: const CircleAvatar(
-                        radius: 16,
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        child: Icon(Icons.add, size: 18),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Text('Set${_quantity == 1 ? '' : 's'}',
-                        style: const TextStyle(
-                            fontSize: 13, color: Color(0xFF4B5563))),
-                  ],
-                ),
-                if (_quantityError != null) ...[
-                  const SizedBox(height: 6),
-                  Text(_quantityError!,
-                      style: const TextStyle(
-                          fontSize: 11, color: Color(0xFFEF4444))),
-                ],
-                const SizedBox(height: 16),
-                Text('Size Group',
-                    style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF374151))),
-                const SizedBox(height: 6),
-                DropdownButtonFormField<String>(
-                  value: _groups.contains(_sizeGroup) ? _sizeGroup : null,
-                  isExpanded: true,
-                  items: [
-                    for (final g in _groups)
-                      DropdownMenuItem<String>(
-                          value: g, child: Text(g)),
-                  ],
-                  decoration: _EditFieldDecoration().decoration(),
-                  hint: const Text('Select size group'),
-                  onChanged: (v) => setState(() {
-                    _sizeGroup = v ?? '';
-                    final pc = pieceCountFor(_sizeGroup);
-                    if (pc > 1) _pieceCount = pc.toString();
-                  }),
-                ),
-                if (_groupError != null) ...[
-                  const SizedBox(height: 6),
-                  Text(_groupError!,
-                      style: const TextStyle(
-                          fontSize: 11, color: Color(0xFFEF4444))),
-                ],
-                const SizedBox(height: 16),
-                Text('$_pieceCount pcs per set',
-                    style: const TextStyle(
-                        fontSize: 12, color: Color(0xFF6B7280))),
-                const SizedBox(height: 20),
-                SizedBox(
-                  width: double.infinity,
-                  child: StockFlowButton(
-                    label: 'Save Changes',
-                    onPressed: _save,
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _EditFieldDecoration {
-  InputDecoration decoration() => InputDecoration(
-        filled: true,
-        fillColor: const Color(0xFFF9FAFB),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: Color(0xFFF3F4F6)),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: Color(0xFFF3F4F6)),
-        ),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      );
 }

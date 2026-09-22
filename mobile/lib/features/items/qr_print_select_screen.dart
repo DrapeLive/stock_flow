@@ -15,7 +15,8 @@ import 'qr_label_pdf.dart';
 
 /// Mirrors `app/(admin-no-layout)/admin/items/qr-print/page.tsx` (SE page).
 /// When reached with `?item=<id>` it shows all variants of that item as
-/// printable 58x90mm labels; without it, lists items to choose from first.
+/// printable 70.87x141.73pt (25mm x 50mm) EC M labels (web `QRLabelPdf.tsx`);
+/// without it, lists items to choose from first.
 class QrPrintSelectScreen extends ConsumerStatefulWidget {
   const QrPrintSelectScreen({super.key, this.itemId});
   final int? itemId;
@@ -54,8 +55,11 @@ class _QrPrintSelectScreenState extends ConsumerState<QrPrintSelectScreen> {
           displayOrder: v.displayOrder,
         ));
       }
-      final bytes =
-          await Future.wait(labels.map((l) => qrPngBytes(l.qrCode)));
+final bytes = await Future.wait(
+          labels.map((l) => qrPngBytes(
+                l.qrCode,
+                errorCorrectionLevel: errorCorrectionLevelFor(QrLabelKind.printAll),
+              )));
       if (!mounted) return;
       setState(() {
         _itemName = data.name;
@@ -92,12 +96,14 @@ class _QrPrintSelectScreenState extends ConsumerState<QrPrintSelectScreen> {
     }
   }
 
-  Future<Uint8List> _buildPdf(PdfPageFormat format) async {
+Future<Uint8List> _buildPdf(PdfPageFormat format) async {
     final doc = await buildQrLabelsPdf(
       itemName: _itemName,
       price: _price,
       labels: _labels,
       qrBytes: _qrBytes,
+      kind: QrLabelKind.printAll,
+      errorCorrectionLevel: errorCorrectionLevelFor(QrLabelKind.printAll),
     );
     return doc.save();
   }

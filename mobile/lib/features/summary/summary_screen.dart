@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/utils/perf.dart';
+import '../../core/utils/text_symbols.dart';
 import '../../data/repositories.dart';
 import '../../models/models.dart';
 import '../../providers.dart';
@@ -159,7 +160,7 @@ ComputedSummary computeSummary(List<ItemStockEntry> items) {
   );
 }
 
-enum _SortKey { name, type, totalUnits, totalPrice }
+enum _SortKey { name, totalUnits, totalPrice }
 
 /// Mirrors `app/(admin-no-layout)/admin/summary/page.tsx`.
 class SummaryScreen extends ConsumerStatefulWidget {
@@ -276,11 +277,8 @@ class _SummaryScreenState extends ConsumerState<SummaryScreen> {
         final cmp = _compareNumeric(an, bn);
         return _sortAsc ? cmp : -cmp;
       }
-      final int cmp;
+final int cmp;
       switch (_sortKey) {
-        case _SortKey.type:
-          cmp = a.type.compareTo(b.type);
-          break;
         case _SortKey.totalUnits:
           cmp = a.totalUnits - b.totalUnits;
           break;
@@ -302,8 +300,8 @@ class _SummaryScreenState extends ConsumerState<SummaryScreen> {
           price: s.price + i.totalPrice),
     );
 
-    return ListView(
-      padding: const EdgeInsets.only(bottom: 40),
+return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 40),
       children: [
         const Text('Inventory Summary',
             style: TextStyle(
@@ -348,7 +346,7 @@ class _SummaryScreenState extends ConsumerState<SummaryScreen> {
                       color: Color(0xFF6B7280))),
             ),
             _pill(
-              'Total Pieces: Low â†’ High',
+              'Total Pieces: Low $kArrow High',
               active: _unitsAscActive,
               onTap: _toggleUnitsAsc,
             ),
@@ -375,13 +373,12 @@ class _SummaryScreenState extends ConsumerState<SummaryScreen> {
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(14),
-            child: Table(
+child: Table(
               columnWidths: const {
-                0: FlexColumnWidth(2.2),
-                1: FlexColumnWidth(0.9),
+                0: FlexColumnWidth(2.4),
+                1: FlexColumnWidth(1),
                 2: FlexColumnWidth(1),
-                3: FlexColumnWidth(0.9),
-                4: FlexColumnWidth(1.4),
+                3: FlexColumnWidth(1.6),
               },
               children: [
                 TableRow(
@@ -389,7 +386,6 @@ class _SummaryScreenState extends ConsumerState<SummaryScreen> {
                       color: Color(0xFFF9FAFB)),
                   children: [
                     _th('Item', onTap: () => _handleSort(_SortKey.name)),
-                    _th('Type', onTap: () => _handleSort(_SortKey.type)),
                     _th('Total Pieces', right: true,
                         onTap: () => _handleSort(_SortKey.totalUnits)),
                     _th('Variants', center: true),
@@ -406,7 +402,6 @@ class _SummaryScreenState extends ConsumerState<SummaryScreen> {
                     ),
                     children: [
                       _td(filtered[idx].name, mono: true, bold: true),
-                      _tdType(filtered[idx].type),
                       _td(_fmt(filtered[idx].totalUnits), right: true),
                       _td('${filtered[idx].variantCount}', center: true),
                       _td(formatCurrency(filtered[idx].totalPrice),
@@ -419,7 +414,6 @@ class _SummaryScreenState extends ConsumerState<SummaryScreen> {
                   children: [
                     _td('Total (${filtered.length} items)',
                         bold: true),
-                    _td(''),
                     _td(_fmt(totals.units), right: true, bold: true),
                     _td('', center: true),
                     _td(formatCurrency(totals.price), right: true, bold: true),
@@ -427,53 +421,7 @@ class _SummaryScreenState extends ConsumerState<SummaryScreen> {
                 ),
               ],
             ),
-          ),
-        ),
-        const SizedBox(height: 20),
-        Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xFFF3F4F6)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('SIZE RANGE â†’ PIECE COUNT REFERENCE',
-                  style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1,
-                      color: Color(0xFF9CA3AF))),
-              const SizedBox(height: 10),
-              Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: [
-                  for (final e in sizeRangePieceCount.entries)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF9FAFB),
-                        borderRadius: BorderRadius.circular(8),
-                        border:
-                            Border.all(color: const Color(0xFFF3F4F6)),
-                      ),
-                      child: Text.rich(TextSpan(children: [
-                        TextSpan(
-                            text: e.key,
-                            style: const TextStyle(
-                                fontWeight: FontWeight.w700,
-                                color: Colors.black)),
-                        TextSpan(text: ' â†’ ${e.value} pcs', style: TextStyle(
-                            color: const Color(0xFF6B7280))),
-                      ])),
-                    ),
-                ],
-              ),
-            ],
-          ),
+),
         ),
       ],
     );
@@ -588,7 +536,7 @@ class _SummaryScreenState extends ConsumerState<SummaryScreen> {
                 ),
               ),
               const SizedBox(width: 8),
-              Text('Ã—$avgStr avg pcs/set',
+              Text('$kMultiply$avgStr avg pcs/set',
                   style: const TextStyle(
                       fontSize: 11, color: Color(0xFF9CA3AF))),
             ],
@@ -656,30 +604,7 @@ class _SummaryScreenState extends ConsumerState<SummaryScreen> {
           fontFamily: mono ? 'monospace' : null,
         ),
       ),
-    );
-  }
-
-  Widget _tdType(String type) {
-    final (bg, fg) =
-        type == 'gents' ? (const Color(0xFFE0F2FE), const Color(0xFF0369A1)) : (const Color(0xFFFEF3C7), const Color(0xFFB45309));
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-      child: Align(
-        alignment: Alignment.centerLeft,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-          decoration: BoxDecoration(
-            color: bg,
-            borderRadius: BorderRadius.circular(999),
-          ),
-          child: Text(type,
-              style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color: fg)),
-        ),
-      ),
-    );
+);
   }
 }
 

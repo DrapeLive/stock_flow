@@ -115,7 +115,9 @@ class ItemVariantRequestSerializer(serializers.Serializer):
     image = serializers.FileField(required=False)
     remove_image = serializers.BooleanField(required=False, default=False)  # ← new
     sizes = ItemVariantSizeRequestSerializer(many=True)
-    display_order = serializers.CharField(max_length=100, required=False)
+    display_order = serializers.CharField(
+        max_length=100, required=False, allow_null=True, allow_blank=True
+    )
 
 
 class CreateItemSerializer(serializers.Serializer):
@@ -186,7 +188,7 @@ class CreateItemSerializer(serializers.Serializer):
     def _create_variant(self, item, variant_data):
         image_file = variant_data.pop("image", None)
         variant_data.pop("remove_image", None)  # ← ignore on create
-        display_order = variant_data.pop("display_order", None)
+        display_order = variant_data.pop("display_order", None) or None
         variant = ItemVariant.objects.create(
             item=item, qr_code=uuid.uuid4(), display_order=display_order
         )
@@ -261,9 +263,8 @@ class CreateItemSerializer(serializers.Serializer):
             if variant_id and variant_id in existing_variants:
                 variant = existing_variants.pop(variant_id)  # ← pop so it's not deleted
 
-                display_order = variant_data.get("display_order")
-                if display_order is not None:
-                    variant.display_order = display_order
+                if "display_order" in variant_data:
+                    variant.display_order = variant_data.get("display_order") or None
 
                 # Handle image removal
                 if remove_image and variant.image:

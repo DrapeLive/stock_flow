@@ -134,7 +134,7 @@ void main() {
           variant: variant,
           sizeGroup: 'S,M,L,XL',
           quantity: quantity,
-          variantDisplayOrder: 1,
+          variantDisplayOrder: '1',
         );
 
     test('groups rows sharing item+variant+size group', () {

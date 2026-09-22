@@ -114,6 +114,16 @@ class AuthRepo {
       throw ApiClient.mapError(e);
     }
   }
+
+  /// Verifies the admin PIN via `/api/auth/verify-pin/` (same PIN used for
+  /// destructive actions) without deleting anything.
+  Future<void> verifyPin(String pin) async {
+    try {
+      await ApiClient.dio.post('/api/auth/verify-pin/', data: {'pin': pin});
+    } catch (e) {
+      throw ApiClient.mapError(e);
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------

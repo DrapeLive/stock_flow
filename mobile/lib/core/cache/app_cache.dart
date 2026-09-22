@@ -6,6 +6,8 @@ import 'package:hive_ce/hive.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:path_provider/path_provider.dart';
 
+import '../utils/perf.dart';
+
 /// Hive-backed cache replicating the web app's client-side "don't refetch every
 /// time" behaviour (module-level size-range cache, sessionStorage filters,
 /// viewed-order-ids, transport/brand/customer lists).
@@ -198,7 +200,7 @@ class AppCache {
   }
 
   static void _cacheLog(String kind, String namespace, String key) {
-    if (!kDebugMode) return;
+    if (!Perf.enabled) return;
     debugPrint('[perf] CACHE $kind $namespace::$key');
   }
 

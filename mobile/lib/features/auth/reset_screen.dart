@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/text_symbols.dart';
 import '../../data/repositories.dart';
 import 'widgets.dart';
 
@@ -175,7 +176,7 @@ return Scaffold(
                         loading: _loading,
                         icon: const Icon(Icons.key, size: 16, color: Colors.white),
                         label: 'Reset password',
-                        loadingLabel: 'Updatingâ€¦',
+                        loadingLabel: 'Updating$kEllipsis',
                         onPressed: _submit,
                       ),
                     ],

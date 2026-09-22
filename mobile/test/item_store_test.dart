@@ -230,19 +230,43 @@ void main() {
       final entries = ItemSyncData.toEntries(items);
 
       expect(entries, hasLength(2));
-      expect(entries.map((e) => e.id), [1, 2]);
-      expect(entries[0].name, 'A');
-      expect(entries[0].image, 'http://host/media/1.jpg');
-      expect(entries[0].variants.single.displayOrder, '1');
-      expect(entries[0].variants.single.qrCode, 'QR-A');
-      expect(entries[0].variants.single.totalStock, 5);
+      // Newest first, matching the web stock list (`order_by("-id")`).
+      expect(entries.map((e) => e.id), [2, 1]);
+      expect(entries[1].name, 'A');
+      expect(entries[1].image, 'http://host/media/1.jpg');
+      expect(entries[1].variants.single.displayOrder, '1');
+      expect(entries[1].variants.single.qrCode, 'QR-A');
+      expect(entries[1].variants.single.totalStock, 5);
 
-      final b = entries[1];
+      final b = entries[0];
+      expect(b.name, 'B');
       expect(b.variants, hasLength(1));
       expect(b.variants.first.sizes, hasLength(2));
       expect(b.variants.first.sizes.first.sizeRange, 'S');
       expect(b.variants.first.sizes.first.stock, 2);
       expect(b.totalStock, 5);
+    });
+
+    test('orders newest-first regardless of arrival order', () {
+      final ascending = [
+        item(1, 'A', []),
+        item(2, 'B', []),
+        item(3, 'C', []),
+      ];
+      final shuffled = [
+        item(3, 'C', []),
+        item(1, 'A', []),
+        item(2, 'B', []),
+      ];
+
+      expect(
+        ItemSyncData.toEntries(ascending).map((e) => e.id).toList(),
+        [3, 2, 1],
+      );
+      expect(
+        ItemSyncData.toEntries(shuffled).map((e) => e.id).toList(),
+        [3, 2, 1],
+      );
     });
 
     test('values mirror the sync item fields', () {
@@ -308,6 +332,49 @@ void main() {
       expect(store.serverTimeOffsetMs, -const Duration(days: 1).inMilliseconds);
       store.clearStore();
       expect(store.serverTimeOffsetMs, 0);
+    });
+  });
+
+  group('ItemStore delta re-sync stability', () {
+    setUp(() async {
+      await resetTestInfra();
+    });
+
+    test('re-applying an unchanged payload keeps variant order and display_order text',
+        () {
+      final store = ItemStore.instance;
+      final payload = [
+        item(9, 'Stable', [
+          variant(90, [sizeRow(900, 'S', 1)], order: '2'),
+          variant(91, [sizeRow(901, 'M', 1)], order: '1'),
+        ], rev: 'r1'),
+      ];
+      store.upsertItems(payload);
+      final first = store.entries().single.variants;
+      final beforeIds = first.map((v) => v.id).toList();
+      final beforeOrders = first.map((v) => v.displayOrder).toList();
+
+      store.upsertItems(payload);
+      final after = store.entries().single.variants;
+      expect(after.map((v) => v.id).toList(), beforeIds);
+      expect(after.map((v) => v.displayOrder).toList(), beforeOrders);
+    });
+
+    test('an in-place stock delta does not rescramble variant order', () {
+      final store = ItemStore.instance;
+      store.upsertItems([
+        item(5, 'K', [
+          variant(50, [sizeRow(500, 'S', 1)], order: '1'),
+          variant(51, [sizeRow(501, 'M', 1)], order: '2'),
+        ], rev: 'r1'),
+      ]);
+
+      ItemSyncData.applyStockRow(
+          store.storedItems(), {'id': 501, 'size': 'M', 'stock': 7});
+      final entry = store.entries().single;
+      expect(entry.variants.map((v) => v.id).toList(), [50, 51]);
+      expect(entry.variants.last.sizes.first.stock, 7);
+      expect(entry.variants.map((v) => v.displayOrder).toList(), ['1', '2']);
     });
   });
 }

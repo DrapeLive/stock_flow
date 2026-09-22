@@ -94,9 +94,7 @@ export async function updateItem(
     imageJobs.map(({ variantId, image }) => {
       const fd = new FormData();
       fd.append("image", image);
-      return api.patch(`/api/items/variants/${variantId}/`, fd, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      return api.patch(`/api/items/variants/${variantId}/`, fd);
     }),
   );
 }

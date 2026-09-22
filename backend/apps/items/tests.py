@@ -1,10 +1,13 @@
 import os
+import shutil
+import tempfile
 from datetime import timedelta
 from io import BytesIO, StringIO
 from unittest.mock import patch
 
 from django.conf import settings
 from django.core.files.base import ContentFile
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
 from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
@@ -1122,3 +1125,334 @@ class ItemSyncAPITests(TestCase):
         self.assertEqual(data["stock"], [])
         self.assertEqual(len(data["items"]), 1)
         self.assertEqual(data["items"][0]["name"], "Edited but same stock")
+
+
+def _image_bytes(fmt="JPEG", size=(80, 60)):
+    buffer = BytesIO()
+    Image.new("RGB", size, (10, 120, 200)).save(buffer, format=fmt)
+    return buffer.getvalue()
+
+
+class ItemEditMatrixAPITests(TestCase):
+    """Covers every edit action the web/mobile clients send to PUT /items/{id}/.
+
+    Regression focus: an explicit ``display_order: null`` (what both clients send
+    when the field is cleared) used to 400 with "This field may not be null."
+    """
+
+    def setUp(self):
+        self.client = APIClient()
+        self.brand = Brand.objects.create(
+            name="Edit Brand",
+            phone="1112223333",
+            email="edit@test.com",
+            address_line1="1 Edit St",
+        )
+        self.admin_user = User.objects.create_user(
+            username="editadmin",
+            email="editadmin@test.com",
+            password="pass1234",
+            role="ADMIN",
+            business="kids",
+            brand=self.brand,
+        )
+        self.client.credentials(**get_auth_header(self.admin_user))
+
+        self.item = Item.objects.create(
+            name="Edit Item", price=250.00, type="kids", brand=self.brand
+        )
+        self.variant = ItemVariant.objects.create(item=self.item, display_order="1")
+        self.size_a = ItemVariantSize.objects.create(
+            item_variant=self.variant, size="20-24", stock=5
+        )
+        self.size_b = ItemVariantSize.objects.create(
+            item_variant=self.variant, size="26-30", stock=7
+        )
+
+        self._media = tempfile.mkdtemp(prefix="items-edit-media-")
+        self.addCleanup(shutil.rmtree, self._media, True)
+        self._media_override = override_settings(MEDIA_ROOT=self._media)
+        self._media_override.enable()
+        self.addCleanup(self._media_override.disable)
+
+    # ── helpers ──────────────────────────────────────────────────────────────
+    def _url(self):
+        return f"/api/items/{self.item.id}/"
+
+    def _variant_payload(self, **overrides):
+        payload = {
+            "id": self.variant.id,
+            "display_order": "1",
+            "sizes": [
+                {"size": "20-24", "stock": 5},
+                {"size": "26-30", "stock": 7},
+            ],
+        }
+        payload.update(overrides)
+        return payload
+
+    def _put(self, variants, **item_fields):
+        payload = {
+            "name": "Edit Item",
+            "price": "250.00",
+            "type": "kids",
+            "variants": variants,
+        }
+        payload.update(item_fields)
+        return self.client.put(self._url(), payload, format="json")
+
+    def _multipart_put(self, variants, **item_fields):
+        data = {
+            "name": "Edit Item",
+            "description": "",
+            "price": "250.00",
+            "type": "kids",
+        }
+        data.update(item_fields)
+        for i, variant in enumerate(variants):
+            if "id" in variant:
+                data[f"variants[{i}]id"] = str(variant["id"])
+            if variant.get("display_order") is not None:
+                data[f"variants[{i}]display_order"] = str(variant["display_order"])
+            if variant.get("remove_image"):
+                data[f"variants[{i}]remove_image"] = "true"
+            if variant.get("image") is not None:
+                data[f"variants[{i}]image"] = variant["image"]
+            for j, size in enumerate(variant.get("sizes", [])):
+                data[f"variants[{i}]sizes[{j}]size"] = size["size"]
+                data[f"variants[{i}]sizes[{j}]stock"] = str(size["stock"])
+        return self.client.put(self._url(), data, format="multipart")
+
+    def _sync_cursor(self):
+        return self.client.get(SYNC_URL).data["cursor"]
+
+    def _sync_delta(self, cursor):
+        from urllib.parse import quote
+
+        return self.client.get(f"{SYNC_URL}?since={quote(cursor)}")
+
+    def _upload(self, name="variant.jpg", fmt="JPEG", size=(80, 60)):
+        content_type = "image/jpeg" if fmt == "JPEG" else "image/png"
+        return SimpleUploadedFile(name, _image_bytes(fmt, size), content_type=content_type)
+
+    # ── BUG 2 regression: display_order null ─────────────────────────────────
+    def test_edit_explicit_null_display_order_clears_field(self):
+        resp = self._put([self._variant_payload(display_order=None)])
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.variant.refresh_from_db()
+        self.assertIsNone(self.variant.display_order)
+
+    def test_edit_legacy_null_display_order_row_is_editable(self):
+        # Items created before migration 0009 have NULL display_order.
+        self.variant.display_order = None
+        self.variant.save(update_fields=["display_order"])
+
+        resp = self._put([self._variant_payload(display_order=None)])
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.variant.refresh_from_db()
+        self.assertIsNone(self.variant.display_order)
+
+    def test_edit_blank_display_order_clears_field(self):
+        resp = self._put([self._variant_payload(display_order="")])
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.variant.refresh_from_db()
+        self.assertIsNone(self.variant.display_order)
+
+    def test_edit_display_order_value_persists(self):
+        resp = self._put([self._variant_payload(display_order="7")])
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.variant.refresh_from_db()
+        self.assertEqual(self.variant.display_order, "7")
+
+    # ── common fields ────────────────────────────────────────────────────────
+    def test_edit_name_and_price_persist(self):
+        resp = self._put(
+            [self._variant_payload()], name="Renamed", price="399.50"
+        )
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.item.refresh_from_db()
+        self.assertEqual(self.item.name, "Renamed")
+        self.assertEqual(str(self.item.price), "399.50")
+
+    # ── variant add / remove ─────────────────────────────────────────────────
+    def test_edit_add_variant_creates_variant_and_sizes(self):
+        variants = [
+            self._variant_payload(),
+            {"display_order": "2", "sizes": [{"size": "32-36", "stock": 3}]},
+        ]
+        resp = self._put(variants)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.item.variants.count(), 2)
+        created = self.item.variants.exclude(id=self.variant.id).get()
+        self.assertEqual(created.display_order, "2")
+        self.assertEqual(
+            {s.size: s.stock for s in created.sizes.all()}, {"32-36": 3}
+        )
+
+    def test_edit_delete_variant_omitted_from_payload(self):
+        extra = ItemVariant.objects.create(item=self.item, display_order="2")
+        ItemVariantSize.objects.create(item_variant=extra, size="38", stock=1)
+
+        resp = self._put([self._variant_payload()])
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertFalse(ItemVariant.objects.filter(id=extra.id).exists())
+        self.assertEqual(self.item.variants.count(), 1)
+
+    def test_edit_remove_variant_image(self):
+        self.variant.image.save(
+            "seed.jpg", ContentFile(_image_bytes()), save=True
+        )
+        stored_name = self.variant.image.name
+        self.assertTrue(
+            os.path.exists(os.path.join(settings.MEDIA_ROOT, stored_name))
+        )
+
+        resp = self._put([self._variant_payload(remove_image=True)])
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.variant.refresh_from_db()
+        self.assertFalse(bool(self.variant.image))
+        self.assertFalse(
+            os.path.exists(os.path.join(settings.MEDIA_ROOT, stored_name))
+        )
+
+    # ── images ───────────────────────────────────────────────────────────────
+    def test_edit_multipart_add_variant_with_image(self):
+        variants = [
+            self._variant_payload(),
+            {
+                "display_order": "2",
+                "sizes": [{"size": "32-36", "stock": 4}],
+                "image": self._upload("new.jpg", size=(2000, 1500)),
+            },
+        ]
+        resp = self._multipart_put(variants)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+
+        created = self.item.variants.exclude(id=self.variant.id).get()
+        self.assertTrue(bool(created.image))
+        with Image.open(created.image.path) as stored:
+            self.assertLessEqual(max(stored.size), 1024)
+
+    def test_edit_multipart_replaces_variant_image(self):
+        self.variant.image.save(
+            "seed.jpg", ContentFile(_image_bytes()), save=True
+        )
+        old_name = self.variant.image.name
+
+        resp = self._multipart_put(
+            [self._variant_payload(image=self._upload("replacement.png", "PNG"))]
+        )
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.variant.refresh_from_db()
+        self.assertNotEqual(self.variant.image.name, old_name)
+        self.assertFalse(
+            os.path.exists(os.path.join(settings.MEDIA_ROOT, old_name))
+        )
+
+    # ── stock deltas ─────────────────────────────────────────────────────────
+    def test_edit_change_stock_produces_stock_delta(self):
+        cursor = self._sync_cursor()
+        payload = self._variant_payload(
+            sizes=[
+                {"size": "20-24", "stock": 5},
+                {"size": "26-30", "stock": 99},
+            ]
+        )
+        resp = self._put([payload])
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+
+        data = self._sync_delta(cursor).data
+        self.assertEqual(data["mode"], "delta")
+        self.size_b.refresh_from_db()
+        self.assertEqual(self.size_b.stock, 99)
+        rows = {row["id"]: row["stock"] for row in data["stock"]}
+        self.assertEqual(rows.get(self.size_b.id), 99)
+        self.assertNotIn(self.size_a.id, rows)
+
+    def test_edit_add_size_produces_stock_delta(self):
+        cursor = self._sync_cursor()
+        payload = self._variant_payload(
+            sizes=[
+                {"size": "20-24", "stock": 5},
+                {"size": "26-30", "stock": 7},
+                {"size": "32-36", "stock": 11},
+            ]
+        )
+        resp = self._put([payload])
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+
+        data = self._sync_delta(cursor).data
+        added = self.variant.sizes.get(size="32-36")
+        rows = {row["id"]: row["stock"] for row in data["stock"]}
+        self.assertEqual(rows.get(added.id), 11)
+
+    def test_edit_catalog_change_bumps_rev(self):
+        before = self.item.catalog_updated_at
+        resp = self._put([self._variant_payload()], name="Catalog Changed")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.item.refresh_from_db()
+        self.assertGreater(self.item.catalog_updated_at, before)
+
+        entry = self.client.get(SYNC_URL).data["items"][0]
+        self.assertEqual(entry["rev"], self.item.catalog_updated_at.isoformat())
+
+
+class ItemCreateMultipartAPITests(TestCase):
+    """The exact flat bracket-key multipart payload the web form builds."""
+
+    def setUp(self):
+        self.client = APIClient()
+        self.brand = Brand.objects.create(
+            name="Create Brand",
+            phone="4445556666",
+            email="create@test.com",
+            address_line1="2 Create St",
+        )
+        self.admin_user = User.objects.create_user(
+            username="createadmin",
+            email="createadmin@test.com",
+            password="pass1234",
+            role="ADMIN",
+            business="kids",
+            brand=self.brand,
+        )
+        self.client.credentials(**get_auth_header(self.admin_user))
+
+        self._media = tempfile.mkdtemp(prefix="items-create-media-")
+        self.addCleanup(shutil.rmtree, self._media, True)
+        self._media_override = override_settings(MEDIA_ROOT=self._media)
+        self._media_override.enable()
+        self.addCleanup(self._media_override.disable)
+
+    def _upload(self, name="photo.jpg", size=(2200, 1600)):
+        return SimpleUploadedFile(
+            name, _image_bytes("JPEG", size), content_type="image/jpeg"
+        )
+
+    def test_web_style_multipart_create_with_two_variants_and_images(self):
+        data = {
+            "name": "Web Created",
+            "description": "from the web wizard",
+            "price": "499.99",
+            "type": "kids",
+            "variants[0]display_order": "1",
+            "variants[0]image": self._upload("one.jpg"),
+            "variants[0]sizes[0]size": "20-24",
+            "variants[0]sizes[0]stock": "5",
+            "variants[0]sizes[1]size": "26-30",
+            "variants[0]sizes[1]stock": "6",
+            "variants[1]display_order": "2",
+            "variants[1]image": self._upload("two.jpg"),
+            "variants[1]sizes[0]size": "32-36",
+            "variants[1]sizes[0]stock": "7",
+        }
+        resp = self.client.post("/api/items/", data, format="multipart")
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+
+        item = Item.objects.get(name="Web Created")
+        self.assertEqual(item.variants.count(), 2)
+        for variant in item.variants.all():
+            self.assertTrue(bool(variant.image))
+            with Image.open(variant.image.path) as stored:
+                self.assertLessEqual(max(stored.size), 1024)
+                self.assertGreater(min(stored.size), 0)

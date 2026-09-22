@@ -6,12 +6,13 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/perf.dart';
+import '../../core/utils/text_symbols.dart';
 import '../../data/repositories.dart';
 import '../../models/models.dart';
 import '../../shared/widgets.dart';
 import 'order_flow_utils.dart';
 
-/// Step 1 â€” pick the customer to create a draft order for. Mirrors
+/// Step 1 - pick the customer to create a draft order for. Mirrors
 /// `components/pages/admin/AdminCustomerSelect.tsx`.
 class OrderCreateCustomerScreen extends ConsumerStatefulWidget {
   const OrderCreateCustomerScreen({super.key, this.presetCustomerId});
@@ -299,7 +300,7 @@ child: Scaffold(
                           fontSize: 14,
                           fontWeight: FontWeight.w700,
                           color: Color(0xFF111827))),
-                  Text('Agent: ${customer.agentName ?? 'â€”'}',
+                  Text('Agent: ${customer.agentName ?? kEmDash}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
@@ -341,7 +342,7 @@ child: Scaffold(
                           fontWeight: FontWeight.w700,
                           color: Color(0xFF111827))),
                   const SizedBox(height: 2),
-                  Text('Agent: ${customer.agentName ?? 'â€”'}',
+                  Text('Agent: ${customer.agentName ?? kEmDash}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(

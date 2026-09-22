@@ -504,21 +504,21 @@ void main() {
             variant: 100,
             sizeGroup: 'S,M,L,XL',
             quantity: 2,
-            variantDisplayOrder: 1),
+            variantDisplayOrder: '1'),
         OrderItem(
             id: 2,
             item: item,
             variant: 100,
             sizeGroup: 'S,M,L,XL',
             quantity: 3,
-            variantDisplayOrder: 1),
+            variantDisplayOrder: '1'),
         OrderItem(
             id: 3,
             item: item,
             variant: 100,
             sizeGroup: 'M,L,XL',
             quantity: 1,
-            variantDisplayOrder: 1),
+            variantDisplayOrder: '1'),
       ];
       final groups = computeDuplicateGroups(items);
       expect(groups, hasLength(1));
@@ -545,7 +545,7 @@ void main() {
           quantity: quantity,
           packedQuantity: packed,
           pieceCount: pieceCount,
-          variantDisplayOrder: 1,
+          variantDisplayOrder: '1',
         );
 
     List<int> ids(List<OrderItem> items) =>

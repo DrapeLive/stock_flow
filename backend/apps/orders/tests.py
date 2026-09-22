@@ -409,6 +409,21 @@ class DraftTestBase(UnpackedOrderItemsTestBase):
             item_type="gents",
         )
 
+    def analytics_range(self, days_back=30):
+        """Explicit from/to covering today in the configured local timezone.
+
+        ``created_at__date`` casts rows with the ``TIME_ZONE`` (Asia/Kolkata)
+        while the analytics view's default range is derived from
+        ``timezone.now().date()`` (UTC). Between 00:00-05:29 IST those two
+        dates differ, so orders created "now" fall outside the default window
+        and analytics totals read 0. Tests that need the default 30-day window
+        must pass an explicit range computed from ``timezone.localdate()`` so
+        the suite does not depend on the wall-clock time it happens to run at.
+        """
+        end = timezone.localdate()
+        start = end - timedelta(days=days_back)
+        return {"from": start.isoformat(), "to": end.isoformat()}
+
     def make_draft(self, created_by, agent=None, age=None, with_item=False):
         draft = Order.objects.create(
             customer=self.customer,
@@ -785,7 +800,7 @@ class AnalyticsDraftTests(DraftTestBase):
         self.make_order_item(self.order, quantity=7)
 
         self.client.credentials(**get_auth_header(self.admin_user))
-        response = self.client.get(self.analytics_url)
+        response = self.client.get(self.analytics_url, self.analytics_range())
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         kpis = response.data["kpis"]
@@ -831,7 +846,7 @@ class AnalyticsKPITotalsTests(DraftTestBase):
                    size_group="S,M,L,XL,XXL")  # 100 x 2 x 5
 
         self.client.credentials(**get_auth_header(self.admin_user))
-        response = self.client.get(self.analytics_url)
+        response = self.client.get(self.analytics_url, self.analytics_range())
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         kpis = response.data["kpis"]
@@ -846,7 +861,7 @@ class AnalyticsKPITotalsTests(DraftTestBase):
         self._item(self.order, quantity=4)
 
         self.client.credentials(**get_auth_header(self.admin_user))
-        response = self.client.get(self.analytics_url)
+        response = self.client.get(self.analytics_url, self.analytics_range())
 
         kpis = response.data["kpis"]
         self.assertEqual(kpis["draft"], 1)
@@ -863,7 +878,7 @@ class AnalyticsKPITotalsTests(DraftTestBase):
         self._item(self.order, quantity=3)
 
         self.client.credentials(**get_auth_header(self.admin_user))
-        response = self.client.get(self.analytics_url)
+        response = self.client.get(self.analytics_url, self.analytics_range())
 
         kpis = response.data["kpis"]
         self.assertEqual(kpis["total_sets"], 3)
@@ -892,19 +907,25 @@ class AnalyticsKPITotalsTests(DraftTestBase):
         )
 
         self.client.credentials(**get_auth_header(gents_admin))
-        gents_kpis = self.client.get(self.analytics_url).data["kpis"]
+        gents_kpis = self.client.get(
+            self.analytics_url, self.analytics_range()
+        ).data["kpis"]
         self.assertEqual(gents_kpis["total_sets"], 5)
         self.assertEqual(gents_kpis["total_pieces"], 15)
         self.assertEqual(gents_kpis["total_value"], 7500.0)
 
         self.client.credentials(**get_auth_header(kids_admin))
-        kids_kpis = self.client.get(self.analytics_url).data["kpis"]
+        kids_kpis = self.client.get(
+            self.analytics_url, self.analytics_range()
+        ).data["kpis"]
         self.assertEqual(kids_kpis["total_sets"], 2)
         self.assertEqual(kids_kpis["total_pieces"], 6)
         self.assertEqual(kids_kpis["total_value"], 1800.0)
 
         self.client.credentials(**get_auth_header(super_user))
-        all_kpis = self.client.get(self.analytics_url).data["kpis"]
+        all_kpis = self.client.get(
+            self.analytics_url, self.analytics_range()
+        ).data["kpis"]
         self.assertEqual(all_kpis["total_sets"], 7)
         self.assertEqual(all_kpis["total_pieces"], 21)
         self.assertEqual(all_kpis["total_value"], 9300.0)
@@ -917,7 +938,7 @@ class AnalyticsKPITotalsTests(DraftTestBase):
         self.item.save()
 
         self.client.credentials(**get_auth_header(self.admin_user))
-        response = self.client.get(self.analytics_url)
+        response = self.client.get(self.analytics_url, self.analytics_range())
 
         kpis = response.data["kpis"]
         self.assertEqual(kpis["total_sets"], 7)
@@ -947,7 +968,7 @@ class AnalyticsKPITotalsTests(DraftTestBase):
         self._item(other, quantity=2, price=400.00, size_group="S,M,L,XL")
 
         self.client.credentials(**get_auth_header(self.admin_user))
-        response = self.client.get(self.analytics_url)
+        response = self.client.get(self.analytics_url, self.analytics_range())
 
         invoice_total = 0.0
         for order_id in (self.order.id, other.id):

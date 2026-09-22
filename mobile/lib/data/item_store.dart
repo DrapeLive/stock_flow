@@ -92,11 +92,14 @@ abstract final class ItemSyncData {
 
   /// Projects raw sync item maps into the stock-list shape the Stock screen
   /// renders (variant sizes use the `size` column as the display range).
+  ///
+  /// Items are ordered newest-first (`id` descending) to match the web stock
+  /// list, which the backend serves with `order_by("-id")`.
   static List<ItemStockEntry> toEntries(List<Map<String, dynamic>> items) {
     final sorted = [...items]..sort((a, b) {
         final ia = asInt(a['id']) ?? 0;
         final ib = asInt(b['id']) ?? 0;
-        return ia.compareTo(ib);
+        return ib.compareTo(ia);
       });
     return [
       for (final item in sorted)

@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
 import '../config/app_config.dart';
+import '../utils/perf.dart';
 
 /// Thrown for non-2xx responses; [message] is derived from the backend error
 /// payload so screens can surface it directly.
@@ -43,7 +44,7 @@ class ApiClient {
 
   static void init() {
     dio.interceptors.clear();
-    if (kDebugMode) {
+    if (Perf.enabled) {
       dio.interceptors.add(_PerfInterceptor());
     }
     dio.interceptors.add(
@@ -144,7 +145,8 @@ class ApiClient {
   }
 }
 
-/// Debug-only request logger (no-op behavior in release: not installed).
+/// Request logger — installed when [Perf.enabled] (debug, or release built
+/// with `--dart-define=PERF_LOG=true`).
 class _PerfInterceptor extends Interceptor {
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {

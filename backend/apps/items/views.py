@@ -1,6 +1,7 @@
 from datetime import timedelta
 
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db.models import Sum
 from django.utils import timezone
 from rest_framework import status
@@ -364,10 +365,9 @@ class ItemViewSet(ModelViewSet):
 
     @action(detail=False, methods=["get"], url_path="by-qr")
     def get_by_qr(self, request):
-        qr_code = request.query_params.get("qr_code")
-        qr_code = qr_code.strip()
+        qr_code = request.query_params.get("qr_code", "").strip()
 
-        if len(qr_code) > 255 or "/" in qr_code:
+        if not qr_code or len(qr_code) > 255 or "/" in qr_code:
             return Response({"error": "No such item with this QR exists"}, status=400)
 
         try:
@@ -376,17 +376,8 @@ class ItemViewSet(ModelViewSet):
                 .prefetch_related("sizes")
                 .get(qr_code=qr_code, item__is_deleted=False)
             )
-        except Exception:
+        except (ItemVariant.DoesNotExist, ValidationError):
             return Response({"error": "Invalid QR code"}, status=400)
-
-        try:
-            variant = (
-                ItemVariant.objects.select_related("item")
-                .prefetch_related("sizes")
-                .get(qr_code=qr_code, item__is_deleted=False)
-            )
-        except ItemVariant.DoesNotExist:
-            return Response({"error": "Variant not found"}, status=404)
 
         biz = admin_business(request.user)
         if biz and variant.item.type != biz:
@@ -477,7 +468,7 @@ class ItemViewSet(ModelViewSet):
                 .prefetch_related("sizes")
                 .get(qr_code=qr_code, item__is_deleted=False)
             )
-        except ItemVariant.DoesNotExist:
+        except (ItemVariant.DoesNotExist, ValidationError):
             return Response({"error": "Variant not found"}, status=404)
 
         biz = admin_business(request.user)

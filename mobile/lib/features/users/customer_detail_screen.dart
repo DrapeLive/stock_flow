@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/utils/perf.dart';
+import '../../core/utils/text_symbols.dart';
 import '../../data/repositories.dart';
 import '../../models/models.dart';
 import '../../shared/admin_shell.dart';
@@ -250,10 +251,10 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
           ),
           child: Column(
             children: [
-              InfoRow('CONTACT', c.contact ?? '—'),
-              InfoRow('ADDRESS', c.address ?? '—'),
-              InfoRow('GST', c.gst ?? '—'),
-              InfoRow('AGENT', c.agentName ?? '—'),
+              InfoRow('CONTACT', c.contact ?? kEmDash),
+              InfoRow('ADDRESS', c.address ?? kEmDash),
+              InfoRow('GST', c.gst ?? kEmDash),
+              InfoRow('AGENT', c.agentName ?? kEmDash),
             ],
           ),
         ),

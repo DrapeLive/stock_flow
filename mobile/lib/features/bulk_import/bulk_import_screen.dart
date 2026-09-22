@@ -12,6 +12,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../core/api/api_client.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/text_symbols.dart';
 import '../../data/repositories.dart';
 import '../../shared/widgets.dart';
 
@@ -209,7 +210,7 @@ class _BulkImportScreenState extends ConsumerState<BulkImportScreen> {
     } catch (_) {
       if (mounted) {
         setState(() => _status = 'error');
-        AppToast.error(context, 'Failed to parse file â€” check the format.');
+        AppToast.error(context, 'Failed to parse file $kEmDash check the format.');
       }
     }
   }
@@ -461,7 +462,7 @@ final invalidCount = _errors.values.where((e) => e.isNotEmpty).length;
                         fontSize: 20,
                         fontWeight: FontWeight.w900,
                         color: Colors.black)),
-                const Text('UPLOAD Â· REVIEW Â· SAVE',
+                const Text('UPLOAD $kMiddleDot REVIEW $kMiddleDot SAVE',
                     style: TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.w800,
@@ -516,7 +517,7 @@ final invalidCount = _errors.values.where((e) => e.isNotEmpty).length;
                                 fontWeight: FontWeight.w800,
                                 color: Color(0xFF374151))),
                         SizedBox(height: 4),
-                        Text('or tap to browse â€” .xlsx, .xls, .csv',
+                        Text('or tap to browse $kEmDash .xlsx, .xls, .csv',
                             style: TextStyle(
                                 fontSize: 12, color: Color(0xFF9CA3AF))),
                       ],
@@ -546,7 +547,7 @@ final invalidCount = _errors.values.where((e) => e.isNotEmpty).length;
                                       fontWeight: FontWeight.w800,
                                       color: Color(0xFF1F2937))),
                               Text(
-                                  '${_rows.length} rows loaded Â· Tap to replace',
+                                  '${_rows.length} rows loaded $kMiddleDot Tap to replace',
                                   style: const TextStyle(
                                       fontSize: 11,
                                       color: Color(0xFF9CA3AF))),
@@ -659,7 +660,7 @@ final invalidCount = _errors.values.where((e) => e.isNotEmpty).length;
                   : const Icon(Icons.check, size: 17),
               label: Text(
                 _saving
-                    ? 'Savingâ€¦'
+                    ? 'Saving$kEllipsis'
                     : invalidCount > 0
                         ? 'Fix $invalidCount error(s)'
                         : 'Save ${_rows.length} Customers',
@@ -1041,7 +1042,7 @@ final invalidCount = _errors.values.where((e) => e.isNotEmpty).length;
                                             fontWeight: FontWeight.w900,
                                             color: Color(0xFFE11D48))),
                                     if (e.name.isNotEmpty)
-                                      TextSpan(text: ' Â· ${e.name}'),
+                                      TextSpan(text: ' $kMiddleDot ${e.name}'),
                                     TextSpan(
                                         text: '\n${e.error}',
                                         style: const TextStyle(

@@ -5,10 +5,11 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../data/repositories.dart';
+import '../../shared/scan_beep.dart';
 import '../../shared/widgets.dart';
 import 'order_flow_utils.dart';
 
-/// Step 3 â€” scan a variant QR. Mirrors `components/pages/ScannerPage.tsx`.
+/// Step 3 - scan a variant QR. Mirrors `components/pages/ScannerPage.tsx`.
 class OrderCreateScannerScreen extends ConsumerStatefulWidget {
   const OrderCreateScannerScreen({super.key, required this.customerId});
 
@@ -28,7 +29,8 @@ class _OrderCreateScannerScreenState
     final barcode =
         capture.barcodes.isNotEmpty ? capture.barcodes.first : null;
     final raw = barcode?.rawValue;
-    if (raw == null || raw.isEmpty) return;
+if (raw == null || raw.isEmpty) return;
+    playScanBeep();
     _validate(raw);
   }
 
@@ -121,8 +123,9 @@ child: Scaffold(
               _header(),
               Expanded(
                 child: Center(
+                  child: SingleChildScrollView(
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -182,23 +185,37 @@ child: Scaffold(
                               fontSize: 18,
                               fontWeight: FontWeight.w800,
                               color: Color(0xFF1F2937))),
-                      const SizedBox(height: 6),
+const SizedBox(height: 6),
                       const Text(
                         "Position the item's QR code within the frame to add it to the order",
                         textAlign: TextAlign.center,
                         style: TextStyle(
                             fontSize: 13, color: Color(0xFF9CA3AF)),
                       ),
+                      const SizedBox(height: 24),
+                      StockFlowButton(
+                        label: 'Search item by name',
+                        icon: const Icon(Icons.search,
+                            size: 18, color: Colors.white),
+                        onPressed: () => context.push(
+                            '/admin/order/new/${widget.customerId}/search'),
+                      ),
+                      const SizedBox(height: 10),
+                      TextButton(
+                        onPressed: _backToOrder,
+                        child: const Text('Back to Orders'),
+                      ),
                     ],
                   ),
                 ),
               ),
             ),
-],
+          ),
+        ],
         ),
-      ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _header() {
     return Container(

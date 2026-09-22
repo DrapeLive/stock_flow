@@ -5,9 +5,11 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/derive_username.dart';
+import '../../core/utils/text_symbols.dart';
 import '../../data/repositories.dart';
 import '../../models/models.dart';
 import '../../shared/admin_shell.dart';
+import '../../shared/scan_beep.dart';
 import '../../shared/widgets.dart';
 
 /// Mirrors `app/(admin)/admin/users/agents/[id]/page.tsx` +
@@ -460,9 +462,9 @@ class _AgentDetailScreenState extends ConsumerState<AgentDetailScreen> {
       child: Column(
         children: [
           InfoRow('DISPLAY NAME', a.displayName),
-          InfoRow('USERNAME', a.user.username ?? '—'),
-          InfoRow('EMAIL', a.user.email ?? '—'),
-          InfoRow('CONTACT', a.contact ?? '—'),
+          InfoRow('USERNAME', a.user.username ?? kEmDash),
+          InfoRow('EMAIL', a.user.email ?? kEmDash),
+          InfoRow('CONTACT', a.contact ?? kEmDash),
         ],
       ),
     );
@@ -660,13 +662,22 @@ class _ItemAssignmentSection extends ConsumerStatefulWidget {
 class _ItemAssignmentSectionState extends ConsumerState<_ItemAssignmentSection> {
   _AssignTab _tab = _AssignTab.recent;
 
+  /// Variants resolved live via `/api/items/by-qr/` that are missing from the
+  /// 15-min-cached `/variants/all/` snapshot, merged inline so a scanned
+  /// variant can still be toggled without waiting out the cache.
+  final List<VariantAllItem> _liveResolved = [];
+
   DateTime get _recentCutoff {
     final now = DateTime.now();
     return DateTime(now.year, now.month, now.day - 1, 0, 1);
   }
 
   List<({VariantAllItem v, bool isUnsaved, bool removing})> get _all {
-    final sorted = [...widget.variants]..sort((a, b) {
+    final byId = <int, VariantAllItem>{
+      for (final v in _liveResolved) v.id: v,
+      for (final v in widget.variants) v.id: v,
+    };
+    final sorted = byId.values.toList()..sort((a, b) {
         final byName = _nameKey(a.itemName).compareTo(_nameKey(b.itemName));
         return byName != 0
             ? byName
@@ -737,30 +748,91 @@ class _ItemAssignmentSectionState extends ConsumerState<_ItemAssignmentSection> 
     return filtered;
   }
 
-  void _handleScan(String qr, {required bool remove}) {
+  /// Resolves a scanned QR to a variant and toggles it, returning an inline
+  /// feedback message so the (modal, continuously-open) scanner can show
+  /// progress. The primary source is the local [widget.variants] snapshot.
+  /// That snapshot comes from `/api/items/variants/all/` which is cached for
+  /// 15 minutes, so a just-created (or otherwise missing) variant is not in it
+  /// even though it still resolves live via the authoritative
+  /// `/api/items/by-qr/` endpoint (the same one the order flow and web app
+  /// use). When the local match misses, fall back to that live lookup and
+  /// merge the resolved row inline.
+  Future<({String message, bool isError})> _handleScan(
+      String qr, {required bool remove}) async {
     final trimmed = qr.trim();
-    final match = widget.variants.where((v) => v.qrCode == trimmed).toList();
-    if (match.isEmpty) {
-      AppToast.error(context, 'Variant not found with this QR code');
-      return;
+    var v = widget.variants.where((x) => x.qrCode == trimmed).toList();
+    if (v.isEmpty) {
+      try {
+        final itemQr = await repos.item.byQr(trimmed);
+        if (!mounted) {
+          return (message: 'Variant not found with this QR code', isError: true);
+        }
+        final matched = itemQr.matchedVariantId == null
+            ? null
+            : itemQr.variants
+                .where((x) => x.id == itemQr.matchedVariantId)
+                .toList();
+        final resolved =
+            (matched == null || matched.isEmpty) ? null : matched.first;
+        if (resolved == null) {
+          AppToast.error(context, 'Variant not found with this QR code');
+          return (message: 'Variant not found with this QR code', isError: true);
+        }
+        final display = _synthesizeFromQr(itemQr, resolved);
+        if (display == null) {
+          AppToast.error(context, 'Variant not found with this QR code');
+          return (message: 'Variant not found with this QR code', isError: true);
+        }
+        final known = widget.variants.where((x) => x.id == display.id).toList();
+        v = known.isEmpty ? [display] : known;
+        if (known.isEmpty && !_all.any((e) => e.v.id == display.id)) {
+          setState(() => _liveResolved.add(display));
+        }
+      } catch (_) {
+        AppToast.error(context, 'Variant not found with this QR code');
+        return (message: 'Variant not found with this QR code', isError: true);
+      }
     }
-    final v = match.first;
+    final variant = v.first;
     if (remove) {
-      if (!widget.selectedIds.contains(v.id)) {
-        AppToast.error(context, '${v.itemName} is not assigned to this agent');
-        return;
+      if (!widget.selectedIds.contains(variant.id)) {
+        AppToast.error(context, '${variant.itemName} is not assigned to this agent');
+        return (
+          message: '${variant.itemName} is not assigned to this agent',
+          isError: true,
+        );
       }
-      widget.onToggle(v.id);
-      widget.onMarkRemoval(v.id);
-      AppToast.success(context, '${v.itemName} marked for removal');
+      widget.onToggle(variant.id);
+      widget.onMarkRemoval(variant.id);
+      AppToast.success(context, '${variant.itemName} marked for removal');
+      return (message: '${variant.itemName} marked for removal', isError: false);
     } else {
-      if (!widget.selectedIds.contains(v.id)) {
-        widget.onToggle(v.id);
-        AppToast.success(context, '${v.itemName} added');
+      if (!widget.selectedIds.contains(variant.id)) {
+        widget.onToggle(variant.id);
+        AppToast.success(context, '${variant.itemName} added');
+        return (message: '${variant.itemName} added', isError: false);
       } else {
-        AppToast.success(context, '${v.itemName} already selected');
+        AppToast.success(context, '${variant.itemName} already selected');
+        return (message: '${variant.itemName} already selected', isError: false);
       }
     }
+  }
+
+  /// Builds a [VariantAllItem] from the live `/api/items/by-qr/` response so a
+  /// variant missing from the cached snapshot can still be toggled/saved.
+  VariantAllItem? _synthesizeFromQr(ItemQR itemQr, ItemVariantQR resolved) {
+    return VariantAllItem(
+      id: resolved.id,
+      itemId: itemQr.id,
+      itemName: itemQr.name,
+      itemType: itemQr.type ?? '',
+      itemPrice: itemQr.price,
+      qrCode: resolved.qrCode,
+      image: resolved.image,
+      sizes: resolved.sizes,
+      totalStock: resolved.totalStock,
+      uniqueSizes: resolved.sizes.map((s) => s.sizeRange).toSet().toList(),
+    );
   }
 
   @override
@@ -1046,7 +1118,7 @@ class _ItemAssignmentSectionState extends ConsumerState<_ItemAssignmentSection> 
                   ],
                 ),
                 const SizedBox(height: 2),
-                Text('Rs. ${v.itemPrice}${v.itemType.isNotEmpty ? ' · ${v.itemType}' : ''}',
+                Text('Rs. ${v.itemPrice}${v.itemType.isNotEmpty ? ' $kMiddleDot ${v.itemType}' : ''}',
                     style: const TextStyle(
                         fontSize: 11, color: Color(0xFF9CA3AF))),
                 if (v.sizes.isNotEmpty)
@@ -1087,25 +1159,38 @@ class _ItemAssignmentSectionState extends ConsumerState<_ItemAssignmentSection> 
       isScrollControlled: true,
       showDragHandle: true,
       builder: (ctx) => _AssignScanSheet(
-        onScanned: (qr) {
-          Navigator.pop(ctx);
-          _handleScan(qr, remove: remove);
-        },
+        remove: remove,
+        onUnsavedCount: () => remove
+            ? widget.pendingRemoval.length
+            : widget.selectedIds
+                .where((id) => !widget.savedIds.contains(id))
+                .length,
+        onScanned: (qr) => _handleScan(qr, remove: remove),
       ),
     );
   }
 }
 
 class _AssignScanSheet extends StatefulWidget {
-  const _AssignScanSheet({required this.onScanned});
-  final void Function(String qr) onScanned;
+  const _AssignScanSheet({
+    required this.remove,
+    required this.onUnsavedCount,
+    required this.onScanned,
+  });
+  final bool remove;
+  final int Function() onUnsavedCount;
+  final Future<({String message, bool isError})> Function(String qr) onScanned;
 
   @override
   State<_AssignScanSheet> createState() => _AssignScanSheetState();
 }
 
 class _AssignScanSheetState extends State<_AssignScanSheet> {
-  bool _done = false;
+  late int _unsaved = widget.onUnsavedCount();
+  String? _lastMessage;
+  bool _lastIsError = false;
+  String? _lastRaw;
+  DateTime? _lastHandledAt;
 
   @override
   Widget build(BuildContext context) {
@@ -1114,32 +1199,123 @@ class _AssignScanSheetState extends State<_AssignScanSheet> {
         height: 420,
         child: Column(
           children: [
-            const Padding(
-              padding: EdgeInsets.all(12),
-              child: Text(
-                'Scan QR code',
-                style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF111827)),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+              child: Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'Scan QR codes',
+                      style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF111827)),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: widget.remove
+                          ? const Color(0xFFFEF2F2)
+                          : const Color(0xFFF0FDF4),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                          _unsaved == 0 ? 'ready' : '$_unsaved unsaved',
+                          style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: widget.remove
+                                  ? const Color(0xFFDC2626)
+                                  : const Color(0xFF16A34A)),
+                        ),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Done',
+                        style: TextStyle(
+                            fontSize: 13, fontWeight: FontWeight.w700)),
+                  ),
+                ],
               ),
             ),
+            if (_lastMessage != null) ...[
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 10, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: _lastIsError
+                        ? const Color(0xFFFEF2F2)
+                        : const Color(0xFFF0FDF4),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: _lastIsError
+                          ? const Color(0xFFFECACA)
+                          : const Color(0xFFBBF7D0),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        _lastIsError
+                            ? Icons.error_outline
+                            : Icons.check_circle_outline,
+                        size: 16,
+                        color: _lastIsError
+                            ? const Color(0xFFDC2626)
+                            : const Color(0xFF16A34A),
+                      ),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          _lastMessage!,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF374151)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(14),
                   child: MobileScanner(
-                    onDetect: (capture) {
-                      if (_done) return;
+                    onDetect: (capture) async {
                       final barcode = capture.barcodes.isNotEmpty
                           ? capture.barcodes.first
                           : null;
                       final raw = barcode?.rawValue;
-                      if (raw != null && raw.isNotEmpty) {
-                        _done = true;
-                        widget.onScanned(raw);
-                      }
+                      if (raw == null || raw.isEmpty) return;
+                      final now = DateTime.now();
+                      final lastHandledAt = _lastHandledAt;
+                      final isRepeat = _lastRaw == raw &&
+                          lastHandledAt != null &&
+                          now.difference(lastHandledAt) <
+                              const Duration(milliseconds: 1500);
+                      if (isRepeat) return;
+                      _lastRaw = raw;
+                      _lastHandledAt = now;
+                      playScanBeep();
+                      final result = await widget.onScanned(raw);
+                      if (!mounted) return;
+                      setState(() {
+                        _unsaved = widget.onUnsavedCount();
+                        _lastMessage = result.message;
+                        _lastIsError = result.isError;
+                      });
                     },
                   ),
                 ),

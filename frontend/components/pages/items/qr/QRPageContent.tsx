@@ -14,6 +14,7 @@ import QRCode from "qrcode";
 import Image from "next/image";
 import { ChevronLeft, Download, Printer, Share2 } from "lucide-react";
 import { PageLoading } from "@/components/ui/Loading";
+import { variantColorLabel } from "@/lib/colorLabel";
 
 type QRPrintItem = {
     id: number;
@@ -68,7 +69,6 @@ export default function QRPrintPageContent() {
                     await prepareItem(parsedItem);
                 } else if (qrId) {
                   const data: ItemQRResponse = await itemApi.byqr(qrId);
-                  console.log(data.variants[0].display_order);
                     const matchedVariant =
                         data.variants.find((v) => v.qr_code === qrId) ||
                         data.variants[0];
@@ -234,7 +234,7 @@ export default function QRPrintPageContent() {
                                     {item.name}
                                 </p>
                                 <p className="text-[18px] bg-gray-100 px-2 py-1 rounded">
-                                    Variant #{variant.display_order}
+                                    {variantColorLabel(variant.display_order, index + 1)}
                                 </p>
                                 <Image
                                     src={qrImages[variant.id]}

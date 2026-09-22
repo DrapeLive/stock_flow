@@ -65,9 +65,12 @@ export const itemApi = {
     },
 
     create(data: ItemRequest | FormData): Promise<ItemResponse> {
+        // For FormData, leave Content-Type unset so the browser adds the
+        // multipart boundary itself (axios's transform would otherwise have no
+        // header to fill in, and a manually-set header would drop the boundary).
         const headers =
             data instanceof FormData
-                ? { "Content-Type": "multipart/form-data" }
+                ? {}
                 : { "Content-Type": "application/json" };
         return api
             .post<ItemResponse>("/api/items/", data, { headers })
@@ -83,12 +86,8 @@ export const itemApi = {
     },
 
     update(id: number, data: ItemRequest | FormData): Promise<ItemResponse> {
-        const headers =
-            data instanceof FormData
-                ? { "Content-Type": "multipart/form-data" }
-                : undefined;
         return api
-            .put<ItemResponse>(`/api/items/${id}/`, data, { headers })
+            .put<ItemResponse>(`/api/items/${id}/`, data)
             .then((r) => r.data);
     },
 

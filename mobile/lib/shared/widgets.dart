@@ -7,6 +7,7 @@ import '../core/config/app_config.dart';
 import '../core/cache/app_cache.dart';
 import '../core/theme/app_theme.dart';
 import '../core/utils/status_maps.dart';
+import '../core/utils/text_symbols.dart';
 import '../providers.dart';
 import '../models/models.dart';
 
@@ -29,7 +30,7 @@ class StatusBadge extends StatelessWidget {
         border: Border.all(color: fg.withValues(alpha: 0.25)),
       ),
       child: Text(
-        status == OrderStatus.unknown ? '—' : status.label.toUpperCase(),
+        status == OrderStatus.unknown ? kEmDash : status.label.toUpperCase(),
         style: TextStyle(
           fontSize: 10,
           fontWeight: FontWeight.bold,
@@ -232,7 +233,14 @@ class StockFlowButton extends StatelessWidget {
     }
     return SizedBox(
       width: expand ? double.infinity : null,
-      child: ElevatedButton(
+      child: FilledButton(
+        style: FilledButton.styleFrom(
+          backgroundColor: AppColors.primary,
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
         onPressed: isDisabled ? null : onPressed,
         child: content,
       ),
@@ -452,6 +460,27 @@ class EmptyState extends StatelessWidget {
 // Images & avatars
 // ---------------------------------------------------------------------------
 
+/// Decode dimension (device pixels) for a box of [boxWidth] x [boxHeight].
+///
+/// `ResizeImage` uses [ResizeImagePolicy.exact] by default: passing BOTH width
+/// and height decodes the bitmap to that exact size (equivalent to
+/// `BoxFit.fill`), which stretches the image before `BoxFit.cover` ever runs.
+/// We therefore hand `ResizeImage` a single dimension so the aspect ratio is
+/// preserved, choosing the larger box side so `BoxFit.cover` still has enough
+/// pixels to crop from. Returns a sane fallback for unbounded constraints.
+int appImageDecodeSide(
+  double boxWidth,
+  double boxHeight,
+  double dpr, {
+  double fallback = 22,
+}) {
+  final w = boxWidth.isFinite && boxWidth >= 8 ? boxWidth : fallback;
+  final h = boxHeight.isFinite && boxHeight >= 8 ? boxHeight : fallback;
+  final side = w > h ? w : h;
+  final pixels = (side * dpr).round();
+  return pixels < 1 ? 1 : pixels;
+}
+
 class AppImage extends StatelessWidget {
   const AppImage(this.url,
       {super.key,
@@ -480,18 +509,20 @@ class AppImage extends StatelessWidget {
     final image = LayoutBuilder(
       builder: (context, constraints) {
         final dpr = MediaQuery.devicePixelRatioOf(context);
-        final width = constraints.maxWidth.isFinite && constraints.maxWidth >= 8
-            ? (constraints.maxWidth * dpr).round()
-            : (iconSize * dpr).round();
-        final height = constraints.maxHeight.isFinite && constraints.maxHeight >= 8
-            ? (constraints.maxHeight * dpr).round()
-            : width;
+        // A single decode dimension keeps the aspect ratio intact; see
+        // [appImageDecodeSide].
+        final decodeSide = appImageDecodeSide(
+          constraints.maxWidth,
+          constraints.maxHeight,
+          dpr,
+          fallback: iconSize,
+        );
         return CachedNetworkImage(
           imageUrl: resolved,
           fit: fit,
           cacheManager: AppCache.imageCacheManager,
           imageBuilder: (context, imageProvider) => Image(
-            image: ResizeImage.resizeIfNeeded(width, height, imageProvider),
+            image: ResizeImage.resizeIfNeeded(decodeSide, null, imageProvider),
             fit: fit,
           ),
           placeholder: (_, __) =>
@@ -649,7 +680,7 @@ class OfflineBanner extends ConsumerWidget {
           Icon(Icons.wifi_off, size: 14, color: Colors.white),
           SizedBox(width: 8),
           Text(
-            'Offline — showing cached data',
+            'Offline $kEmDash showing cached data',
             style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
           ),
         ],
@@ -1087,7 +1118,7 @@ class _DeleteWithTransferDialogState extends State<DeleteWithTransferDialog> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '${widget.entityName} — ${_summary(counts)}',
+                      '${widget.entityName} $kEmDash ${_summary(counts)}',
                       style: const TextStyle(fontSize: 13, color: Color(0xFF374151)),
                     ),
                     const SizedBox(height: 16),

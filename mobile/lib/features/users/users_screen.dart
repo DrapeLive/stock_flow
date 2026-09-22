@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/cache/app_cache.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/perf.dart';
+import '../../core/utils/text_symbols.dart';
 import '../../data/repositories.dart';
 import '../../models/models.dart';
 import '../../shared/admin_shell.dart';
@@ -297,7 +298,7 @@ class _CustomersTabState extends ConsumerState<_CustomersTab> {
                               Border.all(color: const Color(0xFFF3F4F6)),
                         ),
                         child: Text(
-                          '${c.agentName ?? '—'}  •  AGENT',
+                          '${c.agentName ?? kEmDash}  •  AGENT',
                           style: const TextStyle(
                               fontSize: 9,
                               fontWeight: FontWeight.w700,

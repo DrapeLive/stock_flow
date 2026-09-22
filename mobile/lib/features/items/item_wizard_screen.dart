@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/utils/price_input.dart';
+import '../../core/utils/text_symbols.dart';
 import '../../data/repositories.dart';
 import '../../providers.dart';
 import '../../shared/widgets.dart';
@@ -221,7 +222,7 @@ return Scaffold(
     );
   }
 
-  // â”€â”€ Step 1: Item Details â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ---- Step 1: Item Details ----------------------------------------------------------------------------------------------------
 
   Widget _commonStep() {
     return Column(
@@ -283,7 +284,7 @@ Expanded(
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
           child: StockFlowButton(
-            label: 'Next â€” Add Colors',
+            label: 'Next $kEmDash Add Colors',
             enabled: _commonValid,
             onPressed: _goCommonNext,
           ),
@@ -296,7 +297,7 @@ Widget _priceField() {
     return StockFlowTextField(
       label: 'Price *',
       hint: '0.00',
-      prefixText: '₹ ',
+      prefixText: '$kRupee ',
       initialText: _price,
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
       inputFormatters: const [PriceTextInputFormatter()],
@@ -381,7 +382,7 @@ Widget _priceField() {
         ),
       );
 
-  // â”€â”€ Step 2: Color list â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ---- Step 2: Color list --------------------------------------------------------------------------------------------------------
 
   Widget _listStep() {
     return Column(
@@ -452,7 +453,7 @@ Widget _priceField() {
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
           child: StockFlowButton(
-            label: _submitting ? 'Creatingâ€¦' : 'Create Item',
+            label: _submitting ? 'Creating$kEllipsis' : 'Create Item',
             enabled: _variants.isNotEmpty && !_submitting,
             onPressed: _submit,
           ),
@@ -565,7 +566,7 @@ class _CommonBadgeEdit extends StatelessWidget {
                           : const Color(0xFF111827)),
                 ),
                 const SizedBox(height: 2),
-                Text(commonPrice.isEmpty ? 'â€”' : 'â‚¹$commonPrice',
+                Text(commonPrice.isEmpty ? kEmDash : '$kRupee$commonPrice',
                     style: const TextStyle(
                         fontSize: 11, color: Color(0xFF9CA3AF))),
               ],
@@ -631,7 +632,7 @@ class _ColorCardTile extends StatelessWidget {
         ? variant.perSizeStock.entries
             .map((e) => '${e.key}: ${e.value} pcs')
             .join(' | ')
-        : '${variant.sizeRange} â€” ${variant.stock} per size';
+        : '${variant.sizeRange} $kEmDash ${variant.stock} per size';
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),

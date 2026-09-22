@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -30,6 +32,11 @@ class SessionController extends Notifier<Session?> {
           user: AuthUser.fromJson((userJson as Map).cast<String, dynamic>()),
         );
         ApiClient.setToken(access);
+        // The login response omits username/email/display_name, so fetch the
+        // full profile in the background and keep the persisted session fresh.
+        // The Profile page then renders complete details without a visible
+        // gap instead of a few seconds after opening it.
+        Future.microtask(refreshProfile);
       }
     } catch (_) {
       _current = null;
@@ -42,6 +49,29 @@ class SessionController extends Notifier<Session?> {
     _persist(session);
     ApiClient.setToken(session.access);
     state = session;
+    unawaited(refreshProfile());
+  }
+
+  /// Fetches `/api/auth/profile/` and merges it into the session. The login
+  /// response carries no username/email/display_name, so this is the only
+  /// source of those fields. Failure (e.g. offline) keeps the session as-is.
+  Future<AuthUser?> refreshProfile() async {
+    final current = _current ?? state;
+    if (current == null) return null;
+    try {
+      final profile = await repos.auth.profile();
+      final updated = Session(
+        access: current.access,
+        refresh: current.refresh,
+        user: profile,
+      );
+      _current = updated;
+      _persist(updated);
+      state = updated;
+      return profile;
+    } catch (_) {
+      return null;
+    }
   }
 
   void _persist(Session session) {

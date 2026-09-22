@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/piece_counts.dart';
+import '../../core/utils/text_symbols.dart';
 import '../../shared/widgets.dart';
 
 /// The wizard/add-color form's draft variant. Mirrors web `ColorVariant`.
@@ -43,7 +44,7 @@ class ColorVariantDraft {
       );
 }
 
-/// Per-size rows submitted for a variant â€” the flattened version of a
+/// Per-size rows submitted for a variant - the flattened version of a
 /// [ColorVariantDraft] (multipart-friendly so it can build
 /// `variants[N]sizes[M]size|stock`).
 List<({String size, int stock})> flattenVariantSizes(
@@ -389,7 +390,7 @@ class _CommonBadge extends StatelessWidget {
                           commonName.isEmpty ? const Color(0xFFD1D5DB) : const Color(0xFF111827)),
                 ),
                 const SizedBox(height: 2),
-                Text(commonPrice.isEmpty ? 'â€”' : 'â‚¹$commonPrice',
+                Text(commonPrice.isEmpty ? kEmDash : '$kRupee$commonPrice',
                     style: const TextStyle(
                         fontSize: 11, color: Color(0xFF9CA3AF))),
               ],
