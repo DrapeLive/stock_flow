@@ -247,6 +247,7 @@ class PlaceOrderView(APIView):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
+            drained = set()
             for order_item in order.items.select_related("item", "variant"):
                 if order_item.item is None or order_item.item.is_deleted:
                     continue
@@ -261,6 +262,34 @@ class PlaceOrderView(APIView):
                     ).update(
                         stock=F("stock") - order_item.quantity,
                         stock_updated_at=timezone.now(),
+                    )
+                    drained.add((order_item.variant_id, size))
+
+            now_out_of_stock = []
+            for variant_id, size in drained:
+                try:
+                    ivs = ItemVariantSize.objects.select_related(
+                        "item_variant__item"
+                    ).get(item_variant_id=variant_id, size=size, stock=0)
+                except ItemVariantSize.DoesNotExist:
+                    continue
+                now_out_of_stock.append(ivs)
+                if len(now_out_of_stock) >= 20:
+                    break
+            if now_out_of_stock:
+                names = ", ".join(
+                    f"{ivs.item_variant.item.name} ({ivs.size})"
+                    for ivs in now_out_of_stock
+                )
+                for admin_id in admin_ids:
+                    transaction.on_commit(
+                        partial(
+                            notify_user_safely,
+                            admin_id,
+                            "Item Out of Stock",
+                            f"Out of stock: {names}",
+                        ),
+                        robust=True,
                     )
 
             order.status = "PENDING"
@@ -280,7 +309,19 @@ class PlaceOrderView(APIView):
                 order.notes = notes
 
             order.save()
-            username = request.user.username
+
+            total_price = 0
+            for oi in order.items.select_related("item"):
+                if oi.item is None or oi.item.is_deleted:
+                    continue
+                piece_count = get_piece_count(
+                    oi.size_group, oi.item_type if oi.item_type else "gents"
+                )
+                total_price += (
+                    float(oi.item_price or 0) * oi.quantity * piece_count
+                )
+            customer_name = order.customer.name if order.customer else ""
+            order_detail = f"{customer_name} · ₹{total_price:,.2f}"
 
             for id in admin_ids:
                 transaction.on_commit(
@@ -288,7 +329,8 @@ class PlaceOrderView(APIView):
                         notify_user_safely,
                         id,
                         "New Order",
-                        f"Agent {username} placed Order",
+                        order_detail,
+                        data={"order_id": str(order.id)},
                     ),
                     robust=True,
                 )

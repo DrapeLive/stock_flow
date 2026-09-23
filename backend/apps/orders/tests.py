@@ -1200,3 +1200,134 @@ class NotifyFailureResilienceTests(DraftTestBase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.order.refresh_from_db()
         self.assertEqual(self.order.status, "DISPATCHED")
+
+
+class StockDepletionNotifyTests(DraftTestBase):
+    """Placing an order that drains a size to 0 must notify admins."""
+
+    def _capture_queued(self):
+        patchers = [
+            mock.patch("apps.notification.utils.send_push_to_user"),
+            mock.patch("apps.notification.utils.send_fcm_to_user"),
+        ]
+        mocks = [p.start() for p in patchers]
+        for m in mocks:
+            self.addCleanup(m.stop)
+        return mocks
+
+    def test_place_order_hits_zero_notifies_admins(self):
+        draft = self.make_draft(created_by=self.agent_user)
+        ItemVariantSize.objects.create(
+            item_variant=self.variant, size="M,L,XL", stock=4
+        )
+        self.make_order_item(draft, quantity=4)
+
+        web, fcm = self._capture_queued()
+        self.client.credentials(**get_auth_header(self.agent_user))
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.post(
+                f"/api/orders/{draft.id}/place-order/", {}, format="json"
+            )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        draft.refresh_from_db()
+        self.assertEqual(draft.status, "PENDING")
+
+        titles = []
+        for call in web.apply_async.call_args_list:
+            args = call.kwargs["args"]
+            titles.append(args[1])
+        fcm_titles = [
+            call.kwargs["args"][1]
+            for call in fcm.apply_async.call_args_list
+        ]
+        self.assertIn("Item Out of Stock", titles)
+        self.assertIn("Item Out of Stock", fcm_titles)
+
+    def test_place_order_not_to_zero_no_stock_alert(self):
+        draft = self.make_draft(created_by=self.agent_user)
+        ItemVariantSize.objects.create(
+            item_variant=self.variant, size="M,L,XL", stock=10
+        )
+        self.make_order_item(draft, quantity=4)
+
+        web, _ = self._capture_queued()
+        self.client.credentials(**get_auth_header(self.agent_user))
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.post(
+                f"/api/orders/{draft.id}/place-order/", {}, format="json"
+            )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        titles = [
+            call.kwargs["args"][1]
+            for call in web.apply_async.call_args_list
+        ]
+        self.assertNotIn("Item Out of Stock", titles)
+
+    def test_new_order_notify_includes_customer_amount_and_order_id(self):
+        draft = self.make_draft(created_by=self.agent_user)
+        ItemVariantSize.objects.create(
+            item_variant=self.variant, size="M,L,XL", stock=10
+        )
+        self.make_order_item(draft, quantity=2)
+
+        web, fcm = self._capture_queued()
+        self.client.credentials(**get_auth_header(self.agent_user))
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.post(
+                f"/api/orders/{draft.id}/place-order/", {}, format="json"
+            )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        draft.refresh_from_db()
+        self.assertEqual(draft.status, "PENDING")
+
+        new_order_web = [
+            call
+            for call in web.apply_async.call_args_list
+            if call.kwargs["args"][1] == "New Order"
+        ]
+        self.assertTrue(new_order_web)
+        body = new_order_web[0].kwargs["args"][2]
+        self.assertIn("ABC Fashions", body)
+        self.assertIn("₹", body)
+        self.assertEqual(
+            new_order_web[0].kwargs["kwargs"]["data"]["order_id"],
+            str(draft.id),
+        )
+
+        new_order_fcm = [
+            call
+            for call in fcm.apply_async.call_args_list
+            if call.kwargs["args"][1] == "New Order"
+        ]
+        self.assertTrue(new_order_fcm)
+        self.assertEqual(
+            new_order_fcm[0].kwargs["kwargs"]["data"]["order_id"],
+            str(draft.id),
+        )
+
+    def test_pre_exhausted_other_size_row_does_not_alert(self):
+        draft = self.make_draft(created_by=self.agent_user)
+        ItemVariantSize.objects.create(
+            item_variant=self.variant, size="M,L,XL", stock=10
+        )
+        ItemVariantSize.objects.create(
+            item_variant=self.variant, size="S", stock=0
+        )
+        self.make_order_item(draft, quantity=4)
+
+        web, _ = self._capture_queued()
+        self.client.credentials(**get_auth_header(self.agent_user))
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.post(
+                f"/api/orders/{draft.id}/place-order/", {}, format="json"
+            )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        titles = [
+            call.kwargs["args"][1]
+            for call in web.apply_async.call_args_list
+        ]
+        self.assertNotIn("Item Out of Stock", titles)

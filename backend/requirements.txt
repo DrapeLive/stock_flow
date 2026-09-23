@@ -69,6 +69,8 @@ djangorestframework-simplejwt==5.5.1
     # via stock-flow-backend
 drf-spectacular==0.29.0
     # via stock-flow-backend
+firebase-admin==6.6.0
+    # via stock-flow-backend
 frozenlist==1.8.0
     # via
     #   aiohttp

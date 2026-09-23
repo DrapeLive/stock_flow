@@ -143,6 +143,11 @@ CELERY_BROKER_URL = (
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 
+# FCM (Firebase Cloud Messaging) for mobile push.
+# Path to the Firebase Admin service-account JSON. When empty/None, FCM
+# dispatch is skipped (best-effort) without affecting existing web push.
+FIREBASE_CREDENTIALS = config("FIREBASE_CREDENTIALS", default="") or None
+
 CELERY_BEAT_SCHEDULE = {
     "cleanup-orphaned-media-daily": {
         "task": "apps.items.tasks.cleanup_orphaned_media_task",

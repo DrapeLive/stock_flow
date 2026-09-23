@@ -15,6 +15,7 @@ from rest_framework.viewsets import ModelViewSet
 from apps.accounts.permissions import check_admin_pin
 from apps.agents.models import Agent
 from apps.orders.models import Order
+from apps.notification.utils import admin_user_ids, notify_user_safely
 from transports.models import Transport
 
 from .models import Customer
@@ -42,7 +43,14 @@ class CustomerViewSet(ModelViewSet):
 
     def perform_create(self, serializer):
         if self.request.user.role == "AGENT":
-            serializer.save(agent=self.request.user.agent)
+            customer = serializer.save(agent=self.request.user.agent)
+            agent_name = self.request.user.username
+            for admin_id in admin_user_ids():
+                notify_user_safely(
+                    admin_id,
+                    "New Customer",
+                    f"Agent {agent_name} added customer '{customer.name}'",
+                )
         else:
             serializer.save()
 

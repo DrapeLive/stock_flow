@@ -3,6 +3,7 @@ from django.test import TestCase
 from rest_framework import status
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
+from unittest import mock
 
 from apps.agents.models import Agent
 from apps.business.models import Brand
@@ -138,3 +139,63 @@ class CustomerListAdminTests(TestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIsNone(response.data["results"][0]["agent_name"])
+
+
+class CustomerCreateNotifyTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.admin_user = User.objects.create_user(
+            username="admin1",
+            email="admin1@test.com",
+            password="pass1234",
+            role="ADMIN",
+        )
+        self.agent_user = User.objects.create_user(
+            username="agent1",
+            email="agent1@test.com",
+            password="pass1234",
+            role="AGENT",
+        )
+        self.agent = Agent.objects.create(
+            user=self.agent_user, contact="1111111111"
+        )
+
+    def test_agent_customer_create_notifies_admins(self):
+        with mock.patch("apps.notification.utils.send_fcm_to_user") as fcm, mock.patch(
+            "apps.notification.utils.send_push_to_user"
+        ) as web:
+            self.client.credentials(**get_auth_header(self.agent_user))
+            response = self.client.post(
+                LIST_URL,
+                {"name": "New Shop", "contact": "7777777777"},
+                format="json",
+            )
+            self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        titles = [
+            call.kwargs["args"][1]
+            for call in web.apply_async.call_args_list
+        ]
+        self.assertIn("New Customer", titles)
+        bodies = " ".join(
+            call.kwargs["args"][2]
+            for call in web.apply_async.call_args_list
+        )
+        self.assertIn("New Shop", bodies)
+        self.assertIn("agent1", bodies)
+        self.assertTrue(fcm.apply_async.called)
+
+    def test_admin_customer_create_does_not_notify(self):
+        with mock.patch("apps.notification.utils.send_fcm_to_user") as fcm, mock.patch(
+            "apps.notification.utils.send_push_to_user"
+        ) as web:
+            self.client.credentials(**get_auth_header(self.admin_user))
+            response = self.client.post(
+                LIST_URL,
+                {"name": "Admin Shop", "contact": "8888888888"},
+                format="json",
+            )
+            self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        self.assertFalse(web.apply_async.called)
+        self.assertFalse(fcm.apply_async.called)
