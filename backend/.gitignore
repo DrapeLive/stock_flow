@@ -40,3 +40,6 @@ Thumbs.db
 .env.prod
 
 .env.dev
+
+# Firebase service-account (secret — never commit)
+firebase-service-account.json

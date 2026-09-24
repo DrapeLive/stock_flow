@@ -7,6 +7,11 @@ class IsAgent(BasePermission):
         return request.user.is_authenticated and request.user.role == "AGENT"
 
 
+class IsAgentOrAdmin(BasePermission):
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and request.user.role in ("AGENT", "ADMIN")
+
+
 class IsAdmin(BasePermission):
     def has_permission(self, request, view):
 

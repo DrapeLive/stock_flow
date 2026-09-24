@@ -18,6 +18,13 @@ class Order(models.Model):
 
     customer = models.ForeignKey(Customer, on_delete=models.PROTECT)
     agent = models.ForeignKey(Agent, on_delete=models.PROTECT, null=True)
+    created_by = models.ForeignKey(
+        get_user_model(),
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_orders",
+    )
 
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="DRAFT")
 

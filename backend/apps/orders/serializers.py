@@ -8,29 +8,7 @@ from apps.customers.models import Customer
 from apps.items.models import ItemVariant
 
 from .models import Order, OrderItem
-
-
-def get_piece_count(size_group, item_type="gents"):
-    PIECE_COUNT = {
-        "gents": {
-            "M,L,XL": 3,
-            "M,L,XL,XXL": 4,
-            "S,M,L,XL": 4,
-            "S,M,L,XL,XXL": 5,
-        },
-        "kids": {
-            "20-24": 3,
-            "26-30": 3,
-            "32-36": 3,
-            "38": 1,
-            "20-36": 9,
-            "20-38": 10,
-            "26-36": 6,
-            "26-38": 7,
-            "20-30": 6,
-        },
-    }
-    return PIECE_COUNT.get(item_type, {}).get(size_group, 1)
+from .utils import get_piece_count
 
 
 class SimpleCustomerSerializer(serializers.ModelSerializer):
@@ -135,12 +113,15 @@ class OrderSerializer(serializers.ModelSerializer):
 
     customer_details = SimpleCustomerSerializer(source="customer", read_only=True)
 
+    created_by = serializers.PrimaryKeyRelatedField(read_only=True)
+
     total_sets = serializers.SerializerMethodField()
     total_pieces = serializers.SerializerMethodField()
 
     class Meta:
         model = Order
         fields = "__all__"
+        read_only_fields = ("created_by",)
 
     def get_total_sets(self, obj):
         return sum(i.quantity for i in obj.items.all())

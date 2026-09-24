@@ -12,10 +12,12 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .models import PasswordResetToken
+from .permissions import check_admin_pin
 from .serializers import (
     LoginRequestSerializer,
     LoginResponseSerializer,
     UserSerializer,
+    VerifyPinRequestSerializer,
 )
 
 User = get_user_model()
@@ -59,6 +61,8 @@ class LoginView(APIView):
                 "refresh": str(refresh),
                 "role": user.role,
                 "user_id": user.id,
+                "username": user.username,
+                "email": user.email,
                 "business": user.business or None,
                 "is_superuser": user.is_superuser,
             },
@@ -192,3 +196,18 @@ class ResetPasswordView(APIView):
             {"message": "Password updated successfully. You can now sign in."},
             status=status.HTTP_200_OK,
         )
+
+
+class VerifyPinView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        request=VerifyPinRequestSerializer,
+        responses={200: None},
+        tags=["Authentication"],
+    )
+    def post(self, request):
+        pin_error = check_admin_pin(request)
+        if pin_error:
+            return pin_error
+        return Response({"ok": True})
