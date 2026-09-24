@@ -1,6 +1,7 @@
 import uuid
 
 from django.db import models
+from django.utils import timezone
 
 
 class Item(models.Model):
@@ -24,6 +25,9 @@ class Item(models.Model):
 
     is_deleted = models.BooleanField(default=False)
     out_of_stock_since = models.DateTimeField(null=True, blank=True)
+    catalog_updated_at = models.DateTimeField(
+        default=timezone.now, db_index=True
+    )
 
     def __str__(self):
         return self.name
@@ -64,6 +68,10 @@ class ItemVariantSize(models.Model):
     size = models.CharField(max_length=10, choices=SIZE_CHOICES)
 
     stock = models.PositiveIntegerField(default=0)
+
+    stock_updated_at = models.DateTimeField(
+        default=timezone.now, db_index=True
+    )
 
     class Meta:
         unique_together = ["item_variant", "size"]

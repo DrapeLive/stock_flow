@@ -3,8 +3,10 @@ from rest_framework.response import Response
 from django.db.models import Count, Sum
 from django.db.models.functions import TruncDate
 from django.utils import timezone
+from drf_spectacular.utils import OpenApiTypes, extend_schema
 from datetime import timedelta
 from apps.orders.models import Order, OrderItem, OrderLog
+from apps.orders.utils import get_piece_count
 from apps.agents.models import Agent
 from apps.accounts.permissions import IsAdmin, admin_business
 
@@ -16,6 +18,10 @@ class AdminDashboardView(APIView):
         biz = request.user.business
         order_qs = Order.objects.filter(items__item_type=biz).distinct() if biz else Order.objects.all()
         data = {s.lower(): order_qs.filter(status=s).count() for s, _ in Order.STATUS_CHOICES}
+        # D2: an admin only sees/counts their own drafts.
+        data["draft"] = order_qs.filter(
+            status="DRAFT", created_by=request.user
+        ).count()
 
         agents = []
         for agent in Agent.objects.filter(is_active=True):
@@ -34,7 +40,31 @@ class AdminDashboardView(APIView):
 class AdminAnalyticsView(APIView):
     permission_classes = [IsAdmin]
 
+    @extend_schema(
+        summary="Analytics KPIs, trend, top lists and dispatch time metrics",
+        description=(
+            "`kpis` total order value/sets/pieces are computed over placed "
+            "(non-DRAFT) orders in the requested date range, using each order "
+            "item's snapshotted `item_price`, `size_group` and `item_type` — "
+            "never live item prices. Definitions: `total_sets` = sum of item "
+            "quantities; `total_pieces` = sum(quantity × pieces-per-set); "
+            "`total_value` = sum(item_price × quantity × pieces-per-set) "
+            "before GST, matching the per-order invoice `total_price`."
+        ),
+        responses={200: OpenApiTypes.OBJECT},
+    )
     def get(self, request):
+        """Placed (non-DRAFT) order totals in range.
+
+        `total_sets`  = Σ OrderItem.quantity
+        `total_pieces` = Σ quantity × pieces-per-set
+        `total_value` = Σ item_price × quantity × pieces-per-set (pre GST)
+
+        Both use the snapshot fields stored on each OrderItem so editing the
+        underlying Item (price change / soft delete) never rewrites history;
+        rows whose Item hard-deleted and therefore lost its FK are skipped to
+        stay consistent with the invoice total_price formula.
+        """
         biz = admin_business(request.user)
 
         from_date = request.query_params.get('from')
@@ -55,17 +85,45 @@ class AdminAnalyticsView(APIView):
             created_at__date__lte=to_date
         )
 
+        # DRAFT orders are work-in-progress and must not distort analytics:
+        # they are excluded from totals, trends and top lists, but the
+        # dedicated `kpis.draft` counter is kept for the status donut.
+        placed_qs = order_qs.exclude(status='DRAFT')
+
+        # Order value / set totals — one aggregate query. Group items by their
+        # snapshotted (price, size_group, item_type) rows so pieces-per-set can
+        # be applied in Python over the few distinct groups; `item__isnull`
+        # skips OrderItems whose Item was hard-deleted (mirrors invoice math).
+        total_sets = 0
+        total_pieces = 0
+        total_value = 0.0
+        item_rows = (
+            OrderItem.objects
+            .filter(order__in=placed_qs, item__isnull=False)
+            .values('item_price', 'size_group', 'item_type')
+            .annotate(qty=Sum('quantity'))
+        )
+        for row in item_rows:
+            pcs = get_piece_count(row['size_group'], row['item_type'] or 'gents')
+            qty = row['qty']
+            total_sets += qty
+            total_pieces += qty * pcs
+            total_value += float(row['item_price']) * qty * pcs
+
         kpis = {
-            'total': order_qs.count(),
+            'total': placed_qs.count(),
             'draft': order_qs.filter(status='DRAFT').count(),
-            'pending': order_qs.filter(status='PENDING').count(),
-            'editing': order_qs.filter(status='EDITING').count(),
-            'packed': order_qs.filter(status='PACKED').count(),
-            'dispatched': order_qs.filter(status='DISPATCHED').count(),
+            'pending': placed_qs.filter(status='PENDING').count(),
+            'editing': placed_qs.filter(status='EDITING').count(),
+            'packed': placed_qs.filter(status='PACKED').count(),
+            'dispatched': placed_qs.filter(status='DISPATCHED').count(),
+            'total_sets': total_sets,
+            'total_pieces': total_pieces,
+            'total_value': round(total_value, 2),
         }
 
         trend = (
-            order_qs
+            placed_qs
             .annotate(day=TruncDate('created_at'))
             .values('day')
             .annotate(count=Count('id', distinct=True))
@@ -73,14 +131,14 @@ class AdminAnalyticsView(APIView):
         )
 
         top_customers = (
-            order_qs
+            placed_qs
             .values('customer_id', 'customer__name')
             .annotate(count=Count('id', distinct=True))
             .order_by('-count')[:10]
         )
 
         top_agents = (
-            order_qs
+            placed_qs
             .values('agent_id', 'agent__user__username')
             .annotate(count=Count('id', distinct=True))
             .order_by('-count')[:10]
@@ -88,7 +146,7 @@ class AdminAnalyticsView(APIView):
 
         top_items = (
             OrderItem.objects
-            .filter(order__in=order_qs)
+            .filter(order__in=placed_qs)
             .values('item_name')
             .annotate(qty=Sum('quantity'))
             .order_by('-qty')[:10]

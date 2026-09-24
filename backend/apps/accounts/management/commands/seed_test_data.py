@@ -11,8 +11,7 @@ from apps.items.models import Item, ItemVariant, ItemVariantSize
 from apps.orders.models import Order, OrderItem
 import random
 
-from apps.orders.utils import SIZE_MAPPING
-from apps.orders.serializers import get_piece_count
+from apps.orders.utils import SIZE_MAPPING, get_piece_count
 from django.db.models.signals import post_save
 from apps.items.signals import update_item_stock_status
 

@@ -1,7 +1,10 @@
 import uuid
+from datetime import timedelta
 from io import BytesIO
 
+from django.conf import settings
 from django.core.files.base import ContentFile
+from django.utils import timezone
 from PIL import Image
 from rest_framework import serializers
 
@@ -9,6 +12,7 @@ from apps.business.models import Brand
 from apps.orders.utils import SIZE_MAPPING
 
 from .models import Item, ItemVariant, ItemVariantSize
+from .services import touch_catalog
 
 KIDS_SIZES = set()
 for sizes in SIZE_MAPPING.get("kids", {}).values():
@@ -46,13 +50,27 @@ class ItemVariantSerializer(serializers.ModelSerializer):
         variant = ItemVariant.objects.create(**validated_data)
         for size_data in sizes_data:
             ItemVariantSize.objects.create(item_variant=variant, **size_data)
+
+        if variant.item_id:
+            touch_catalog(variant.item)
         return variant
+
+    def update(self, instance, validated_data):
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+
+        if instance.item_id:
+            touch_catalog(instance.item)
+        return instance
 
 
 class ItemSerializer(serializers.ModelSerializer):
     variants = ItemVariantSerializer(many=True, read_only=True)
     brand_id = serializers.IntegerField(source="brand.id", read_only=True)
     brand_name = serializers.CharField(source="brand.name", read_only=True)
+    purge_on = serializers.SerializerMethodField()
+    days_until_purge = serializers.SerializerMethodField()
 
     class Meta:
         model = Item
@@ -66,7 +84,25 @@ class ItemSerializer(serializers.ModelSerializer):
             "brand_name",
             "variants",
             "out_of_stock_since",
+            "purge_on",
+            "days_until_purge",
         ]
+
+    def _purge_date(self, obj):
+        if not obj.out_of_stock_since:
+            return None
+        total = settings.ARCHIVE_AFTER_DAYS + settings.ARCHIVED_ITEM_RETENTION_DAYS
+        return timezone.localdate(obj.out_of_stock_since + timedelta(days=total))
+
+    def get_purge_on(self, obj):
+        purge = self._purge_date(obj)
+        return purge.isoformat() if purge else None
+
+    def get_days_until_purge(self, obj):
+        purge = self._purge_date(obj)
+        if purge is None:
+            return None
+        return max((purge - timezone.localdate()).days, 0)
 
 
 class ItemVariantSizeRequestSerializer(serializers.Serializer):
@@ -79,7 +115,9 @@ class ItemVariantRequestSerializer(serializers.Serializer):
     image = serializers.FileField(required=False)
     remove_image = serializers.BooleanField(required=False, default=False)  # ← new
     sizes = ItemVariantSizeRequestSerializer(many=True)
-    display_order = serializers.CharField(max_length=100, required=False)
+    display_order = serializers.CharField(
+        max_length=100, required=False, allow_null=True, allow_blank=True
+    )
 
 
 class CreateItemSerializer(serializers.Serializer):
@@ -150,7 +188,7 @@ class CreateItemSerializer(serializers.Serializer):
     def _create_variant(self, item, variant_data):
         image_file = variant_data.pop("image", None)
         variant_data.pop("remove_image", None)  # ← ignore on create
-        display_order = variant_data.pop("display_order", None)
+        display_order = variant_data.pop("display_order", None) or None
         variant = ItemVariant.objects.create(
             item=item, qr_code=uuid.uuid4(), display_order=display_order
         )
@@ -225,9 +263,8 @@ class CreateItemSerializer(serializers.Serializer):
             if variant_id and variant_id in existing_variants:
                 variant = existing_variants.pop(variant_id)  # ← pop so it's not deleted
 
-                display_order = variant_data.get("display_order")
-                if display_order is not None:
-                    variant.display_order = display_order
+                if "display_order" in variant_data:
+                    variant.display_order = variant_data.get("display_order") or None
 
                 # Handle image removal
                 if remove_image and variant.image:
@@ -250,6 +287,8 @@ class CreateItemSerializer(serializers.Serializer):
         for variant in existing_variants.values():
             variant.delete()
 
+        touch_catalog(instance)
+
         return instance
 
     def _update_sizes(self, variant, sizes_data):
@@ -259,16 +298,19 @@ class CreateItemSerializer(serializers.Serializer):
             size_name = size_data["size"]
 
             if size_name in existing_sizes:
-                existing_sizes[size_name].stock = size_data.get(
-                    "stock", existing_sizes[size_name].stock
-                )
-                existing_sizes[size_name].save()
+                existing = existing_sizes[size_name]
+                new_stock = size_data.get("stock", existing.stock)
+                if existing.stock != new_stock:
+                    existing.stock = new_stock
+                    existing.stock_updated_at = timezone.now()
+                    existing.save()
                 del existing_sizes[size_name]
             else:
                 ItemVariantSize.objects.create(
                     item_variant=variant,
                     size=size_name,
                     stock=size_data.get("stock", 0),
+                    stock_updated_at=timezone.now(),
                 )
 
         for size in existing_sizes.values():
