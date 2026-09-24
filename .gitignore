@@ -4,3 +4,7 @@ tunnels.sh
 dump.rdb
 .opencode/
 .env*
+
+backend/firebase-service-account.json
+mobile/
+xlapparals_app/
