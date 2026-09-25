@@ -6,5 +6,4 @@ dump.rdb
 .env*
 
 backend/firebase-service-account.json
-mobile/
-xlapparals_app/
+
