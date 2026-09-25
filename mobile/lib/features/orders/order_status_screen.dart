@@ -326,12 +326,22 @@ Future<void> _completePacking() async {
     // Enter edit mode on the backend first: it atomically snapshots the
     // current items and sets status=EDITING so concurrent admins/agents
     // cannot edit the same order. Item stock stays reserved while editing.
+    String status;
     try {
-      await repos.order.startEdit(order.id);
+      status = await repos.order.startEdit(order.id);
     } catch (e) {
       if (mounted) {
         setState(() => _editStarting = false);
         AppToast.error(context, e.toString());
+      }
+      return;
+    }
+    if (status != 'EDITING') {
+      // A 200 alone is not proof the order was claimed; without this the item
+      // cart would post add-item to an order still in its pre-edit status.
+      if (mounted) {
+        setState(() => _editStarting = false);
+        AppToast.error(context, 'Could not start editing: still $status');
       }
       return;
     }

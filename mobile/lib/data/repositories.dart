@@ -252,15 +252,29 @@ class OrderRepo {
     }
   }
 
+  /// Reads the status out of an edit-flow response, falling back to a
+  /// `GET /api/orders/<id>/` for a backend that answers without one.
+  Future<String> _editStatus(dynamic data, int orderId) async {
+    final status = data is Map ? data['status'] : null;
+    if (status is String && status.isNotEmpty) return status;
+    return (await getOne(orderId)).status ?? 'UNKNOWN';
+  }
+
   /// Enters edit mode for a PENDING/PACKED order. The backend snapshots the
   /// captured items and sets status=EDITING atomically (mirrors
   /// `orderApi.startEdit`). Item stock stays reserved while editing.
-  Future<void> startEdit(int orderId) async {
+  ///
+  /// Returns the status the server reports. A 200 alone is not proof the order
+  /// was claimed, so a backend that answers `{"message": ...}` without a status
+  /// falls back to re-reading the order.
+  Future<String> startEdit(int orderId) async {
     try {
-      await ApiClient.dio.post('/api/orders/$orderId/start-edit/');
-      await _invalidateOrders();
+      final res = await ApiClient.dio.post('/api/orders/$orderId/start-edit/');
+      return await _editStatus(res.data, orderId);
     } catch (e) {
       throw ApiClient.mapError(e);
+    } finally {
+      await _invalidateOrders();
     }
   }
 
@@ -268,14 +282,14 @@ class OrderRepo {
   /// re-deducts the final items, and returns the order to its pre-edit status
   /// (mirrors `orderApi.saveEdit`). [expectedDeliveryDate], [preferredTransport]
   /// and [notes] are applied to the order in the same request.
-  Future<void> saveEdit(
+  Future<String> saveEdit(
     int orderId, {
     String? expectedDeliveryDate,
     int? preferredTransport,
     String? notes,
   }) async {
     try {
-      await ApiClient.dio.post(
+      final res = await ApiClient.dio.post(
         '/api/orders/$orderId/save-edit/',
         data: {
           'expected_delivery_date': expectedDeliveryDate,
@@ -283,24 +297,34 @@ class OrderRepo {
           'notes': notes,
         },
       );
+      final data = res.data;
+      final status = await _editStatus(data, orderId);
+      // The backend reverts an edit to the status it was started from.
+      if (status != 'PENDING' && status != 'PACKED') {
+        throw ApiException('The order did not finish saving (still $status)');
+      }
+      return status;
+    } catch (e) {
+      throw ApiClient.mapError(e);
+    } finally {
       await _invalidateOrders();
       await AppCache.invalidate('items');
       await AppCache.invalidate('item');
       await AppCache.invalidate('summary');
-    } catch (e) {
-      throw ApiClient.mapError(e);
     }
   }
 
   /// Aborts an in-progress edit, restoring the captured snapshot and the
   /// pre-edit status (mirrors `orderApi.cancelEdit`). Safe to call even if no
   /// edit is active — the backend then returns 400 which is treated as a no-op.
-  Future<void> cancelEdit(int orderId) async {
+  Future<String> cancelEdit(int orderId) async {
     try {
-      await ApiClient.dio.post('/api/orders/$orderId/cancel-edit/');
-      await _invalidateOrders();
+      final res = await ApiClient.dio.post('/api/orders/$orderId/cancel-edit/');
+      return await _editStatus(res.data, orderId);
     } catch (e) {
       throw ApiClient.mapError(e);
+    } finally {
+      await _invalidateOrders();
     }
   }
 

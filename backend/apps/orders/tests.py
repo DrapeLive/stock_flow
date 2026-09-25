@@ -1529,3 +1529,196 @@ class OrderEditFlowTests(DraftTestBase):
         self.assertEqual(save.status_code, status.HTTP_400_BAD_REQUEST)
         order.refresh_from_db()
         self.assertEqual(order.status, "EDITING")
+
+
+class OrderEditBusinessScopeTests(DraftTestBase):
+    """An admin may only edit an order inside their own business scope.
+
+    ``self.admin_user`` is scoped to the ``gents`` business while
+    ``self.item`` is a gents item, so a ``kids`` order stands in for
+    an out-of-scope order.
+    """
+
+    def setUp(self):
+        super().setUp()
+
+        self.kids_item = Item.objects.create(
+            name="Kids Tee",
+            price=300.00,
+            type="kids",
+            brand=self.brand,
+        )
+        self.kids_variant = ItemVariant.objects.create(
+            item=self.kids_item, display_order="201"
+        )
+        ItemVariantSize.objects.create(
+            item_variant=self.kids_variant, size="20-36", stock=100
+        )
+
+    def kids_order(self, order_status="PENDING", quantity=4):
+        order = Order.objects.create(
+            customer=self.customer, agent=self.agent, status=order_status
+        )
+        OrderItem.objects.create(
+            order=order,
+            item=self.kids_item,
+            variant=self.kids_variant,
+            quantity=quantity,
+            packed_quantity=0,
+            item_name="Kids Tee",
+            item_price=300.00,
+            size_group="20-36",
+            item_type="kids",
+        )
+        return order
+
+    def editing_kids_order(self, editor):
+        order = self.kids_order("PENDING")
+        self.client.credentials(**get_auth_header(editor))
+        start = self.client.post(f"/api/orders/{order.id}/start-edit/")
+        self.assertEqual(start.status_code, status.HTTP_200_OK)
+        return order
+
+    def test_admin_cannot_start_edit_out_of_business_order(self):
+        order = self.kids_order()
+
+        self.client.credentials(**get_auth_header(self.admin_user))
+        response = self.client.post(f"/api/orders/{order.id}/start-edit/")
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        order.refresh_from_db()
+        self.assertEqual(order.status, "PENDING")
+        self.assertEqual(order.reservation_snapshot, [])
+
+    def test_admin_cannot_save_edit_out_of_business_order(self):
+        order = self.editing_kids_order(self.agent_user)
+
+        self.client.credentials(**get_auth_header(self.admin_user))
+        response = self.client.post(
+            f"/api/orders/{order.id}/save-edit/", {}, format="json"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        order.refresh_from_db()
+        self.assertEqual(order.status, "EDITING")
+
+    def test_admin_cannot_add_item_to_out_of_business_edit(self):
+        order = self.editing_kids_order(self.agent_user)
+
+        self.client.credentials(**get_auth_header(self.admin_user))
+        response = self.client.post(
+            f"/api/orders/{order.id}/add-item/",
+            {
+                "qr_code": str(self.kids_variant.qr_code),
+                "quantity": 1,
+                "size_group": "20-36",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        order.refresh_from_db()
+        self.assertEqual(order.items.count(), 1)
+
+    def test_admin_cannot_cancel_out_of_business_edit_session(self):
+        order = self.editing_kids_order(self.agent_user)
+
+        self.client.credentials(**get_auth_header(self.admin_user))
+        response = self.client.post(f"/api/orders/{order.id}/cancel-edit/")
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        order.refresh_from_db()
+        self.assertEqual(order.status, "EDITING")
+
+    def test_admin_without_business_scope_may_edit_any_business(self):
+        superuser = User.objects.create_user(
+            username="admin2",
+            email="admin2@test.com",
+            password="pass1234",
+            role="ADMIN",
+            business="",
+            brand=self.brand,
+        )
+        order = self.kids_order()
+
+        self.client.credentials(**get_auth_header(superuser))
+        start = self.client.post(f"/api/orders/{order.id}/start-edit/")
+        self.assertEqual(start.status_code, status.HTTP_200_OK)
+
+        add = self.client.post(
+            f"/api/orders/{order.id}/add-item/",
+            {
+                "qr_code": str(self.kids_variant.qr_code),
+                "quantity": 1,
+                "size_group": "20-36",
+            },
+            format="json",
+        )
+        self.assertEqual(add.status_code, status.HTTP_201_CREATED)
+
+    def test_agent_without_item_assignment_cannot_add_to_another_agents_edit(
+        self,
+    ):
+        """An agent with no assignment for the item is rejected.
+
+        ``add-item`` authorises agents through their AgentItem assignments
+        rather than an order-ownership check, so this is the guard that stops
+        one agent from topping up another agent's in-progress edit.
+        """
+        order = self.editing_kids_order(self.agent_user)
+
+        other_user = User.objects.create_user(
+            username="agent2",
+            email="agent2@test.com",
+            password="pass1234",
+            role="AGENT",
+        )
+        other_agent = Agent.objects.create(user=other_user, contact="3333333333")
+
+        self.client.credentials(**get_auth_header(other_user))
+        response = self.client.post(
+            f"/api/orders/{order.id}/add-item/",
+            {
+                "qr_code": str(self.kids_variant.qr_code),
+                "quantity": 1,
+                "size_group": "20-36",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("not assigned", response.data["error"])
+        order.refresh_from_db()
+        self.assertEqual(order.items.count(), 1)
+        self.assertNotEqual(order.agent_id, other_agent.id)
+
+    def test_edit_responses_expose_status_and_order_id(self):
+        order = Order.objects.create(
+            customer=self.customer, agent=self.agent, status="PENDING"
+        )
+        ItemVariantSize.objects.create(
+            item_variant=self.variant, size="M,L,XL", stock=100
+        )
+        self.make_order_item(order, quantity=5)
+
+        self.client.credentials(**get_auth_header(self.admin_user))
+
+        start = self.client.post(f"/api/orders/{order.id}/start-edit/")
+        self.assertEqual(start.status_code, status.HTTP_200_OK)
+        self.assertEqual(start.data["status"], "EDITING")
+        self.assertEqual(start.data["order_id"], order.id)
+
+        with mock.patch("apps.notification.utils.send_push_to_user.apply_async"):
+            with mock.patch("apps.notification.utils.send_fcm_to_user.apply_async"):
+                save = self.client.post(
+                    f"/api/orders/{order.id}/save-edit/", {}, format="json"
+                )
+        self.assertEqual(save.status_code, status.HTTP_200_OK)
+        self.assertEqual(save.data["status"], "PENDING")
+        self.assertEqual(save.data["order_id"], order.id)
+
+        self.client.post(f"/api/orders/{order.id}/start-edit/")
+        cancel = self.client.post(f"/api/orders/{order.id}/cancel-edit/")
+        self.assertEqual(cancel.status_code, status.HTTP_200_OK)
+        self.assertEqual(cancel.data["status"], "PENDING")
+        self.assertEqual(cancel.data["order_id"], order.id)

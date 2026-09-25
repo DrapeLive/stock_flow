@@ -77,6 +77,28 @@ def _is_creator(user, order):
     return bool(order.agent_id) and order.agent.user_id == user.id
 
 
+def _edit_access_error(user, order):
+    """Return a 403 ``Response`` when ``user`` may not edit ``order``, else None.
+
+    An admin may start/save/cancel an edit on any order inside their business
+    scope (mirroring every other admin order action), including an order that
+    belongs to an agent, because the edit session can be the admin's own. Agents
+    remain limited to their own orders.
+    """
+    if user.role == "ADMIN":
+        biz = admin_business(user)
+        if biz and not order.items.filter(item_type=biz).exists():
+            return Response(
+                {"error": "This order is outside your business type"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        return None
+
+    if order.agent_id and order.agent.user_id == user.id:
+        return None
+    return Response({"error": "Unauthorized"}, status=status.HTTP_403_FORBIDDEN)
+
+
 def _reap_stale_drafts(user):
     """Delete stale DRAFT orders using role-based expiry (Option A lazy sweep).
 
@@ -383,10 +405,9 @@ class StartEditView(APIView):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
-            if request.user.role == "AGENT" and (
-                order.agent is None or order.agent.user != request.user
-            ):
-                return Response({"error": "Unauthorized"}, status=403)
+            denied = _edit_access_error(request.user, order)
+            if denied:
+                return denied
 
             order.reservation_snapshot = _build_snapshot(order)
             order.editing_started_at = timezone.now()
@@ -410,7 +431,13 @@ class StartEditView(APIView):
                 performed_by=request.user,
             )
 
-            return Response({"message": "Edit started"})
+            return Response(
+                {
+                    "message": "Edit started",
+                    "status": order.status,
+                    "order_id": order.id,
+                }
+            )
 
 
 class SaveEditView(APIView):
@@ -424,16 +451,15 @@ class SaveEditView(APIView):
     def post(self, request, order_id):
         order = get_object_or_404(Order, id=order_id)
 
+        denied = _edit_access_error(request.user, order)
+        if denied:
+            return denied
+
         if order.status != "EDITING":
             return Response(
                 {"error": "Order is not in editing mode"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-
-        if request.user.role == "AGENT" and (
-            order.agent is None or order.agent.user != request.user
-        ):
-            return Response({"error": "Unauthorized"}, status=403)
 
         with transaction.atomic():
             for snap in order.reservation_snapshot:
@@ -576,7 +602,13 @@ class SaveEditView(APIView):
             performed_by=request.user,
         )
 
-        return Response({"message": "Order saved successfully", "order_id": order.id})
+        return Response(
+            {
+                "message": "Order saved successfully",
+                "order_id": order.id,
+                "status": order.status,
+            }
+        )
 
 
 class OrderViewSet(ModelViewSet):
@@ -866,16 +898,15 @@ class OrderViewSet(ModelViewSet):
     def cancel_edit(self, request, pk=None):
         order = self.get_object()
 
+        denied = _edit_access_error(request.user, order)
+        if denied:
+            return denied
+
         if order.status != "EDITING":
             return Response(
                 {"error": "Order is not in editing mode"},
-status=status.HTTP_400_BAD_REQUEST,
+                status=status.HTTP_400_BAD_REQUEST,
             )
-
-        if request.user.role == "AGENT" and (
-            order.agent is None or order.agent.user != request.user
-        ):
-            return Response({"error": "Unauthorized"}, status=403)
 
         _revert_edit(order)
 
@@ -886,7 +917,13 @@ status=status.HTTP_400_BAD_REQUEST,
             performed_by=request.user,
         )
 
-        return Response({"message": "Edit cancelled"})
+        return Response(
+            {
+                "message": "Edit cancelled",
+                "order_id": order.id,
+                "status": order.status,
+            }
+        )
 
     @extend_schema(summary="List order IDs viewed by the current user")
     @action(detail=False, methods=["get"], url_path="my-viewed-ids")
@@ -996,6 +1033,10 @@ class AddOrderItemView(APIView):
                     },
                     status=status.HTTP_403_FORBIDDEN,
                 )
+            if is_active_edit:
+                denied = _edit_access_error(request.user, order)
+                if denied:
+                    return denied
 
         if order.status not in ("DRAFT", "EDITING", "PENDING"):
             return Response(
