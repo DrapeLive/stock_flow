@@ -24,9 +24,7 @@ export const brandApi = {
     if (data.address_line2) fd.append("address_line2", data.address_line2);
     if (data.gst) fd.append("gst", data.gst);
     if (data.logo) fd.append("logo", data.logo);
-    return api.post<BrandResponse>("/api/business/", fd, {
-      headers: { "Content-Type": "multipart/form-data" },
-    }).then((r) => r.data);
+    return api.post<BrandResponse>("/api/business/", fd).then((r) => r.data);
   },
 
   update(id: number, data: Partial<BrandFormData>): Promise<BrandResponse> {
@@ -38,9 +36,7 @@ export const brandApi = {
     if (data.address_line2 !== undefined) fd.append("address_line2", data.address_line2);
     if (data.gst !== undefined) fd.append("gst", data.gst);
     if (data.logo !== undefined && data.logo !== null) fd.append("logo", data.logo);
-    return api.patch<BrandResponse>(`/api/business/${id}/`, fd, {
-      headers: { "Content-Type": "multipart/form-data" },
-    }).then((r) => r.data);
+    return api.patch<BrandResponse>(`/api/business/${id}/`, fd).then((r) => r.data);
   },
 
   getDeleteInfo(id: number): Promise<BrandDeleteInfo> {

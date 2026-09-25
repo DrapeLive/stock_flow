@@ -65,12 +65,8 @@ export const itemApi = {
     },
 
     create(data: ItemRequest | FormData): Promise<ItemResponse> {
-        const headers =
-            data instanceof FormData
-                ? { "Content-Type": "multipart/form-data" }
-                : { "Content-Type": "application/json" };
         return api
-            .post<ItemResponse>("/api/items/", data, { headers })
+            .post<ItemResponse>("/api/items/", data)
             .then((r) => r.data);
     },
 
@@ -83,12 +79,8 @@ export const itemApi = {
     },
 
     update(id: number, data: ItemRequest | FormData): Promise<ItemResponse> {
-        const headers =
-            data instanceof FormData
-                ? { "Content-Type": "multipart/form-data" }
-                : undefined;
         return api
-            .put<ItemResponse>(`/api/items/${id}/`, data, { headers })
+            .put<ItemResponse>(`/api/items/${id}/`, data)
             .then((r) => r.data);
     },
 

@@ -1331,3 +1331,201 @@ class StockDepletionNotifyTests(DraftTestBase):
             for call in web.apply_async.call_args_list
         ]
         self.assertNotIn("Item Out of Stock", titles)
+
+
+class OrderEditFlowTests(DraftTestBase):
+    """Edit-mode lifecycle: start-edit sets EDITING, save/cancel revert cleanly."""
+
+    def _variant_stock(self, quantity=5, stock=100):
+        order = Order.objects.create(
+            customer=self.customer, agent=self.agent, status="PENDING"
+        )
+        ItemVariantSize.objects.create(
+            item_variant=self.variant, size="M,L,XL", stock=stock
+        )
+        self.make_order_item(order, quantity=quantity)
+        return order
+
+    def test_start_edit_sets_editing_with_snapshot(self):
+        order = self._variant_stock()
+
+        self.client.credentials(**get_auth_header(self.agent_user))
+        response = self.client.post(f"/api/orders/{order.id}/start-edit/")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        order.refresh_from_db()
+        self.assertEqual(order.status, "EDITING")
+        self.assertEqual(order.previous_edit_status, "PENDING")
+        self.assertEqual(len(order.reservation_snapshot), 1)
+        self.assertIsNotNone(order.editing_started_at)
+
+    def test_second_start_edit_rejected_while_editing(self):
+        order = self._variant_stock()
+        self.client.credentials(**get_auth_header(self.agent_user))
+
+        first = self.client.post(f"/api/orders/{order.id}/start-edit/")
+        self.assertEqual(first.status_code, status.HTTP_200_OK)
+
+        second = self.client.post(f"/api/orders/{order.id}/start-edit/")
+        self.assertEqual(second.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_start_edit_rejects_non_editable_status(self):
+        dispatched = Order.objects.create(
+            customer=self.customer, agent=self.agent, status="DISPATCHED"
+        )
+        self.client.credentials(**get_auth_header(self.agent_user))
+        response = self.client.post(f"/api/orders/{dispatched.id}/start-edit/")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_agent_cannot_start_edit_another_agents_order(self):
+        other_user = User.objects.create_user(
+            username="agent2",
+            email="agent2@test.com",
+            password="pass1234",
+            role="AGENT",
+        )
+        other_agent = Agent.objects.create(user=other_user, contact="3333333333")
+        order = Order.objects.create(
+            customer=self.customer, agent=other_agent, status="PENDING"
+        )
+
+        self.client.credentials(**get_auth_header(self.agent_user))
+        response = self.client.post(f"/api/orders/{order.id}/start-edit/")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        order.refresh_from_db()
+        self.assertEqual(order.status, "PENDING")
+
+    def test_admin_can_start_edit_any_order(self):
+        order = self._variant_stock()
+
+        self.client.credentials(**get_auth_header(self.admin_user))
+        response = self.client.post(f"/api/orders/{order.id}/start-edit/")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        order.refresh_from_db()
+        self.assertEqual(order.status, "EDITING")
+
+    def test_save_edit_requires_editing_mode(self):
+        order = self._variant_stock()
+        self.client.credentials(**get_auth_header(self.agent_user))
+        response = self.client.post(
+            f"/api/orders/{order.id}/save-edit/",
+            {"notes": "nope"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_complete_edit_cycle_preserves_stock_and_restores_pending(self):
+        order = self._variant_stock(quantity=5, stock=100)
+
+        self.client.credentials(**get_auth_header(self.agent_user))
+        start = self.client.post(f"/api/orders/{order.id}/start-edit/")
+        self.assertEqual(start.status_code, status.HTTP_200_OK)
+
+        save = self.client.post(
+            f"/api/orders/{order.id}/save-edit/",
+            {"notes": "edited note", "expected_delivery_date": "2026-10-01"},
+            format="json",
+        )
+        self.assertEqual(save.status_code, status.HTTP_200_OK)
+
+        order.refresh_from_db()
+        self.assertEqual(order.status, "PENDING")
+        self.assertEqual(order.notes, "edited note")
+        self.assertEqual(order.reservation_snapshot, [])
+        self.assertIsNone(order.editing_started_at)
+        self.assertIsNone(order.previous_edit_status)
+        self.assertEqual(order.items.count(), 1)
+
+    def test_cancel_edit_restores_snapshot_and_reverts_status(self):
+        order = self._variant_stock(quantity=5, stock=100)
+
+        self.client.credentials(**get_auth_header(self.agent_user))
+        start = self.client.post(f"/api/orders/{order.id}/start-edit/")
+        self.assertEqual(start.status_code, status.HTTP_200_OK)
+
+        order.items.all().delete()
+
+        cancel = self.client.post(f"/api/orders/{order.id}/cancel-edit/")
+        self.assertEqual(cancel.status_code, status.HTTP_200_OK)
+
+        order.refresh_from_db()
+        self.assertEqual(order.status, "PENDING")
+        self.assertEqual(order.items.count(), 1)
+        self.assertEqual(order.items.first().quantity, 5)
+        self.assertEqual(order.reservation_snapshot, [])
+        self.assertEqual(order.editing_started_at, None)
+        self.assertEqual(order.previous_edit_status, None)
+
+    def test_admin_can_add_item_during_editing(self):
+        order = self._variant_stock()
+
+        self.client.credentials(**get_auth_header(self.admin_user))
+        start = self.client.post(f"/api/orders/{order.id}/start-edit/")
+        self.assertEqual(start.status_code, status.HTTP_200_OK)
+
+        add = self.client.post(
+            f"/api/orders/{order.id}/add-item/",
+            {
+                "qr_code": str(self.variant.qr_code),
+                "quantity": 2,
+                "size_group": "M,L,XL",
+            },
+            format="json",
+        )
+        self.assertEqual(add.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(order.items.count(), 2)
+
+    def test_packed_order_edit_returns_to_packed(self):
+        packed = Order.objects.create(
+            customer=self.customer, agent=self.agent, status="PACKED"
+        )
+        ItemVariantSize.objects.create(
+            item_variant=self.variant, size="M,L,XL", stock=50
+        )
+        self.make_order_item(packed, quantity=3)
+
+        self.client.credentials(**get_auth_header(self.admin_user))
+        start = self.client.post(f"/api/orders/{packed.id}/start-edit/")
+        self.assertEqual(start.status_code, status.HTTP_200_OK)
+
+        save = self.client.post(
+            f"/api/orders/{packed.id}/save-edit/", {}, format="json"
+        )
+        self.assertEqual(save.status_code, status.HTTP_200_OK)
+
+        packed.refresh_from_db()
+        self.assertEqual(packed.status, "PACKED")
+        self.assertEqual(
+            ItemVariantSize.objects.get(
+                item_variant=self.variant, size="M,L,XL"
+            ).stock,
+            50,
+        )
+
+    def test_save_edit_without_stock_returns_400_and_keeps_editing(self):
+        order = self._variant_stock(quantity=5, stock=10)
+
+        self.client.credentials(**get_auth_header(self.admin_user))
+        start = self.client.post(f"/api/orders/{order.id}/start-edit/")
+        self.assertEqual(start.status_code, status.HTTP_200_OK)
+
+        add = self.client.post(
+            f"/api/orders/{order.id}/add-item/",
+            {
+                "qr_code": str(self.variant.qr_code),
+                "quantity": 20,
+                "size_group": "M,L,XL",
+            },
+            format="json",
+        )
+        self.assertEqual(add.status_code, status.HTTP_201_CREATED)
+
+        with mock.patch("apps.notification.utils.send_push_to_user.apply_async"):
+            with mock.patch("apps.notification.utils.send_fcm_to_user.apply_async"):
+                save = self.client.post(
+                    f"/api/orders/{order.id}/save-edit/", {}, format="json"
+                )
+        self.assertEqual(save.status_code, status.HTTP_400_BAD_REQUEST)
+        order.refresh_from_db()
+        self.assertEqual(order.status, "EDITING")

@@ -34,9 +34,7 @@ export async function updateItem(
     imageUpdates.map((v) => {
       const fd = new FormData();
       fd.append("image", v.newImage!);
-      return api.patch(`/api/items/variants/${v.backendId}/`, fd, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      return api.patch(`/api/items/variants/${v.backendId}/`, fd);
     }),
   );
 }
