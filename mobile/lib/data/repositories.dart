@@ -237,30 +237,39 @@ class OrderRepo {
     }
   }
 
-  Future<Order> saveEdit(
+  /// Commits an open edit transaction. The backend closes the session, re-deducts
+  /// stock from the live cart and returns the order to PENDING, so the field
+  /// values are sent here as well (the field PATCH is only best-effort).
+  Future<void> saveEdit(
     int orderId, {
-    required int customer,
-    required String notes,
-    required String lrNumber,
-    required int? transport,
+    String? notes,
+    int? transport,
+    String? expectedDeliveryDate,
   }) async {
     try {
       final res = await ApiClient.dio.post<Map<String, dynamic>>(
         '/api/orders/$orderId/save-edit/',
         data: {
-          'customer': customer,
-          'notes': notes,
-          'lr_number': lrNumber,
-          'transport': transport,
+          'expected_delivery_date': expectedDeliveryDate,
+          'preferred_transport': transport,
+          'notes': (notes == null || notes.isEmpty) ? null : notes,
         },
       );
       await _invalidateOrders();
-      return Order.fromJson(_asMap(res.data));
+      final status = _statusOf((res.data ?? const <String, dynamic>{})['status']);
+      if (status != null && status != 'PENDING') {
+        throw ApiException(
+          'Saved order #$orderId is still ${status.toLowerCase()}.',
+          statusCode: res.statusCode,
+        );
+      }
     } catch (e) {
       throw ApiClient.mapError(e);
     }
   }
 
+  /// Releases an open edit transaction, restoring the order to its last saved
+  /// state instead of committing the cart.
   Future<void> cancelEdit(int orderId) async {
     try {
       await ApiClient.dio.post('/api/orders/$orderId/cancel-edit/');

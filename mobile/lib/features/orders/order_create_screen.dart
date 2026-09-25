@@ -234,10 +234,10 @@ _ready = true;
       try {
         await repos.order.saveEdit(
           orderId,
-          customer: _effectiveCustomerId,
           notes: _notes,
-          lrNumber: _order?.lrNumber ?? '',
           transport: _preferredTransport,
+          expectedDeliveryDate:
+              _expectedDate == null ? null : toApiDate(_expectedDate!),
         );
         _editCommitted = true;
         OrderDraftSession.clear();

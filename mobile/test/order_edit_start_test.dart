@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:http_mock_adapter/http_mock_adapter.dart';
 
+import 'package:stock_flow_admin/core/api/api_client.dart';
 import 'package:stock_flow_admin/core/theme/app_theme.dart';
 import 'package:stock_flow_admin/data/repositories.dart';
 import 'package:stock_flow_admin/features/orders/order_flow_utils.dart';
@@ -162,5 +163,64 @@ void main() {
 
     final status = await repos.order.startEdit(1);
     expect(status, 'EDITING');
+  });
+
+  /// The backend reads `expected_delivery_date` / `preferred_transport` /
+  /// `notes`; the old payload sent `customer` / `lr_number` / `transport`, so
+  /// the delivery date and transport were silently dropped on every save.
+  test('saveEdit sends the field keys the backend reads', () async {
+    dioAdapter.onPost(
+      '/api/orders/1/save-edit/',
+      (server) => server.reply(200, {'status': 'PENDING', 'order_id': 1}),
+      data: const JsonBody({
+        'expected_delivery_date': '2026-01-05',
+        'preferred_transport': 7,
+        'notes': 'call before delivery',
+      }),
+    );
+
+    await repos.order.saveEdit(
+      1,
+      notes: 'call before delivery',
+      transport: 7,
+      expectedDeliveryDate: '2026-01-05',
+    );
+  });
+
+  test('saveEdit sends a null transport when none is picked', () async {
+    dioAdapter.onPost(
+      '/api/orders/1/save-edit/',
+      (server) => server.reply(200, {'status': 'PENDING', 'order_id': 1}),
+      data: const JsonBody({
+        'expected_delivery_date': null,
+        'preferred_transport': null,
+        'notes': null,
+      }),
+    );
+
+    await repos.order.saveEdit(1, notes: '');
+  });
+
+  test('saveEdit fails when the order did not return to PENDING', () async {
+    dioAdapter.onPost(
+      '/api/orders/1/save-edit/',
+      (server) => server.reply(200, {'status': 'EDITING', 'order_id': 1}),
+      data: Matchers.any,
+    );
+
+    await expectLater(
+      repos.order.saveEdit(1, notes: 'x'),
+      throwsA(isA<ApiException>()),
+    );
+  });
+
+  test('cancelEdit posts to the order-scoped endpoint', () async {
+    dioAdapter.onPost(
+      '/api/orders/1/cancel-edit/',
+      (server) => server.reply(200, {'status': 'PENDING', 'order_id': 1}),
+      data: Matchers.any,
+    );
+
+    await repos.order.cancelEdit(1);
   });
 }

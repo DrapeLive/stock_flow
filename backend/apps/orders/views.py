@@ -19,7 +19,6 @@ from rest_framework.viewsets import ModelViewSet
 
 from apps.accounts.permissions import (
     IsAdmin,
-    IsAgent,
     IsAgentOrAdmin,
     admin_business,
     check_admin_pin,
@@ -74,6 +73,27 @@ def _is_creator(user, order):
     if order.created_by_id is not None:
         return order.created_by_id == user.id
     return bool(order.agent_id) and order.agent.user_id == user.id
+
+
+def _edit_access_error(user, order):
+    """Return a 403 ``Response`` when ``user`` may not edit ``order``, else None.
+
+    Admins may start/save an edit on any order inside their business scope
+    (mirroring every other admin order action), regardless of which agent the
+    customer's order belongs to. Agents remain limited to their own orders.
+    """
+    if user.role == "ADMIN":
+        biz = admin_business(user)
+        if biz and not order.items.filter(item_type=biz).exists():
+            return Response(
+                {"error": "This order is outside your business type"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        return None
+
+    if order.agent_id and order.agent.user_id == user.id:
+        return None
+    return Response({"error": "Unauthorized"}, status=status.HTTP_403_FORBIDDEN)
 
 
 def _reap_stale_drafts(user):
@@ -361,7 +381,7 @@ def return_stock_for_item(order_item):
 
 
 class StartEditView(APIView):
-    permission_classes = [IsAgent]
+    permission_classes = [IsAgentOrAdmin]
 
     @extend_schema(
         summary="Start editing a PENDING order",
@@ -371,18 +391,33 @@ class StartEditView(APIView):
     def post(self, request, order_id):
         order = get_object_or_404(Order, id=order_id)
 
+        denied = _edit_access_error(request.user, order)
+        if denied:
+            return denied
+
         if order.status != "PENDING":
             return Response(
                 {"error": "Only PENDING orders can be edited"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        if order.agent.user != request.user:
-            return Response({"error": "Unauthorized"}, status=403)
+        with transaction.atomic():
+            # Re-read under a row lock so two concurrent editors cannot both
+            # snapshot the same PENDING order; the loser sees EDITING.
+            order = get_object_or_404(
+                Order.objects.select_for_update(), id=order_id
+            )
+            if order.status != "PENDING":
+                return Response(
+                    {"error": "Only PENDING orders can be edited"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
-        order.reservation_snapshot = _build_snapshot(order)
-        order.editing_started_at = timezone.now()
-        order.save()
+            order.reservation_snapshot = _build_snapshot(order)
+            order.editing_started_at = timezone.now()
+            order.status = "EDITING"
+            order.save()
+
         # Remove viewed entries for non-pending/packed orders
         UserViewedOrder.objects.filter(order=order).delete()
 
@@ -393,11 +428,17 @@ class StartEditView(APIView):
             performed_by=request.user,
         )
 
-        return Response({"message": "Edit started"})
+        return Response(
+            {
+                "message": "Edit started",
+                "status": order.status,
+                "order_id": order.id,
+            }
+        )
 
 
 class SaveEditView(APIView):
-    permission_classes = [IsAgent]
+    permission_classes = [IsAgentOrAdmin]
 
     @extend_schema(
         summary="Save edits made to a PENDING order",
@@ -407,8 +448,9 @@ class SaveEditView(APIView):
     def post(self, request, order_id):
         order = get_object_or_404(Order, id=order_id)
 
-        if order.agent.user != request.user:
-            return Response({"error": "Unauthorized"}, status=403)
+        denied = _edit_access_error(request.user, order)
+        if denied:
+            return denied
 
         with transaction.atomic():
             for snap in order.reservation_snapshot:
@@ -550,7 +592,13 @@ class SaveEditView(APIView):
             performed_by=request.user,
         )
 
-        return Response({"message": "Order saved successfully", "order_id": order.id})
+        return Response(
+            {
+                "message": "Order saved successfully",
+                "order_id": order.id,
+                "status": order.status,
+            }
+        )
 
 
 class OrderViewSet(ModelViewSet):
@@ -566,11 +614,21 @@ class OrderViewSet(ModelViewSet):
             _reap_stale_drafts(user)
 
             cutoff = timezone.now() - timedelta(minutes=15)
+            # Editor-agnostic sweep: an admin's own edit sessions live on orders
+            # whose `agent` is somebody else, so scoping by `agent__user` alone
+            # would leave admin-started edits stuck in EDITING.
             stale_editing = Order.objects.filter(
                 status="EDITING",
-                agent__user=user,
                 editing_started_at__lt=cutoff,
             )
+            if user.role == "ADMIN":
+                biz = admin_business(user)
+                if biz:
+                    stale_editing = stale_editing.filter(
+                        items__item_type=biz
+                    ).distinct()
+            else:
+                stale_editing = stale_editing.filter(agent__user=user)
             for o in stale_editing:
                 _revert_edit(o)
 
@@ -830,19 +888,26 @@ class OrderViewSet(ModelViewSet):
 
         return Response({"message": "Order dispatched successfully"})
 
-    @extend_schema(summary="Cancel an in-progress order edit")
+    @extend_schema(
+        summary="Cancel an in-progress order edit",
+        responses={200: None, 400: None, 403: None},
+    )
     @action(detail=True, methods=["post"], url_path="cancel-edit")
     def cancel_edit(self, request, pk=None):
         order = self.get_object()
+
+        # Same access rules as start-edit/save-edit: an admin may release the
+        # edit session of any order inside their business scope, because that
+        # session can be theirs on an order owned by another agent.
+        denied = _edit_access_error(request.user, order)
+        if denied:
+            return denied
 
         if order.status != "EDITING":
             return Response(
                 {"error": "Order is not in editing mode"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-
-        if order.agent.user != request.user:
-            return Response({"error": "Unauthorized"}, status=403)
 
         _revert_edit(order)
 
@@ -853,7 +918,13 @@ class OrderViewSet(ModelViewSet):
             performed_by=request.user,
         )
 
-        return Response({"message": "Edit cancelled"})
+        return Response(
+            {
+                "message": "Edit cancelled",
+                "order_id": order.id,
+                "status": order.status,
+            }
+        )
 
     @extend_schema(summary="List order IDs viewed by the current user")
     @action(detail=False, methods=["get"], url_path="my-viewed-ids")
@@ -949,24 +1020,33 @@ class AddOrderItemView(APIView):
 
         order = get_object_or_404(Order, id=order_id)
 
-        # Admins may only add items to a draft order they created themselves.
-        if request.user.role == "ADMIN" and (
-            order.status != "DRAFT" or not _is_creator(request.user, order)
-        ):
-            return Response(
-                {"error": "An admin can only add items to a draft order they created"},
-                status=status.HTTP_403_FORBIDDEN,
-            )
-
         if order.status not in ("DRAFT", "EDITING", "PENDING"):
             return Response(
                 {"error": "Items can only be added to DRAFT or EDITING orders"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        if order.status == "DRAFT" and not _is_creator(request.user, order):
+        if order.status == "EDITING":
+            # An open edit transaction is an agent+admin collaboration: the
+            # session can belong to an admin editing an agent's order, so it
+            # follows the same rule as start-edit/save-edit/cancel-edit.
+            denied = _edit_access_error(request.user, order)
+            if denied:
+                return denied
+        elif order.status == "DRAFT":
+            # A draft is still "yours only", for agents and admins alike.
+            if not _is_creator(request.user, order):
+                return Response(
+                    {"error": "You can only add items to your own draft orders"},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+        elif request.user.role == "ADMIN":
+            # Adding straight to a placed order would sidestep the stock
+            # snapshot that save-edit settles, so only the owning agent may.
             return Response(
-                {"error": "You can only add items to your own draft orders"},
+                {
+                    "error": "An admin can only add items to a draft order they created"
+                },
                 status=status.HTTP_403_FORBIDDEN,
             )
 

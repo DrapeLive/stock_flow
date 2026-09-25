@@ -9,7 +9,7 @@ from rest_framework import status
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from apps.agents.models import Agent
+from apps.agents.models import Agent, AgentItem
 from apps.business.models import Brand
 from apps.customers.models import Customer
 from apps.items.models import Item, ItemVariant, ItemVariantSize
@@ -1331,3 +1331,502 @@ class StockDepletionNotifyTests(DraftTestBase):
             for call in web.apply_async.call_args_list
         ]
         self.assertNotIn("Item Out of Stock", titles)
+
+
+class OrderEditTests(DraftTestBase):
+    """start-edit / save-edit are an agent+admin transaction.
+
+    Admins edit orders that were placed normally (any agent's customer, not
+    just drafts they created), scoped to their business type; agents keep their
+    own-order-only access.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.size_stock = ItemVariantSize.objects.create(
+            item_variant=self.variant, size="M,L,XL", stock=10
+        )
+        self.start_url = f"/api/orders/{self.order.id}/start-edit/"
+        self.save_url = f"/api/orders/{self.order.id}/save-edit/"
+
+    def stock(self):
+        self.size_stock.refresh_from_db()
+        return self.size_stock.stock
+
+    def start_edit(self, user, order=None):
+        order = order or self.order
+        self.client.credentials(**get_auth_header(user))
+        return self.client.post(f"/api/orders/{order.id}/start-edit/")
+
+    def save_edit(self, user, order=None, payload=None):
+        order = order or self.order
+        self.client.credentials(**get_auth_header(user))
+        return self.client.post(
+            f"/api/orders/{order.id}/save-edit/",
+            payload or {},
+            format="json",
+        )
+
+    def other_agent_order(self, item=None, item_type="gents", size_group="M,L,XL"):
+        other_user = User.objects.create_user(
+            username="agent2",
+            email="agent2@test.com",
+            password="pass1234",
+            role="AGENT",
+        )
+        other_agent = Agent.objects.create(user=other_user, contact="3333333333")
+        other_customer = Customer.objects.create(
+            name="Other Fashions", contact="4444444444", agent=other_agent
+        )
+        order = Order.objects.create(
+            customer=other_customer, agent=other_agent, status="PENDING"
+        )
+        item = item or self.item
+        OrderItem.objects.create(
+            order=order,
+            item=item,
+            variant=self.variant,
+            quantity=1,
+            packed_quantity=0,
+            item_name=item.name,
+            item_price=item.price,
+            size_group=size_group,
+            item_type=item_type,
+        )
+        return order
+
+    # -- admin access ------------------------------------------------------
+
+    def test_admin_can_start_edit_pending_order_of_another_agents_customer(self):
+        self.make_order_item(self.order, quantity=2)
+
+        response = self.start_edit(self.admin_user)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["status"], "EDITING")
+        self.assertEqual(response.data["order_id"], self.order.id)
+
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, "EDITING")
+        self.assertIsNotNone(self.order.editing_started_at)
+        self.assertEqual(len(self.order.reservation_snapshot), 1)
+        self.assertEqual(self.order.reservation_snapshot[0]["quantity"], 2)
+        # the order still belongs to the agent, the admin only edited it
+        self.assertEqual(self.order.agent.user_id, self.agent_user.id)
+        self.assertNotEqual(self.order.agent.user_id, self.admin_user.id)
+
+    def test_admin_save_edit_restores_and_deducts_stock_and_returns_to_pending(self):
+        kept = self.make_order_item(self.order, quantity=2)
+        removed = self.make_order_item(self.order, quantity=1)
+        self.assertEqual(
+            self.start_edit(self.admin_user).status_code, status.HTTP_200_OK
+        )
+
+        # What the edit cart does: adjust, remove, then add a new line.
+        OrderItem.objects.filter(id=kept.id).update(quantity=3)
+        removed.delete()
+        self.make_order_item(self.order, quantity=1)
+
+        response = self.save_edit(self.admin_user)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["status"], "PENDING")
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, "PENDING")
+        self.assertIsNone(self.order.editing_started_at)
+        self.assertEqual(self.order.reservation_snapshot, [])
+        self.assertEqual(self.order.items.count(), 2)
+        # snapshot 2+1=3 restored, final 3+1=4 deducted -> 10 + 3 - 4
+        self.assertEqual(self.stock(), 9)
+
+    def test_business_scoped_admin_cannot_start_edit_other_business_order(self):
+        kids_item = Item.objects.create(
+            name="Kids Shirt", price=100.00, type="kids", brand=self.brand
+        )
+        kids_order = self.other_agent_order(
+            item=kids_item, item_type="kids", size_group="20-24"
+        )
+
+        response = self.start_edit(self.admin_user, order=kids_order)
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        kids_order.refresh_from_db()
+        self.assertEqual(kids_order.status, "PENDING")
+        self.assertEqual(kids_order.reservation_snapshot, [])
+
+    def test_business_scoped_admin_cannot_save_edit_other_business_order(self):
+        kids_item = Item.objects.create(
+            name="Kids Shirt", price=100.00, type="kids", brand=self.brand
+        )
+        kids_order = self.other_agent_order(
+            item=kids_item, item_type="kids", size_group="20-24"
+        )
+        kids_order.status = "EDITING"
+        kids_order.editing_started_at = timezone.now()
+        kids_order.reservation_snapshot = []
+        kids_order.save()
+
+        response = self.save_edit(self.admin_user, order=kids_order)
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        kids_order.refresh_from_db()
+        self.assertEqual(kids_order.status, "EDITING")
+
+    def test_admin_without_business_scope_may_edit_any_business(self):
+        # `business` is blank-able: an empty value is the unscoped admin.
+        self.admin_user.business = ""
+        self.admin_user.save(update_fields=["business"])
+        kids_item = Item.objects.create(
+            name="Kids Shirt", price=100.00, type="kids", brand=self.brand
+        )
+        kids_order = self.other_agent_order(
+            item=kids_item, item_type="kids", size_group="20-24"
+        )
+
+        response = self.start_edit(self.admin_user, order=kids_order)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        kids_order.refresh_from_db()
+        self.assertEqual(kids_order.status, "EDITING")
+
+    # -- agent behaviour unchanged ----------------------------------------
+
+    def test_agent_start_and_save_edit_on_own_order_unchanged(self):
+        self.make_order_item(self.order, quantity=2)
+
+        response = self.start_edit(self.agent_user)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["status"], "EDITING")
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, "EDITING")
+        self.assertEqual(len(self.order.reservation_snapshot), 1)
+
+        response = self.save_edit(self.agent_user)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, "PENDING")
+        self.assertIsNone(self.order.editing_started_at)
+        self.assertEqual(self.order.reservation_snapshot, [])
+        # unchanged contents: 2 restored and 2 re-deducted
+        self.assertEqual(self.stock(), 10)
+
+    def test_agent_cannot_start_edit_another_agents_order(self):
+        other_order = self.other_agent_order()
+
+        response = self.start_edit(self.agent_user, order=other_order)
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        other_order.refresh_from_db()
+        self.assertEqual(other_order.status, "PENDING")
+        self.assertEqual(other_order.reservation_snapshot, [])
+
+    def test_agent_cannot_save_edit_another_agents_order(self):
+        other_order = self.other_agent_order()
+
+        response = self.save_edit(self.agent_user, order=other_order)
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        other_order.refresh_from_db()
+        self.assertEqual(other_order.status, "PENDING")
+
+    # -- concurrency -------------------------------------------------------
+
+    def test_second_start_edit_by_same_editor_is_rejected(self):
+        self.make_order_item(self.order, quantity=2)
+        self.assertEqual(
+            self.start_edit(self.agent_user).status_code, status.HTTP_200_OK
+        )
+        self.order.refresh_from_db()
+        started_at = self.order.editing_started_at
+        snapshot = self.order.reservation_snapshot
+
+        response = self.start_edit(self.agent_user)
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, "EDITING")
+        self.assertEqual(self.order.editing_started_at, started_at)
+        self.assertEqual(self.order.reservation_snapshot, snapshot)
+
+    def test_start_edit_is_rejected_when_the_other_role_already_editing(self):
+        self.make_order_item(self.order, quantity=2)
+        self.assertEqual(
+            self.start_edit(self.admin_user).status_code, status.HTTP_200_OK
+        )
+        self.order.refresh_from_db()
+        started_at = self.order.editing_started_at
+
+        # the owning agent cannot hijack the admin's session
+        response = self.start_edit(self.agent_user)
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, "EDITING")
+        self.assertEqual(self.order.editing_started_at, started_at)
+
+    # -- 15 minute revert is editor agnostic -------------------------------
+
+    def test_stale_admin_edit_is_reverted_after_15_minutes(self):
+        self.make_order_item(self.order, quantity=2)
+        self.assertEqual(
+            self.start_edit(self.admin_user).status_code, status.HTTP_200_OK
+        )
+        Order.objects.filter(id=self.order.id).update(
+            editing_started_at=timezone.now() - timedelta(minutes=20)
+        )
+
+        self.client.credentials(**get_auth_header(self.admin_user))
+        response = self.client.get(self.orders_url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, "PENDING")
+        self.assertIsNone(self.order.editing_started_at)
+        self.assertEqual(self.order.reservation_snapshot, [])
+        self.assertEqual(self.order.items.count(), 1)
+        self.assertEqual(self.order.items.first().quantity, 2)
+
+    def test_stale_agent_edit_is_reverted_after_15_minutes(self):
+        self.make_order_item(self.order, quantity=2)
+        self.assertEqual(
+            self.start_edit(self.agent_user).status_code, status.HTTP_200_OK
+        )
+        Order.objects.filter(id=self.order.id).update(
+            editing_started_at=timezone.now() - timedelta(minutes=20)
+        )
+
+        self.client.credentials(**get_auth_header(self.agent_user))
+        response = self.client.get(self.orders_url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, "PENDING")
+        self.assertIsNone(self.order.editing_started_at)
+        self.assertEqual(self.order.reservation_snapshot, [])
+        self.assertEqual(self.order.items.count(), 1)
+
+    def test_fresh_admin_edit_is_not_reverted(self):
+        self.make_order_item(self.order, quantity=2)
+        self.assertEqual(
+            self.start_edit(self.admin_user).status_code, status.HTTP_200_OK
+        )
+
+        self.client.credentials(**get_auth_header(self.admin_user))
+        self.client.get(self.orders_url)
+
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, "EDITING")
+        self.assertEqual(len(self.order.reservation_snapshot), 1)
+
+    # -- cancel-edit releases the session -----------------------------------
+
+    def cancel_edit(self, user, order=None):
+        order = order or self.order
+        self.client.credentials(**get_auth_header(user))
+        return self.client.post(f"/api/orders/{order.id}/cancel-edit/")
+
+    def test_agent_can_cancel_own_edit_session(self):
+        kept = self.make_order_item(self.order, quantity=2)
+        self.assertEqual(
+            self.start_edit(self.agent_user).status_code, status.HTTP_200_OK
+        )
+
+        # Uncommitted cart changes must be dropped, not applied.
+        OrderItem.objects.filter(id=kept.id).update(quantity=3)
+        self.make_order_item(self.order, quantity=1)
+
+        response = self.cancel_edit(self.agent_user)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["status"], "PENDING")
+        self.assertEqual(response.data["order_id"], self.order.id)
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, "PENDING")
+        self.assertIsNone(self.order.editing_started_at)
+        self.assertEqual(self.order.reservation_snapshot, [])
+        # back to the single snapshot line, and stock is untouched
+        self.assertEqual(self.order.items.count(), 1)
+        self.assertEqual(self.order.items.first().quantity, 2)
+        self.assertEqual(self.stock(), 10)
+        self.assertTrue(
+            self.order.logs.filter(action="EDIT_CANCELLED").exists()
+        )
+
+    def test_admin_can_cancel_edit_session_on_agents_order(self):
+        self.make_order_item(self.order, quantity=2)
+        self.assertEqual(
+            self.start_edit(self.admin_user).status_code, status.HTTP_200_OK
+        )
+
+        response = self.cancel_edit(self.admin_user)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["status"], "PENDING")
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, "PENDING")
+        self.assertEqual(self.order.reservation_snapshot, [])
+        self.assertEqual(self.order.items.count(), 1)
+        self.assertEqual(self.order.items.first().quantity, 2)
+        self.assertEqual(self.stock(), 10)
+        self.assertTrue(
+            self.order.logs.filter(action="EDIT_CANCELLED").exists()
+        )
+
+    def test_cancel_edit_releases_the_other_editors_session(self):
+        # The admin opened the session; the owning agent may still release it
+        # instead of leaving the order stuck in EDITING.
+        self.make_order_item(self.order, quantity=2)
+        self.assertEqual(
+            self.start_edit(self.admin_user).status_code, status.HTTP_200_OK
+        )
+
+        response = self.cancel_edit(self.agent_user)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, "PENDING")
+
+    def test_cancel_edit_requires_editing_status(self):
+        self.make_order_item(self.order, quantity=2)
+
+        response = self.cancel_edit(self.agent_user)
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, "PENDING")
+        self.assertFalse(self.order.logs.filter(action="EDIT_CANCELLED").exists())
+
+    def test_agent_cannot_cancel_another_agents_edit_session(self):
+        other_order = self.other_agent_order()
+        other_order.status = "EDITING"
+        other_order.editing_started_at = timezone.now()
+        other_order.save()
+
+        response = self.cancel_edit(self.agent_user, order=other_order)
+
+        # the order is outside the agent's queryset, so it is not even visible
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        other_order.refresh_from_db()
+        self.assertEqual(other_order.status, "EDITING")
+
+    def test_business_scoped_admin_cannot_cancel_other_business_edit_session(self):
+        kids_item = Item.objects.create(
+            name="Kids Shirt", price=100.00, type="kids", brand=self.brand
+        )
+        kids_order = self.other_agent_order(
+            item=kids_item, item_type="kids", size_group="20-24"
+        )
+        kids_order.status = "EDITING"
+        kids_order.editing_started_at = timezone.now()
+        kids_order.save()
+
+        response = self.cancel_edit(self.admin_user, order=kids_order)
+
+        # out-of-scope orders are hidden from the admin's queryset
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        kids_order.refresh_from_db()
+        self.assertEqual(kids_order.status, "EDITING")
+
+    # -- add-item inside an edit session ------------------------------------
+
+    def add_item(self, user, order=None, quantity=1):
+        order = order or self.order
+        self.client.credentials(**get_auth_header(user))
+        return self.client.post(
+            f"/api/orders/{order.id}/add-item/",
+            {
+                "qr_code": str(self.variant.qr_code),
+                "quantity": quantity,
+                "size_group": "M,L,XL",
+            },
+            format="json",
+        )
+
+    def test_admin_can_add_item_to_editing_agent_order(self):
+        self.make_order_item(self.order, quantity=2)
+        self.assertEqual(
+            self.start_edit(self.admin_user).status_code, status.HTTP_200_OK
+        )
+
+        response = self.add_item(self.admin_user, quantity=3)
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, "EDITING")
+        self.assertEqual(self.order.items.count(), 2)
+        added = self.order.items.exclude(id=self.order.items.first().id).first()
+        self.assertEqual(added.quantity, 3)
+        # adding a line does not touch stock: save-edit settles the snapshot
+        self.assertEqual(self.stock(), 10)
+
+    def test_admin_add_item_then_save_commits_the_new_line(self):
+        self.make_order_item(self.order, quantity=2)
+        self.assertEqual(
+            self.start_edit(self.admin_user).status_code, status.HTTP_200_OK
+        )
+        self.assertEqual(
+            self.add_item(self.admin_user, quantity=3).status_code,
+            status.HTTP_201_CREATED,
+        )
+
+        response = self.save_edit(self.admin_user)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["status"], "PENDING")
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, "PENDING")
+        self.assertEqual(self.order.items.count(), 2)
+        # snapshot 2 restored, final 2+3=5 deducted -> 10 + 2 - 5
+        self.assertEqual(self.stock(), 7)
+
+    def test_agent_can_add_item_to_own_editing_order(self):
+        AgentItem.objects.create(agent=self.agent, variant=self.variant)
+        self.make_order_item(self.order, quantity=2)
+        self.assertEqual(
+            self.start_edit(self.agent_user).status_code, status.HTTP_200_OK
+        )
+
+        response = self.add_item(self.agent_user, quantity=3)
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.items.count(), 2)
+
+    def test_admin_cannot_add_item_to_pending_order_without_an_edit_session(self):
+        self.make_order_item(self.order, quantity=2)
+
+        response = self.add_item(self.admin_user)
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, "PENDING")
+        self.assertEqual(self.order.items.count(), 1)
+
+    def test_agent_cannot_add_item_to_another_agents_editing_order(self):
+        other_order = self.other_agent_order()
+        other_order.status = "EDITING"
+        other_order.editing_started_at = timezone.now()
+        other_order.save()
+
+        response = self.add_item(self.agent_user, order=other_order)
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        other_order.refresh_from_db()
+        self.assertEqual(other_order.items.count(), 1)
+
+    def test_business_scoped_admin_cannot_add_item_to_other_business_edit(self):
+        kids_item = Item.objects.create(
+            name="Kids Shirt", price=100.00, type="kids", brand=self.brand
+        )
+        kids_order = self.other_agent_order(
+            item=kids_item, item_type="kids", size_group="20-24"
+        )
+        kids_order.status = "EDITING"
+        kids_order.editing_started_at = timezone.now()
+        kids_order.save()
+
+        response = self.add_item(self.admin_user, order=kids_order)
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        kids_order.refresh_from_db()
+        self.assertEqual(kids_order.items.count(), 1)

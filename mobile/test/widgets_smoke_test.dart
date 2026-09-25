@@ -14,7 +14,6 @@ import 'package:stock_flow_admin/features/items/qr_print_select_screen.dart';
 import 'package:stock_flow_admin/features/orders/order_create_customer_screen.dart';
 import 'package:stock_flow_admin/features/orders/order_create_item_screen.dart';
 import 'package:stock_flow_admin/features/orders/order_create_screen.dart';
-import 'package:stock_flow_admin/features/orders/order_edit_stub_screen.dart';
 import 'package:stock_flow_admin/features/orders/order_flow_utils.dart';
 import 'package:stock_flow_admin/features/orders/order_status_screen.dart';
 import 'package:stock_flow_admin/features/profile/profile_screen.dart';
@@ -264,19 +263,6 @@ void main() {
 
       expect(find.text('Print QR labels'), findsOneWidget);
       expect(find.text('ITEM-A'), findsWidgets);
-    });
-
-    testWidgets('OrderEditStubScreen renders stub', (tester) async {
-      useTallSurface(tester);
-      seedAdminSession();
-      mockGet('/api/orders/1/', body: orderJson());
-
-      await pumpScreen(
-          tester, const OrderEditStubScreen(orderId: 1), container);
-      await settle(tester);
-
-      expect(find.text('Ordered Items'), findsOneWidget);
-      expect(find.text('Back'), findsOneWidget);
     });
   });
 
