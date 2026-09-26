@@ -525,17 +525,29 @@ class OrderItem {
         variantDisplayOrder: s(json['variant_display_order']),
       );
 
+<<<<<<< HEAD
+  OrderItem copyWith({int? packedQuantity}) => OrderItem(
+        id: id,
+        item: item,
+        variant: variant,
+        sizeGroup: sizeGroup,
+=======
   OrderItem copyWith({int? quantity, String? sizeGroup, int? packedQuantity}) =>
       OrderItem(
         id: id,
         item: item,
         variant: variant,
         sizeGroup: sizeGroup ?? this.sizeGroup,
+>>>>>>> dev
         size: size,
         itemName: itemName,
         itemPrice: itemPrice,
         variantImage: variantImage,
+<<<<<<< HEAD
+        quantity: quantity,
+=======
         quantity: quantity ?? this.quantity,
+>>>>>>> dev
         originalQuantity: originalQuantity,
         packedQuantity: packedQuantity ?? this.packedQuantity,
         pieceCount: pieceCount,

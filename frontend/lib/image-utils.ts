@@ -1,3 +1,5 @@
+import { computeShrinkSize, JPEG_QUALITY } from "./image-resize";
+
 export const createImage = (url: string): Promise<HTMLImageElement> =>
   new Promise((resolve, reject) => {
     const image = new Image();
@@ -6,6 +8,52 @@ export const createImage = (url: string): Promise<HTMLImageElement> =>
     image.setAttribute("crossOrigin", "anonymous");
     image.src = url;
   });
+
+/**
+ * Downscale an image file so its longest side is at most MAX_UPLOAD_SIDE.
+ * Returns the original file when it is already small enough or when the
+ * browser cannot decode it (callers keep working, the server resizes anyway).
+ */
+export async function shrinkImageFile(file: File): Promise<File> {
+  if (typeof document === "undefined" || !file.type.startsWith("image/")) {
+    return file;
+  }
+
+  const url = URL.createObjectURL(file);
+  try {
+    const image = await createImage(url);
+    const { width, height, scaled } = computeShrinkSize(
+      image.naturalWidth,
+      image.naturalHeight,
+    );
+    if (!scaled) return file;
+
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return file;
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(image, 0, 0, width, height);
+
+    const transparent = file.type === "image/png" || file.type === "image/webp";
+    const mime = transparent ? "image/png" : "image/jpeg";
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob(resolve, mime, transparent ? undefined : JPEG_QUALITY),
+    );
+    if (!blob) return file;
+
+    const ext = transparent ? "png" : "jpg";
+    return new File([blob], file.name.replace(/\.[^.]+$/, `.${ext}`), {
+      type: mime,
+    });
+  } catch {
+    return file;
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
 
 export async function getCroppedImg(
   imageSrc: string,
@@ -64,10 +112,12 @@ export const normalizeImageFile = async (file: File): Promise<File> => {
       quality: 1,
     });
     const blob = Array.isArray(converted) ? converted[0] : converted;
-    return new File([blob], file.name.replace(/\.(heic|heif)$/i, ".jpg"), {
-      type: "image/jpeg",
-    });
+    return shrinkImageFile(
+      new File([blob], file.name.replace(/\.(heic|heif)$/i, ".jpg"), {
+        type: "image/jpeg",
+      }),
+    );
   }
 
-  return file;
+  return shrinkImageFile(file);
 };

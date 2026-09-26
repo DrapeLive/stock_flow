@@ -13,6 +13,35 @@ interface Props {
   onDelete: () => void;
 }
 
+interface DisplayOrderFieldProps {
+  value: string;
+  placeholder?: string;
+  onChange: (value: string) => void;
+}
+
+/**
+ * Display-order input for one variant. Kept as a small fixed-width field: the
+ * value may be an empty string (nullable display_order), and without an
+ * explicit width it would otherwise stretch across the whole row as a long
+ * blank bar.
+ */
+export function DisplayOrderField({
+  value,
+  placeholder = "0",
+  onChange,
+}: DisplayOrderFieldProps) {
+  return (
+    <Input
+      type="number"
+      min={0}
+      value={value}
+      placeholder={placeholder}
+      onChange={(e) => onChange(e.target.value)}
+      className="h-8 w-24 shrink-0 text-sm"
+    />
+  );
+}
+
 export default function EditVariantRow({
   variant,
   isOnly,

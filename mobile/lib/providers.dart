@@ -5,7 +5,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/api/api_client.dart';
 import 'core/cache/app_cache.dart';
+<<<<<<< HEAD
+=======
 import 'core/notifications/push_service.dart';
+>>>>>>> dev
 import 'data/repositories.dart';
 import 'features/items/item_sync_service.dart';
 import 'models/models.dart';
@@ -38,7 +41,10 @@ class SessionController extends Notifier<Session?> {
         // The Profile page then renders complete details without a visible
         // gap instead of a few seconds after opening it.
         Future.microtask(refreshProfile);
+<<<<<<< HEAD
+=======
         unawaited(PushService.instance.registerForUser());
+>>>>>>> dev
       }
     } catch (_) {
       _current = null;
@@ -51,7 +57,10 @@ class SessionController extends Notifier<Session?> {
     _persist(session);
     ApiClient.setToken(session.access);
     state = session;
+<<<<<<< HEAD
+=======
     unawaited(PushService.instance.registerForUser());
+>>>>>>> dev
     unawaited(refreshProfile());
   }
 
@@ -84,7 +93,10 @@ class SessionController extends Notifier<Session?> {
   }
 
   Future<void> logout() async {
+<<<<<<< HEAD
+=======
     await PushService.instance.unregisterForUser();
+>>>>>>> dev
     _current = null;
     ApiClient.setToken(null);
     await AppCache.clearAll();

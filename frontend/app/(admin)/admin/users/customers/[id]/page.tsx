@@ -13,7 +13,15 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 import StockFlowSelect from "@/components/ui/custom/stockFlowSelect";
-import { Trash2, ArrowLeft, User, Pencil, Eye, Package } from "lucide-react";
+import {
+  Trash2,
+  ArrowLeft,
+  User,
+  Pencil,
+  Eye,
+  Package,
+  Plus,
+} from "lucide-react";
 import Pagination from "@/components/ui/Pagination";
 import DeleteWithTransferDialog from "@/components/ui/deleteWithTransferDialog";
 import { useAuth } from "@/context/AuthContext";
@@ -217,6 +225,15 @@ export default function CustomerDetailPage() {
         </div>
         <div className="flex items-center gap-1">
           <button
+            onClick={() =>
+              router.push(`/admin/order/new?customer=${id}`)
+            }
+            className="p-2 rounded-xl text-primary hover:bg-primary/10 transition-colors"
+            title="Create order"
+          >
+            <Plus size={20} />
+          </button>
+          <button
             onClick={() => setIsEditing(!isEditing)}
             className="p-2 rounded-xl hover:bg-gray-50 transition-colors"
             title={isEditing ? "View details" : "Edit details"}
@@ -395,14 +412,25 @@ export default function CustomerDetailPage() {
             </div>
           </div>
 
-          {/* Order History Section */}
-          <div className="mt-6">
-            <div className="flex items-center gap-2 mb-3">
-              <Package size={16} className="text-gray-400" />
-              <span className="text-xs font-black uppercase tracking-widest text-gray-400">
-                Order History
-              </span>
-            </div>
+            {/* Order History Section */}
+            <div className="mt-6">
+              <div className="flex items-center justify-between gap-2 mb-3">
+                <div className="flex items-center gap-2">
+                  <Package size={16} className="text-gray-400" />
+                  <span className="text-xs font-black uppercase tracking-widest text-gray-400">
+                    Order History
+                  </span>
+                </div>
+                <button
+                  onClick={() =>
+                    router.push(`/admin/order/new?customer=${id}`)
+                  }
+                  className="inline-flex items-center gap-1.5 px-3 h-8 rounded-full bg-primary text-white text-[11px] font-black shadow-sm shadow-primary/20 active:scale-95 transition-all"
+                >
+                  <Plus size={14} />
+                  Create Order
+                </button>
+              </div>
             {orders.length === 0 ? (
               <div className="bg-gray-50 border border-gray-100 rounded-2xl p-4 text-center">
                 <span className="text-sm font-medium text-gray-400">

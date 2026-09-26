@@ -1,4 +1,26 @@
 import type { Area } from "react-easy-crop";
+import { computeShrinkSize, JPEG_QUALITY } from "./image-resize";
+
+/**
+ * Downscale a canvas in place (returns a new canvas) so its longest side is at
+ * most MAX_UPLOAD_SIDE. Keeps uploads well under the proxy body limit.
+ */
+function shrinkCanvas(canvas: HTMLCanvasElement): HTMLCanvasElement {
+    const { width, height, scaled } = computeShrinkSize(
+        canvas.width,
+        canvas.height,
+    );
+    if (!scaled) return canvas;
+
+    const out = document.createElement("canvas");
+    out.width = width;
+    out.height = height;
+    const ctx = out.getContext("2d")!;
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(canvas, 0, 0, width, height);
+    return out;
+}
 
 function hasTransparency(canvas: HTMLCanvasElement): boolean {
     const ctx = canvas.getContext("2d")!;
@@ -10,13 +32,14 @@ function hasTransparency(canvas: HTMLCanvasElement): boolean {
 }
 
 const toFile = (canvas: HTMLCanvasElement, suffix: string): Promise<File> => {
-    const transparent = hasTransparency(canvas);
+    const scaled = shrinkCanvas(canvas);
+    const transparent = hasTransparency(scaled);
     const mime = transparent ? "image/png" : "image/jpeg";
-    const quality = transparent ? undefined : 0.92; // PNG ignores quality
+    const quality = transparent ? undefined : JPEG_QUALITY; // PNG ignores quality
     const ext = transparent ? "png" : "jpg";
 
     return new Promise((resolve, reject) =>
-        canvas.toBlob(
+        scaled.toBlob(
             (blob) =>
                 blob
                     ? resolve(

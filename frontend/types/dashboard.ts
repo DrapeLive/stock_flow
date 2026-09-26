@@ -5,6 +5,9 @@ export interface AnalyticsKPIs {
   editing: number;
   packed: number;
   dispatched: number;
+  total_value?: number;
+  total_sets?: number;
+  total_pieces?: number;
 }
 
 export interface TrendPoint {

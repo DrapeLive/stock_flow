@@ -13,7 +13,10 @@ import '../../data/repositories.dart';
 import '../../models/models.dart';
 import '../../shared/scan_beep.dart';
 import '../../shared/widgets.dart';
+<<<<<<< HEAD
+=======
 import 'order_flow_utils.dart';
+>>>>>>> dev
 
 enum _OrderTab { packing, dispatching }
 
@@ -36,7 +39,10 @@ class _OrderStatusScreenState extends ConsumerState<OrderStatusScreen> {
   // server list). Ticking boxes updates checkbox state but never reshuffles.
   List<OrderItem>? _packingItems;
   bool _deleting = false;
+<<<<<<< HEAD
+=======
   bool _editStarting = false;
+>>>>>>> dev
   bool _logsExpanded = false;
   bool _logsLoading = false;
   List<OrderLog> _logs = const [];
@@ -51,8 +57,14 @@ class _OrderStatusScreenState extends ConsumerState<OrderStatusScreen> {
   bool get _isDeletable =>
       _order?.status == 'PENDING' || _order?.status == 'PACKED';
 
+<<<<<<< HEAD
+  bool get _isEditable => _order?.status == 'DRAFT' ||
+      _order?.status == 'PENDING' ||
+      _order?.status == 'PACKED';
+=======
   bool get _isEditable =>
       _order?.status == 'PENDING' || _order?.status == 'PACKED';
+>>>>>>> dev
 
 @override
   void initState() {
@@ -315,6 +327,8 @@ Future<void> _completePacking() async {
     }
   }
 
+<<<<<<< HEAD
+=======
   Future<void> _openEdit() async {
     final order = _order;
     if (order == null || _editStarting) return;
@@ -365,6 +379,7 @@ Future<void> _completePacking() async {
     }
   }
 
+>>>>>>> dev
   Future<void> _deleteOrder() async {
     final pin = await PinDialog.show(
       context,
@@ -454,11 +469,20 @@ _OrderTabs(
                     _packingItems = null;
                   }),
                 ),
+<<<<<<< HEAD
+                if (_isDeletable)
+=======
 if (_isEditable || _isDeletable)
+>>>>>>> dev
                   Align(
                     alignment: Alignment.centerRight,
                     child: Padding(
                       padding: const EdgeInsets.only(bottom: 8),
+<<<<<<< HEAD
+                      child: _OrderDeleteButton(
+                        loading: _deleting,
+                        onTap: _deleteOrder,
+=======
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -475,6 +499,7 @@ if (_isEditable || _isDeletable)
                               onTap: _deleteOrder,
                             ),
                         ],
+>>>>>>> dev
                       ),
                     ),
                   ),
@@ -690,6 +715,8 @@ const Text(
   }
 }
 
+<<<<<<< HEAD
+=======
 class _OrderEditButton extends StatelessWidget {
   const _OrderEditButton({required this.onTap, this.loading = false});
   final VoidCallback onTap;
@@ -734,6 +761,7 @@ class _OrderEditButton extends StatelessWidget {
   }
 }
 
+>>>>>>> dev
 // ---------------------------------------------------------------------------
 // Tabs
 // ---------------------------------------------------------------------------

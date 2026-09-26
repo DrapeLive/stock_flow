@@ -228,6 +228,8 @@ void main() {
           preferredTransport: 1,
           notes: 'rush');
     });
+<<<<<<< HEAD
+=======
 
     test('startEdit hits start-edit and invalidates order caches', () async {
       mockGet('/api/orders/1/', body: orderJson());
@@ -263,6 +265,7 @@ void main() {
 
       expect(await repos.order.cancelEdit(1), 'PENDING');
     });
+>>>>>>> dev
   });
 
   group('ItemRepo', () {

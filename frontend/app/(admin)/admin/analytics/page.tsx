@@ -7,6 +7,7 @@ import RangePresets from "@/components/pages/admin/analytics/RangePresets";
 import TrendSparkline from "@/components/pages/admin/analytics/TrendSparkline";
 import TimeMetricsRow from "@/components/pages/admin/analytics/TimeMetricsRow";
 import StatusDonutChart from "@/components/pages/admin/analytics/StatusDonutChart";
+import ValueCards from "@/components/pages/admin/analytics/ValueCards";
 import AgentHorizontalBarChart from "@/components/pages/admin/analytics/AgentHorizontalBarChart";
 import ItemBarChart from "@/components/pages/admin/analytics/ItemBarChart";
 import CustomerBarChart from "@/components/pages/admin/analytics/CustomerBarChart";
@@ -62,6 +63,7 @@ export default function AdminAnalyticsPage() {
       {data && (
         <>
           <StatusDonutChart kpis={data.kpis} />
+          <ValueCards kpis={data.kpis} />
           <TrendSparkline data={data.trend} from={from} to={to} />
           <TimeMetricsRow metrics={data.time_metrics} />
 

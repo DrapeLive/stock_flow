@@ -130,8 +130,13 @@ void main() {
     });
 
     testWidgets(
+<<<<<<< HEAD
+        'deleted-item group is not tappable and shows no-longer-available hint',
+        (tester) async {
+=======
         'deleted-item group stays tappable; the no-longer-available hint is '
         'left to the detail screen', (tester) async {
+>>>>>>> dev
       useTallSurface(tester);
       await pumpItemsRouter(tester, container,
           stockBody: [stockEntryJson()],
@@ -152,13 +157,21 @@ void main() {
       await tester.tap(find.text('Ordered (2)'));
       await tester.pumpAndSettle();
 
+<<<<<<< HEAD
+      expect(find.text('Item no longer available'), findsOneWidget);
+=======
       expect(find.text('Item no longer available'), findsNothing);
       expect(find.text('PHANTOM-ITEM'), findsOneWidget);
+>>>>>>> dev
 
       await tester.tap(find.text('PHANTOM-ITEM'));
       await tester.pumpAndSettle();
 
+<<<<<<< HEAD
+      expect(lastOrderedLocation, isNull);
+=======
       expect(lastOrderedLocation, '/admin/items/ordered/22');
+>>>>>>> dev
     });
   });
 

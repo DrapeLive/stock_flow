@@ -9,6 +9,10 @@ import { useState, useEffect } from "react";
 
 import { OrderItemRow } from "@/components/order";
 import OrderItemEditModal from "./orderItemEdit";
+import {
+  isOrderItemFullyPacked,
+  sortOrderItemsUnpackedFirst,
+} from "@/lib/utils/orderItemSort";
 
 import {
   getAvailableSizeGroups,
@@ -274,36 +278,34 @@ const OrderItem: React.FC<Props> = ({
   return (
     <>
       <div className="pt-0 space-y-1">
-        {orderItems
-          ?.filter((item) => {
+        {sortOrderItemsUnpackedFirst(
+          orderItems?.filter((item) => {
             if (!isDispatching) return true;
-            const totalPieces = (item.piece_count || 1) * item.quantity;
-            const isFullyPacked = (item.packed_quantity ?? 0) >= totalPieces;
-            return isFullyPacked;
-          })
-          .map((item) => {
-            const totalPieces = (item.piece_count || 1) * item.quantity;
-            const isFullyPacked = (item.packed_quantity ?? 0) >= totalPieces;
+            return isOrderItemFullyPacked(item);
+          }) ?? [],
+        ).map((item) => {
+          const totalPieces = (item.piece_count || 1) * item.quantity;
+          const isFullyPacked = (item.packed_quantity ?? 0) >= totalPieces;
 
-            return (
-              <OrderItemRow
-                key={item.id}
-                item={item}
-                showDelete={isDeletable}
-                showEdit={isEditable}
-                showPackedToggle={isPacking}
-                isLoading={loadingItemId === item.id}
-                isPacked={isFullyPacked}
-                isOutOfStock={outOfStockItemIds.includes(item.id)}
-                onDelete={(deleteItemID) => onDelete(deleteItemID, orderId)}
-                onEdit={isEditable ? handleEditItem : undefined}
-                onTogglePacked={(id, packed) => {
-                  void packed;
-                  togglePacked(id, item.packed_quantity ?? 0, totalPieces);
-                }}
-              />
-            );
-          })}
+          return (
+            <OrderItemRow
+              key={item.id}
+              item={item}
+              showDelete={isDeletable}
+              showEdit={isEditable}
+              showPackedToggle={isPacking}
+              isLoading={loadingItemId === item.id}
+              isPacked={isFullyPacked}
+              isOutOfStock={outOfStockItemIds.includes(item.id)}
+              onDelete={(deleteItemID) => onDelete(deleteItemID, orderId)}
+              onEdit={isEditable ? handleEditItem : undefined}
+              onTogglePacked={(id, packed) => {
+                void packed;
+                togglePacked(id, item.packed_quantity ?? 0, totalPieces);
+              }}
+            />
+          );
+        })}
       </div>
 
       {showUnpackDialog && (

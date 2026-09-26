@@ -19,7 +19,7 @@ import SizeGroupSelector from "./components/SizeGroupSelector";
 import QuantitySelector from "./components/QuantitySelector";
 import SubmitButton from "./components/SubmitButton";
 import { useBackButton } from "@/util/useBackButton";
-import { useAuth } from "@/context/AuthContext";
+import { useOrderFlow } from "@/context/OrderFlowContext";
 import { Modal, ModalButton } from "@/components/ui/custom/Modals";
 
 export default function ProductDetailPage() {
@@ -27,7 +27,7 @@ export default function ProductDetailPage() {
     const id = params.id as string;
     const router = useRouter();
 
-    const { user } = useAuth();
+    const { basePath, agentId } = useOrderFlow();
 
     const [data, setData] = useState<ItemQRResponse | null>(null);
     const [quantity, setQuantity] = useState<number>(1);
@@ -70,8 +70,8 @@ export default function ProductDetailPage() {
 
     useBackButton({
         onBack: useCallback(() => {
-            router.push(`/agent/order/new/${id}`);
-        }, [router, id]),
+            router.push(`${basePath}/${id}`);
+        }, [router, id, basePath]),
     });
 
     // ─── Initial data fetch (pageLoading only) ─────────────────────────────────
@@ -80,7 +80,7 @@ export default function ProductDetailPage() {
         const fetchData = async () => {
             try {
                 const [itemResponse, orderResponse] = await Promise.all([
-                    itemApi.byqr(params.qr, user?.id),
+                    itemApi.byqr(params.qr, agentId),
                     (async () => {
                         const orderKey = localStorage.getItem("orderKey");
                         if (orderKey) {
@@ -122,7 +122,7 @@ export default function ProductDetailPage() {
             }
         };
         fetchData();
-    }, [params.qr]);
+    }, [params.qr, agentId]);
 
     const sizeGroups = getAvailableSizeRanges(selectedVariant, data?.type);
 
@@ -328,7 +328,7 @@ export default function ProductDetailPage() {
             }
 
             // Navigate once all branches succeed — no setSubmitting(false) needed
-            router.push(`/agent/order/new/${id}`);
+            router.push(`${basePath}/${id}`);
         } catch (e) {
             console.error("Error adding item to order:", e);
             toastError("Failed to add item", e);
@@ -343,7 +343,7 @@ export default function ProductDetailPage() {
         <div className="min-h-screen bg-gray-50/50 pb-32">
             <ProductHeader
                 isEditMode={isEditMode}
-                onBack={() => router.push(`/agent/order/new/${id}`)}
+                onBack={() => router.push(`${basePath}/${id}`)}
             />
 
             <div className="max-w-md mx-auto px-6 pt-6">
@@ -415,7 +415,7 @@ export default function ProductDetailPage() {
                                 onClick={() => {
                                     setShowNotAssignedModal(false);
                                     router.push(
-                                        `/agent/order/new/${id}/scanner`,
+                                        `${basePath}/${id}/scanner`,
                                     );
                                 }}
                             >
@@ -426,7 +426,7 @@ export default function ProductDetailPage() {
                                 variant="primary"
                                 onClick={() => {
                                     setShowNotAssignedModal(false);
-                                    router.push(`/agent/order/new/${id}`);
+                                    router.push(`${basePath}/${id}`);
                                 }}
                             >
                                 Back to Orders

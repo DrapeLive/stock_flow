@@ -252,6 +252,8 @@ class OrderRepo {
     }
   }
 
+<<<<<<< HEAD
+=======
   /// Reads the status out of an edit-flow response, falling back to a
   /// `GET /api/orders/<id>/` for a backend that answers without one.
   Future<String> _editStatus(dynamic data, int orderId) async {
@@ -328,6 +330,7 @@ class OrderRepo {
     }
   }
 
+>>>>>>> dev
   /// Order history for a customer detail page (mirrors `orderApi.getByCustomer`).
   Future<Paginated<Order>> byCustomer(int customerId,
       {int page = 1, int pageSize = 50}) async {

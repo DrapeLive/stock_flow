@@ -5,11 +5,13 @@ import { useBackButton } from "@/util/useBackButton";
 import { ArrowLeft } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
+import { useOrderFlow } from "@/context/OrderFlowContext";
 
 export default function OrderScannerPage() {
   const params = useParams();
   const id = params.id as string;
   const router = useRouter();
+  const { basePath } = useOrderFlow();
 
   const [orderId] = useState<number | null>(() => {
     if (typeof window === "undefined") return null;
@@ -21,7 +23,7 @@ export default function OrderScannerPage() {
 
   useBackButton({
     onBack: () => {
-      router.push(`/agent/order/new/${id}`);
+      router.push(`${basePath}/${id}`);
     },
   });
 
@@ -32,7 +34,7 @@ export default function OrderScannerPage() {
         <div className="max-w-md mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button
-              onClick={() => router.push(`/agent/order/new/${id}`)}
+              onClick={() => router.push(`${basePath}/${id}`)}
               className="p-2 rounded-xl hover:bg-gray-50 text-gray-400 transition-colors"
             >
               <ArrowLeft size={20} />
@@ -50,7 +52,7 @@ export default function OrderScannerPage() {
       </div>
 
       <div className="flex-1 max-w-md mx-auto w-full px-6 py-10 flex flex-col items-center justify-center">
-        <ScannerPage id={id} orderId={orderId} />
+        <ScannerPage id={id} orderId={orderId} basePath={basePath} />
       </div>
     </div>
   );

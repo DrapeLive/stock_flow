@@ -8,7 +8,7 @@ import ColorListScreen from "./colorList";
 import { submitItem } from "@/lib/submitItem";
 import type { ColorVariant, CommonDetails, WizardStep } from "@/types/item";
 import { getSizesForItemType } from "@/types/item";
-import { toastError } from "@/lib/toast";
+import { toastError, toastWarning } from "@/lib/toast";
 import { useAuth } from "@/context/AuthContext";
 
 const uid = () => Math.random().toString(36).slice(2, 9);
@@ -93,7 +93,16 @@ export default function NewItemPage() {
   const handleSubmit = async () => {
     setLoading(true);
     try {
-      console.log("Variants :", variants);
+      const totalBytes = variants.reduce(
+        (sum, v) => sum + (v.image ? v.image.size : 0),
+        0,
+      );
+      if (totalBytes >= 20 * 1024 * 1024) {
+        toastWarning(
+          "Large upload detected",
+          "You have uploaded more than 20MB of images. The server may reject this. Consider using smaller photos.",
+        );
+      }
       await submitItem(common, variants);
       router.push("/admin/items");
     } catch (err) {

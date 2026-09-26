@@ -24,17 +24,23 @@ import { AxiosError } from "axios";
 import { OrderTotals } from "@/components/order";
 import { useBackButton } from "@/util/useBackButton";
 import { Modal, ModalButton } from "@/components/ui/custom/Modals";
+import { useOrderFlow } from "@/context/OrderFlowContext";
+import { extractErrorMessage } from "@/lib/orderFlow";
+
+type LoadError = { kind: "notfound" | "error"; message?: string };
 
 export default function OrderDetailsPage() {
   const params = useParams();
   const id = params.id as string;
   const router = useRouter();
+  const { basePath, isAdmin, afterPlacePath } = useOrderFlow();
 
   const [data, setData] = useState<CustomerResponse>();
   const [loading, setLoading] = useState(true);
   const [placingOrder, setPlacingOrder] = useState(false);
   const [orders, setOrders] = useState<OrderResponse>();
-  const [loadError, setLoadError] = useState(false);
+  const [loadError, setLoadError] = useState<LoadError | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
   const [showOutOfStockModal, setShowOutOfStockModal] = useState(false);
   const [outOfStockItems, setOutOfStockItems] = useState<OutOfStockItem[]>([]);
   const [showMergeWarning, setShowMergeWarning] = useState(false);
@@ -150,7 +156,7 @@ export default function OrderDetailsPage() {
         notes: notes || null,
       });
       toastSuccess("Order placed successfully!");
-      router.push("/agent/order/orderform");
+      router.push(afterPlacePath(Number(orderKey)));
     } catch (error) {
       const axiosError = error as AxiosError<PlaceOrderError>;
       if (axiosError.response?.data?.out_of_stock_items) {
@@ -181,7 +187,7 @@ export default function OrderDetailsPage() {
       setOrders(res);
       await orderApi.placeOrder(Number(orderKey));
       toastSuccess("Order placed successfully!");
-      router.push("/agent/order/orderform");
+      router.push(afterPlacePath(Number(orderKey)));
     } catch (error) {
       const axiosError = error as AxiosError<PlaceOrderError>;
       if (axiosError.response?.data?.out_of_stock_items) {
@@ -212,10 +218,25 @@ export default function OrderDetailsPage() {
           setExpectedDeliveryDate(res2.expected_delivery_date || "");
           setNotes(res2.notes || "");
           isReady.current = true;
+        } else if (isAdmin) {
+          setLoadError({ kind: "notfound" });
         }
       } catch (e) {
         console.error("Error fetching order details:", e);
-        setLoadError(true);
+        const axiosError = e as AxiosError<{ error?: string; detail?: string }>;
+        const status = axiosError.response?.status;
+        console.error("Order details load failed:", status ?? "network error");
+        if (status === 404) {
+          setLoadError({ kind: "notfound" });
+        } else {
+          setLoadError({
+            kind: "error",
+            message: extractErrorMessage(
+              axiosError.response?.data,
+              "Something went wrong",
+            ),
+          });
+        }
       } finally {
         setLoading(false);
       }
@@ -239,7 +260,7 @@ export default function OrderDetailsPage() {
 
     fetchData();
     fetchTransports();
-  }, [id]);
+  }, [id, isAdmin, reloadKey]);
 
   const handleDeleteItem = (itemId: number) => {
     setOrders((prev) => {
@@ -252,13 +273,52 @@ export default function OrderDetailsPage() {
   };
 
   useEffect(() => {
-    if (loadError) {
+    if (loadError && !isAdmin) {
       toastError("Server Error");
-      router.push(`/agent/order/new/`);
+      router.push(`${basePath}/`);
     }
-  }, [loadError, router]);
+  }, [loadError, isAdmin, router, basePath]);
 
   if (loading) return <PageLoading />;
+
+  if (loadError && isAdmin) {
+    const isNotFound = loadError.kind === "notfound";
+    return (
+      <div className="min-h-screen flex items-center justify-center px-6">
+        <div className="text-center max-w-sm">
+          <div className="w-14 h-14 rounded-2xl bg-amber-100 flex items-center justify-center mx-auto mb-4">
+            <AlertTriangle size={26} className="text-amber-500" />
+          </div>
+          <h1 className="text-lg font-black text-gray-900">
+            {isNotFound ? "Order unavailable" : "Something went wrong"}
+          </h1>
+          <p className="text-sm text-gray-500 mt-2 mb-6">
+            {isNotFound
+              ? "This order draft has expired or was removed. You can start a new order for this customer."
+              : loadError.message}
+          </p>
+          {isNotFound ? (
+            <StockFlowButton
+              text="Start new order"
+              variant="filled"
+              onClick={() => router.push(`/admin/order/new?customer=${id}`)}
+              className="w-full h-12 rounded-2xl"
+            />
+          ) : (
+            <StockFlowButton
+              text="Retry"
+              variant="filled"
+              onClick={() => {
+                setLoadError(null);
+                setReloadKey((k) => k + 1);
+              }}
+              className="w-full h-12 rounded-2xl"
+            />
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen pb-36">
@@ -290,6 +350,19 @@ export default function OrderDetailsPage() {
           )}
         </div>
       </div>
+
+      {isAdmin && (
+        <div className="bg-primary/5 border-b border-primary/10 px-4 py-2">
+          <div className="max-w-lg mx-auto flex items-center justify-between gap-3 text-[11px]">
+            <span className="font-bold text-gray-700 truncate">
+              Order for {data?.name ?? "—"}
+            </span>
+            <span className="text-gray-400 font-medium shrink-0">
+              Agent: {data?.agent_name || "—"}
+            </span>
+          </div>
+        </div>
+      )}
 
       <div className="max-w-lg mx-auto px-4 pt-6 space-y-6">
         {/* Customer Card */}
@@ -398,7 +471,7 @@ export default function OrderDetailsPage() {
               text="Add Item"
               variant="filled"
               icon={<Plus className="size-4" />}
-              onClick={() => router.push(`/agent/order/new/${id}/scanner`)}
+              onClick={() => router.push(`${basePath}/${id}/scanner`)}
               className="shadow-md shadow-primary/20 active:scale-95 transition-all text-sm h-10 px-4 rounded-xl"
             />
           </div>
@@ -406,7 +479,7 @@ export default function OrderDetailsPage() {
           {/* Empty state */}
           {!orders || orders.items.length === 0 ? (
             <div
-              onClick={() => router.push(`/agent/order/new/${id}/scanner`)}
+              onClick={() => router.push(`${basePath}/${id}/scanner`)}
               className="flex flex-col items-center justify-center py-14 bg-white rounded-2xl border-2 border-dashed border-gray-200 cursor-pointer hover:border-primary/30 hover:bg-primary/2 transition-all group"
             >
               <div className="w-14 h-14 rounded-2xl bg-gray-100 group-hover:bg-primary/10 flex items-center justify-center mb-3 transition-colors">
@@ -616,7 +689,7 @@ export default function OrderDetailsPage() {
                 variant="primary"
                 onClick={() => {
                   setShowLeaveConfirm(false);
-                  router.push("/agent/order/new");
+                  router.push(basePath);
                 }}
               >
                 Leave

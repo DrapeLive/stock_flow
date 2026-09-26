@@ -5,12 +5,15 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+<<<<<<< HEAD
+=======
 // Firebase (google-services) is applied only once google-services.json is
 // dropped into android/app — until then local builds keep working.
 if (file("google-services.json").exists()) {
     apply(plugin = "com.google.gms.google-services")
 }
 
+>>>>>>> dev
 android {
     namespace = "com.xlapparals.stock_flow_admin"
     compileSdk = flutter.compileSdkVersion
@@ -19,7 +22,10 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
+<<<<<<< HEAD
+=======
         isCoreLibraryDesugaringEnabled = true
+>>>>>>> dev
     }
 
     kotlinOptions {
@@ -49,7 +55,10 @@ android {
 flutter {
     source = "../.."
 }
+<<<<<<< HEAD
+=======
 
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }
+>>>>>>> dev

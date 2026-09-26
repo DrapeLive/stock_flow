@@ -5,5 +5,5 @@ dump.rdb
 .opencode/
 .env*
 
-backend/firebase-service-account.json
-
+# Mobile app is not part of this repo
+mobile/

@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { ImagePreview } from "@/components/pages/ImagePreview";
 import { OrderItem } from "@/types/order";
+import { orderItemColorSuffix } from "@/lib/colorLabel";
 import { Spinner } from "../ui/spinner";
 
 // ─── Delete Confirmation Dialog ───────────────────────────────────────────────
@@ -237,7 +238,7 @@ export default function OrderItemRow({
                   : "text-gray-900"
             }`}
           >
-            {item.item_name || "Unknown Item"} ( Color #{item.variant_display_order} )
+            {item.item_name || "Unknown Item"}{orderItemColorSuffix(item.variant_display_order)}
           </h6>
           <p className="text-[10px] text-gray-400 mt-0.5">
             Size: {item.size_group || "N/A"}

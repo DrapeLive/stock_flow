@@ -30,7 +30,7 @@ import StockFlowButton from "@/components/ui/custom/stockFlowButton";
 import { itemApi } from "@/lib/api/item";
 import { updateItem } from "@/lib/updateItem";
 import { toastError, toastSuccess } from "@/lib/toast";
-import EditVariantRow from "./editVariantRow";
+import EditVariantRow, { DisplayOrderField } from "./editVariantRow";
 import CropModal from "../../new/cropModal";
 import type {
   EditCommonDetails,
@@ -639,13 +639,10 @@ export default function ItemEditPage() {
                   <AccordionContent className="px-4 pb-3 space-y-2">
                     <div className="flex items-center gap-2 bg-gray-50 border border-gray-100 rounded-xl px-3 py-2 mb-2">
                       <span className="text-xs text-gray-400 flex-shrink-0">Display Order</span>
-                      <Input
-                        type="number"
-                        min={0}
+                      <DisplayOrderField
                         value={group.display_order ?? ""}
                         placeholder="0"
-                        onChange={(e) => updateVariantGroup(group.backendId, { display_order: e.target.value })}
-                        className="h-8 text-sm"
+                        onChange={(v) => updateVariantGroup(group.backendId, { display_order: v })}
                       />
                     </div>
                     {group.sizes.map((v) => (

@@ -3,8 +3,10 @@
 import { ChevronDown, ChevronUp, Info, Edit, QrCode } from "lucide-react";
 import { ImagePreview } from "@/components/pages/ImagePreview";
 import { ItemType, UIItem } from "@/types/item";
+import { archiveCountdownLabel } from "@/util/archiveLabel";
 import VariantCard from "./VariantCard";
 import { isItemOutOfStock, isVariantOutOfStock } from "@/util/stockValidators";
+import { compareByVariantOrder } from "@/lib/sortVariants";
 
 interface ItemCardProps {
     item: UIItem;
@@ -16,6 +18,7 @@ interface ItemCardProps {
     onPrintQR?: (qr: string, id: number) => void;
     onOrder?: (variantId: number) => void;
     isReadonly?: boolean;
+    countdownDays?: number | null;
 }
 
 function getItemImage(item: UIItem): string | null {
@@ -38,6 +41,7 @@ export default function ItemCard({
     onPrintQR,
     onOrder,
     isReadonly = false,
+    countdownDays,
 }: ItemCardProps) {
     const hasPartialOutOfStock = hasOutOfStockVariants(item);
     const image = getItemImage(item);
@@ -79,6 +83,17 @@ export default function ItemCard({
                         {item.type && (
                             <span className="text-[9px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-md uppercase font-bold tracking-tighter border border-gray-200 flex-shrink-0">
                                 {item.type}
+                            </span>
+                        )}
+                        {countdownDays != null && countdownDays >= 0 && (
+                            <span
+                                className={`text-[9px] px-1.5 py-0.5 rounded-md uppercase font-bold tracking-tighter border flex-shrink-0 ${
+                                    countdownDays <= 7
+                                        ? "bg-amber-100 text-amber-700 border-amber-200"
+                                        : "bg-gray-100 text-gray-500 border-gray-200"
+                                }`}
+                            >
+                                {archiveCountdownLabel(countdownDays)}
                             </span>
                         )}
                     </div>
@@ -149,11 +164,7 @@ export default function ItemCard({
                 <div className="px-4 pb-4 pt-2">
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                         {[...item.variants]
-                            .sort((a, b) => {
-                                const orderA = a.display_order ? parseInt(a.display_order, 10) : Infinity;
-                                const orderB = b.display_order ? parseInt(b.display_order, 10) : Infinity;
-                                return orderA - orderB;
-                            })
+                            .sort(compareByVariantOrder)
                             .map((variant, index) => (
                             <VariantCard
                                 key={variant.id}

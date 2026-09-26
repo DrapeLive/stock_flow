@@ -189,6 +189,15 @@ void main() {
     await tester.pumpAndSettle();
   });
 
+<<<<<<< HEAD
+  testWidgets('Bug 3: the Edit button is removed from the order item rows',
+      (tester) async {
+    useTallSurface(tester);
+    await _pumpOrderStatus(tester, container, _twoItemOrderJson());
+
+    expect(find.byIcon(Icons.edit_outlined), findsNothing,
+        reason: 'pencil Edit button must no longer exist on the summary rows');
+=======
   testWidgets('Bug 3: per-row Edit buttons stay removed; Edit lives only on '
         'the Order Summary header', (tester) async {
     useTallSurface(tester);
@@ -197,6 +206,7 @@ void main() {
     expect(find.byIcon(Icons.edit_outlined), findsOneWidget,
         reason: 'exactly one pencil Edit button, on the summary header '
             '(next to Delete) - never on the item rows');
+>>>>>>> dev
     expect(find.byIcon(Icons.delete_outline), findsWidgets,
         reason: 'delete stays available for pending/packed rows');
   });

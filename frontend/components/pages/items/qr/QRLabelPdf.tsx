@@ -56,11 +56,12 @@ const styles = StyleSheet.create({
 export const QRLabelPdf = ({ item, qrImages, id }: QRLabelPdfProps) => (
   <Document>
     {item.variants.map((variant, index) => {
-      // console.log(variant.display_order);
       return (
         <Page key={variant.id} size={[70.87, 141.73]} style={styles.page}>
           <Text style={styles.name}>{item.name}</Text>
-          <Text style={styles.variant}>Color #{variant.display_order}</Text>
+          {variant.display_order ? (
+            <Text style={styles.variant}>Color #{variant.display_order}</Text>
+          ) : null}
           <View>
             {/* eslint-disable-next-line*/}
             <Image src={qrImages[variant.id]} style={styles.qr} />
