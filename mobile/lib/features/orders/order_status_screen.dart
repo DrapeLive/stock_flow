@@ -13,6 +13,10 @@ import '../../data/repositories.dart';
 import '../../models/models.dart';
 import '../../shared/scan_beep.dart';
 import '../../shared/widgets.dart';
+<<<<<<< HEAD
+=======
+import 'order_flow_utils.dart';
+>>>>>>> dev
 
 enum _OrderTab { packing, dispatching }
 
@@ -35,6 +39,10 @@ class _OrderStatusScreenState extends ConsumerState<OrderStatusScreen> {
   // server list). Ticking boxes updates checkbox state but never reshuffles.
   List<OrderItem>? _packingItems;
   bool _deleting = false;
+<<<<<<< HEAD
+=======
+  bool _editStarting = false;
+>>>>>>> dev
   bool _logsExpanded = false;
   bool _logsLoading = false;
   List<OrderLog> _logs = const [];
@@ -49,9 +57,14 @@ class _OrderStatusScreenState extends ConsumerState<OrderStatusScreen> {
   bool get _isDeletable =>
       _order?.status == 'PENDING' || _order?.status == 'PACKED';
 
+<<<<<<< HEAD
   bool get _isEditable => _order?.status == 'DRAFT' ||
       _order?.status == 'PENDING' ||
       _order?.status == 'PACKED';
+=======
+  bool get _isEditable =>
+      _order?.status == 'PENDING' || _order?.status == 'PACKED';
+>>>>>>> dev
 
 @override
   void initState() {
@@ -314,6 +327,59 @@ Future<void> _completePacking() async {
     }
   }
 
+<<<<<<< HEAD
+=======
+  Future<void> _openEdit() async {
+    final order = _order;
+    if (order == null || _editStarting) return;
+    setState(() {
+      _packingMode = false;
+      _packingItems = null;
+      _editStarting = true;
+    });
+    // Enter edit mode on the backend first: it atomically snapshots the
+    // current items and sets status=EDITING so concurrent admins/agents
+    // cannot edit the same order. Item stock stays reserved while editing.
+    String status;
+    try {
+      status = await repos.order.startEdit(order.id);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _editStarting = false);
+        AppToast.error(context, e.toString());
+      }
+      return;
+    }
+    if (status != 'EDITING') {
+      // A 200 alone is not proof the order was claimed; without this the item
+      // cart would post add-item to an order still in its pre-edit status.
+      if (mounted) {
+        setState(() => _editStarting = false);
+        AppToast.error(context, 'Could not start editing: still $status');
+      }
+      return;
+    }
+    // Point the shared draft session at this order so the reused
+    // scanner/search item-picker screens add items to it.
+    OrderDraftSession.start(
+      orderId: order.id,
+      customerId: order.customer.id,
+    );
+    if (mounted) setState(() => _editStarting = false);
+    if (!mounted) return;
+    await context.push('/admin/order/status/${order.id}/edit');
+    OrderDraftSession.clear();
+    if (mounted) {
+      await _load();
+      if (_packingMode && _tab == _OrderTab.packing) {
+        setState(() {
+          _packingItems = sortOrderItemsUnpackedFirst(_order?.items ?? const []);
+        });
+      }
+    }
+  }
+
+>>>>>>> dev
   Future<void> _deleteOrder() async {
     final pin = await PinDialog.show(
       context,
@@ -403,14 +469,37 @@ _OrderTabs(
                     _packingItems = null;
                   }),
                 ),
+<<<<<<< HEAD
                 if (_isDeletable)
+=======
+if (_isEditable || _isDeletable)
+>>>>>>> dev
                   Align(
                     alignment: Alignment.centerRight,
                     child: Padding(
                       padding: const EdgeInsets.only(bottom: 8),
+<<<<<<< HEAD
                       child: _OrderDeleteButton(
                         loading: _deleting,
                         onTap: _deleteOrder,
+=======
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (_isEditable)
+                            _OrderEditButton(
+                              loading: _editStarting,
+                              onTap: _openEdit,
+                            ),
+                          if (_isEditable && _isDeletable)
+                            const SizedBox(width: 8),
+                          if (_isDeletable)
+                            _OrderDeleteButton(
+                              loading: _deleting,
+                              onTap: _deleteOrder,
+                            ),
+                        ],
+>>>>>>> dev
                       ),
                     ),
                   ),
@@ -626,6 +715,53 @@ const Text(
   }
 }
 
+<<<<<<< HEAD
+=======
+class _OrderEditButton extends StatelessWidget {
+  const _OrderEditButton({required this.onTap, this.loading = false});
+  final VoidCallback onTap;
+  final bool loading;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(10),
+      onTap: loading ? null : onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: const Color(0xFFCBD5E1)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (loading)
+              const SizedBox(
+                width: 14,
+                height: 14,
+                child: CircularProgressIndicator(
+                    strokeWidth: 2, color: Color(0xFF4F46E5)),
+              )
+            else
+              const Icon(Icons.edit_outlined, size: 16, color: Color(0xFF4F46E5)),
+            const SizedBox(width: 6),
+            Text(
+              'Edit',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF4F46E5),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+>>>>>>> dev
 // ---------------------------------------------------------------------------
 // Tabs
 // ---------------------------------------------------------------------------

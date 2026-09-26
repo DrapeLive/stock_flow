@@ -16,7 +16,18 @@ export const api = axios.create({
   },
 });
 
+export function clearFormDataContentType(config: {
+  data?: unknown;
+  headers: { delete: (name: string) => void };
+}): void {
+  if (config.data instanceof FormData) {
+    config.headers.delete("Content-Type");
+  }
+}
+
 api.interceptors.request.use((config) => {
+  clearFormDataContentType(config);
+
   if (typeof window !== "undefined") {
     const accessToken = Cookies.get("token");
 

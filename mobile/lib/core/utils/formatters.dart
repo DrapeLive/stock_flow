@@ -20,6 +20,7 @@ String toApiDate(DateTime d) => _apiDate.format(d);
 
 final DateFormat _displayDate = DateFormat('dd MMM yyyy');
 
+<<<<<<< HEAD
 String formatDate(String? iso) {
   if (iso == null || iso.isEmpty) return kEmDash;
   try {
@@ -27,25 +28,49 @@ String formatDate(String? iso) {
   } catch (_) {
     return iso;
   }
+=======
+DateTime? _parseToIst(String iso) {
+  try {
+    return DateTime.parse(iso).toUtc().add(const Duration(hours: 5, minutes: 30));
+  } catch (_) {
+    return null;
+  }
+}
+
+String formatDate(String? iso) {
+  if (iso == null || iso.isEmpty) return kEmDash;
+  final date = _parseToIst(iso);
+  return date == null ? iso : _displayDate.format(date);
+>>>>>>> dev
 }
 
 /// e.g. "12 Jan" — matches OrderCard's `day: "2-digit", month: "short"`.
 String formatDateShort(String? iso) {
   if (iso == null || iso.isEmpty) return kEmDash;
+<<<<<<< HEAD
   try {
     return DateFormat('dd MMM').format(DateTime.parse(iso));
   } catch (_) {
     return iso;
   }
+=======
+  final date = _parseToIst(iso);
+  return date == null ? iso : DateFormat('dd MMM').format(date);
+>>>>>>> dev
 }
 
 String formatDateTime(String? iso) {
   if (iso == null || iso.isEmpty) return kEmDash;
+<<<<<<< HEAD
   try {
     return DateFormat('dd MMM yyyy, hh:mm a').format(DateTime.parse(iso));
   } catch (_) {
     return iso;
   }
+=======
+  final date = _parseToIst(iso);
+  return date == null ? iso : DateFormat('dd MMM yyyy, hh:mm a').format(date);
+>>>>>>> dev
 }
 
 /// Human-readable set count, e.g. "1 Set" / "2 Sets".

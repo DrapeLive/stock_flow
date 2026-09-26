@@ -26,11 +26,33 @@ class _LoadError {
 
 /// Step 2 - order details + item list. Mirrors the agent
 /// `order/new/[id]/page.tsx` shared by the admin flow.
+<<<<<<< HEAD
 class OrderCreateScreen extends ConsumerStatefulWidget {
   const OrderCreateScreen({super.key, required this.customerId});
 
   final int customerId;
 
+=======
+///
+/// When [editOrderId] is set the same cart is reused to edit an existing
+/// (placed) order instead of building a draft: the order details + item rows
+/// + totals all behave identically, only the footer action ("Save Order") and
+/// the header differ.
+class OrderCreateScreen extends ConsumerStatefulWidget {
+  const OrderCreateScreen({
+    super.key,
+    required this.customerId,
+    this.editOrderId,
+  });
+
+  final int customerId;
+
+  /// When set, this screen edits the given existing order instead of the
+  /// draft in [OrderDraftSession]. [customerId] is ignored in this mode (the
+  /// order's own customer is used).
+  final int? editOrderId;
+
+>>>>>>> dev
   @override
   ConsumerState<OrderCreateScreen> createState() => _OrderCreateScreenState();
 }
@@ -51,6 +73,22 @@ class _OrderCreateScreenState extends ConsumerState<OrderCreateScreen>
   int? _preferredTransport;
   String _notes = '';
   bool _ready = false;
+<<<<<<< HEAD
+=======
+  bool _editCommitted = false;
+
+  bool get _isEdit => widget.editOrderId != null;
+
+  /// Order id the cart operates on: the draft in the session (create flow) or
+  /// the fixed order id (edit flow).
+  int? get _orderId => _isEdit ? widget.editOrderId : OrderDraftSession.orderId;
+
+  /// Customer id used to build the scanner/search/picker routes. For edits the
+  /// route's [Widget.customerId] is a placeholder, so the order's own customer
+  /// is used.
+  int get _effectiveCustomerId =>
+      _isEdit ? (_order?.customer.id ?? 0) : widget.customerId;
+>>>>>>> dev
 
   @override
   void initState() {
@@ -91,8 +129,13 @@ class _OrderCreateScreenState extends ConsumerState<OrderCreateScreen>
     } catch (_) {}
   }
 
+<<<<<<< HEAD
   Future<void> _load() async {
     final orderId = OrderDraftSession.orderId;
+=======
+Future<void> _load() async {
+    final orderId = _orderId;
+>>>>>>> dev
     if (orderId == null) {
       setState(() {
         _loadError = const _LoadError.notfound();
@@ -101,9 +144,25 @@ class _OrderCreateScreenState extends ConsumerState<OrderCreateScreen>
       return;
     }
     try {
+<<<<<<< HEAD
       final results = await Future.wait([
         repos.customer.getOne(widget.customerId),
         repos.order.getOne(orderId),
+=======
+      // In edit mode the customer is resolved from the order itself (the route
+      // only carries the order id), so fetch it first.
+      final editOrder =
+          _isEdit ? await repos.order.getOne(orderId) : null;
+      final customerId =
+          _isEdit ? editOrder!.customer.id : widget.customerId;
+      OrderDraftSession.start(orderId: orderId, customerId: customerId);
+
+      final results = await Future.wait([
+        repos.customer.getOne(customerId),
+        _isEdit
+            ? Future<Order>.value(editOrder!)
+            : repos.order.getOne(orderId),
+>>>>>>> dev
       ]);
       if (!mounted) return;
       final customer = results[0] as Customer;
@@ -140,6 +199,13 @@ _ready = true;
   }
 
   Future<void> _saveFields() async {
+<<<<<<< HEAD
+=======
+    // In edit mode fields are committed through save-edit (which restores and
+    // re-deducts stock in one request); a PATCH here would round-trip an
+    // already-EDITING order's fields separately.
+    if (_isEdit) return;
+>>>>>>> dev
     final orderId = OrderDraftSession.orderId;
     if (orderId == null) return;
     try {
@@ -159,6 +225,53 @@ _ready = true;
     return const [];
   }
 
+<<<<<<< HEAD
+=======
+  /// Finishes editing an existing order by committing edit mode via save-edit
+  /// (restores snapshot stock, re-deducts the final items and applies the
+  /// order fields in one request). On success the draft session is released and
+  /// control returns to the order status screen (which reloads).
+  Future<void> _finishEdit() async {
+    final orderId = OrderDraftSession.orderId;
+    if (orderId == null || _placing) return;
+    _saveDebounce?.cancel();
+    setState(() => _placing = true);
+    try {
+      await repos.order.saveEdit(
+        orderId,
+        expectedDeliveryDate:
+            _expectedDate == null ? null : toApiDate(_expectedDate!),
+        preferredTransport: _preferredTransport,
+        notes: _notes.isEmpty ? null : _notes,
+      );
+      _editCommitted = true;
+      OrderDraftSession.clear();
+      if (!mounted) return;
+      AppToast.success(context, 'Order updated successfully!');
+      if (context.canPop()) {
+        context.pop();
+      } else {
+        context.go('/admin/order/status/$orderId');
+      }
+    } on ApiException catch (e) {
+      final items = _outOfStockItems(e.data);
+      if (items.isNotEmpty) {
+        await _showOutOfStock(items);
+      } else if (mounted) {
+        AppToast.error(context, e.message);
+      }
+      if (mounted) setState(() => _placing = false);
+    } catch (e) {
+      if (mounted) {
+        AppToast.error(context, e.toString().replaceFirst('Exception: ', ''));
+        setState(() => _placing = false);
+      }
+    }
+  }
+
+  Future<void> _footerAction() => _isEdit ? _finishEdit() : _placeOrder();
+
+>>>>>>> dev
   Future<void> _placeOrder() async {
     final orderId = OrderDraftSession.orderId;
     if (orderId == null || _order == null) return;
@@ -257,7 +370,12 @@ _ready = true;
     if (mounted) setState(() => _order = order);
   }
 
+<<<<<<< HEAD
   void _addItem() => context.push('/admin/order/new/${widget.customerId}/scan');
+=======
+  void _addItem() =>
+      context.push('/admin/order/new/$_effectiveCustomerId/scan');
+>>>>>>> dev
 
   void _editItem(OrderItem item) {
     final qr = item.item?.variants
@@ -268,8 +386,13 @@ _ready = true;
       AppToast.error(context, 'This item has no QR code to edit.');
       return;
     }
+<<<<<<< HEAD
     context.push(
         '/admin/order/new/${widget.customerId}/item/${Uri.encodeComponent(qr)}');
+=======
+context.push(
+        '/admin/order/new/$_effectiveCustomerId/item/${Uri.encodeComponent(qr)}');
+>>>>>>> dev
   }
 
   Future<void> _pickDate() async {
@@ -286,7 +409,35 @@ _ready = true;
     }
   }
 
+<<<<<<< HEAD
   Future<void> _handleLeave() async {
+=======
+Future<void> _handleLeave() async {
+    // Editing an existing order entered edit mode via start-edit; leaving
+    // without saving must cancel the backend edit so the order goes back to
+    // its previous status (not stuck in EDITING).
+    if (_isEdit) {
+      if (!_editCommitted) {
+        final orderId = OrderDraftSession.orderId;
+        if (orderId != null) {
+          try {
+            await repos.order.cancelEdit(orderId);
+          } catch (_) {
+            // Best effort: if the edit already committed or another user
+            // finished it, the backend 400 is treated as a no-op.
+          }
+        }
+      }
+      OrderDraftSession.clear();
+      if (!mounted) return;
+      if (context.canPop()) {
+        context.pop();
+      } else {
+        context.go('/admin');
+      }
+      return;
+    }
+>>>>>>> dev
     final items = _order?.items ?? const <OrderItem>[];
     if (items.isNotEmpty) {
       final leave = await confirmDialog(
@@ -405,9 +556,17 @@ leading: IconButton(
                     color: Color(0xFF111827)),
               ),
               const SizedBox(height: 6),
+<<<<<<< HEAD
               Text(
                 error.notfound
                     ? 'This order draft has expired or was removed. You can start a new order for this customer.'
+=======
+Text(
+                error.notfound
+                    ? (_isEdit
+                        ? 'This order no longer exists or has been deleted.'
+                        : 'This order draft has expired or was removed. You can start a new order for this customer.')
+>>>>>>> dev
                     : (error.message ?? 'Something went wrong'),
                 textAlign: TextAlign.center,
                 style: const TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
@@ -415,11 +574,27 @@ leading: IconButton(
               const SizedBox(height: 20),
               if (error.notfound)
                 StockFlowButton(
+<<<<<<< HEAD
                   label: 'Start new order',
                   onPressed: () {
                     OrderDraftSession.clear();
                     context.pushReplacement(
                         '/admin/order/new?customer=${widget.customerId}');
+=======
+                  label: _isEdit ? 'Back' : 'Start new order',
+                  onPressed: () {
+                    OrderDraftSession.clear();
+                    if (_isEdit) {
+                      if (context.canPop()) {
+                        context.pop();
+                        return;
+                      }
+                      context.go('/admin');
+                      return;
+                    }
+                    context.pushReplacement(
+                        '/admin/order/new?customer=$_effectiveCustomerId');
+>>>>>>> dev
                   },
                 )
               else
@@ -455,6 +630,7 @@ Widget _header(int itemCount) {
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+<<<<<<< HEAD
                   children: const [
                     Text('Order Details',
                         style: TextStyle(
@@ -463,6 +639,19 @@ Widget _header(int itemCount) {
                             color: Color(0xFF111827))),
                     Text('STEP 2 $kEmDash ADD ITEMS',
                         style: TextStyle(
+=======
+                  children: [
+                    Text(_isEdit ? 'Edit Order' : 'Order Details',
+                        style: const TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFF111827))),
+                    Text(
+                        _isEdit
+                            ? 'EDIT ITEMS'
+                            : 'STEP 2 $kEmDash ADD ITEMS',
+                        style: const TextStyle(
+>>>>>>> dev
                             fontSize: 9,
                             fontWeight: FontWeight.w800,
                             letterSpacing: 1.3,
@@ -786,12 +975,21 @@ Widget _header(int itemCount) {
             ],
           ),
           const SizedBox(height: 16),
+<<<<<<< HEAD
           StockFlowButton(
             label: 'Place Order',
             loading: _placing,
             icon: const Icon(Icons.check_circle_outline,
                 size: 18, color: Colors.white),
             onPressed: _placing ? null : _placeOrder,
+=======
+StockFlowButton(
+            label: _isEdit ? 'Save Order' : 'Place Order',
+            loading: _placing,
+            icon: const Icon(Icons.check_circle_outline,
+                size: 18, color: Colors.white),
+            onPressed: _placing ? null : _footerAction,
+>>>>>>> dev
           ),
         ],
       ),

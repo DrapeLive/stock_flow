@@ -59,6 +59,7 @@ def _build_snapshot(order):
             "variant_image": oi.variant_image,
             "size": oi.size,
             "quantity": oi.quantity,
+            "packed_quantity": oi.packed_quantity,
         }
         for oi in order.items.all()
     ]
@@ -74,6 +75,28 @@ def _is_creator(user, order):
     if order.created_by_id is not None:
         return order.created_by_id == user.id
     return bool(order.agent_id) and order.agent.user_id == user.id
+
+
+def _edit_access_error(user, order):
+    """Return a 403 ``Response`` when ``user`` may not edit ``order``, else None.
+
+    An admin may start/save/cancel an edit on any order inside their business
+    scope (mirroring every other admin order action), including an order that
+    belongs to an agent, because the edit session can be the admin's own. Agents
+    remain limited to their own orders.
+    """
+    if user.role == "ADMIN":
+        biz = admin_business(user)
+        if biz and not order.items.filter(item_type=biz).exists():
+            return Response(
+                {"error": "This order is outside your business type"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        return None
+
+    if order.agent_id and order.agent.user_id == user.id:
+        return None
+    return Response({"error": "Unauthorized"}, status=status.HTTP_403_FORBIDDEN)
 
 
 def _reap_stale_drafts(user):
@@ -101,7 +124,7 @@ def _reap_stale_drafts(user):
 
 
 def _revert_edit(order):
-    """Restore OrderItems from reservation_snapshot and set status back to PENDING."""
+    """Restore OrderItems from reservation_snapshot and revert to pre-edit status."""
     with transaction.atomic():
         order.items.all().delete()
         for snap in order.reservation_snapshot:
@@ -116,10 +139,12 @@ def _revert_edit(order):
                 variant_image=snap.get("variant_image"),
                 size=snap.get("size", ""),
                 quantity=snap["quantity"],
+                packed_quantity=snap.get("packed_quantity", 0),
             )
         order.reservation_snapshot = []
         order.editing_started_at = None
-        order.status = "PENDING"
+        order.status = order.previous_edit_status or "PENDING"
+        order.previous_edit_status = None
         order.save()
 
 
@@ -361,54 +386,80 @@ def return_stock_for_item(order_item):
 
 
 class StartEditView(APIView):
-    permission_classes = [IsAgent]
+    permission_classes = [IsAgentOrAdmin]
 
     @extend_schema(
-        summary="Start editing a PENDING order",
+        summary="Start editing a PENDING or PACKED order",
         request=None,
         responses={200: None, 400: None, 403: None},
     )
     def post(self, request, order_id):
-        order = get_object_or_404(Order, id=order_id)
-
-        if order.status != "PENDING":
-            return Response(
-                {"error": "Only PENDING orders can be edited"},
-                status=status.HTTP_400_BAD_REQUEST,
+        with transaction.atomic():
+            order = get_object_or_404(
+                Order.objects.select_for_update(), id=order_id
             )
 
-        if order.agent.user != request.user:
-            return Response({"error": "Unauthorized"}, status=403)
+            if order.status not in ("PENDING", "PACKED"):
+                return Response(
+                    {"error": "Only PENDING or PACKED orders can be edited"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
-        order.reservation_snapshot = _build_snapshot(order)
-        order.editing_started_at = timezone.now()
-        order.save()
-        # Remove viewed entries for non-pending/packed orders
-        UserViewedOrder.objects.filter(order=order).delete()
+            denied = _edit_access_error(request.user, order)
+            if denied:
+                return denied
 
-        OrderLog.objects.create(
-            order=order,
-            action="EDIT_STARTED",
-            details={"items_count": len(order.reservation_snapshot)},
-            performed_by=request.user,
-        )
+            order.reservation_snapshot = _build_snapshot(order)
+            order.editing_started_at = timezone.now()
+            order.previous_edit_status = order.status
+            order.status = "EDITING"
+            order.save(
+                update_fields=[
+                    "reservation_snapshot",
+                    "editing_started_at",
+                    "previous_edit_status",
+                    "status",
+                ]
+            )
+            # Remove viewed entries for non-pending/packed orders
+            UserViewedOrder.objects.filter(order=order).delete()
 
-        return Response({"message": "Edit started"})
+            OrderLog.objects.create(
+                order=order,
+                action="EDIT_STARTED",
+                details={"items_count": len(order.reservation_snapshot)},
+                performed_by=request.user,
+            )
+
+            return Response(
+                {
+                    "message": "Edit started",
+                    "status": order.status,
+                    "order_id": order.id,
+                }
+            )
 
 
 class SaveEditView(APIView):
-    permission_classes = [IsAgent]
+    permission_classes = [IsAgentOrAdmin]
 
     @extend_schema(
-        summary="Save edits made to a PENDING order",
+        summary="Save edits made to a PENDING/PACKED order",
         request=None,
         responses={200: None, 400: None, 403: None},
     )
     def post(self, request, order_id):
         order = get_object_or_404(Order, id=order_id)
 
-        if order.agent.user != request.user:
-            return Response({"error": "Unauthorized"}, status=403)
+        denied = _edit_access_error(request.user, order)
+        if denied:
+            return denied
+
+        if order.status != "EDITING":
+            return Response(
+                {"error": "Order is not in editing mode"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         with transaction.atomic():
             for snap in order.reservation_snapshot:
@@ -519,7 +570,8 @@ class SaveEditView(APIView):
 
             order.reservation_snapshot = []
             order.editing_started_at = None
-            order.status = "PENDING"
+            order.status = order.previous_edit_status or "PENDING"
+            order.previous_edit_status = None
 
             if expected_delivery_date:
                 order.expected_delivery_date = expected_delivery_date
@@ -550,7 +602,13 @@ class SaveEditView(APIView):
             performed_by=request.user,
         )
 
-        return Response({"message": "Order saved successfully", "order_id": order.id})
+        return Response(
+            {
+                "message": "Order saved successfully",
+                "order_id": order.id,
+                "status": order.status,
+            }
+        )
 
 
 class OrderViewSet(ModelViewSet):
@@ -568,8 +626,13 @@ class OrderViewSet(ModelViewSet):
             cutoff = timezone.now() - timedelta(minutes=15)
             stale_editing = Order.objects.filter(
                 status="EDITING",
-                agent__user=user,
                 editing_started_at__lt=cutoff,
+            ).filter(
+                Q(agent__user=user)
+                | Q(
+                    logs__action="EDIT_STARTED",
+                    logs__performed_by=user,
+                )
             )
             for o in stale_editing:
                 _revert_edit(o)
@@ -835,14 +898,15 @@ class OrderViewSet(ModelViewSet):
     def cancel_edit(self, request, pk=None):
         order = self.get_object()
 
+        denied = _edit_access_error(request.user, order)
+        if denied:
+            return denied
+
         if order.status != "EDITING":
             return Response(
                 {"error": "Order is not in editing mode"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-
-        if order.agent.user != request.user:
-            return Response({"error": "Unauthorized"}, status=403)
 
         _revert_edit(order)
 
@@ -853,7 +917,13 @@ class OrderViewSet(ModelViewSet):
             performed_by=request.user,
         )
 
-        return Response({"message": "Edit cancelled"})
+        return Response(
+            {
+                "message": "Edit cancelled",
+                "order_id": order.id,
+                "status": order.status,
+            }
+        )
 
     @extend_schema(summary="List order IDs viewed by the current user")
     @action(detail=False, methods=["get"], url_path="my-viewed-ids")
@@ -949,14 +1019,24 @@ class AddOrderItemView(APIView):
 
         order = get_object_or_404(Order, id=order_id)
 
-        # Admins may only add items to a draft order they created themselves.
-        if request.user.role == "ADMIN" and (
-            order.status != "DRAFT" or not _is_creator(request.user, order)
-        ):
-            return Response(
-                {"error": "An admin can only add items to a draft order they created"},
-                status=status.HTTP_403_FORBIDDEN,
+        # Admins may add items to a draft order they created themselves or to
+        # an order currently being edited (started via start-edit).
+        if request.user.role == "ADMIN":
+            is_own_draft = order.status == "DRAFT" and _is_creator(
+                request.user, order
             )
+            is_active_edit = order.status == "EDITING"
+            if not (is_own_draft or is_active_edit):
+                return Response(
+                    {
+                        "error": "An admin can only add items to a draft order they created or to an order being edited"
+                    },
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+            if is_active_edit:
+                denied = _edit_access_error(request.user, order)
+                if denied:
+                    return denied
 
         if order.status not in ("DRAFT", "EDITING", "PENDING"):
             return Response(

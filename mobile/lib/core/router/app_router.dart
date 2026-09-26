@@ -19,7 +19,10 @@ import '../../features/orders/order_create_item_screen.dart';
 import '../../features/orders/order_create_scanner_screen.dart';
 import '../../features/orders/order_create_search_screen.dart';
 import '../../features/orders/order_create_screen.dart';
+<<<<<<< HEAD
 import '../../features/orders/order_edit_stub_screen.dart';
+=======
+>>>>>>> dev
 import '../../features/orders/order_status_screen.dart';
 import '../../features/profile/profile_screen.dart';
 import '../../features/summary/summary_screen.dart';
@@ -164,8 +167,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/admin/order/status/:id/edit',
+<<<<<<< HEAD
         builder: (c, s) => OrderEditStubScreen(
           orderId: int.parse(s.pathParameters['id'] ?? '0'),
+=======
+        builder: (c, s) => OrderCreateScreen(
+          customerId: 0,
+          editOrderId: int.parse(s.pathParameters['id'] ?? '0'),
+>>>>>>> dev
         ),
       ),
     ],

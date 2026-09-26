@@ -67,6 +67,11 @@ class ApiClient {
 
   static void setToken(String? token) => _token = token;
 
+<<<<<<< HEAD
+=======
+  static bool get hasToken => _token != null && _token!.isNotEmpty;
+
+>>>>>>> dev
   static void _perfBytes(RequestOptions o, int? status, dynamic data, {DioException? error}) {
     final start = o.extra[kPerfStartKey];
     final ms =

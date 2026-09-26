@@ -228,6 +228,44 @@ void main() {
           preferredTransport: 1,
           notes: 'rush');
     });
+<<<<<<< HEAD
+=======
+
+    test('startEdit hits start-edit and invalidates order caches', () async {
+      mockGet('/api/orders/1/', body: orderJson());
+      await repos.order.getOne(1);
+      expect(canReadCache('order'), isTrue);
+
+      mockPost('/api/orders/1/start-edit/', body: const {'status': 'EDITING'});
+      expect(await repos.order.startEdit(1), 'EDITING');
+
+      expect(canReadCache('order'), isFalse);
+      expect(canReadCache('orders'), isFalse);
+    });
+
+    test('saveEdit posts the delivery/transport/notes payload', () async {
+      dioAdapter.onPost(
+        '/api/orders/1/save-edit/',
+        (server) => server.reply(200, const {'status': 'PENDING'}),
+        data: {
+          'expected_delivery_date': '2026-09-10',
+          'preferred_transport': 2,
+          'notes': 'revised qty',
+        },
+      );
+
+      await repos.order.saveEdit(1,
+          expectedDeliveryDate: '2026-09-10',
+          preferredTransport: 2,
+          notes: 'revised qty');
+    });
+
+    test('cancelEdit hits cancel-edit', () async {
+      mockPost('/api/orders/1/cancel-edit/', body: const {'status': 'PENDING'});
+
+      expect(await repos.order.cancelEdit(1), 'PENDING');
+    });
+>>>>>>> dev
   });
 
   group('ItemRepo', () {

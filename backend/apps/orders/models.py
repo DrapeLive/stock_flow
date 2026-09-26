@@ -47,6 +47,9 @@ class Order(models.Model):
 
     reservation_snapshot = models.JSONField(default=list, blank=True)
     editing_started_at = models.DateTimeField(null=True, blank=True)
+    previous_edit_status = models.CharField(
+        max_length=20, blank=True, null=True
+    )
     notes = models.CharField(max_length=200, null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)

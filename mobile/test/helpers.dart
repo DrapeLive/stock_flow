@@ -1,3 +1,7 @@
+<<<<<<< HEAD
+=======
+import 'dart:convert';
+>>>>>>> dev
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -7,6 +11,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hive_ce/hive.dart';
 import 'package:http_mock_adapter/http_mock_adapter.dart';
+<<<<<<< HEAD
+=======
+import 'package:http_mock_adapter/http_mock_adapter.dart' as mock;
+>>>>>>> dev
 
 import 'package:stock_flow_admin/core/api/api_client.dart';
 import 'package:stock_flow_admin/core/cache/app_cache.dart';
@@ -86,6 +94,35 @@ void mockPost(String path, {dynamic body, Map<String, dynamic>? query}) {
   );
 }
 
+<<<<<<< HEAD
+=======
+/// Matches a JSON request body exactly (decoded map or encoded string), so a
+/// payload-shape regression fails loudly instead of silently dropping the
+/// fields the backend actually reads. Implemented against the mock adapter's
+/// own matcher interface, which is distinct from `package:matcher`'s.
+class JsonBody implements mock.Matcher {
+  const JsonBody(this.expected);
+
+  final Map<String, dynamic> expected;
+
+  @override
+  bool matches(dynamic actual) {
+    Object? decoded = actual;
+    if (decoded is String) {
+      try {
+        decoded = jsonDecode(decoded);
+      } catch (_) {
+        return false;
+      }
+    }
+    if (decoded is! Map) return false;
+    final map = decoded;
+    if (map.length != expected.length) return false;
+    return expected.entries.every((e) => map[e.key] == e.value);
+  }
+}
+
+>>>>>>> dev
 void mockPut(String path, {dynamic body, Map<String, dynamic>? query}) {
   dioAdapter.onPut(
     path,

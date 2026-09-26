@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "87900909020",
+    "project_id": "xl-apparels",
+    "storage_bucket": "xl-apparels.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:87900909020:android:fffe51dc7c524015887319",
+        "android_client_info": {
+          "package_name": "com.xlapparals.stock_flow_admin"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCOJ3kPW-rVJw0x1WIElSsXFvJNHK_b1lE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -65,15 +65,8 @@ export const itemApi = {
     },
 
     create(data: ItemRequest | FormData): Promise<ItemResponse> {
-        // For FormData, leave Content-Type unset so the browser adds the
-        // multipart boundary itself (axios's transform would otherwise have no
-        // header to fill in, and a manually-set header would drop the boundary).
-        const headers =
-            data instanceof FormData
-                ? {}
-                : { "Content-Type": "application/json" };
         return api
-            .post<ItemResponse>("/api/items/", data, { headers })
+            .post<ItemResponse>("/api/items/", data)
             .then((r) => r.data);
     },
 

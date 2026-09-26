@@ -1,5 +1,10 @@
 gradle-wrapper.jar
 /.gradle
+<<<<<<< HEAD
+=======
+/.kotlin
+/build/
+>>>>>>> dev
 /captures/
 /gradlew
 /gradlew.bat
