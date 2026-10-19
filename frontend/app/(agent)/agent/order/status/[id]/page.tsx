@@ -134,6 +134,10 @@ export default function Page() {
             }
             lrNumber={data?.lr_number ?? ""}
             notes={data?.notes ?? ""}
+            splitFrom={data?.split_from}
+            dispatchHistory={data?.dispatch_history}
+            hasPartialDispatchRemainder={data?.has_partial_dispatch_remainder}
+            orderStatusHref="/agent/order/status"
           />
         )}
 

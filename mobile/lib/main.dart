@@ -1,19 +1,13 @@
-<<<<<<< HEAD
-=======
 import 'dart:async';
 
->>>>>>> dev
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app.dart';
 import 'core/api/api_client.dart';
 import 'core/cache/app_cache.dart';
-<<<<<<< HEAD
-=======
 import 'core/notifications/push_service.dart';
 import 'core/router/app_router.dart';
->>>>>>> dev
 import 'providers.dart';
 
 Future<void> main() async {
@@ -28,8 +22,6 @@ Future<void> main() async {
     container.read(sessionProvider.notifier).logout();
   };
 
-<<<<<<< HEAD
-=======
   // Best-effort push wiring; no-ops when Firebase isn't configured yet.
   PushService.instance.onOpen = (data) {
     final router = container.read(routerProvider);
@@ -48,7 +40,6 @@ Future<void> main() async {
   };
   unawaited(PushService.instance.init());
 
->>>>>>> dev
   runApp(
     UncontrolledProviderScope(
       container: container,

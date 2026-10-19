@@ -68,6 +68,12 @@ export default function OrderCard({ order, onClick }: OrderCardProps) {
         <StatusBadge status={order.status} />
       </div>
 
+      {order.has_partial_dispatch_remainder && (
+        <div className="mt-3 border-l-4 border-orange-500 bg-orange-50 px-3 py-2 text-[10px] font-black tracking-wide text-orange-800">
+          PARTIALLY DISPATCHED
+        </div>
+      )}
+
       <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-50">
         <div className="flex items-center gap-1.5">
           <span className="text-base font-black text-gray-900">

@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from django.conf import settings
 
 from rest_framework import serializers
@@ -57,6 +59,9 @@ class OrderItemSerializer(serializers.ModelSerializer):
     variant_display_order = serializers.CharField(
         source="variant.display_order", read_only=True
     )
+    variant_qr_code = serializers.CharField(
+        source="variant.qr_code", read_only=True, allow_null=True
+    )
     size_display = serializers.CharField(source="size", read_only=True)
     piece_count = serializers.SerializerMethodField()
 
@@ -75,6 +80,7 @@ class OrderItemSerializer(serializers.ModelSerializer):
             "variant_image",
             "variant_image_display",
             "variant_display_order",
+            "variant_qr_code",
             "size",
             "size_display",
             "quantity",
@@ -117,11 +123,31 @@ class OrderSerializer(serializers.ModelSerializer):
 
     total_sets = serializers.SerializerMethodField()
     total_pieces = serializers.SerializerMethodField()
+    dispatch_history = serializers.SerializerMethodField()
+    has_partial_dispatch_remainder = serializers.SerializerMethodField()
 
     class Meta:
         model = Order
         fields = "__all__"
-        read_only_fields = ("created_by",)
+        read_only_fields = ("created_by", "split_from")
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        # A split order represents the remainder of the original customer
+        # order. Expose the root order date even for older split rows whose
+        # stored created_at was set to the split time.
+        root = instance
+        seen_ids = {root.pk}
+        while root.split_from_id:
+            root = root.split_from
+            if root.pk in seen_ids:
+                break
+            seen_ids.add(root.pk)
+        if root.pk != instance.pk:
+            data["created_at"] = self.fields["created_at"].to_representation(
+                root.created_at
+            )
+        return data
 
     def get_total_sets(self, obj):
         return sum(i.quantity for i in obj.items.all())
@@ -132,6 +158,67 @@ class OrderSerializer(serializers.ModelSerializer):
             piece_count = get_piece_count(i.size_group, i.item_type or "gents")
             total += i.quantity * piece_count
         return total
+
+    def get_dispatch_history(self, obj):
+        """Return dispatched ancestors for pending orders created by splits."""
+        history = []
+        seen_ids = {obj.pk}
+        parent = obj
+        while parent.split_from_id:
+            parent = parent.split_from
+            if parent.pk in seen_ids:
+                break
+            seen_ids.add(parent.pk)
+            if parent.status == "DISPATCHED":
+                history.append(
+                    {
+                        "id": parent.pk,
+                        "dispatched_at": parent.dispatched_at,
+                        "total_price": str(
+                            sum(
+                                (item.item_price or 0)
+                                * item.quantity
+                                * get_piece_count(
+                                    item.size_group, item.item_type or "gents"
+                                )
+                                for item in parent.items.all()
+                            )
+                        ),
+                    }
+                )
+        history.reverse()
+        return history
+
+    def get_has_partial_dispatch_remainder(self, obj):
+        """Keep the indicator while any partial-dispatch remainder is active."""
+        stack = [obj]
+        seen_ids = set()
+        active_statuses = {"PENDING", "PACKED", "EDITING"}
+        while stack:
+            current = stack.pop()
+            if current.pk in seen_ids:
+                continue
+            seen_ids.add(current.pk)
+            if (
+                current.split_from_id
+                and current.status in active_statuses
+            ):
+                return True
+            stack.extend(current.split_orders.all())
+        return False
+
+
+class AdminDraftOrderSerializer(OrderSerializer):
+    """OrderSerializer plus the derived draft expiry (no stored field).
+
+    Used only by the admin abandoned-drafts list so existing order payloads
+    stay byte-identical.
+    """
+
+    expires_at = serializers.SerializerMethodField()
+
+    def get_expires_at(self, obj):
+        return (obj.created_at + timedelta(minutes=30)).isoformat()
 
 
 class AddOrderItemSerializer(serializers.Serializer):

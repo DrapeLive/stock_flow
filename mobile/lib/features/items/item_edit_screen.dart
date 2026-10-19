@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:image_picker/image_picker.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/price_input.dart';
@@ -221,10 +220,10 @@ bool get _isValid {
   }
 
   Future<void> _pickImageFor(_VariantGroup g) async {
-    final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
-    if (picked == null) return;
+    final path = await pickImageWithSourceChoice(context);
+    if (path == null || !mounted) return;
     setState(() {
-      g.newImagePath = picked.path;
+      g.newImagePath = path;
     });
   }
 

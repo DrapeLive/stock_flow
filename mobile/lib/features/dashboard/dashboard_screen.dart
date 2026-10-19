@@ -16,8 +16,58 @@ import '../../models/models.dart';
 import '../../providers.dart';
 import '../../shared/admin_shell.dart';
 import '../../shared/widgets.dart';
+import '../orders/order_flow_utils.dart';
 
-enum AdminTab { all, pending, packed, dispatched }
+enum AdminTab { all, pending, packed, dispatched, drafts }
+
+/// The status a tab filters on, or `null` for the All tab.
+///
+/// Single source of truth for BOTH the badge-count derivation and the list
+/// query, so the two can never disagree about what "Dispatched" means.
+///
+/// Drafts combine the signed-in admin's own drafts from `/api/orders/` and
+/// recent agent drafts from `/api/orders/admin-drafts/`. The order-id snapshot
+/// does not include DRAFT rows, so this tab counts its own results.
+String? orderStatusForTab(AdminTab tab) => switch (tab) {
+      AdminTab.all => null,
+      AdminTab.pending => 'PENDING',
+      AdminTab.packed => 'PACKED',
+      AdminTab.dispatched => 'DISPATCHED',
+      AdminTab.drafts => 'DRAFT',
+    };
+
+/// Orders a tab covers, taken from the same `{id, status}` snapshot
+/// (`/api/orders/order-ids/`) that every tab counts from — including
+/// [AdminTab.dispatched], which the backend does return.
+List<({int id, String status})> orderRecordsForTab(
+  List<({int id, String status})> allIds,
+  AdminTab tab,
+) {
+  final status = orderStatusForTab(tab);
+  return allIds.where((o) => status == null || o.status == status).toList();
+}
+
+/// Dispatched orders are always treated as viewed (see `_syncPulse` and the
+/// order card's `viewed` flag), so they are never unread.
+bool isUnreadOrder(({int id, String status}) o, Set<int> viewedIds) =>
+    o.status != 'DISPATCHED' && !viewedIds.contains(o.id);
+
+/// Badge count for a tab.
+///
+/// Every tab — including Dispatched — counts from the one shared snapshot via
+/// [orderRecordsForTab]. With [unreadOnly] the count narrows to unread records,
+/// which is legitimately 0 for Dispatched because dispatched orders are always
+/// viewed.
+int orderCountForTab(
+  List<({int id, String status})> allIds,
+  AdminTab tab, {
+  bool unreadOnly = false,
+  Set<int> viewedIds = const {},
+}) {
+  final records = orderRecordsForTab(allIds, tab);
+  if (!unreadOnly) return records.length;
+  return records.where((o) => isUnreadOrder(o, viewedIds)).length;
+}
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -44,6 +94,17 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
   List<SimpleCustomer> _customers = [];
   Timer? _searchDebounce;
 
+  /// Recent agent drafts awaiting admin review. Shared by the banner and the
+  /// Drafts tab. Never cached because the review window is short.
+  List<Order> _drafts = const [];
+  List<Order> _ownDrafts = const [];
+  int _draftCount = 0;
+  int _ownDraftCount = 0;
+  bool _bannerDismissed = false;
+
+  /// Draft ids with an accept/reject in flight, to disable their buttons.
+  final Set<int> _actingDrafts = {};
+
   /// One ticker shared by every unread card's [PulsingDot] instead of one
   /// controller per card. Only runs while the list has unread rows, so it
   /// costs nothing (and schedules no frames) otherwise.
@@ -56,6 +117,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
   String? _error;
   int _loadOrdersGen = 0;
   int _loadCountsGen = 0;
+  int _loadDraftsGen = 0;
   List<Order> _orders = const [];
   int _totalPages = 1;
   final int _pageSize = 50;
@@ -87,6 +149,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     _loadCounts();
     _loadCustomers();
     _loadOrders();
+    _loadDrafts();
   }
 
   @override
@@ -164,40 +227,35 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     } catch (_) {}
   }
 
-  List<({int id, String status})> _recordsFor(AdminTab tab) {
-    final status = switch (tab) {
-      AdminTab.all => null,
-      AdminTab.pending => 'PENDING',
-      AdminTab.packed => 'PACKED',
-      AdminTab.dispatched => 'DISPATCHED',
-    };
-    return _allIds.where((o) => status == null || o.status == status).toList();
+  int _unreadCountFor(AdminTab tab) {
+    // Drafts are never "unread" — the banner + Drafts tab carry them.
+    if (tab == AdminTab.drafts) return 0;
+    return orderCountForTab(
+      _allIds,
+      tab,
+      unreadOnly: true,
+      viewedIds: _viewedIds,
+    );
   }
-
-  int _unreadCountFor(AdminTab tab) => _recordsFor(tab)
-      .where((o) => o.status != 'DISPATCHED' && !_viewedIds.contains(o.id))
-      .length;
 
   int _countFor(AdminTab tab) {
-    if (tab == AdminTab.dispatched) return 0;
-    if (_showUnreadOnly) return _unreadCountFor(tab);
-    return _recordsFor(tab).length;
+    // The abandoned-drafts count comes from its own endpoint (server-side
+    // 30-minute window + non-empty filter), not the order-ids snapshot.
+    if (tab == AdminTab.drafts) return _draftCount + _ownDraftCount;
+    return orderCountForTab(
+      _allIds,
+      tab,
+      unreadOnly: _showUnreadOnly,
+      viewedIds: _viewedIds,
+    );
   }
 
-  String? get _statusParam {
-    switch (_tab) {
-      case AdminTab.all:
-        return null;
-      case AdminTab.pending:
-        return 'PENDING';
-      case AdminTab.packed:
-        return 'PACKED';
-      case AdminTab.dispatched:
-        return 'DISPATCHED';
-    }
-  }
+  String? get _statusParam => orderStatusForTab(_tab);
 
   Future<void> _loadOrders() async {
+    // Drafts are loaded separately because they combine admin-owned drafts
+    // with the dedicated recent-agent-drafts endpoint.
+    if (_tab == AdminTab.drafts) return _loadDrafts();
     final gen = ++_loadOrdersGen;
     setState(() {
       _loading = true;
@@ -233,6 +291,123 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
           _loading = false;
         });
       }
+    }
+  }
+
+  /// Loads recent agent drafts and the admin's own drafts. Runs on startup and
+  /// after accept/reject so the banner and Drafts tab stay current. Has its own
+  /// generation counter so it cannot cancel a regular order-list load.
+  Future<void> _loadDrafts() async {
+    final gen = ++_loadDraftsGen;
+    final showProgress = _tab == AdminTab.drafts;
+    if (showProgress) {
+      setState(() {
+        _loading = true;
+        _error = null;
+      });
+    }
+    Paginated<Order>? agentDrafts;
+    Paginated<Order>? ownDrafts;
+    Object? loadError;
+    try {
+      agentDrafts = await repos.order.getAdminDrafts();
+    } catch (e) {
+      loadError = e;
+    }
+    try {
+      ownDrafts = await repos.order.getOwnDrafts();
+    } catch (e) {
+      loadError ??= e;
+    }
+    if (mounted && gen == _loadDraftsGen) {
+      final loadedAgentDrafts = agentDrafts;
+      final loadedOwnDrafts = ownDrafts;
+      setState(() {
+        if (loadedAgentDrafts != null) {
+          _drafts = loadedAgentDrafts.results;
+          _draftCount = loadedAgentDrafts.count;
+        }
+        if (loadedOwnDrafts != null) {
+          _ownDrafts = loadedOwnDrafts.results;
+          _ownDraftCount = loadedOwnDrafts.count;
+        }
+        if (loadedAgentDrafts == null && loadedOwnDrafts == null &&
+            _tab == AdminTab.drafts) {
+          _error = loadError.toString();
+        } else {
+          _error = null;
+        }
+        if (_tab == AdminTab.drafts) _loading = false;
+      });
+    }
+  }
+
+  void _continueDraft(Order draft) {
+    OrderDraftSession.start(
+      orderId: draft.id,
+      customerId: draft.customer.id,
+    );
+    context.push('/admin/order/new/${draft.customer.id}');
+  }
+
+  /// Accepts an abandoned draft after admin PIN confirmation.
+  Future<void> _acceptDraft(Order draft) async {
+    if (_actingDrafts.contains(draft.id)) return;
+    final pin = await PinDialog.show(
+      context,
+      title: 'Accept Draft',
+      message:
+          'Draft #${draft.id} for ${draft.customer.name} will be placed as a pending order.',
+    );
+    if (pin == null || !mounted) return;
+    setState(() => _actingDrafts.add(draft.id));
+    try {
+      await repos.order.acceptDraft(draft.id, pin);
+      if (!mounted) return;
+      setState(() {
+        _actingDrafts.remove(draft.id);
+        _drafts = [for (final d in _drafts) if (d.id != draft.id) d];
+        if (_draftCount > 0) _draftCount--;
+      });
+      AppToast.success(context, 'Order placed for ${draft.customer.name}');
+      _loadCounts();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _actingDrafts.remove(draft.id));
+      // 400 expired / 403 scope / 404 already actioned elsewhere: show the
+      // server's message, then re-sync so the card reflects reality.
+      AppToast.error(context, e.toString());
+      _loadDrafts();
+    }
+  }
+
+  /// Rejects an abandoned draft. The PIN is asked BEFORE any request (the
+  /// backend rejects without a valid admin PIN; superusers pass trivially).
+  Future<void> _rejectDraft(Order draft) async {
+    if (_actingDrafts.contains(draft.id)) return;
+    final pin = await PinDialog.show(
+      context,
+      title: 'Discard Draft',
+      message:
+          'Draft #${draft.id} for ${draft.customer.name} will be deleted. This cannot be undone.',
+    );
+    if (pin == null || !mounted) return;
+    setState(() => _actingDrafts.add(draft.id));
+    try {
+      await repos.order.rejectDraft(draft.id, pin);
+      if (!mounted) return;
+      setState(() {
+        _actingDrafts.remove(draft.id);
+        _drafts = [for (final d in _drafts) if (d.id != draft.id) d];
+        if (_draftCount > 0) _draftCount--;
+      });
+      AppToast.success(context, 'Draft #${draft.id} discarded');
+      _loadCounts();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _actingDrafts.remove(draft.id));
+      AppToast.error(context, e.toString());
+      _loadDrafts();
     }
   }
 
@@ -342,7 +517,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       AdminTab.pending => 'Pending',
       AdminTab.packed => 'Packed',
       AdminTab.dispatched => 'Dispatched',
+      AdminTab.drafts => 'Drafts',
     };
+    final isDrafts = _tab == AdminTab.drafts;
     final bottomPad = 62 + MediaQuery.of(context).padding.bottom + 16;
 
     return AdminScaffold(
@@ -351,6 +528,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          if (_draftCount > 0 && !_bannerDismissed) _draftBanner(),
           _tabBar(),
           Padding(
             padding: const EdgeInsets.fromLTRB(8, 12, 8, 8),
@@ -358,7 +536,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
               children: [
                 Expanded(
                   child: Text(
-                    '$activeTabName${_showUnreadOnly ? ' unread' : ''} orders',
+                    isDrafts
+                        ? 'Draft orders'
+                        : '$activeTabName${_showUnreadOnly ? ' unread' : ''} orders',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
@@ -379,138 +559,274 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                   ),
                 ),
                 const SizedBox(width: 8),
-                _UnreadFilterChip(
-                  selected: _showUnreadOnly,
-                  count: _unreadCountFor(_tab),
-                  onTap: () {
-                    final v = !_showUnreadOnly;
-                    setState(() => _showUnreadOnly = v);
-                    _saveUnread(v);
-                  },
-                ),
+                if (!isDrafts)
+                  _UnreadFilterChip(
+                    selected: _showUnreadOnly,
+                    count: _unreadCountFor(_tab),
+                    onTap: () {
+                      final v = !_showUnreadOnly;
+                      setState(() => _showUnreadOnly = v);
+                      _saveUnread(v);
+                    },
+                  ),
               ],
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: Row(
-              children: [
-                Expanded(
-                  child: SizedBox(
-                    height: 48,
-                    child: _SearchField(
-                      value: _search,
-                      onChanged: _onSearchChanged,
-                      hint: 'Search orders',
+          // Search and order filters apply to `/api/orders/` only; the
+          // abandoned-drafts endpoint takes neither, so they are hidden on
+          // the Drafts tab rather than shown as no-ops.
+          if (!isDrafts)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: SizedBox(
+                      height: 48,
+                      child: _SearchField(
+                        value: _search,
+                        onChanged: _onSearchChanged,
+                        hint: 'Search orders',
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 6),
-                _FilterToggleChip(
-                  isOpen: _showFilters,
-                  activeCount: activeFilterCount(
-                    from: _from,
-                    to: _to,
-                    agent: _agentFilter,
-                    customer: _customerFilter,
+                  const SizedBox(width: 6),
+                  _FilterToggleChip(
+                    isOpen: _showFilters,
+                    activeCount: activeFilterCount(
+                      from: _from,
+                      to: _to,
+                      agent: _agentFilter,
+                      customer: _customerFilter,
+                    ),
+                    onTap: () {
+                      setState(() {
+                        if (_showFilters) {
+                          _clearFilters();
+                        } else {
+                          _showFilters = true;
+                        }
+                      });
+                    },
                   ),
-                  onTap: () {
-                    setState(() {
-                      if (_showFilters) {
-                        _clearFilters();
-                      } else {
-                        _showFilters = true;
-                      }
-                    });
-                  },
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          if (_showFilters)
+          if (!isDrafts && _showFilters)
             Padding(
               padding: const EdgeInsets.only(top: 8),
               child: _filterPanel(),
             ),
           const SizedBox(height: 4),
-          if (_loading && _orders.isNotEmpty)
+          if (_loading && (isDrafts ? _drafts : _orders).isNotEmpty)
             const LinearProgressIndicator(minHeight: 2),
           Expanded(
-            child: _loading && _orders.isEmpty
-                ? PageLoading(
-                    label: 'Loading ${activeTabName.toLowerCase()} orders...')
-                : _error != null && _orders.isEmpty
-                    ? SingleChildScrollView(
-                        child: EmptyState(
-                          icon: Icons.cloud_off,
-                          title: 'Could not load orders',
-                          subtitle: _error,
-                          action: Align(
-                            child: StockFlowButton(
-                              label: 'Retry',
-                              onPressed: _loadOrders,
-                              expand: false,
+            child: isDrafts
+                ? _draftsBody(bottomPad)
+                : _loading && _orders.isEmpty
+                    ? PageLoading(
+                        label: 'Loading ${activeTabName.toLowerCase()} orders...')
+                    : _error != null && _orders.isEmpty
+                        ? SingleChildScrollView(
+                            child: EmptyState(
+                              icon: Icons.cloud_off,
+                              title: 'Could not load orders',
+                              subtitle: _error,
+                              action: Align(
+                                child: StockFlowButton(
+                                  label: 'Retry',
+                                  onPressed: _loadOrders,
+                                  expand: false,
+                                ),
+                              ),
                             ),
-                          ),
-                        ),
-                      )
-                    : filteredOrders.isEmpty
-                        ? EmptyState(
-                            icon: Icons.info_outline,
-                            title: _showUnreadOnly
-                                ? 'No unread orders'
-                                : _debouncedSearch.isNotEmpty
-                                    ? 'No matching orders'
-                                    : switch (_tab) {
-                                        AdminTab.all => 'No Data Found',
-                                        AdminTab.pending => 'No Pending Orders',
-                                        AdminTab.packed => 'No Packed Orders',
-                                        AdminTab.dispatched =>
-                                          'No Dispatched Orders',
-                                      },
                           )
-                        : RefreshIndicator(
-                            onRefresh: () async => _loadOrders(),
-                            child: ListView.builder(
-                              padding: EdgeInsets.fromLTRB(8, 8, 8, bottomPad),
-                              physics: const AlwaysScrollableScrollPhysics(),
-                              itemCount: filteredOrders.length + 1,
-                              itemBuilder: (context, i) {
-                                if (i == filteredOrders.length) {
-                                  return _PaginationBar(
-                                    currentPage: _pageByTab[_tab] ?? 1,
-                                    totalPages: _totalPages,
-                                    onPage: (p) {
-                                      setState(() => _pageByTab[_tab] = p);
-                                      _loadOrders();
-                                    },
-                                  );
-                                }
-                                final o = filteredOrders[i];
-                                return Padding(
-                                  padding: const EdgeInsets.only(bottom: 12),
-                                  child: _OrderCardView(
-                                    order: o,
-                                    viewed: o.status == 'DISPATCHED' ||
-                                        _viewedIds.contains(o.id),
-                                    pulse: _pulse,
-                                    onTap: () async {
-                                      _markViewed(o);
-                                      await context
-                                          .push('/admin/order/status/${o.id}');
-                                      // Refresh so pack/dispatch changes made on
-                                      // the status screen show up on return.
-                                      if (!mounted) return;
-                                      _loadOrders();
-                                      _loadCounts();
-                                    },
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
+                        : filteredOrders.isEmpty
+                            ? EmptyState(
+                                icon: Icons.info_outline,
+                                title: _showUnreadOnly
+                                    ? 'No unread orders'
+                                    : _debouncedSearch.isNotEmpty
+                                        ? 'No matching orders'
+                                        : switch (_tab) {
+                                            AdminTab.all => 'No Data Found',
+                                            AdminTab.pending =>
+                                              'No Pending Orders',
+                                            AdminTab.packed =>
+                                              'No Packed Orders',
+                                            AdminTab.dispatched =>
+                                              'No Dispatched Orders',
+                                            AdminTab.drafts =>
+                                              'No Draft Orders',
+                                          },
+                              )
+                            : RefreshIndicator(
+                                onRefresh: () async => _loadOrders(),
+                                child: ListView.builder(
+                                  padding:
+                                      EdgeInsets.fromLTRB(8, 8, 8, bottomPad),
+                                  physics:
+                                      const AlwaysScrollableScrollPhysics(),
+                                  itemCount: filteredOrders.length + 1,
+                                  itemBuilder: (context, i) {
+                                    if (i == filteredOrders.length) {
+                                      return _PaginationBar(
+                                        currentPage: _pageByTab[_tab] ?? 1,
+                                        totalPages: _totalPages,
+                                        onPage: (p) {
+                                          setState(() => _pageByTab[_tab] = p);
+                                          _loadOrders();
+                                        },
+                                      );
+                                    }
+                                    final o = filteredOrders[i];
+                                    return Padding(
+                                      padding:
+                                          const EdgeInsets.only(bottom: 12),
+                                      child: _OrderCardView(
+                                        order: o,
+                                        viewed: o.status == 'DISPATCHED' ||
+                                            _viewedIds.contains(o.id),
+                                        pulse: _pulse,
+                                        onTap: () async {
+                                          _markViewed(o);
+                                          await context.push(
+                                              '/admin/order/status/${o.id}');
+                                          // Refresh so pack/dispatch changes
+                                          // made on the status screen show up
+                                          // on return.
+                                          if (!mounted) return;
+                                          _loadOrders();
+                                          _loadCounts();
+                                        },
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
           ),
         ],
+      ),
+    );
+  }
+
+  /// The Drafts tab combines resumable admin drafts and agent drafts awaiting
+  /// inline accept/reject review.
+  Widget _draftsBody(double bottomPad) {
+    final drafts = <({Order order, bool isOwnDraft})>[
+      for (final draft in _drafts) (order: draft, isOwnDraft: false),
+      for (final draft in _ownDrafts) (order: draft, isOwnDraft: true),
+    ]..sort((a, b) => a.order.createdAt.compareTo(b.order.createdAt));
+    if (_loading && drafts.isEmpty) {
+      return const PageLoading(label: 'Loading draft orders...');
+    }
+    if (_error != null && drafts.isEmpty) {
+      return SingleChildScrollView(
+        child: EmptyState(
+          icon: Icons.cloud_off,
+          title: 'Could not load drafts',
+          subtitle: _error,
+          action: Align(
+            child: StockFlowButton(
+              label: 'Retry',
+              onPressed: _loadDrafts,
+              expand: false,
+            ),
+          ),
+        ),
+      );
+    }
+    if (drafts.isEmpty) {
+      return const EmptyState(
+        icon: Icons.info_outline,
+        title: 'No Draft Orders',
+        subtitle: 'Your drafts and recent agent drafts will show up here.',
+      );
+    }
+    return RefreshIndicator(
+      onRefresh: _loadDrafts,
+      child: ListView.builder(
+        padding: EdgeInsets.fromLTRB(8, 8, 8, bottomPad),
+        physics: const AlwaysScrollableScrollPhysics(),
+        itemCount: drafts.length,
+        itemBuilder: (context, i) {
+          final entry = drafts[i];
+          final draft = entry.order;
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: _DraftCardView(
+              order: draft,
+              isOwnDraft: entry.isOwnDraft,
+              busy: _actingDrafts.contains(draft.id),
+              onAccept: () => _acceptDraft(draft),
+              onReject: () => _rejectDraft(draft),
+              onContinue: () => _continueDraft(draft),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  /// Dismissible strip above the tab strip: how many drafts are waiting and
+  /// when the oldest one expires (the server list is oldest-first, so the
+  /// first row is the closest to expiring). Tapping it opens the Drafts tab.
+  Widget _draftBanner() {
+    final remaining = _drafts.isEmpty
+        ? null
+        : draftRemainingLabel(_drafts.first.expiresAt);
+    return Container(
+      margin: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFFBEB),
+        border: Border.all(color: const Color(0xFFFCD34D)),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: () => _switchTab(AdminTab.drafts),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 8, 4, 8),
+          child: Row(
+            children: [
+              const Icon(Icons.edit_note,
+                  size: 20, color: Color(0xFFB45309)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '$_draftCount abandoned draft${_draftCount == 1 ? '' : 's'} to review',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF92400E),
+                      ),
+                    ),
+                    if (remaining != null)
+                      Text(
+                        remaining == 'Expired'
+                            ? 'Oldest already expired'
+                            : 'Oldest expires in $remaining',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFFB45309),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.close,
+                    size: 18, color: Color(0xFFB45309)),
+                tooltip: 'Dismiss',
+                onPressed: () => setState(() => _bannerDismissed = true),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -522,6 +838,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       if (!_loading && next.valueOrNull == true) {
         _loadOrders();
         _loadCounts();
+        _loadDrafts();
       }
     }), fireImmediately: false);
   }
@@ -531,7 +848,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       AdminTab.all,
       AdminTab.pending,
       AdminTab.packed,
-      AdminTab.dispatched
+      AdminTab.dispatched,
+      AdminTab.drafts
     ];
     return Container(
       margin: const EdgeInsets.fromLTRB(8, 8, 8, 0),
@@ -566,6 +884,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                           AdminTab.pending => 'Pending',
                           AdminTab.packed => 'Packed',
                           AdminTab.dispatched => 'Dispatched',
+                          AdminTab.drafts => 'Drafts',
                         },
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -1108,13 +1427,21 @@ class _OrderCardView extends StatelessWidget {
   Widget build(BuildContext context) {
     final status = OrderStatus.from(order.status);
     final dateTime = formatDateTime(order.createdAt);
-    final value = order.items.fold<num>(
+    final currentOrderValue = order.items.fold<num>(
         0,
         (sum, item) =>
             sum +
             (num.tryParse(item.itemPrice ?? '') ?? 0) *
                 item.quantity *
                 (item.pieceCount ?? 1));
+    final value = order.status == 'DISPATCHED'
+        ? currentOrderValue +
+            order.dispatchHistory.fold<num>(
+              0,
+              (sum, bundle) =>
+                  sum + (num.tryParse(bundle.totalPrice ?? '') ?? 0),
+            )
+        : currentOrderValue;
     final unpackedCount = unpackedLineCount(order);
 
     return Material(
@@ -1252,6 +1579,28 @@ class _OrderCardView extends StatelessWidget {
                   ),
                 ],
               ),
+              if (order.hasPartialDispatchRemainder)
+                Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.only(top: 10),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFFFF7ED),
+                    border: Border(
+                      left: BorderSide(color: Color(0xFFF97316), width: 4),
+                    ),
+                  ),
+                  child: const Text(
+                    'PARTIALLY DISPATCHED',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0.5,
+                      color: Color(0xFF9A3412),
+                    ),
+                  ),
+                ),
               Container(
                 margin: const EdgeInsets.only(top: 12),
                 padding: const EdgeInsets.only(top: 10),
@@ -1308,6 +1657,322 @@ class _OrderCardView extends StatelessWidget {
                         color: Colors.black,
                       ),
                     ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Abandoned draft card — Drafts tab only. Review happens INLINE (expand the
+// items, Accept/Reject in the footer): there is deliberately no tap-through
+// to `/admin/order/status/:id`, which is built for placed orders.
+// ---------------------------------------------------------------------------
+
+/// Remaining time until [expiresAt] (the server's derived
+/// `created_at + 15min`), formatted as `'12m 30s'` / `'45s'` / `'2h 5m'`,
+/// `'Expired'` once past, or null when the timestamp is absent/unparseable.
+///
+/// Recomputed on every build — deliberately NO per-second ticker, so the
+/// Drafts tab never schedules frames on its own; any rebuild (tab switch,
+/// pull-to-refresh, accept/reject, banner refresh) updates the label.
+String? draftRemainingLabel(String? expiresAt, {DateTime? now}) {
+  final expiry = expiresAt == null ? null : DateTime.tryParse(expiresAt);
+  if (expiry == null) return null;
+  final left = expiry.difference(now ?? DateTime.now());
+  if (left.isNegative) return 'Expired';
+  final seconds = left.inSeconds;
+  if (seconds < 60) return '${left.inSeconds}s';
+  final minutes = left.inMinutes;
+  if (minutes < 60) return '${minutes}m ${seconds % 60}s';
+  return '${left.inHours}h ${minutes % 60}m';
+}
+
+class _DraftCardView extends StatefulWidget {
+  const _DraftCardView({
+    required this.order,
+    required this.isOwnDraft,
+    required this.busy,
+    required this.onAccept,
+    required this.onReject,
+    required this.onContinue,
+  });
+
+  final Order order;
+  final bool isOwnDraft;
+  final bool busy;
+  final VoidCallback onAccept;
+  final VoidCallback onReject;
+  final VoidCallback onContinue;
+
+  @override
+  State<_DraftCardView> createState() => _DraftCardViewState();
+}
+
+class _DraftCardViewState extends State<_DraftCardView> {
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final order = widget.order;
+    final remaining = draftRemainingLabel(order.expiresAt);
+    final expired = remaining == 'Expired';
+    final itemCount = order.items.length;
+    final value = order.items.fold<num>(
+        0,
+        (sum, item) =>
+            sum +
+            (num.tryParse(item.itemPrice ?? '') ?? 0) *
+                item.quantity *
+                (item.pieceCount ?? 1));
+
+    return Material(
+      color: const Color(0xFFFFFBEB),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap:
+            widget.busy ? null : () => setState(() => _expanded = !_expanded),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: expired
+                  ? const Color(0xFFFCA5A5)
+                  : const Color(0xFFFDE68A),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  StockflowAvatar(
+                    id: order.customer.id,
+                    name: order.customer.name,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          order.customer.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF111827),
+                          ),
+                        ),
+                        Row(
+                          children: [
+                            const Icon(Icons.person_outline,
+                                size: 12, color: Color(0xFF9CA3AF)),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                order.agent.name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                    fontSize: 12, color: Color(0xFF9CA3AF)),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          _expanded
+                              ? 'Tap to hide items'
+                              : 'Tap to view $itemCount item${itemCount == 1 ? '' : 's'}',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFFB45309),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      const StatusBadge(OrderStatus.draft),
+                      const SizedBox(height: 4),
+                      Text(
+                        'ID #${order.id}',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Color(0xFF4B5563),
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      if (remaining != null) ...[
+                        const SizedBox(height: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: expired
+                                ? const Color(0xFFFEE2E2)
+                                : const Color(0xFFFEF3C7),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            expired ? 'Expired' : 'Expires in $remaining',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              color: expired
+                                  ? const Color(0xFFB91C1C)
+                                  : const Color(0xFF92400E),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
+              if (_expanded) ...[
+                Container(
+                  margin: const EdgeInsets.only(top: 12),
+                  padding: const EdgeInsets.only(top: 10),
+                  decoration: const BoxDecoration(
+                    border: Border(top: BorderSide(color: Color(0xFFFDE68A))),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      for (final item in order.items)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 6),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  item.displayNameWithColor,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    color: Color(0xFF374151),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                '${item.displaySizeGroup ?? ''} · x${item.quantity}',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF6B7280),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+              Container(
+                margin: const EdgeInsets.only(top: 12),
+                padding: const EdgeInsets.only(top: 10),
+                decoration: const BoxDecoration(
+                  border: Border(top: BorderSide(color: Color(0xFFFDE68A))),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                formatDateTime(order.createdAt),
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF4B5563),
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  Text(
+                                    formatSets(order.totalSets),
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w900,
+                                      color: Color(0xFF111827),
+                                    ),
+                                  ),
+                                  const Text(' • ',
+                                      style:
+                                          TextStyle(color: Color(0xFFD1D5DB))),
+                                  Text(
+                                    formatPieces(order.totalPieces),
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                      color: Color(0xFF4B5563),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        Text(
+                          formatInrInt(value),
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.black,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    if (widget.isOwnDraft)
+                      StockFlowButton(
+                        label: 'Continue Draft',
+                        disabled: widget.busy,
+                        onPressed: widget.onContinue,
+                      )
+                    else
+                      Row(
+                        children: [
+                          Expanded(
+                            child: StockFlowButton(
+                              label: 'Reject',
+                              destructive: true,
+                              disabled: widget.busy,
+                              onPressed: widget.onReject,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: StockFlowButton(
+                              label: 'Accept',
+                              disabled: widget.busy,
+                              onPressed: widget.onAccept,
+                            ),
+                          ),
+                        ],
+                      ),
                   ],
                 ),
               ),

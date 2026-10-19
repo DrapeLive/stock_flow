@@ -524,9 +524,9 @@ class DraftOwnershipTests(DraftTestBase):
 
 
 class DraftSweepTests(DraftTestBase):
-    def test_legacy_draft_swept_after_15_minutes_for_agent(self):
+    def test_legacy_draft_swept_after_30_minutes_for_agent(self):
         legacy = self.make_draft(
-            created_by=None, agent=self.agent, age=timedelta(minutes=20)
+            created_by=None, agent=self.agent, age=timedelta(minutes=35)
         )
 
         self.client.credentials(**get_auth_header(self.agent_user))
@@ -545,12 +545,12 @@ class DraftSweepTests(DraftTestBase):
         ids = [o["id"] for o in response.data["results"]]
         self.assertIn(legacy.id, ids)
 
-    def test_admin_draft_swept_after_24_hours(self):
+    def test_admin_draft_swept_after_30_minutes(self):
         old = self.make_draft(
-            created_by=self.admin_user, age=timedelta(hours=25), with_item=True
+            created_by=self.admin_user, age=timedelta(minutes=31), with_item=True
         )
         fresh = self.make_draft(
-            created_by=self.admin_user, age=timedelta(hours=1), with_item=True
+            created_by=self.admin_user, age=timedelta(minutes=29), with_item=True
         )
 
         self.client.credentials(**get_auth_header(self.admin_user))
@@ -564,7 +564,7 @@ class DraftSweepTests(DraftTestBase):
         agent_draft = self.make_draft(
             created_by=self.agent_user,
             agent=self.agent,
-            age=timedelta(hours=25),
+            age=timedelta(minutes=31),
             with_item=True,
         )
 
@@ -1529,6 +1529,59 @@ class OrderEditFlowTests(DraftTestBase):
         self.assertEqual(save.status_code, status.HTTP_400_BAD_REQUEST)
         order.refresh_from_db()
         self.assertEqual(order.status, "EDITING")
+        self.assertEqual(
+            ItemVariantSize.objects.get(
+                item_variant=self.variant, size="M,L,XL"
+            ).stock,
+            10,
+        )
+
+    def test_direct_item_update_insufficient_stock_rolls_back_return(self):
+        order = self._variant_stock(quantity=5, stock=10)
+        order_item = order.items.first()
+
+        self.client.credentials(**get_auth_header(self.agent_user))
+        response = self.client.patch(
+            f"/api/orders/order-items/{order_item.id}/",
+            {"quantity": 20},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            ItemVariantSize.objects.get(
+                item_variant=self.variant, size="M,L,XL"
+            ).stock,
+            10,
+        )
+
+
+class PlaceDraftOrderIdempotencyTests(DraftTestBase):
+    def test_shared_place_function_rejects_already_placed_order(self):
+        from apps.orders.views import place_draft_order
+
+        draft = self.make_draft(created_by=self.agent_user, with_item=True)
+        ItemVariantSize.objects.create(
+            item_variant=self.variant, size="M,L,XL", stock=10
+        )
+
+        first = place_draft_order(draft, {})
+        # Simulate a second request holding the stale DRAFT instance it read
+        # before the first request committed.
+        draft.status = "DRAFT"
+        second = place_draft_order(draft, {})
+
+        self.assertEqual(first.status_code, status.HTTP_200_OK)
+        self.assertEqual(second.status_code, status.HTTP_409_CONFLICT)
+        self.assertEqual(
+            second.data["error"], "This order has already been placed."
+        )
+        self.assertEqual(
+            ItemVariantSize.objects.get(
+                item_variant=self.variant, size="M,L,XL"
+            ).stock,
+            5,
+        )
 
 
 class OrderEditBusinessScopeTests(DraftTestBase):
@@ -1722,3 +1775,557 @@ class OrderEditBusinessScopeTests(DraftTestBase):
         self.assertEqual(cancel.status_code, status.HTTP_200_OK)
         self.assertEqual(cancel.data["status"], "PENDING")
         self.assertEqual(cancel.data["order_id"], order.id)
+
+
+class AbandonedDraftTestBase(DraftTestBase):
+    """Shared helpers for the admin abandoned-draft endpoints."""
+
+    drafts_url = "/api/orders/admin-drafts/"
+
+    def accept_url(self, order_id):
+        return f"/api/orders/{order_id}/admin-accept-draft/"
+
+    def reject_url(self, order_id):
+        return f"/api/orders/{order_id}/admin-reject-draft/"
+
+    def _capture_queued(self):
+        patchers = [
+            mock.patch("apps.notification.utils.send_push_to_user"),
+            mock.patch("apps.notification.utils.send_fcm_to_user"),
+        ]
+        mocks = [p.start() for p in patchers]
+        for m in mocks:
+            self.addCleanup(m.stop)
+        return mocks
+
+    def _titles(self, queued_mock, title=None):
+        calls = []
+        for call in queued_mock.apply_async.call_args_list:
+            if title is None or call.kwargs["args"][1] == title:
+                calls.append(call)
+        return calls
+
+    def make_kids_draft(self):
+        """A draft whose item is of the ``kids`` business type."""
+        kids_item = Item.objects.create(
+            name="Kids Tee", price=300.00, type="kids", brand=self.brand
+        )
+        kids_variant = ItemVariant.objects.create(
+            item=kids_item, display_order="201"
+        )
+        draft = Order.objects.create(
+            customer=self.customer,
+            agent=self.agent,
+            status="DRAFT",
+            created_by=self.agent_user,
+        )
+        OrderItem.objects.create(
+            order=draft,
+            item=kids_item,
+            variant=kids_variant,
+            quantity=2,
+            packed_quantity=0,
+            item_name="Kids Tee",
+            item_price=300.00,
+            size_group="20-24",
+            item_type="kids",
+        )
+        return draft
+
+
+class AdminAbandonedDraftListTests(AbandonedDraftTestBase):
+    def test_lists_agent_draft_with_derived_expiry(self):
+        draft = self.make_draft(created_by=self.agent_user, with_item=True)
+
+        self.client.credentials(**get_auth_header(self.admin_user))
+        response = self.client.get(self.drafts_url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        results = response.data["results"]
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0]["id"], draft.id)
+
+        draft.refresh_from_db()
+        expected = (draft.created_at + timedelta(minutes=30)).isoformat()
+        self.assertEqual(results[0]["expires_at"], expected)
+        self.assertEqual(results[0]["status"], "DRAFT")
+
+    def test_excludes_admin_created_drafts(self):
+        agent_draft = self.make_draft(
+            created_by=self.agent_user, agent=self.agent, with_item=True
+        )
+        self.make_draft(
+            created_by=self.admin_user, agent=self.agent, with_item=True
+        )
+
+        self.client.credentials(**get_auth_header(self.admin_user))
+        response = self.client.get(self.drafts_url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        ids = [r["id"] for r in response.data["results"]]
+        self.assertEqual(ids, [agent_draft.id])
+
+    def test_excludes_empty_drafts(self):
+        draft_with_item = self.make_draft(
+            created_by=self.agent_user, with_item=True
+        )
+        self.make_draft(created_by=self.agent_user, with_item=False)
+
+        self.client.credentials(**get_auth_header(self.admin_user))
+        response = self.client.get(self.drafts_url)
+
+        ids = [r["id"] for r in response.data["results"]]
+        self.assertEqual(ids, [draft_with_item.id])
+
+    def test_excludes_draft_whose_items_were_all_removed(self):
+        """Deliberate caveat: an emptied-out draft is treated as empty."""
+        emptied = self.make_draft(created_by=self.agent_user, with_item=True)
+        emptied.items.all().delete()
+        self.make_draft(created_by=self.agent_user, with_item=True)
+
+        self.client.credentials(**get_auth_header(self.admin_user))
+        response = self.client.get(self.drafts_url)
+
+        ids = [r["id"] for r in response.data["results"]]
+        self.assertNotIn(emptied.id, ids)
+        self.assertEqual(len(ids), 1)
+
+    def test_excludes_drafts_older_than_thirty_minutes(self):
+        fresh = self.make_draft(created_by=self.agent_user, with_item=True)
+        self.make_draft(
+            created_by=self.agent_user,
+            with_item=True,
+            age=timedelta(minutes=31),
+        )
+
+        self.client.credentials(**get_auth_header(self.admin_user))
+        response = self.client.get(self.drafts_url)
+
+        ids = [r["id"] for r in response.data["results"]]
+        self.assertEqual(ids, [fresh.id])
+
+    def test_orders_oldest_first(self):
+        urgent = self.make_draft(
+            created_by=self.agent_user,
+            with_item=True,
+            age=timedelta(minutes=10),
+        )
+        later = self.make_draft(
+            created_by=self.agent_user, with_item=True, age=timedelta(minutes=1)
+        )
+
+        self.client.credentials(**get_auth_header(self.admin_user))
+        response = self.client.get(self.drafts_url)
+
+        ids = [r["id"] for r in response.data["results"]]
+        self.assertEqual(ids, [urgent.id, later.id])
+
+    def test_business_scoped(self):
+        gents_draft = self.make_draft(
+            created_by=self.agent_user, with_item=True
+        )
+        kids_draft = self.make_kids_draft()
+        kids_admin = User.objects.create_user(
+            username="admin2",
+            email="admin2@test.com",
+            password="pass1234",
+            role="ADMIN",
+            business="kids",
+            brand=self.brand,
+        )
+
+        self.client.credentials(**get_auth_header(self.admin_user))
+        gents_ids = [
+            r["id"] for r in self.client.get(self.drafts_url).data["results"]
+        ]
+
+        self.client.credentials(**get_auth_header(kids_admin))
+        kids_ids = [
+            r["id"] for r in self.client.get(self.drafts_url).data["results"]
+        ]
+
+        self.assertEqual(gents_ids, [gents_draft.id])
+        self.assertEqual(kids_ids, [kids_draft.id])
+
+    def test_browsing_does_not_sweep_stale_drafts(self):
+        stale = self.make_draft(
+            created_by=None,
+            agent=self.agent,
+            with_item=True,
+            age=timedelta(minutes=35),
+        )
+
+        self.client.credentials(**get_auth_header(self.admin_user))
+        response = self.client.get(self.drafts_url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["results"], [])
+        self.assertTrue(Order.objects.filter(id=stale.id).exists())
+
+    def test_agent_forbidden(self):
+        self.make_draft(created_by=self.agent_user, with_item=True)
+
+        self.client.credentials(**get_auth_header(self.agent_user))
+        response = self.client.get(self.drafts_url)
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+
+class AdminDraftAcceptTests(AbandonedDraftTestBase):
+    def test_accept_places_order_and_deducts_stock(self):
+        draft = self.make_draft(created_by=self.agent_user, with_item=True)
+        ItemVariantSize.objects.create(
+            item_variant=self.variant, size="M,L,XL", stock=10
+        )
+
+        self.client.credentials(**get_auth_header(self.admin_user))
+        response = self.client.post(
+            self.accept_url(draft.id), {}, format="json"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["message"], "Order placed successfully")
+        self.assertEqual(response.data["order_id"], draft.id)
+
+        draft.refresh_from_db()
+        self.assertEqual(draft.status, "PENDING")
+        size = ItemVariantSize.objects.get(
+            item_variant=self.variant, size="M,L,XL"
+        )
+        # make_order_item() defaults to quantity=5
+        self.assertEqual(size.stock, 5)
+
+    def test_accept_out_of_stock_returns_place_order_400(self):
+        draft = self.make_draft(created_by=self.agent_user, with_item=True)
+        ItemVariantSize.objects.create(
+            item_variant=self.variant, size="M,L,XL", stock=2
+        )
+
+        self.client.credentials(**get_auth_header(self.admin_user))
+        response = self.client.post(
+            self.accept_url(draft.id), {}, format="json"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("out_of_stock_items", response.data)
+        self.assertEqual(len(response.data["out_of_stock_items"]), 1)
+        self.assertEqual(
+            response.data["out_of_stock_items"][0]["available"], 2
+        )
+
+        draft.refresh_from_db()
+        self.assertEqual(draft.status, "DRAFT")
+        size = ItemVariantSize.objects.get(
+            item_variant=self.variant, size="M,L,XL"
+        )
+        self.assertEqual(size.stock, 2)
+
+    def test_accept_admin_own_draft_forbidden(self):
+        own = self.make_draft(
+            created_by=self.admin_user, agent=self.agent, with_item=True
+        )
+
+        self.client.credentials(**get_auth_header(self.admin_user))
+        response = self.client.post(
+            self.accept_url(own.id), {}, format="json"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        own.refresh_from_db()
+        self.assertEqual(own.status, "DRAFT")
+
+    def test_accept_non_draft_rejected(self):
+        self.client.credentials(**get_auth_header(self.admin_user))
+        response = self.client.post(
+            self.accept_url(self.order.id), {}, format="json"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data["error"], "Only DRAFT orders can be placed"
+        )
+
+    def test_accept_expired_draft_rejected(self):
+        draft = self.make_draft(
+            created_by=self.agent_user,
+            with_item=True,
+            age=timedelta(minutes=31),
+        )
+
+        self.client.credentials(**get_auth_header(self.admin_user))
+        response = self.client.post(
+            self.accept_url(draft.id), {}, format="json"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["error"], "This draft has expired")
+        draft.refresh_from_db()
+        self.assertEqual(draft.status, "DRAFT")
+
+    def test_accept_outside_business_scope_forbidden(self):
+        kids_draft = self.make_kids_draft()
+
+        self.client.credentials(**get_auth_header(self.admin_user))
+        response = self.client.post(
+            self.accept_url(kids_draft.id), {}, format="json"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(
+            response.data["error"], "This order is outside your business type"
+        )
+        kids_draft.refresh_from_db()
+        self.assertEqual(kids_draft.status, "DRAFT")
+
+    def test_accept_empty_draft_rejected(self):
+        """An admin without a business scope reaches the empty check.
+
+        (A business-scoped admin fails the scope check first, because an
+        order with no items cannot match any item type.)
+        """
+        unscoped_admin = User.objects.create_user(
+            username="admin3",
+            email="admin3@test.com",
+            password="pass1234",
+            role="ADMIN",
+        )
+        draft = self.make_draft(created_by=self.agent_user, with_item=False)
+
+        self.client.credentials(**get_auth_header(unscoped_admin))
+        response = self.client.post(
+            self.accept_url(draft.id), {}, format="json"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data["error"], "Cannot place an empty order"
+        )
+        draft.refresh_from_db()
+        self.assertEqual(draft.status, "DRAFT")
+
+    def test_accept_notifies_agent(self):
+        draft = self.make_draft(created_by=self.agent_user, with_item=True)
+        ItemVariantSize.objects.create(
+            item_variant=self.variant, size="M,L,XL", stock=10
+        )
+        web, fcm = self._capture_queued()
+
+        self.client.credentials(**get_auth_header(self.admin_user))
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.post(
+                self.accept_url(draft.id), {}, format="json"
+            )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        web_calls = self._titles(web, "Order Placed")
+        fcm_calls = self._titles(fcm, "Order Placed")
+        self.assertTrue(web_calls)
+        self.assertTrue(fcm_calls)
+
+        call = web_calls[0]
+        self.assertEqual(call.kwargs["args"][0], self.agent_user.id)
+        body = call.kwargs["args"][2]
+        self.assertIn("ABC Fashions", body)
+        self.assertIn(f"#{draft.id}", body)
+        self.assertIn("accepted by admin", body)
+        self.assertEqual(
+            call.kwargs["kwargs"]["data"]["order_id"], str(draft.id)
+        )
+
+    def test_accept_agent_forbidden(self):
+        draft = self.make_draft(created_by=self.agent_user, with_item=True)
+
+        self.client.credentials(**get_auth_header(self.agent_user))
+        response = self.client.post(
+            self.accept_url(draft.id), {}, format="json"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_accept_unknown_order_404(self):
+        self.client.credentials(**get_auth_header(self.admin_user))
+        response = self.client.post(
+            self.accept_url(999999), {}, format="json"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+
+class AdminDraftRejectTests(AbandonedDraftTestBase):
+    def test_reject_without_pin_forbidden(self):
+        draft = self.make_draft(created_by=self.agent_user, with_item=True)
+
+        self.client.credentials(**get_auth_header(self.admin_user))
+        response = self.client.post(
+            self.reject_url(draft.id), {}, format="json"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(
+            response.data["error"], "PIN is required to delete."
+        )
+        self.assertTrue(Order.objects.filter(id=draft.id).exists())
+
+    def test_reject_with_wrong_pin_forbidden(self):
+        draft = self.make_draft(created_by=self.agent_user, with_item=True)
+        self.admin_user.set_pin("1234")
+        self.admin_user.save()
+
+        self.client.credentials(**get_auth_header(self.admin_user))
+        response = self.client.post(
+            self.reject_url(draft.id), {"pin": "9999"}, format="json"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data["error"], "Incorrect PIN.")
+        self.assertTrue(Order.objects.filter(id=draft.id).exists())
+
+    def test_reject_with_pin_deletes_without_stock_movement(self):
+        draft = self.make_draft(created_by=self.agent_user, with_item=True)
+        ItemVariantSize.objects.create(
+            item_variant=self.variant, size="M,L,XL", stock=10
+        )
+        self.admin_user.set_pin("1234")
+        self.admin_user.save()
+
+        self.client.credentials(**get_auth_header(self.admin_user))
+        response = self.client.post(
+            self.reject_url(draft.id), {"pin": "1234"}, format="json"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.data, {"message": "Draft rejected", "order_id": draft.id}
+        )
+        self.assertFalse(Order.objects.filter(id=draft.id).exists())
+        self.assertFalse(OrderItem.objects.filter(order_id=draft.id).exists())
+        size = ItemVariantSize.objects.get(
+            item_variant=self.variant, size="M,L,XL"
+        )
+        self.assertEqual(size.stock, 10)
+
+    def test_reject_superuser_skips_pin(self):
+        draft = self.make_draft(created_by=self.agent_user, with_item=True)
+        root = User.objects.create_superuser(
+            username="root2", email="root2@test.com", password="pass1234"
+        )
+
+        self.client.credentials(**get_auth_header(root))
+        response = self.client.post(
+            self.reject_url(draft.id), {}, format="json"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertFalse(Order.objects.filter(id=draft.id).exists())
+
+    def test_reject_notifies_agent(self):
+        draft = self.make_draft(created_by=self.agent_user, with_item=True)
+        self.admin_user.set_pin("1234")
+        self.admin_user.save()
+        web, fcm = self._capture_queued()
+
+        self.client.credentials(**get_auth_header(self.admin_user))
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.post(
+                self.reject_url(draft.id), {"pin": "1234"}, format="json"
+            )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        web_calls = self._titles(web, "Draft Discarded")
+        fcm_calls = self._titles(fcm, "Draft Discarded")
+        self.assertTrue(web_calls)
+        self.assertTrue(fcm_calls)
+
+        call = web_calls[0]
+        self.assertEqual(call.kwargs["args"][0], self.agent_user.id)
+        body = call.kwargs["args"][2]
+        self.assertIn("ABC Fashions", body)
+        self.assertIn(f"#{draft.id}", body)
+        self.assertIn("discarded", body)
+        self.assertEqual(
+            call.kwargs["kwargs"]["data"]["order_id"], str(draft.id)
+        )
+
+    def test_reject_admin_own_draft_forbidden(self):
+        own = self.make_draft(
+            created_by=self.admin_user, agent=self.agent, with_item=True
+        )
+        self.admin_user.set_pin("1234")
+        self.admin_user.save()
+
+        self.client.credentials(**get_auth_header(self.admin_user))
+        response = self.client.post(
+            self.reject_url(own.id), {"pin": "1234"}, format="json"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertTrue(Order.objects.filter(id=own.id).exists())
+
+    def test_reject_non_draft_rejected(self):
+        self.admin_user.set_pin("1234")
+        self.admin_user.save()
+
+        self.client.credentials(**get_auth_header(self.admin_user))
+        response = self.client.post(
+            self.reject_url(self.order.id), {"pin": "1234"}, format="json"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data["error"], "Only DRAFT orders can be rejected"
+        )
+        self.assertTrue(Order.objects.filter(id=self.order.id).exists())
+
+    def test_reject_expired_draft_rejected(self):
+        draft = self.make_draft(
+            created_by=self.agent_user,
+            with_item=True,
+            age=timedelta(minutes=31),
+        )
+        self.admin_user.set_pin("1234")
+        self.admin_user.save()
+
+        self.client.credentials(**get_auth_header(self.admin_user))
+        response = self.client.post(
+            self.reject_url(draft.id), {"pin": "1234"}, format="json"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["error"], "This draft has expired")
+        self.assertTrue(Order.objects.filter(id=draft.id).exists())
+
+    def test_reject_outside_business_scope_forbidden(self):
+        kids_draft = self.make_kids_draft()
+        self.admin_user.set_pin("1234")
+        self.admin_user.save()
+
+        self.client.credentials(**get_auth_header(self.admin_user))
+        response = self.client.post(
+            self.reject_url(kids_draft.id), {"pin": "1234"}, format="json"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(
+            response.data["error"], "This order is outside your business type"
+        )
+        self.assertTrue(Order.objects.filter(id=kids_draft.id).exists())
+
+    def test_reject_agent_forbidden(self):
+        draft = self.make_draft(created_by=self.agent_user, with_item=True)
+
+        self.client.credentials(**get_auth_header(self.agent_user))
+        response = self.client.post(
+            self.reject_url(draft.id), {"pin": "1234"}, format="json"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertTrue(Order.objects.filter(id=draft.id).exists())
+
+    def test_reject_unknown_order_404(self):
+        self.client.credentials(**get_auth_header(self.admin_user))
+        response = self.client.post(
+            self.reject_url(999999), {}, format="json"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+

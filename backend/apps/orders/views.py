@@ -4,7 +4,7 @@ from functools import partial
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import transaction
-from django.db.models import F, Q
+from django.db.models import Exists, F, OuterRef, Q
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema
@@ -30,6 +30,7 @@ from apps.notification.utils import notify_user_safely
 from apps.orders.models import Order, OrderItem, OrderLog, UserViewedOrder
 from apps.orders.serializers import (
     AddOrderItemSerializer,
+    AdminDraftOrderSerializer,
     InvoiceSerializer,
     OrderItemSerializer,
     OrderSerializer,
@@ -103,24 +104,54 @@ def _reap_stale_drafts(user):
     """Delete stale DRAFT orders using role-based expiry (Option A lazy sweep).
 
     * Agents: drafts they created (or legacy drafts owned via their agent FK)
-      older than 15 minutes.
-    * Admins: drafts they created older than ``ADMIN_DRAFT_EXPIRY_HOURS``.
+      older than 30 minutes.
+    * Admins: drafts they created older than ``ADMIN_DRAFT_EXPIRY_MINUTES``.
     """
     if user.role == "ADMIN":
         cutoff = timezone.now() - timedelta(
-            hours=getattr(settings, "ADMIN_DRAFT_EXPIRY_HOURS", 24)
+            minutes=getattr(settings, "ADMIN_DRAFT_EXPIRY_MINUTES", 30)
         )
-        Order.objects.filter(
+        stale_orders = Order.objects.filter(
             status="DRAFT", created_by=user, created_at__lt=cutoff
-        ).delete()
+        )
+        _delete_stale_drafts(stale_orders)
         return
 
-    cutoff = timezone.now() - timedelta(minutes=15)
-    Order.objects.filter(
+    cutoff = timezone.now() - timedelta(minutes=30)
+    stale_orders = Order.objects.filter(
         status="DRAFT",
         agent__user=user,
         created_at__lt=cutoff,
-    ).filter(Q(created_by=user) | Q(created_by__isnull=True)).delete()
+    ).filter(Q(created_by=user) | Q(created_by__isnull=True))
+    _delete_stale_drafts(stale_orders)
+
+
+def _delete_stale_drafts(orders):
+    """Release stock held by draft lines before removing expired orders."""
+    for order_id in orders.values_list("id", flat=True):
+        with transaction.atomic():
+            try:
+                order = Order.objects.select_for_update().get(
+                    pk=order_id, status="DRAFT"
+                )
+            except Order.DoesNotExist:
+                continue
+            for order_item in order.items.select_related("item", "variant"):
+                if order_item.stock_reserved:
+                    _return_reserved_stock_for_item(order_item)
+            order.delete()
+
+
+def _exclude_partial_dispatch_bundles(queryset):
+    """Keep partial bundles reachable by detail links, not as order-list rows."""
+    partial_dispatch_logs = OrderLog.objects.filter(
+        order_id=OuterRef("pk"),
+        action="DISPATCHED",
+        details__partial=True,
+    )
+    return queryset.annotate(
+        _is_partial_dispatch_bundle=Exists(partial_dispatch_logs)
+    ).filter(_is_partial_dispatch_bundle=False)
 
 
 def _revert_edit(order):
@@ -140,12 +171,214 @@ def _revert_edit(order):
                 size=snap.get("size", ""),
                 quantity=snap["quantity"],
                 packed_quantity=snap.get("packed_quantity", 0),
+                stock_reserved=True,
             )
         order.reservation_snapshot = []
         order.editing_started_at = None
         order.status = order.previous_edit_status or "PENDING"
         order.previous_edit_status = None
         order.save()
+
+
+def place_draft_order(order, data):
+    """Place a DRAFT order and transition to PENDING.
+
+    New draft lines already hold stock. Legacy/unreserved lines are checked
+    and reserved here. Admin draft-accept shares this exact transaction.
+    """
+    out_of_stock_items = []
+
+    admin_ids = set()
+    super_admin_ids = User.objects.filter(is_superuser=True).values_list(
+        "id", flat=True
+    )
+
+    admin_ids.update(super_admin_ids)
+    admins = User.objects.filter(role="ADMIN")
+
+    expected_delivery_date = data.get("expected_delivery_date")
+    preferred_transport = data.get("preferred_transport")
+    notes = data.get("notes")
+
+    with transaction.atomic():
+        order = Order.objects.select_for_update().get(pk=order.pk)
+        if order.status != "DRAFT":
+            return Response(
+                {"error": "This order has already been placed."},
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        for order_item in order.items.select_related("item", "variant"):
+            if order_item.stock_reserved:
+                continue
+            if order_item.item is None or order_item.item.is_deleted:
+                continue
+
+            matched_admins = User.objects.filter(
+                role="ADMIN",
+                brand=order_item.item.brand,
+                business=order_item.item.type,
+            ).values_list("id", flat=True)
+
+            admin_ids.update(matched_admins)
+
+            item_type = order_item.item.type
+            required_sizes = SIZE_MAPPING[item_type][order_item.size_group]
+
+            for size in required_sizes:
+                try:
+                    size_obj = ItemVariantSize.objects.select_for_update().get(
+                        item_variant=order_item.variant,
+                        size=size,
+                    )
+
+                except ItemVariantSize.DoesNotExist:
+                    out_of_stock_items.append(
+                        {
+                            "item_name": order_item.item_name,
+                            "size_group": order_item.size_group,
+                            "size": size,
+                            "required": order_item.quantity,
+                            "available": 0,
+                            "order_item_id": order_item.id,
+                        }
+                    )
+                    continue
+
+                if size_obj.stock < order_item.quantity:
+                    out_of_stock_items.append(
+                        {
+                            "item_name": order_item.item_name,
+                            "size_group": order_item.size_group,
+                            "size": size,
+                            "required": order_item.quantity,
+                            "available": size_obj.stock,
+                            "order_item_id": order_item.id,
+                        }
+                    )
+
+        if out_of_stock_items:
+            agent_user_id = order.agent.user_id if order.agent else None
+            if agent_user_id:
+                notify_user_safely(
+                    agent_user_id,
+                    "Items Out of Stock",
+                    f"{len(out_of_stock_items)} item(s) in your order are out of stock",
+                )
+
+            for admin_id in admin_ids:
+                notify_user_safely(
+                    admin_id,
+                    "Stock Alert",
+                    f"Order #{order.id} has {len(out_of_stock_items)} out-of-stock item(s)",
+                )
+
+            return Response(
+                {
+                    "error": "Some items are no longer available. Another agent may have placed an order.",
+                    "out_of_stock_items": out_of_stock_items,
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        drained = set()
+        for order_item in order.items.select_related("item", "variant"):
+            if order_item.stock_reserved:
+                continue
+            if order_item.item is None or order_item.item.is_deleted:
+                continue
+
+            item_type = order_item.item.type
+            required_sizes = SIZE_MAPPING[item_type][order_item.size_group]
+
+            for size in required_sizes:
+                ItemVariantSize.objects.filter(
+                    item_variant=order_item.variant,
+                    size=size,
+                ).update(
+                    stock=F("stock") - order_item.quantity,
+                    stock_updated_at=timezone.now(),
+                )
+                drained.add((order_item.variant_id, size))
+            order_item.stock_reserved = True
+            order_item.save(update_fields=["stock_reserved"])
+
+        now_out_of_stock = []
+        for variant_id, size in drained:
+            try:
+                ivs = ItemVariantSize.objects.select_related(
+                    "item_variant__item"
+                ).get(item_variant_id=variant_id, size=size, stock=0)
+            except ItemVariantSize.DoesNotExist:
+                continue
+            now_out_of_stock.append(ivs)
+            if len(now_out_of_stock) >= 20:
+                break
+        if now_out_of_stock:
+            names = ", ".join(
+                f"{ivs.item_variant.item.name} ({ivs.size})"
+                for ivs in now_out_of_stock
+            )
+            for admin_id in admin_ids:
+                transaction.on_commit(
+                    partial(
+                        notify_user_safely,
+                        admin_id,
+                        "Item Out of Stock",
+                        f"Out of stock: {names}",
+                    ),
+                    robust=True,
+                )
+
+        order.status = "PENDING"
+        if expected_delivery_date:
+            order.expected_delivery_date = expected_delivery_date
+
+        if preferred_transport:
+            from transports.models import Transport
+
+            try:
+                order.preferred_transport = Transport.objects.get(
+                    id=preferred_transport
+                )
+            except Transport.DoesNotExist:
+                pass
+        if notes:
+            order.notes = notes
+
+        order.save()
+
+        total_price = 0
+        for oi in order.items.select_related("item"):
+            if oi.item is None or oi.item.is_deleted:
+                continue
+            piece_count = get_piece_count(
+                oi.size_group, oi.item_type if oi.item_type else "gents"
+            )
+            total_price += (
+                float(oi.item_price or 0) * oi.quantity * piece_count
+            )
+        customer_name = order.customer.name if order.customer else ""
+        order_detail = f"{customer_name} · ₹{total_price:,.2f}"
+
+        for id in admin_ids:
+            transaction.on_commit(
+                partial(
+                    notify_user_safely,
+                    id,
+                    "New Order",
+                    order_detail,
+                    data={"order_id": str(order.id)},
+                ),
+                robust=True,
+            )
+
+    return Response(
+        {
+            "message": "Order placed successfully",
+            "order_id": order.id,
+        }
+    )
 
 
 class PlaceOrderView(APIView):
@@ -186,191 +419,177 @@ class PlaceOrderView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        out_of_stock_items = []
+        return place_draft_order(order, request.data)
 
-        admin_ids = set()
-        super_admin_ids = User.objects.filter(is_superuser=True).values_list(
-            "id", flat=True
+
+def _is_agent_created_draft(order):
+    """Whether ``order`` is an abandoned draft owned by an agent.
+
+    Mirrors the ownership rule used by ``_reap_stale_drafts``: an order
+    created by an agent user, or a legacy draft (``created_by`` NULL) that
+    belongs to an agent. Admin-created drafts are rejected here so they keep
+    flowing through the normal place-order endpoint.
+    """
+    if order.agent_id is None:
+        return False
+    if order.created_by_id is None:
+        return True
+    return order.created_by.role == "AGENT"
+
+
+def _agent_draft_guard(user, order, rejected=False):
+    """Shared validation for the admin abandoned-draft endpoints.
+
+    Returns a 4xx ``Response`` when ``order`` may not be actioned, else
+    ``None``. Check order: status -> agent-created -> business scope ->
+    30-minute window -> empty.
+    """
+    if order.status != "DRAFT":
+        return Response(
+            {
+                "error": (
+                    "Only DRAFT orders can be rejected"
+                    if rejected
+                    else "Only DRAFT orders can be placed"
+                )
+            },
+            status=status.HTTP_400_BAD_REQUEST,
         )
 
-        admin_ids.update(super_admin_ids)
-        admins = User.objects.filter(role="ADMIN")
+    if not _is_agent_created_draft(order):
+        return Response(
+            {"error": "Only abandoned agent drafts can be actioned"},
+            status=status.HTTP_403_FORBIDDEN,
+        )
 
-        expected_delivery_date = request.data.get("expected_delivery_date")
-        preferred_transport = request.data.get("preferred_transport")
-        notes = request.data.get("notes")
+    biz = admin_business(user)
+    if biz and not order.items.filter(item_type=biz).exists():
+        return Response(
+            {"error": "This order is outside your business type"},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
+    if order.created_at < timezone.now() - timedelta(minutes=30):
+        return Response(
+            {"error": "This draft has expired"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if not order.items.exists():
+        return Response(
+            {"error": "Cannot place an empty order"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    return None
+
+
+class AdminDraftAcceptView(APIView):
+    """Accept an abandoned agent DRAFT with admin PIN confirmation."""
+
+    permission_classes = [IsAdmin]
+
+    @extend_schema(
+        summary="Accept an abandoned agent DRAFT order",
+        request=None,
+        responses={200: None, 400: None, 403: None, 404: None},
+    )
+    def post(self, request, order_id):
+        order = get_object_or_404(Order, id=order_id)
+
+        denial = _agent_draft_guard(request.user, order)
+        if denial:
+            return denial
+
+        pin_error = check_admin_pin(request)
+        if pin_error:
+            return pin_error
 
         with transaction.atomic():
-            for order_item in order.items.select_related("item", "variant"):
-                if order_item.item is None or order_item.item.is_deleted:
-                    continue
-
-                matched_admins = User.objects.filter(
-                    role="ADMIN",
-                    brand=order_item.item.brand,
-                    business=order_item.item.type,
-                ).values_list("id", flat=True)
-
-                admin_ids.update(matched_admins)
-
-                item_type = order_item.item.type
-                required_sizes = SIZE_MAPPING[item_type][order_item.size_group]
-
-                for size in required_sizes:
-                    try:
-                        size_obj = ItemVariantSize.objects.select_for_update().get(
-                            item_variant=order_item.variant,
-                            size=size,
-                        )
-
-                    except ItemVariantSize.DoesNotExist:
-                        out_of_stock_items.append(
-                            {
-                                "item_name": order_item.item_name,
-                                "size_group": order_item.size_group,
-                                "size": size,
-                                "required": order_item.quantity,
-                                "available": 0,
-                                "order_item_id": order_item.id,
-                            }
-                        )
-                        continue
-
-                    if size_obj.stock < order_item.quantity:
-                        out_of_stock_items.append(
-                            {
-                                "item_name": order_item.item_name,
-                                "size_group": order_item.size_group,
-                                "size": size,
-                                "required": order_item.quantity,
-                                "available": size_obj.stock,
-                                "order_item_id": order_item.id,
-                            }
-                        )
-
-            if out_of_stock_items:
-                agent_user_id = order.agent.user_id if order.agent else None
-                if agent_user_id:
-                    notify_user_safely(
-                        agent_user_id,
-                        "Items Out of Stock",
-                        f"{len(out_of_stock_items)} item(s) in your order are out of stock",
-                    )
-
-                for admin_id in admin_ids:
-                    notify_user_safely(
-                        admin_id,
-                        "Stock Alert",
-                        f"Order #{order.id} has {len(out_of_stock_items)} out-of-stock item(s)",
-                    )
-
+            locked = Order.objects.select_for_update().get(id=order_id)
+            if locked.status != "DRAFT":
                 return Response(
-                    {
-                        "error": "Some items are no longer available. Another agent may have placed an order.",
-                        "out_of_stock_items": out_of_stock_items,
-                    },
+                    {"error": "Only DRAFT orders can be placed"},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
-            drained = set()
-            for order_item in order.items.select_related("item", "variant"):
-                if order_item.item is None or order_item.item.is_deleted:
-                    continue
+            response = place_draft_order(locked, request.data)
 
-                item_type = order_item.item.type
-                required_sizes = SIZE_MAPPING[item_type][order_item.size_group]
-
-                for size in required_sizes:
-                    ItemVariantSize.objects.filter(
-                        item_variant=order_item.variant,
-                        size=size,
-                    ).update(
-                        stock=F("stock") - order_item.quantity,
-                        stock_updated_at=timezone.now(),
-                    )
-                    drained.add((order_item.variant_id, size))
-
-            now_out_of_stock = []
-            for variant_id, size in drained:
-                try:
-                    ivs = ItemVariantSize.objects.select_related(
-                        "item_variant__item"
-                    ).get(item_variant_id=variant_id, size=size, stock=0)
-                except ItemVariantSize.DoesNotExist:
-                    continue
-                now_out_of_stock.append(ivs)
-                if len(now_out_of_stock) >= 20:
-                    break
-            if now_out_of_stock:
-                names = ", ".join(
-                    f"{ivs.item_variant.item.name} ({ivs.size})"
-                    for ivs in now_out_of_stock
-                )
-                for admin_id in admin_ids:
+            if response.status_code == status.HTTP_200_OK:
+                agent_user_id = locked.agent.user_id if locked.agent else None
+                if agent_user_id:
+                    customer_name = locked.customer.name if locked.customer else ""
                     transaction.on_commit(
                         partial(
                             notify_user_safely,
-                            admin_id,
-                            "Item Out of Stock",
-                            f"Out of stock: {names}",
+                            agent_user_id,
+                            "Order Placed",
+                            f"Your unfinished order #{locked.id} for {customer_name}"
+                            " was accepted by admin and is now pending",
+                            data={"order_id": str(locked.id)},
                         ),
                         robust=True,
                     )
 
-            order.status = "PENDING"
-            if expected_delivery_date:
-                order.expected_delivery_date = expected_delivery_date
+        return response
 
-            if preferred_transport:
-                from transports.models import Transport
 
-                try:
-                    order.preferred_transport = Transport.objects.get(
-                        id=preferred_transport
-                    )
-                except Transport.DoesNotExist:
-                    pass
-            if notes:
-                order.notes = notes
+class AdminDraftRejectView(APIView):
+    """Discard an abandoned agent DRAFT. Admin PIN required (superusers skip)."""
 
-            order.save()
+    permission_classes = [IsAdmin]
 
-            total_price = 0
-            for oi in order.items.select_related("item"):
-                if oi.item is None or oi.item.is_deleted:
-                    continue
-                piece_count = get_piece_count(
-                    oi.size_group, oi.item_type if oi.item_type else "gents"
+    @extend_schema(
+        summary="Reject an abandoned agent DRAFT order",
+        request=None,
+        responses={200: None, 400: None, 403: None, 404: None},
+    )
+    def post(self, request, order_id):
+        order = get_object_or_404(Order, id=order_id)
+
+        denial = _agent_draft_guard(request.user, order, rejected=True)
+        if denial:
+            return denial
+
+        pin_error = check_admin_pin(request)
+        if pin_error:
+            return pin_error
+
+        with transaction.atomic():
+            locked = Order.objects.select_for_update().get(id=order_id)
+            if locked.status != "DRAFT":
+                return Response(
+                    {"error": "Only DRAFT orders can be rejected"},
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
-                total_price += (
-                    float(oi.item_price or 0) * oi.quantity * piece_count
-                )
-            customer_name = order.customer.name if order.customer else ""
-            order_detail = f"{customer_name} · ₹{total_price:,.2f}"
 
-            for id in admin_ids:
+            agent_user_id = locked.agent.user_id if locked.agent else None
+            customer_name = locked.customer.name if locked.customer else ""
+            for order_item in locked.items.select_related("item", "variant"):
+                _return_reserved_stock_for_item(order_item)
+            locked.delete()
+
+            if agent_user_id:
                 transaction.on_commit(
                     partial(
                         notify_user_safely,
-                        id,
-                        "New Order",
-                        order_detail,
-                        data={"order_id": str(order.id)},
+                        agent_user_id,
+                        "Draft Discarded",
+                        f"Your unfinished order #{order_id} for {customer_name}"
+                        " was discarded",
+                        data={"order_id": str(order_id)},
                     ),
                     robust=True,
                 )
 
         return Response(
-            {
-                "message": "Order placed successfully",
-                "order_id": order.id,
-            }
+            {"message": "Draft rejected", "order_id": order_id}
         )
 
 
 def return_stock_for_item(order_item):
     """Return stock to warehouse for an order item."""
-    if order_item.item is None or order_item.item.is_deleted:
+    if order_item.item is None:
         return
 
     item_type = order_item.item.type
@@ -381,6 +600,53 @@ def return_stock_for_item(order_item):
             item_variant=order_item.variant, size=size
         ).update(
             stock=F("stock") + order_item.quantity,
+            stock_updated_at=timezone.now(),
+        )
+
+
+def _return_reserved_stock_for_item(order_item):
+    """Release only stock actually reserved by this order line."""
+    if not order_item.stock_reserved:
+        return
+    return_stock_for_item(order_item)
+
+
+def _stock_shortages(order_item):
+    """Lock and report missing/insufficient size rows for one order line."""
+    if order_item.item is None or order_item.item.is_deleted:
+        return []
+    required_sizes = SIZE_MAPPING[order_item.item.type][order_item.size_group]
+    shortages = []
+    for size in required_sizes:
+        try:
+            size_obj = ItemVariantSize.objects.select_for_update().get(
+                item_variant=order_item.variant, size=size
+            )
+        except ItemVariantSize.DoesNotExist:
+            available = 0
+        else:
+            available = size_obj.stock
+        if available < order_item.quantity:
+            shortages.append({
+                "item_name": order_item.item_name,
+                "size_group": order_item.size_group,
+                "size": size,
+                "required": order_item.quantity,
+                "available": available,
+                "order_item_id": order_item.id,
+            })
+    return shortages
+
+
+def _deduct_stock_for_item(order_item):
+    if order_item.item is None or order_item.item.is_deleted:
+        return
+    required_sizes = SIZE_MAPPING[order_item.item.type][order_item.size_group]
+    for size in required_sizes:
+        ItemVariantSize.objects.filter(
+            item_variant=order_item.variant, size=size
+        ).update(
+            stock=F("stock") - order_item.quantity,
             stock_updated_at=timezone.now(),
         )
 
@@ -421,6 +687,9 @@ class StartEditView(APIView):
                     "status",
                 ]
             )
+            # The original inventory remains held by the snapshot during edit.
+            # Edited lines must not claim that same stock a second time.
+            order.items.update(stock_reserved=False)
             # Remove viewed entries for non-pending/packed orders
             UserViewedOrder.objects.filter(order=order).delete()
 
@@ -541,6 +810,7 @@ class SaveEditView(APIView):
                         f"Order #{order.id} has {len(out_of_stock_items)} out-of-stock item(s) after edit",
                     )
 
+                transaction.set_rollback(True)
                 return Response(
                     {
                         "error": "Some items are no longer available. Another agent may have placed an order.",
@@ -563,6 +833,8 @@ class SaveEditView(APIView):
                         stock=F("stock") - order_item.quantity,
                         stock_updated_at=timezone.now(),
                     )
+                order_item.stock_reserved = True
+                order_item.save(update_fields=["stock_reserved"])
 
             expected_delivery_date = request.data.get("expected_delivery_date")
             preferred_transport = request.data.get("preferred_transport")
@@ -648,6 +920,7 @@ class OrderViewSet(ModelViewSet):
                 dispatched_at__isnull=False,
                 dispatched_at__lte=archive_cutoff,
             )
+            qs = _exclude_partial_dispatch_bundles(qs)
 
         customer_id = self.request.query_params.get("customer")
         if customer_id:
@@ -786,7 +1059,14 @@ class OrderViewSet(ModelViewSet):
             return pin_error
         order = self.get_object()
 
-        if order.status != "DRAFT":
+        if order.status == "DRAFT":
+            with transaction.atomic():
+                locked = Order.objects.select_for_update().get(pk=order.pk)
+                for order_item in locked.items.select_related("item", "variant"):
+                    _return_reserved_stock_for_item(order_item)
+                locked.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        else:
             with transaction.atomic():
                 for order_item in order.items.select_related("item", "variant"):
                     return_stock_for_item(order_item)
@@ -806,35 +1086,187 @@ class OrderViewSet(ModelViewSet):
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    @extend_schema(summary="Dispatch a PENDING/PACKED order")
+    @extend_schema(summary="Dispatch all or part of a PENDING/PACKED order")
     @action(detail=True, methods=["post"], url_path="dispatch")
     def dispatch_order(self, request, pk=None):
         order = self.get_object()
-
-        if order.status not in ["PENDING", "PACKED"]:
+        dispatch_type = request.data.get("dispatch_type", "full")
+        if dispatch_type not in ("full", "partial"):
             return Response(
-                {"error": "Only PENDING or PACKED orders can be dispatched"},
+                {"error": "dispatch_type must be 'full' or 'partial'"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-
         transport_company_id = request.data.get("transport_company")
         lr_number = request.data.get("lr_number", "")
 
-        agent_user_id = order.agent.user_id if order.agent else None
-
         with transaction.atomic():
-            for order_item in order.items.select_related("item", "variant"):
-                if order_item.item is None or order_item.item.is_deleted:
-                    continue
+            order = Order.objects.select_for_update().get(pk=order.pk)
+            if order.status not in ["PENDING", "PACKED"]:
+                return Response(
+                    {"error": "Only PENDING or PACKED orders can be dispatched"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
+            item_quantities = []
+            for order_item in order.items.select_related("item", "variant"):
                 piece_count = get_piece_count(
                     order_item.size_group, order_item.item_type or "gents"
                 )
-                packed_sets = (
-                    (order_item.packed_quantity or 0) if piece_count > 0 else 0
+                packed_sets = min(
+                    order_item.quantity,
+                    (order_item.packed_quantity or 0) // max(piece_count, 1),
                 )
-                unpacked_sets = order_item.quantity - packed_sets
+                item_quantities.append((order_item, packed_sets))
 
+            if dispatch_type == "partial":
+                packed_lines = [
+                    (item, packed_sets)
+                    for item, packed_sets in item_quantities
+                    if packed_sets > 0
+                ]
+                if not packed_lines:
+                    return Response(
+                        {"error": "There are no fully packed sets to dispatch."},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                if all(
+                    item.quantity == packed_sets
+                    for item, packed_sets in item_quantities
+                ):
+                    return Response(
+                        {"error": "All items are packed; use full dispatch."},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+
+                now = timezone.now()
+                pending_order = Order.objects.create(
+                    customer=order.customer,
+                    agent=order.agent,
+                    created_by=order.created_by,
+                    split_from=order,
+                    status="PENDING",
+                    expected_delivery_date=order.expected_delivery_date,
+                    preferred_transport=order.preferred_transport,
+                    notes=order.notes,
+                )
+                # The remainder is still the same customer order, so keep its
+                # original order date instead of using the split timestamp.
+                Order.objects.filter(pk=pending_order.pk).update(
+                    created_at=order.created_at
+                )
+
+                shipped_details = []
+                for order_item, packed_sets in item_quantities:
+                    piece_count = get_piece_count(
+                        order_item.size_group, order_item.item_type or "gents"
+                    )
+                    if packed_sets:
+                        shipped_details.append(
+                            {
+                                "order_item_id": order_item.id,
+                                "item_name": order_item.item_name,
+                                "quantity": packed_sets,
+                            }
+                        )
+
+                    remaining_sets = order_item.quantity - packed_sets
+                    if remaining_sets:
+                        OrderItem.objects.create(
+                            order=pending_order,
+                            item=order_item.item,
+                            variant=order_item.variant,
+                            size_group=order_item.size_group,
+                            item_type=order_item.item_type,
+                            item_name=order_item.item_name,
+                            item_price=order_item.item_price,
+                            variant_image=order_item.variant_image,
+                            size=order_item.size,
+                            quantity=remaining_sets,
+                            packed_quantity=max(
+                                0,
+                                (order_item.packed_quantity or 0)
+                                - packed_sets * piece_count,
+                            ),
+                            stock_reserved=True,
+                        )
+                    order_item.quantity = packed_sets
+                    order_item.packed_quantity = packed_sets * piece_count
+                    order_item.stock_reserved = True
+                    if packed_sets:
+                        order_item.save(
+                            update_fields=[
+                                "quantity",
+                                "packed_quantity",
+                                "stock_reserved",
+                            ]
+                        )
+                    else:
+                        order_item.delete()
+
+                order.status = "DISPATCHED"
+                order.dispatched_at = now
+                if transport_company_id:
+                    from transports.models import Transport
+
+                    transport_company = Transport.objects.filter(
+                        id=transport_company_id
+                    ).first()
+                    if transport_company is not None:
+                        order.transport_company = transport_company
+                if lr_number:
+                    order.lr_number = lr_number
+                order.save()
+
+                OrderLog.objects.create(
+                    order=order,
+                    action="PARTIAL_DISPATCH",
+                    details={
+                        "remaining_order_id": pending_order.id,
+                        "items": shipped_details,
+                    },
+                    performed_by=request.user,
+                )
+                OrderLog.objects.create(
+                    order=order,
+                    action="DISPATCHED",
+                    details={
+                        "partial": True,
+                        "remaining_order_id": pending_order.id,
+                        "packed_items": len(packed_lines),
+                        "total_items": len(packed_lines),
+                    },
+                    performed_by=request.user,
+                )
+                OrderLog.objects.create(
+                    order=pending_order,
+                    action="PARTIAL_DISPATCH",
+                    details={"dispatched_order_id": order.id},
+                    performed_by=request.user,
+                )
+                UserViewedOrder.objects.filter(order=order).delete()
+                result = {
+                    "message": "Packed items dispatched successfully",
+                    "dispatch_type": "partial",
+                    "dispatched_order_id": order.id,
+                    "remaining_order_id": pending_order.id,
+                }
+                agent_user_id = order.agent.user_id if order.agent else None
+                if agent_user_id:
+                    transaction.on_commit(
+                        partial(
+                            notify_user_safely,
+                            agent_user_id,
+                            "Order Partially Dispatched",
+                            f"Packed items from order #{order.id} have been dispatched",
+                        ),
+                        robust=True,
+                    )
+                return Response(result)
+
+            for order_item, packed_sets in item_quantities:
+                if order_item.item is None or order_item.item.is_deleted:
+                    continue
+                unpacked_sets = order_item.quantity - packed_sets
                 if unpacked_sets > 0:
                     item_type = order_item.item.type
                     required_sizes = SIZE_MAPPING[item_type][order_item.size_group]
@@ -851,9 +1283,9 @@ class OrderViewSet(ModelViewSet):
                 action="DISPATCHED",
                 details={
                     "packed_items": sum(
-                        1 for i in order.items.all() if (i.packed_quantity or 0) > 0
+                        1 for _, packed_sets in item_quantities if packed_sets > 0
                     ),
-                    "total_items": order.items.count(),
+                    "total_items": len(item_quantities),
                 },
                 performed_by=request.user,
             )
@@ -876,22 +1308,21 @@ class OrderViewSet(ModelViewSet):
 
             order.save()
 
-            if agent_user_id:
-                customer_name = order.customer.name if order.customer else "Customer"
-                transaction.on_commit(
-                    partial(
-                        notify_user_safely,
-                        agent_user_id,
-                        "Order Dispatched",
-                        f"Order for {customer_name} has been dispatched",
-                    ),
-                    robust=True,
-                )
-
             # Remove viewed entries for non-pending/packed orders
             UserViewedOrder.objects.filter(order=order).delete()
 
-        return Response({"message": "Order dispatched successfully"})
+        agent_user_id = order.agent.user_id if order.agent else None
+        if agent_user_id:
+            transaction.on_commit(
+                partial(
+                    notify_user_safely,
+                    agent_user_id,
+                    "Order Dispatched",
+                    f"Order for {order.customer.name if order.customer else 'Customer'} has been dispatched",
+                ),
+                robust=True,
+            )
+        return Response({"message": "Order dispatched successfully", "dispatch_type": "full"})
 
     @extend_schema(summary="Cancel an in-progress order edit")
     @action(detail=True, methods=["post"], url_path="cancel-edit")
@@ -963,6 +1394,8 @@ class OrderViewSet(ModelViewSet):
         else:
             qs = qs.filter(agent__user=user)
 
+        qs = _exclude_partial_dispatch_bundles(qs)
+
         qs = qs.values_list("id", "status")
         return Response([{"id": oid, "status": stat} for oid, stat in qs])
 
@@ -985,6 +1418,7 @@ class OrderViewSet(ModelViewSet):
             )
             .order_by("-dispatched_at")
         )
+        qs = _exclude_partial_dispatch_bundles(qs)
 
         print(f"DEBUG get_archived: qs.count()={qs.count()}")
 
@@ -1001,6 +1435,48 @@ class OrderViewSet(ModelViewSet):
             return self.get_paginated_response(serializer.data)
 
         serializer = self.get_serializer(qs, many=True)
+        return Response(serializer.data)
+
+    @extend_schema(
+        summary="List abandoned agent DRAFT orders from the last 30 minutes"
+    )
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="admin-drafts",
+        permission_classes=[IsAdmin],
+    )
+    def admin_drafts(self, request):
+        """Agent-owned, non-empty drafts still inside the 30-minute window.
+
+        Deliberately does not call ``_reap_stale_drafts``: browsing this list
+        must never change when a draft gets deleted.
+        """
+        cutoff = timezone.now() - timedelta(minutes=30)
+        qs = (
+            Order.objects.filter(
+                status="DRAFT",
+                agent__isnull=False,
+                created_at__gte=cutoff,
+            )
+            .filter(Q(created_by__isnull=True) | Q(created_by__role="AGENT"))
+            .filter(items__isnull=False)
+            .select_related("agent__user", "customer", "created_by")
+            .prefetch_related("items")
+            .order_by("created_at")
+        )
+
+        biz = admin_business(request.user)
+        if biz:
+            qs = qs.filter(items__item_type=biz).distinct()
+
+        page = self.paginate_queryset(qs)
+        serializer = AdminDraftOrderSerializer(
+            page, many=True, context={"request": request}
+        )
+        if page is not None:
+            return self.get_paginated_response(serializer.data)
+
         return Response(serializer.data)
 
 
@@ -1081,7 +1557,30 @@ class AddOrderItemView(APIView):
             )
 
         with transaction.atomic():
-            OrderItem.objects.create(
+            # Serialize item additions with placement/deletion for this order.
+            order = Order.objects.select_for_update().get(pk=order.pk)
+            if order.status not in ("DRAFT", "EDITING", "PENDING"):
+                return Response(
+                    {"error": "Items can only be added to DRAFT or EDITING orders"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            if order.status == "DRAFT" and not _is_creator(request.user, order):
+                return Response(
+                    {"error": "You can only add items to your own draft orders"},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+            locked_existing = order.items.first()
+            if locked_existing and locked_existing.item_type != item.type:
+                return Response(
+                    {
+                        "error": (
+                            "Order can only contain items of "
+                            f"{locked_existing.item_type} type"
+                        )
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            order_item = OrderItem(
                 order=order,
                 item=item,
                 variant=variant,
@@ -1093,6 +1592,19 @@ class AddOrderItemView(APIView):
                 size=serializer.validated_data.get("size", ""),
                 quantity=qty,
             )
+            if order.status == "DRAFT":
+                shortages = _stock_shortages(order_item)
+                if shortages:
+                    return Response(
+                        {
+                            "error": "Insufficient stock to reserve this draft item.",
+                            "out_of_stock_items": shortages,
+                        },
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                _deduct_stock_for_item(order_item)
+                order_item.stock_reserved = True
+            order_item.save()
 
         return Response(
             {"message": "Item added successfully"}, status=status.HTTP_201_CREATED
@@ -1143,7 +1655,7 @@ class DeleteOrderItemView(APIView):
                     },
                     performed_by=request.user,
                 )
-        else:
+        elif order.status == "EDITING":
             OrderLog.objects.create(
                 order=order,
                 action="ITEM_DELETED",
@@ -1155,6 +1667,26 @@ class DeleteOrderItemView(APIView):
                 },
                 performed_by=request.user,
             )
+        else:
+            with transaction.atomic():
+                order = Order.objects.select_for_update().get(pk=order.pk)
+                order_item = OrderItem.objects.select_for_update().get(
+                    pk=order_item.pk, order=order
+                )
+                _return_reserved_stock_for_item(order_item)
+                OrderLog.objects.create(
+                    order=order,
+                    action="ITEM_DELETED",
+                    details={
+                        "item_name": order_item.item_name,
+                        "size_group": order_item.size_group,
+                        "quantity": order_item.quantity,
+                        "stock_returned": order_item.stock_reserved,
+                    },
+                    performed_by=request.user,
+                )
+                order_item.delete()
+            return Response({"message": "Item Deleted Successfully"})
 
         order_item.delete()
 
@@ -1273,6 +1805,52 @@ class OrderItemViewSet(ModelViewSet):
             order_item.save()
             return super().update(request, *args, **kwargs)
 
+        if order.status == "DRAFT":
+            if "item" in request.data or "variant" in request.data:
+                return Response(
+                    {"error": "Remove and re-add an item to change its product or variant."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            try:
+                new_quantity = int(new_quantity)
+            except (TypeError, ValueError):
+                return Response(
+                    {"quantity": "A valid integer is required."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            if new_quantity <= 0:
+                return Response(
+                    {"quantity": "Must be greater than zero."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            with transaction.atomic():
+                locked_order = Order.objects.select_for_update().get(pk=order.pk)
+                if locked_order.status != "DRAFT":
+                    return Response(
+                        {"error": "The draft is no longer editable."},
+                        status=status.HTTP_409_CONFLICT,
+                    )
+                order_item = OrderItem.objects.select_for_update().get(
+                    pk=order_item.pk, order=locked_order
+                )
+                _return_reserved_stock_for_item(order_item)
+                order_item.quantity = new_quantity
+                order_item.size_group = new_size_group
+                shortages = _stock_shortages(order_item)
+                if shortages:
+                    transaction.set_rollback(True)
+                    return Response(
+                        {
+                            "error": "Insufficient stock to update this draft item.",
+                            "out_of_stock_items": shortages,
+                        },
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                _deduct_stock_for_item(order_item)
+                order_item.stock_reserved = True
+                order_item.save()
+            return super().update(request, *args, **kwargs)
+
         if order.status != "DRAFT":
             with transaction.atomic():
                 if old_quantity != new_quantity or old_size_group != new_size_group:
@@ -1290,6 +1868,7 @@ class OrderItemViewSet(ModelViewSet):
                                     )
                                 )
                             except ItemVariantSize.DoesNotExist:
+                                transaction.set_rollback(True)
                                 return Response(
                                     {
                                         "error": f"Size {size} not found for this variant"
@@ -1298,6 +1877,7 @@ class OrderItemViewSet(ModelViewSet):
                                 )
 
                             if size_obj.stock < new_quantity:
+                                transaction.set_rollback(True)
                                 return Response(
                                     {"error": f"Insufficient stock in {size}"},
                                     status=status.HTTP_400_BAD_REQUEST,
@@ -1331,6 +1911,25 @@ class OrderItemViewSet(ModelViewSet):
                     order_item.save()
 
         return super().update(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        order_item = self.get_object()
+        order = order_item.order
+        if order.status != "DRAFT":
+            return super().destroy(request, *args, **kwargs)
+        if not _is_creator(request.user, order):
+            return Response(
+                {"error": "You can only edit your own draft orders"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        with transaction.atomic():
+            locked_order = Order.objects.select_for_update().get(pk=order.pk)
+            locked_item = OrderItem.objects.select_for_update().get(
+                pk=order_item.pk, order=locked_order
+            )
+            _return_reserved_stock_for_item(locked_item)
+            locked_item.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @extend_schema(summary="List unpacked items from PENDING orders")
     @action(detail=False, methods=["get"], url_path="unpacked")

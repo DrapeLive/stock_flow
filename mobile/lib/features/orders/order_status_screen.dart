@@ -13,10 +13,7 @@ import '../../data/repositories.dart';
 import '../../models/models.dart';
 import '../../shared/scan_beep.dart';
 import '../../shared/widgets.dart';
-<<<<<<< HEAD
-=======
 import 'order_flow_utils.dart';
->>>>>>> dev
 
 enum _OrderTab { packing, dispatching }
 
@@ -39,10 +36,7 @@ class _OrderStatusScreenState extends ConsumerState<OrderStatusScreen> {
   // server list). Ticking boxes updates checkbox state but never reshuffles.
   List<OrderItem>? _packingItems;
   bool _deleting = false;
-<<<<<<< HEAD
-=======
   bool _editStarting = false;
->>>>>>> dev
   bool _logsExpanded = false;
   bool _logsLoading = false;
   List<OrderLog> _logs = const [];
@@ -57,14 +51,8 @@ class _OrderStatusScreenState extends ConsumerState<OrderStatusScreen> {
   bool get _isDeletable =>
       _order?.status == 'PENDING' || _order?.status == 'PACKED';
 
-<<<<<<< HEAD
-  bool get _isEditable => _order?.status == 'DRAFT' ||
-      _order?.status == 'PENDING' ||
-      _order?.status == 'PACKED';
-=======
   bool get _isEditable =>
       _order?.status == 'PENDING' || _order?.status == 'PACKED';
->>>>>>> dev
 
 @override
   void initState() {
@@ -72,6 +60,23 @@ class _OrderStatusScreenState extends ConsumerState<OrderStatusScreen> {
     Perf.start('ostatus');
     _load();
     _loadTransports();
+  }
+
+  @override
+  void didUpdateWidget(covariant OrderStatusScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.orderId != widget.orderId) {
+      setState(() {
+        _order = null;
+        _loading = true;
+        _error = null;
+        _tab = _OrderTab.packing;
+        _packingMode = false;
+        _packingItems = null;
+        _logs = const [];
+      });
+      _load();
+    }
   }
 
   Future<void> _loadTransports() async {
@@ -213,29 +218,7 @@ Future<void> _togglePacked(OrderItem item) async {
     }
   }
 
-  Future<void> _deleteItem(OrderItem item) async {
-    final ok = await confirmDialog(
-      context,
-      title: 'Remove item?',
-      message: 'This action cannot be undone.',
-      confirmLabel: 'Remove',
-      destructive: true,
-    );
-    if (!ok) return;
-    try {
-await repos.order.deleteItem(widget.orderId, item.id);
-      await _load();
-      if (mounted && _packingMode && _tab == _OrderTab.packing) {
-        setState(() {
-          _packingItems = sortOrderItemsUnpackedFirst(_order?.items ?? const []);
-        });
-      }
-    } catch (e) {
-      if (mounted) AppToast.error(context, e.toString());
-    }
-  }
-
-Future<void> _completePacking() async {
+  Future<void> _completePacking() async {
     if (_completingPacking) return;
     playConfirmBeep();
     HapticFeedback.mediumImpact();
@@ -258,19 +241,75 @@ Future<void> _completePacking() async {
   }
 
   Future<void> _showDispatchDialog() async {
+    var dispatchType = 'full';
+    final order = _order;
+    final hasUnpackedItems = order != null &&
+        order.items.any((item) => !isOrderItemFullyPacked(item));
+    if (hasUnpackedItems) {
+      final selectedType = await showDialog<String>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Some items are still unpacked'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                  'Choose whether to dispatch only packed items or dispatch '
+                  'the full order and return unpacked stock.',
+                ),
+                const SizedBox(height: 20),
+                OutlinedButton.icon(
+                  onPressed: () => Navigator.pop(ctx, 'partial'),
+                  icon: const Icon(Icons.inventory_2_outlined),
+                  label: const Text('Partial Dispatch'),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(50),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                FilledButton.icon(
+                  onPressed: () => Navigator.pop(ctx, 'full'),
+                  icon: const Icon(Icons.local_shipping_outlined),
+                  label: const Text('Full Dispatch'),
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size.fromHeight(50),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+          ],
+        ),
+      );
+      if (selectedType == null) return;
+      dispatchType = selectedType;
+    }
+
     var transport = _dispatchTransport;
     var lr = _lrNumber;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          title: const Text('Dispatch Order',
-              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+          title: Text(
+            dispatchType == 'partial' ? 'Dispatch Packed Items' : 'Dispatch Order',
+            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+          ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text(
-                'Unpacked items will be returned to the warehouse.',
+              Text(
+                dispatchType == 'partial'
+                    ? 'Packed quantities will be dispatched. Remaining items will stay pending.'
+                    : 'Unpacked items will be returned to the warehouse.',
                 style: TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
               ),
               const SizedBox(height: 16),
@@ -303,7 +342,9 @@ Future<void> _completePacking() async {
             ),
             FilledButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Dispatch'),
+              child: Text(
+                dispatchType == 'partial' ? 'Dispatch Packed Items' : 'Dispatch',
+              ),
             ),
           ],
         ),
@@ -315,20 +356,32 @@ Future<void> _completePacking() async {
       _lrNumber = lr;
     });
     try {
-      await repos.order.dispatch(
+      final result = await repos.order.dispatch(
         widget.orderId,
         transportCompany: transport,
         lrNumber: lr.isEmpty ? null : lr,
+        dispatchType: dispatchType,
       );
-      if (mounted) AppToast.success(context, 'Order dispatched');
-      if (mounted) context.go('/admin');
+      if (mounted) {
+        final remainingOrderId =
+            int.tryParse('${result['remaining_order_id'] ?? ''}');
+        AppToast.success(
+          context,
+          dispatchType == 'partial'
+              ? 'Packed items dispatched; opening the remaining pending order'
+              : 'Order dispatched',
+        );
+        if (dispatchType == 'partial' && remainingOrderId != null) {
+          context.push('/admin/order/status/$remainingOrderId');
+        } else {
+          context.go('/admin');
+        }
+      }
     } catch (e) {
       if (mounted) AppToast.error(context, e.toString());
     }
   }
 
-<<<<<<< HEAD
-=======
   Future<void> _openEdit() async {
     final order = _order;
     if (order == null || _editStarting) return;
@@ -379,7 +432,6 @@ Future<void> _completePacking() async {
     }
   }
 
->>>>>>> dev
   Future<void> _deleteOrder() async {
     final pin = await PinDialog.show(
       context,
@@ -469,20 +521,11 @@ _OrderTabs(
                     _packingItems = null;
                   }),
                 ),
-<<<<<<< HEAD
-                if (_isDeletable)
-=======
 if (_isEditable || _isDeletable)
->>>>>>> dev
                   Align(
                     alignment: Alignment.centerRight,
                     child: Padding(
                       padding: const EdgeInsets.only(bottom: 8),
-<<<<<<< HEAD
-                      child: _OrderDeleteButton(
-                        loading: _deleting,
-                        onTap: _deleteOrder,
-=======
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -499,7 +542,6 @@ if (_isEditable || _isDeletable)
                               onTap: _deleteOrder,
                             ),
                         ],
->>>>>>> dev
                       ),
                     ),
                   ),
@@ -516,9 +558,7 @@ _ItemsHeader(
                   (item) => _OrderItemRowView(
                     item: item,
                     isPacking: _packingMode && _tab == _OrderTab.packing,
-                    isDeletable: _isEditable,
                     onTogglePacked: () => _togglePacked(item),
-                    onDelete: () => _deleteItem(item),
                   ),
                 ),
                 _OrderLogsSection(
@@ -715,8 +755,6 @@ const Text(
   }
 }
 
-<<<<<<< HEAD
-=======
 class _OrderEditButton extends StatelessWidget {
   const _OrderEditButton({required this.onTap, this.loading = false});
   final VoidCallback onTap;
@@ -761,7 +799,6 @@ class _OrderEditButton extends StatelessWidget {
   }
 }
 
->>>>>>> dev
 // ---------------------------------------------------------------------------
 // Tabs
 // ---------------------------------------------------------------------------
@@ -878,6 +915,81 @@ class _OrderSummaryCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 14),
+          if (order.hasPartialDispatchRemainder) ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: const BoxDecoration(
+                color: Color(0xFFFFF7ED),
+                border: Border(
+                  left: BorderSide(color: Color(0xFFF97316), width: 4),
+                ),
+              ),
+              child: const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'PARTIALLY DISPATCHED',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0.5,
+                      color: Color(0xFF9A3412),
+                    ),
+                  ),
+                  SizedBox(height: 3),
+                  Text(
+                    'Some items have shipped; the remaining items stay pending.',
+                    style: TextStyle(fontSize: 12, color: Color(0xFF9A3412)),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+          ],
+          if (order.dispatchHistory.isNotEmpty || order.splitFrom != null) ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF0F9FF),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFBAE6FD)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Dispatched bundles',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF075985),
+                    ),
+                  ),
+                  if (order.dispatchHistory.isNotEmpty)
+                    for (var i = 0; i < order.dispatchHistory.length; i++)
+                      TextButton(
+                        onPressed: () => context.push(
+                          '/admin/order/status/${order.dispatchHistory[i].id}',
+                        ),
+                        child: Text(
+                          'Bundle ${i + 1} · order #${order.dispatchHistory[i].id} · '
+                          '${formatInrInt(num.tryParse(order.dispatchHistory[i].totalPrice ?? '') ?? 0)}',
+                        ),
+                      )
+                  else
+                    TextButton(
+                      onPressed: () => context.push(
+                        '/admin/order/status/${order.splitFrom}',
+                      ),
+                      child: Text('View dispatched order #${order.splitFrom}'),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+          ],
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1172,15 +1284,11 @@ class _OrderItemRowView extends StatelessWidget {
   const _OrderItemRowView({
     required this.item,
     required this.isPacking,
-    required this.isDeletable,
     required this.onTogglePacked,
-    required this.onDelete,
   });
   final OrderItem item;
   final bool isPacking;
-  final bool isDeletable;
   final VoidCallback onTogglePacked;
-  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -1214,15 +1322,6 @@ class _OrderItemRowView extends StatelessWidget {
                       ? const Color(0xFF16A34A)
                       : const Color(0xFFD1D5DB),
                 ),
-              ),
-            ),
-if (isDeletable)
-            InkWell(
-              onTap: onDelete,
-              child: const Padding(
-                padding: EdgeInsets.all(10),
-                child: Icon(Icons.delete_outline,
-                    size: 17, color: Color(0xFFEF4444)),
               ),
             ),
           GestureDetector(

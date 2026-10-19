@@ -277,8 +277,10 @@ if not DEBUG:
 
 GST_RATE = config("GST_RATE", default=5, cast=float)
 
-# Admin-created draft orders expire after this many hours.
-ADMIN_DRAFT_EXPIRY_HOURS = config("ADMIN_DRAFT_EXPIRY_HOURS", default=24, cast=int)
+# Admin-created draft orders expire after this many minutes.
+ADMIN_DRAFT_EXPIRY_MINUTES = config(
+    "ADMIN_DRAFT_EXPIRY_MINUTES", default=30, cast=int
+)
 
 # Items are considered "archived" once they have been out of stock for this
 # many days (matches the /api/items/archived/ cutoff).

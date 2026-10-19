@@ -5,5 +5,4 @@ dump.rdb
 .opencode/
 .env*
 
-# Mobile app is not part of this repo
-mobile/
+

@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../core/config/app_config.dart';
 import '../core/cache/app_cache.dart';
@@ -967,6 +968,57 @@ Future<bool> confirmDialog(
         ),
       ) ??
       false;
+}
+
+/// Asks whether the image should be captured with the camera or chosen from
+/// the device gallery. Returns null when the sheet is dismissed, so callers
+/// can treat both "dismissed" and "cancelled" the same way.
+Future<ImageSource?> showImageSourceSheet(BuildContext context) {
+  return showModalBottomSheet<ImageSource>(
+    context: context,
+    showDragHandle: true,
+    builder: (ctx) => SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Padding(
+            padding: EdgeInsets.only(bottom: 8),
+            child: Text(
+              'Product Image',
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+            ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.photo_camera_outlined,
+                size: 20, color: AppColors.primary),
+            title: const Text('Take Photo',
+                style: TextStyle(
+                    fontSize: 14, fontWeight: FontWeight.w600)),
+            onTap: () => Navigator.pop(ctx, ImageSource.camera),
+          ),
+          ListTile(
+            leading: const Icon(Icons.photo_library_outlined,
+                size: 20, color: AppColors.primary),
+            title: const Text('Choose from Gallery',
+                style: TextStyle(
+                    fontSize: 14, fontWeight: FontWeight.w600)),
+            onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+/// Opens the camera/gallery chooser and then runs the platform picker with the
+/// chosen [ImageSource], returning the picked file's local path (null when the
+/// sheet is dismissed or the picker is cancelled). Both sources share this one
+/// code path, so the caller applies identical downstream handling either way.
+Future<String?> pickImageWithSourceChoice(BuildContext context) async {
+  final source = await showImageSourceSheet(context);
+  if (source == null) return null;
+  final picked = await ImagePicker().pickImage(source: source);
+  return picked?.path;
 }
 
 // ---------------------------------------------------------------------------

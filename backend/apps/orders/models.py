@@ -25,6 +25,13 @@ class Order(models.Model):
         blank=True,
         related_name="created_orders",
     )
+    split_from = models.ForeignKey(
+        "self",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="split_orders",
+    )
 
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="DRAFT")
 
@@ -65,6 +72,7 @@ class OrderLog(models.Model):
         ("ORDER_DELETED", "Order Deleted"),
         ("ORDER_EDITED", "Order Edited"),
         ("DISPATCHED", "Dispatched"),
+        ("PARTIAL_DISPATCH", "Partial Dispatch"),
         ("EDIT_STARTED", "Edit Started"),
         ("EDIT_SAVED", "Edit Saved"),
         ("EDIT_CANCELLED", "Edit Cancelled"),
@@ -100,6 +108,10 @@ class OrderItem(models.Model):
     size = models.CharField(max_length=10, default="")
 
     quantity = models.PositiveIntegerField()
+
+    # True when this line currently holds warehouse stock. Draft lines reserve
+    # on creation; legacy drafts are backfilled at placement instead.
+    stock_reserved = models.BooleanField(default=False)
 
     packed_quantity = models.PositiveIntegerField(default=0)
 

@@ -1,4 +1,5 @@
-﻿import 'package:flutter/material.dart';
+﻿
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -177,6 +178,15 @@ class _SummaryScreenState extends ConsumerState<SummaryScreen> {
   bool _sortAsc = false;
   String _typeFilter = 'all';
 
+  /// Owned for the lifetime of the screen (created once, never reset) so the
+  /// breakdown keeps its exact scroll offset across an ItemEdit round trip.
+  late final ScrollController _scrollController;
+
+  /// Id of the breakdown row currently held down, used for the row-level
+  /// press highlight (the table rows are opaque, so an ink splash would be
+  /// painted underneath them).
+  int? _pressedItemId;
+
   String? get _business {
     final session = ref.read(sessionProvider);
     final b = session?.user.business;
@@ -187,8 +197,15 @@ class _SummaryScreenState extends ConsumerState<SummaryScreen> {
 @override
   void initState() {
     super.initState();
+    _scrollController = ScrollController();
     Perf.start('summary');
     _load();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   Future<void> _load() async {
@@ -214,6 +231,22 @@ class _SummaryScreenState extends ConsumerState<SummaryScreen> {
         _sortAsc = false;
       }
     });
+  }
+
+  /// Same navigation call the Stock screen uses for its item cards
+  /// (`context.push('/admin/items/edit/:id')`), so this screen stays on the
+  /// stack underneath and a normal pop returns here with the breakdown's
+  /// scroll offset and sort/filter state intact.
+  ///
+  /// The stock list is re-read on return because this screen keeps its own
+  /// copy of the data (it is not fed by the reactive sync store). The edit
+  /// screen invalidates the `items` cache namespace on save/delete, so this is
+  /// a single cheap `networkFirst` list fetch that reflects price/name/stock
+  /// edits made there.
+  Future<void> _openItem(int itemId) async {
+    await context.push('/admin/items/edit/$itemId');
+    if (!mounted) return;
+    await _load();
   }
 
   void _toggleUnitsAsc() {
@@ -301,6 +334,7 @@ final int cmp;
     );
 
 return ListView(
+      controller: _scrollController,
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 40),
       children: [
         const Text('Inventory Summary',
@@ -394,20 +428,7 @@ child: Table(
                   ],
                 ),
                 for (var idx = 0; idx < filtered.length; idx++)
-                  TableRow(
-                    decoration: BoxDecoration(
-                      color: idx.isEven
-                          ? Colors.white
-                          : const Color(0xFFF9FAFB),
-                    ),
-                    children: [
-                      _td(filtered[idx].name, mono: true, bold: true),
-                      _td(_fmt(filtered[idx].totalUnits), right: true),
-                      _td('${filtered[idx].variantCount}', center: true),
-                      _td(formatCurrency(filtered[idx].totalPrice),
-                          right: true, bold: true),
-                    ],
-                  ),
+                  _breakdownRow(filtered[idx], idx),
                 TableRow(
                   decoration: const BoxDecoration(
                       color: Color(0xFFF9FAFB)),
@@ -423,6 +444,44 @@ child: Table(
             ),
 ),
         ),
+      ],
+    );
+  }
+
+  /// One tappable row of the per-item breakdown. Every cell handles the tap so
+  /// the whole row width is a target; the press highlight is applied to the row
+  /// decoration because `Table`'s opaque row backgrounds would otherwise paint
+  /// over the ink splash.
+  TableRow _breakdownRow(ItemSummary s, int idx) {
+    void onTap() => _openItem(s.id);
+    void onHighlight(bool down) {
+      if (!mounted) return;
+      setState(() => _pressedItemId = down ? s.id : null);
+    }
+
+    return TableRow(
+      decoration: BoxDecoration(
+        color: _pressedItemId == s.id
+            ? const Color(0xFFECEEF1)
+            : idx.isEven
+                ? Colors.white
+                : const Color(0xFFF9FAFB),
+      ),
+      children: [
+        _td(s.name,
+            mono: true,
+            bold: true,
+            onTap: onTap,
+            onHighlightChanged: onHighlight),
+        _td(_fmt(s.totalUnits),
+            right: true, onTap: onTap, onHighlightChanged: onHighlight),
+        _td('${s.variantCount}',
+            center: true, onTap: onTap, onHighlightChanged: onHighlight),
+        _td(formatCurrency(s.totalPrice),
+            right: true,
+            bold: true,
+            onTap: onTap,
+            onHighlightChanged: onHighlight),
       ],
     );
   }
@@ -586,9 +645,14 @@ child: Table(
     );
   }
 
-  Widget _td(String text,
-      {bool right = false, bool center = false, bool mono = false, bool bold = false}) {
-    return Padding(
+Widget _td(String text,
+      {bool right = false,
+      bool center = false,
+      bool mono = false,
+      bool bold = false,
+      VoidCallback? onTap,
+      ValueChanged<bool>? onHighlightChanged}) {
+    Widget cell = Padding(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
       child: Text(
         text,
@@ -604,7 +668,13 @@ child: Table(
           fontFamily: mono ? 'monospace' : null,
         ),
       ),
-);
+    );
+    if (onTap == null) return cell;
+    return InkWell(
+      onTap: onTap,
+      onHighlightChanged: onHighlightChanged,
+      child: cell,
+    );
   }
 }
 

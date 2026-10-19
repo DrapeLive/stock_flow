@@ -339,13 +339,20 @@ class _AgentDetailScreenState extends ConsumerState<AgentDetailScreen> {
           ],
         ),
         Expanded(
-          child: ListView(
-            padding: const EdgeInsets.only(bottom: 40),
-            children: [
-              _avatarSection(),
-              const SizedBox(height: 16),
-              if (_isEditing) _editForm() else _viewDetails(),
-              const SizedBox(height: 8),
+          // A CustomScrollView (not a ListView) is required here: the assigned
+          // items list has to be a lazily built SliverList. As a single
+          // ListView child it was laid out eagerly, so every assigned row was
+          // built up front. Agents with many assigned items therefore froze
+          // while scrolling and could exhaust memory, which the OS answers by
+          // killing the app.
+          child: CustomScrollView(
+            slivers: [
+              SliverToBoxAdapter(child: _avatarSection()),
+              const SliverToBoxAdapter(child: SizedBox(height: 16)),
+              SliverToBoxAdapter(
+                child: _isEditing ? _editForm() : _viewDetails(),
+              ),
+              const SliverToBoxAdapter(child: SizedBox(height: 8)),
               _ItemAssignmentSection(
                 agentId: widget.agentId,
                 agentName: _agent?.displayName ?? '',
@@ -360,6 +367,7 @@ class _AgentDetailScreenState extends ConsumerState<AgentDetailScreen> {
                 onMarkRemoval: (id) => setState(() => _pendingRemoval.add(id)),
                 onSave: _saveItems,
               ),
+              const SliverToBoxAdapter(child: SizedBox(height: 40)),
             ],
           ),
         ),
@@ -839,8 +847,13 @@ class _ItemAssignmentSectionState extends ConsumerState<_ItemAssignmentSection> 
   Widget build(BuildContext context) {
     final display = _display;
     final selectedCount = widget.selectedIds.length;
-    final recentCount = _recentIds.length;
-    return Column(
+    final recentIds = _recentIds;
+    final recentCount = recentIds.length;
+    // The header controls go into one sliver; the rows themselves are built
+    // lazily by [SliverList] so only the on-screen ones exist at any time.
+    // Building them eagerly (a plain `for` loop in a Column) is what made long
+    // assigned lists hang and crash the app.
+    final header = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const Divider(),
@@ -953,21 +966,31 @@ class _ItemAssignmentSectionState extends ConsumerState<_ItemAssignmentSection> 
           ),
         ],
         const SizedBox(height: 12),
+      ],
+    );
+    return SliverMainAxisGroup(
+      slivers: [
+        SliverToBoxAdapter(child: header),
         if (display.isEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 24),
-            child: Center(
-              child: Text(
-                _tab == _AssignTab.recent
-                    ? 'No recently added variants'
-                    : 'No assigned variants',
-                style: const TextStyle(
-                    fontSize: 13, color: Color(0xFF9CA3AF)),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Center(
+                child: Text(
+                  _tab == _AssignTab.recent
+                      ? 'No recently added variants'
+                      : 'No assigned variants',
+                  style: const TextStyle(
+                      fontSize: 13, color: Color(0xFF9CA3AF)),
+                ),
               ),
             ),
           )
         else
-          for (final e in display) _variantRow(e),
+          SliverList.builder(
+            itemCount: display.length,
+            itemBuilder: (context, index) => _variantRow(display[index]),
+          ),
       ],
     );
   }

@@ -36,6 +36,8 @@ services:
         command: celery -A config worker -l info
         env_file: .env
         environment:
+            DB_HOST: db
+            CELERY_BROKER_URL: redis://redis:6379/0
             REDIS_URL: redis://redis:6379/0
         volumes:
             - ./media:/app/media
@@ -51,6 +53,8 @@ services:
         command: celery -A config beat -l info
         env_file: .env
         environment:
+            DB_HOST: db
+            CELERY_BROKER_URL: redis://redis:6379/0
             REDIS_URL: redis://redis:6379/0
         depends_on:
             db:
@@ -72,6 +76,8 @@ services:
         ports:
             - "127.0.0.1:8000:8000"
         environment:
+            DB_HOST: db
+            CELERY_BROKER_URL: redis://redis:6379/0
             REDIS_URL: redis://redis:6379/0
 
 volumes:

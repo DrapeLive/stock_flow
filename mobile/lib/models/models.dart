@@ -459,6 +459,7 @@ class OrderItem {
     this.itemName,
     this.itemPrice,
     this.variantImage,
+    this.variantQrCode,
     this.quantity = 0,
     this.originalQuantity,
     this.packedQuantity,
@@ -475,6 +476,7 @@ class OrderItem {
   final String? itemName;
   final String? itemPrice;
   final String? variantImage;
+  final String? variantQrCode;
   final int quantity;
   final int? originalQuantity;
   final int? packedQuantity;
@@ -517,6 +519,7 @@ class OrderItem {
         itemName: json['item_name'] as String?,
         itemPrice: json['item_price'] as String?,
         variantImage: json['variant_image'] as String?,
+        variantQrCode: json['variant_qr_code'] as String?,
         quantity: asInt(json['quantity']) ?? 0,
         originalQuantity: asInt(json['original_quantity']),
         packedQuantity: asInt(json['packed_quantity']),
@@ -525,34 +528,43 @@ class OrderItem {
         variantDisplayOrder: s(json['variant_display_order']),
       );
 
-<<<<<<< HEAD
-  OrderItem copyWith({int? packedQuantity}) => OrderItem(
-        id: id,
-        item: item,
-        variant: variant,
-        sizeGroup: sizeGroup,
-=======
   OrderItem copyWith({int? quantity, String? sizeGroup, int? packedQuantity}) =>
       OrderItem(
         id: id,
         item: item,
         variant: variant,
         sizeGroup: sizeGroup ?? this.sizeGroup,
->>>>>>> dev
         size: size,
         itemName: itemName,
         itemPrice: itemPrice,
         variantImage: variantImage,
-<<<<<<< HEAD
-        quantity: quantity,
-=======
+        variantQrCode: variantQrCode,
         quantity: quantity ?? this.quantity,
->>>>>>> dev
         originalQuantity: originalQuantity,
         packedQuantity: packedQuantity ?? this.packedQuantity,
         pieceCount: pieceCount,
         variantDisplayOrder: variantDisplayOrder,
         order: order,
+      );
+}
+
+@immutable
+class DispatchedBundle {
+  const DispatchedBundle({
+    required this.id,
+    this.dispatchedAt,
+    this.totalPrice,
+  });
+
+  final int id;
+  final String? dispatchedAt;
+  final String? totalPrice;
+
+  factory DispatchedBundle.fromJson(Map<String, dynamic> json) =>
+      DispatchedBundle(
+        id: asInt(json['id']) ?? 0,
+        dispatchedAt: json['dispatched_at'] as String?,
+        totalPrice: json['total_price']?.toString(),
       );
 }
 
@@ -575,6 +587,10 @@ class Order {
     this.lrNumber,
     this.notes,
     this.totalQuantity,
+    this.expiresAt,
+    this.splitFrom,
+    this.dispatchHistory = const [],
+    this.hasPartialDispatchRemainder = false,
   });
 
   final int id;
@@ -593,6 +609,13 @@ class Order {
   final String? transportCompanyName;
   final String? lrNumber;
   final String? notes;
+
+  /// Server-derived draft expiry (`created_at + 30min`), sent ONLY by
+  /// `GET /api/orders/admin-drafts/`. Null for every other payload.
+  final String? expiresAt;
+  final int? splitFrom;
+  final List<DispatchedBundle> dispatchHistory;
+  final bool hasPartialDispatchRemainder;
 
   factory Order.fromJson(Map<String, dynamic> json) => Order(
         id: asInt(json['id']) ?? 0,
@@ -615,6 +638,14 @@ class Order {
         transportCompanyName: json['transport_company_name'] as String?,
         lrNumber: s(json['lr_number']),
         notes: json['notes'] as String?,
+        expiresAt: json['expires_at'] as String?,
+        splitFrom: asInt(json['split_from']),
+        dispatchHistory: asList(
+          json['dispatch_history'],
+          (value) => DispatchedBundle.fromJson(value as Map<String, dynamic>),
+        ),
+        hasPartialDispatchRemainder:
+            json['has_partial_dispatch_remainder'] == true,
       );
 
   Order copyWith({List<OrderItem>? items, String? status}) => Order(
@@ -634,6 +665,10 @@ class Order {
         transportCompanyName: transportCompanyName,
         lrNumber: lrNumber,
         notes: notes,
+        expiresAt: expiresAt,
+        splitFrom: splitFrom,
+        dispatchHistory: dispatchHistory,
+        hasPartialDispatchRemainder: hasPartialDispatchRemainder,
       );
 }
 

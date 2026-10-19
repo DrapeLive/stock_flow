@@ -1,7 +1,6 @@
 ﻿import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/piece_counts.dart';
@@ -120,10 +119,10 @@ class _VariantEditorScreenState extends State<VariantEditorScreen> {
   }
 
   Future<void> _pickImage() async {
-    final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
-    if (picked == null) return;
+    final path = await pickImageWithSourceChoice(context);
+    if (path == null || !mounted) return;
     setState(() {
-      _variant = _variant.copyWith(imagePath: picked.path);
+      _variant = _variant.copyWith(imagePath: path);
     });
   }
 

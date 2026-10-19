@@ -252,8 +252,68 @@ class OrderRepo {
     }
   }
 
-<<<<<<< HEAD
-=======
+  /// Abandoned agent drafts awaiting admin review: DRAFT, agent-owned,
+  /// non-empty, created within the last 30 minutes. Each order carries the
+  /// server-derived `expiresAt` (see `AdminDraftOrderSerializer`).
+  ///
+  /// Deliberately NOT cached: the window is 30 minutes, so a stale cache
+  /// would show drafts the server has already expired, accepted or rejected
+  /// elsewhere. The banner and the Drafts tab share one call site
+  /// (`DashboardScreen._loadDrafts`).
+  Future<Paginated<Order>> getAdminDrafts() async {
+    try {
+      final res =
+          await ApiClient.dio.get<Map<String, dynamic>>('/api/orders/admin-drafts/');
+      return Paginated.fromJson(_asMap(res.data), Order.fromJson);
+    } catch (e) {
+      throw ApiClient.mapError(e);
+    }
+  }
+
+  /// The signed-in admin's own drafts, including empty drafts that can be
+  /// resumed from the dashboard. This is intentionally a fresh request.
+  Future<Paginated<Order>> getOwnDrafts() async {
+    try {
+      final res = await ApiClient.dio.get<Map<String, dynamic>>(
+        '/api/orders/',
+        queryParameters: {'status': 'DRAFT', 'page_size': 200},
+      );
+      return Paginated.fromJson(_asMap(res.data), Order.fromJson);
+    } catch (e) {
+      throw ApiClient.mapError(e);
+    }
+  }
+
+  /// Accepts an abandoned draft with the admin PIN.
+  Future<void> acceptDraft(int orderId, String pin) async {
+    try {
+      await ApiClient.dio.post(
+        '/api/orders/$orderId/admin-accept-draft/',
+        data: {'pin': pin},
+      );
+      await _invalidateOrders();
+      await AppCache.invalidate('items');
+      await AppCache.invalidate('item');
+      await AppCache.invalidate('summary');
+    } catch (e) {
+      throw ApiClient.mapError(e);
+    }
+  }
+
+  /// Rejects an abandoned draft with the admin PIN; the backend deletes the
+  /// order and notifies the agent "Draft Discarded".
+  Future<void> rejectDraft(int orderId, String pin) async {
+    try {
+      await ApiClient.dio.post(
+        '/api/orders/$orderId/admin-reject-draft/',
+        data: {'pin': pin},
+      );
+      await _invalidateOrders();
+    } catch (e) {
+      throw ApiClient.mapError(e);
+    }
+  }
+
   /// Reads the status out of an edit-flow response, falling back to a
   /// `GET /api/orders/<id>/` for a backend that answers without one.
   Future<String> _editStatus(dynamic data, int orderId) async {
@@ -330,7 +390,6 @@ class OrderRepo {
     }
   }
 
->>>>>>> dev
   /// Order history for a customer detail page (mirrors `orderApi.getByCustomer`).
   Future<Paginated<Order>> byCustomer(int customerId,
       {int page = 1, int pageSize = 50}) async {
@@ -428,13 +487,26 @@ class OrderRepo {
     }
   }
 
-  Future<void> dispatch(int id, {int? transportCompany, String? lrNumber}) async {
+  Future<Map<String, dynamic>> dispatch(
+    int id, {
+    int? transportCompany,
+    String? lrNumber,
+    String dispatchType = 'full',
+  }) async {
     try {
-      await ApiClient.dio.post(
+      final response = await ApiClient.dio.post(
         '/api/orders/$id/dispatch/',
-        data: {'transport_company': transportCompany, 'lr_number': lrNumber},
+        data: {
+          'transport_company': transportCompany,
+          'lr_number': lrNumber,
+          'dispatch_type': dispatchType,
+        },
       );
       await _invalidateOrders();
+      if (response.data is Map<String, dynamic>) {
+        return response.data as Map<String, dynamic>;
+      }
+      return const {};
     } catch (e) {
       throw ApiClient.mapError(e);
     }

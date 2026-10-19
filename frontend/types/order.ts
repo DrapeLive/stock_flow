@@ -71,6 +71,13 @@ export interface Order {
   transport_company_name?: string;
   lr_number: string;
   notes?: string;
+  split_from?: number | null;
+  dispatch_history?: {
+    id: number;
+    dispatched_at: string | null;
+    total_price: string;
+  }[];
+  has_partial_dispatch_remainder?: boolean;
 }
 
 export interface OrderItemDisplay {
