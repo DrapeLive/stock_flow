@@ -22,13 +22,14 @@ import {
   ShoppingBag,
   Users,
   ScrollText,
+  Tags,
 } from "lucide-react";
 import ItemCard from "@/components/items/ItemCard";
 import OrderCard from "@/components/order/OrderCard";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
-type Tab = "profile" | "archives";
+type Tab = "profile" | "archives" | "settings";
 
 export default function ProfilePage() {
   const { user, logout, isSuperuser } = useAuth();
@@ -45,6 +46,12 @@ export default function ProfilePage() {
   const [expandedItem, setExpandedItem] = useState<number | null>(null);
 
   const isAdmin = profile?.role === "ADMIN" || isSuperuser;
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    const requestedTab = new URLSearchParams(window.location.search).get("tab");
+    if (requestedTab === "settings") setTab("settings");
+  }, [isAdmin]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -112,7 +119,7 @@ export default function ProfilePage() {
 
           {/* Tab Bar */}
           <div className="flex gap-1 bg-gray-100 p-1.5 rounded-md border border-gray-200">
-            {(["profile", "archives"] as Tab[]).map((t) => (
+            {(["profile", ...(isAdmin ? ["settings"] : []), "archives"] as Tab[]).map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
@@ -268,6 +275,23 @@ export default function ProfilePage() {
               </>
             )}
           </div>
+        )}
+
+        {tab === "settings" && isAdmin && (
+          <section className="space-y-4">
+            <div>
+              <h2 className="text-lg font-black text-gray-900">Settings</h2>
+              <p className="text-xs text-gray-400 mt-1">Manage the categories available when creating items.</p>
+            </div>
+            <div className="bg-white rounded-3xl border border-gray-100 shadow-sm divide-y divide-gray-50">
+              <ActionRow
+                icon={<Tags size={16} />}
+                iconBg="bg-amber-50 text-amber-500"
+                label="Item Categories"
+                onClick={() => router.push("/admin/profile/categories")}
+              />
+            </div>
+          </section>
         )}
       </div>
     </div>

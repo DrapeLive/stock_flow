@@ -32,6 +32,7 @@ services:
 
     celery:
         build: .
+        image: stock-flow-backend:latest
         restart: unless-stopped
         command: celery -A config worker -l info
         env_file: .env
@@ -49,6 +50,7 @@ services:
 
     celery-beat:
         build: .
+        image: stock-flow-backend:latest
         restart: unless-stopped
         command: celery -A config beat -l info
         env_file: .env
@@ -64,6 +66,7 @@ services:
 
     web:
         build: .
+        image: stock-flow-backend:latest
         restart: unless-stopped
         env_file: .env
         depends_on:

@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/utils/price_input.dart';
 import '../../core/utils/text_symbols.dart';
 import '../../data/repositories.dart';
+import '../../models/models.dart';
 import '../../providers.dart';
 import '../../shared/widgets.dart';
 import 'variant_form.dart';
@@ -29,6 +30,10 @@ class _ItemWizardScreenState extends ConsumerState<ItemWizardScreen> {
 
 String _name = '';
   String _description = '';
+  String _category = '';
+  String _fabric = '';
+  List<ItemCategory> _categories = const [];
+  bool _categoriesLoading = true;
   String _price = '';
   String _type = '';
   List<ColorVariantDraft> _variants = [];
@@ -64,6 +69,23 @@ String _name = '';
     }
     _tempSeq = _randomId();
     _loadRanges();
+    _loadCategories();
+  }
+
+  Future<void> _loadCategories() async {
+    try {
+      final categories = await repos.item.categories();
+      if (!mounted) return;
+      setState(() {
+        _categories = categories;
+        if (_category.isEmpty && categories.length == 1) {
+          _category = categories.first.name;
+        }
+        _categoriesLoading = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _categoriesLoading = false);
+    }
   }
 
   String _randomId() =>
@@ -159,6 +181,7 @@ String _name = '';
     if (_name.trim().isEmpty) return false;
     final price = parseItemPrice(_price.trim());
     if (price == null || price <= 0) return false;
+    if (_categories.isEmpty || _category.isEmpty) return false;
     return _hasBusiness || _type == 'gents' || _type == 'kids';
   }
 
@@ -179,6 +202,8 @@ await repos.item.createMultipart(
         description: _description,
         price: parseItemPrice(_price.trim()) ?? 0,
         type: _type,
+        category: _category,
+        fabric: _fabric.trim(),
         variants: payload,
       );
       if (!mounted) return;
@@ -258,6 +283,8 @@ Expanded(
                 onChanged: (v) => setState(() => _name = v),
               ),
               const SizedBox(height: 16),
+              _categoryField(),
+              const SizedBox(height: 16),
               StockFlowTextField(
                 label: 'Description',
                 hint: 'Describe the item…',
@@ -266,6 +293,15 @@ Expanded(
                 minLines: 3,
                 maxLines: 6,
                 onChanged: (v) => setState(() => _description = v),
+              ),
+              const SizedBox(height: 16),
+              StockFlowTextField(
+                label: 'Fabric',
+                hint: 'e.g. Cotton, Linen blend',
+                initialText: _fabric,
+                textCapitalization: TextCapitalization.words,
+                inputFormatters: [LengthLimitingTextInputFormatter(150)],
+                onChanged: (v) => setState(() => _fabric = v),
               ),
               const SizedBox(height: 16),
               _hasBusiness
@@ -290,6 +326,35 @@ Expanded(
           ),
         ),
       ],
+    );
+  }
+
+  Widget _categoryField() {
+    if (_categoriesLoading) {
+      return const Center(child: LinearProgressIndicator());
+    }
+    if (_categories.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFFBEB),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFFDE68A)),
+        ),
+        child: Row(children: [
+          const Expanded(child: Text('Add a category in Profile > Settings before creating items.', style: TextStyle(fontSize: 12))),
+          TextButton(onPressed: () => context.push('/admin/profile?tab=settings'), child: const Text('Settings')),
+        ]),
+      );
+    }
+    return DropdownButtonFormField<String>(
+      value: _categories.any((c) => c.name == _category) ? _category : null,
+      decoration: const InputDecoration(labelText: 'Category *', border: OutlineInputBorder()),
+      items: [
+        for (final category in _categories)
+          DropdownMenuItem(value: category.name, child: Text(category.name)),
+      ],
+      onChanged: (value) => setState(() => _category = value ?? ''),
     );
   }
 

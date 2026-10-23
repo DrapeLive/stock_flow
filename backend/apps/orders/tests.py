@@ -14,6 +14,8 @@ from apps.business.models import Brand
 from apps.customers.models import Customer
 from apps.items.models import Item, ItemVariant, ItemVariantSize
 from apps.orders.models import Order, OrderItem
+from apps.orders.serializers import OrderSerializer
+from apps.orders.utils import get_piece_count
 
 User = get_user_model()
 
@@ -980,6 +982,347 @@ class AnalyticsKPITotalsTests(DraftTestBase):
 
         self.assertEqual(response.data["kpis"]["total_value"], invoice_total)
         self.assertEqual(invoice_total, 10 * 500 * 3 + 2 * 400 * 4)
+
+
+class AnalyticsAgentBreakdownTests(DraftTestBase):
+    """agent_analytics groups placed orders by agent without double counting."""
+
+    analytics_url = "/api/dashboard/analytics/"
+
+    def _item(self, order, quantity, price=500.00, size_group="M,L,XL",
+              item_type="gents", item=None, variant=None):
+        return OrderItem.objects.create(
+            order=order,
+            item=item or self.item,
+            variant=variant or self.variant,
+            quantity=quantity,
+            packed_quantity=0,
+            item_name=(item or self.item).name,
+            item_price=price,
+            size_group=size_group,
+            item_type=item_type,
+        )
+
+    def test_rows_and_summary_reconcile_without_double_counting(self):
+        second_user = User.objects.create_user(
+            username="agent2", email="agent2@test.com", password="pass1234",
+            role="AGENT",
+        )
+        second_agent = Agent.objects.create(
+            user=second_user, contact="3333333333"
+        )
+        idle_user = User.objects.create_user(
+            username="agent_without_orders", email="idle@test.com",
+            password="pass1234", role="AGENT",
+        )
+        Agent.objects.create(user=idle_user, contact="4444444444")
+
+        self._item(self.order, quantity=7)  # 500 x 7 x 3 = 10,500
+        self._item(self.order, quantity=2, price=100.00,
+                   size_group="S,M,L,XL,XXL")  # 100 x 2 x 5 = 1,000
+
+        second_order = Order.objects.create(
+            customer=self.customer, agent=second_agent, status="PACKED"
+        )
+        self._item(second_order, quantity=1, price=400.00)  # 400 x 1 x 3
+
+        unassigned_order = Order.objects.create(
+            customer=self.customer, agent=None, status="PENDING"
+        )
+        self._item(unassigned_order, quantity=5)  # 500 x 5 x 3 = 7,500
+
+        self.make_draft(created_by=self.agent_user, with_item=True)
+
+        self.client.credentials(**get_auth_header(self.admin_user))
+        response = self.client.get(self.analytics_url, self.analytics_range())
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        breakdown = response.data["agent_analytics"]
+        self.assertEqual(breakdown["summary"], {
+            "agents": 2,
+            "orders": 2,
+            "order_amount": 12700.0,
+        })
+        self.assertEqual([row["username"] for row in breakdown["agents"]],
+                         ["agent1", "agent2"])
+        self.assertEqual(breakdown["agents"][0], {
+            "id": self.agent.id,
+            "username": "agent1",
+            "orders": 1,
+            "order_amount": 11500.0,
+        })
+        self.assertEqual(breakdown["agents"][1], {
+            "id": second_agent.id,
+            "username": "agent2",
+            "orders": 1,
+            "order_amount": 1200.0,
+        })
+
+        kpis = response.data["kpis"]
+        self.assertEqual(kpis["total"], 3)
+        self.assertEqual(kpis["total_value"], 20200.0)
+        self.assertEqual(
+            breakdown["summary"]["order_amount"] + 7500.0,
+            kpis["total_value"],
+        )
+
+    def test_date_range_and_business_scope_match_existing_analytics(self):
+        old_order = Order.objects.create(
+            customer=self.customer, agent=self.agent, status="PENDING"
+        )
+        self._item(old_order, quantity=3)
+        Order.objects.filter(id=old_order.id).update(
+            created_at=timezone.now() - timedelta(days=45)
+        )
+
+        kids_item = Item.objects.create(
+            name="Kids Tee", price=300.00, type="kids", brand=self.brand
+        )
+        kids_variant = ItemVariant.objects.create(
+            item=kids_item, display_order="201"
+        )
+        kids_order = Order.objects.create(
+            customer=self.customer, agent=self.agent, status="PENDING"
+        )
+        self._item(kids_order, quantity=2, price=300.00, size_group="20-24",
+                   item_type="kids", item=kids_item, variant=kids_variant)
+
+        self._item(self.order, quantity=5)
+
+        self.client.credentials(**get_auth_header(self.admin_user))
+        gents = self.client.get(
+            self.analytics_url, self.analytics_range()
+        ).data["agent_analytics"]
+        self.assertEqual(gents["summary"], {
+            "agents": 1,
+            "orders": 1,
+            "order_amount": 7500.0,
+        })
+
+        kids_admin = User.objects.create_user(
+            username="kidsadmin", email="kidsadmin@test.com",
+            password="pass1234", role="ADMIN", business="kids",
+            brand=self.brand,
+        )
+        self.client.credentials(**get_auth_header(kids_admin))
+        kids = self.client.get(
+            self.analytics_url, self.analytics_range()
+        ).data["agent_analytics"]
+        self.assertEqual(kids["summary"], {
+            "agents": 1,
+            "orders": 1,
+            "order_amount": 1800.0,
+        })
+
+    def test_empty_range_returns_an_empty_agent_breakdown(self):
+        self._item(self.order, quantity=5)
+
+        self.client.credentials(**get_auth_header(self.admin_user))
+        response = self.client.get(
+            self.analytics_url,
+            {"from": "2099-01-01", "to": "2099-01-02"},
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["agent_analytics"], {
+            "summary": {"agents": 0, "orders": 0, "order_amount": 0},
+            "agents": [],
+        })
+
+
+class AnalyticsItemBreakdownTests(DraftTestBase):
+    """item_analytics groups placed order items by category and fabric."""
+
+    analytics_url = "/api/dashboard/analytics/"
+
+    def _item(self, order, quantity, price=500.00, size_group="M,L,XL",
+              item_type="gents", item=None, variant=None):
+        target = item or self.item
+        return OrderItem.objects.create(
+            order=order,
+            item=target,
+            variant=variant or self.variant,
+            quantity=quantity,
+            packed_quantity=0,
+            item_name=target.name,
+            item_price=price,
+            size_group=size_group,
+            item_type=item_type,
+        )
+
+    def _make_item(self, name, price, category, fabric, item_type="gents"):
+        item = Item.objects.create(
+            name=name,
+            price=price,
+            type=item_type,
+            brand=self.brand,
+            category=category,
+            fabric=fabric,
+        )
+        variant = ItemVariant.objects.create(item=item, display_order="201")
+        return item, variant
+
+    def test_category_and_fabric_totals_reconcile_with_kpis(self):
+        shirt, shirt_variant = self._make_item(
+            "Formal Shirt", 200.00, "Shirts", "Cotton"
+        )
+        trouser, trouser_variant = self._make_item(
+            "Chinos", 400.00, "Trousers", "Denim"
+        )
+
+        # Blank category/fabric on the default item must stay in the report.
+        self._item(self.order, quantity=2)  # 2 x 3 pcs x 500 = 3,000
+        self._item(
+            self.order, quantity=3, price=200.00,
+            item=shirt, variant=shirt_variant,
+        )  # 3 x 3 pcs x 200 = 1,800
+        self._item(
+            self.order, quantity=1, price=400.00, size_group="S,M,L,XL,XXL",
+            item=trouser, variant=trouser_variant,
+        )  # 1 x 5 pcs x 400 = 2,000
+        self._item(
+            self.order, quantity=2, price=200.00, size_group="S,M,L,XL",
+            item=shirt, variant=shirt_variant,
+        )  # 2 x 4 pcs x 200 = 1,600
+
+        self.client.credentials(**get_auth_header(self.admin_user))
+        response = self.client.get(self.analytics_url, self.analytics_range())
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        kpis = response.data["kpis"]
+        breakdown = response.data["item_analytics"]
+
+        self.assertEqual(kpis["total_pieces"], 28)
+        self.assertEqual(kpis["total_value"], 8400.0)
+        self.assertEqual(breakdown["summary"], {
+            "total_pieces": 28,
+            "total_sales": 8400.0,
+            "distinct_items": 3,
+        })
+
+        categories = {row["name"]: row for row in breakdown["categories"]}
+        self.assertEqual(categories["Shirts"], {
+            "name": "Shirts", "pieces": 17, "sales": 3400.0,
+        })
+        self.assertEqual(categories["Trousers"], {
+            "name": "Trousers", "pieces": 5, "sales": 2000.0,
+        })
+        self.assertEqual(categories["Uncategorized"], {
+            "name": "Uncategorized", "pieces": 6, "sales": 3000.0,
+        })
+        self.assertEqual(
+            sum(row["pieces"] for row in breakdown["categories"]),
+            breakdown["summary"]["total_pieces"],
+        )
+        self.assertAlmostEqual(
+            sum(row["sales"] for row in breakdown["categories"]),
+            breakdown["summary"]["total_sales"],
+        )
+        self.assertEqual(breakdown["categories"][0]["name"], "Shirts")
+
+        fabrics = {row["name"]: row for row in breakdown["fabrics"]}
+        self.assertEqual(fabrics["Cotton"], {
+            "name": "Cotton", "pieces": 17, "sales": 3400.0,
+        })
+        self.assertEqual(fabrics["Denim"], {
+            "name": "Denim", "pieces": 5, "sales": 2000.0,
+        })
+        self.assertEqual(fabrics["Fabric not set"], {
+            "name": "Fabric not set", "pieces": 6, "sales": 3000.0,
+        })
+        self.assertEqual(
+            sum(row["pieces"] for row in breakdown["fabrics"]),
+            breakdown["summary"]["total_pieces"],
+        )
+        self.assertAlmostEqual(
+            sum(row["sales"] for row in breakdown["fabrics"]),
+            breakdown["summary"]["total_sales"],
+        )
+
+    def test_breakdown_excludes_drafts_and_out_of_range_orders(self):
+        self.item.category = "Shirts"
+        self.item.fabric = "Cotton"
+        self.item.save()
+
+        self.make_draft(created_by=self.agent_user, with_item=True)
+
+        old_order = Order.objects.create(
+            customer=self.customer, agent=self.agent, status="PENDING"
+        )
+        self._item(old_order, quantity=9)
+        Order.objects.filter(id=old_order.id).update(
+            created_at=timezone.now() - timedelta(days=45)
+        )
+
+        self._item(self.order, quantity=2)
+
+        self.client.credentials(**get_auth_header(self.admin_user))
+        response = self.client.get(self.analytics_url, self.analytics_range())
+
+        breakdown = response.data["item_analytics"]
+        self.assertEqual(breakdown["summary"], {
+            "total_pieces": 6,
+            "total_sales": 3000.0,
+            "distinct_items": 1,
+        })
+        self.assertEqual([row["name"] for row in breakdown["categories"]],
+                         ["Shirts"])
+        self.assertEqual([row["name"] for row in breakdown["fabrics"]],
+                         ["Cotton"])
+        self.assertEqual(
+            breakdown["summary"]["total_pieces"],
+            response.data["kpis"]["total_pieces"],
+        )
+        self.assertEqual(
+            breakdown["summary"]["total_sales"],
+            response.data["kpis"]["total_value"],
+        )
+
+    def test_breakdown_scopes_to_admin_business(self):
+        self.item.category = "Gents"
+        self.item.fabric = "Cotton"
+        self.item.save()
+
+        kids_item, kids_variant = self._make_item(
+            "Kids Tee", 300.00, "Kids", "Cotton Kids", item_type="kids"
+        )
+        kids_order = Order.objects.create(
+            customer=self.customer, agent=self.agent, status="PENDING"
+        )
+        self._item(
+            kids_order, quantity=2, price=300.00, size_group="20-24",
+            item_type="kids", item=kids_item, variant=kids_variant,
+        )
+        self._item(self.order, quantity=3)
+
+        self.client.credentials(**get_auth_header(self.admin_user))
+        gents = self.client.get(
+            self.analytics_url, self.analytics_range()
+        ).data["item_analytics"]
+        self.assertEqual(gents["summary"], {
+            "total_pieces": 9,
+            "total_sales": 4500.0,
+            "distinct_items": 1,
+        })
+        self.assertEqual([row["name"] for row in gents["categories"]],
+                         ["Gents"])
+
+        kids_admin = User.objects.create_user(
+            username="kidsadmin", email="kidsadmin@test.com",
+            password="pass1234", role="ADMIN", business="kids",
+            brand=self.brand,
+        )
+        self.client.credentials(**get_auth_header(kids_admin))
+        kids = self.client.get(
+            self.analytics_url, self.analytics_range()
+        ).data["item_analytics"]
+        self.assertEqual(kids["summary"], {
+            "total_pieces": 6,
+            "total_sales": 1800.0,
+            "distinct_items": 1,
+        })
+        self.assertEqual([row["name"] for row in kids["categories"]],
+                         ["Kids"])
 
 
 class AdminDraftRetrieveTests(DraftTestBase):
@@ -2328,4 +2671,35 @@ class AdminDraftRejectTests(AbandonedDraftTestBase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+
+class PieceCountTests(UnpackedOrderItemsTestBase):
+    def test_kids_32_38_has_four_pieces_per_set(self):
+        self.assertEqual(get_piece_count("32-38", "kids"), 4)
+
+    def test_existing_size_ranges_keep_their_piece_counts(self):
+        self.assertEqual(get_piece_count("32-36", "kids"), 3)
+        self.assertEqual(get_piece_count("38", "kids"), 1)
+        self.assertEqual(get_piece_count("20-38", "kids"), 10)
+        self.assertEqual(get_piece_count("M,L,XL", "gents"), 3)
+        self.assertEqual(get_piece_count("S,M,L,XL,XXL", "gents"), 5)
+
+    def test_order_totals_multiply_sets_by_pieces_per_set(self):
+        OrderItem.objects.create(
+            order=self.order,
+            item=self.item,
+            variant=self.variant,
+            quantity=2,
+            packed_quantity=0,
+            item_name="Kids Set",
+            item_price=300.00,
+            size_group="32-38",
+            item_type="kids",
+        )
+
+        data = OrderSerializer(self.order).data
+
+        self.assertEqual(data["items"][0]["piece_count"], 4)
+        self.assertEqual(data["total_pieces"], 8)
+
 

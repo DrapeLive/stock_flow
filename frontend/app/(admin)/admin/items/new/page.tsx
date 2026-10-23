@@ -31,6 +31,8 @@ export default function NewItemPage() {
   const [common, setCommon] = useState<CommonDetails>({
     name: "",
     description: "",
+    category: "",
+    fabric: "",
     price: "",
     type: (business as CommonDetails["type"]) || "gents",
     brand_id: undefined,

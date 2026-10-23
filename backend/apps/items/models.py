@@ -11,6 +11,9 @@ class Item(models.Model):
 
     description = models.TextField(blank=True)
 
+    category = models.CharField(max_length=100, blank=True)
+    fabric = models.CharField(max_length=150, blank=True)
+
     price = models.DecimalField(max_digits=10, decimal_places=2)
 
     type = models.CharField(max_length=10, choices=TYPE_CHOICES, default="NONE")
@@ -78,3 +81,14 @@ class ItemVariantSize(models.Model):
 
     def __str__(self):
         return f"{self.item_variant} - {self.size}"
+
+
+class ItemCategory(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name

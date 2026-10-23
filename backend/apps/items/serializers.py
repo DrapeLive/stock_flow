@@ -11,7 +11,7 @@ from rest_framework import serializers
 from apps.business.models import Brand
 from apps.orders.utils import SIZE_MAPPING
 
-from .models import Item, ItemVariant, ItemVariantSize
+from .models import Item, ItemCategory, ItemVariant, ItemVariantSize
 from .services import touch_catalog
 
 KIDS_SIZES = set()
@@ -80,6 +80,8 @@ class ItemSerializer(serializers.ModelSerializer):
             "type",
             "price",
             "description",
+            "category",
+            "fabric",
             "brand_id",
             "brand_name",
             "variants",
@@ -123,6 +125,8 @@ class ItemVariantRequestSerializer(serializers.Serializer):
 class CreateItemSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=100)
     description = serializers.CharField(required=False, default="")
+    category = serializers.CharField(max_length=100, required=False, allow_blank=True, default="")
+    fabric = serializers.CharField(max_length=150, required=False, allow_blank=True, default="")
     price = serializers.DecimalField(max_digits=10, decimal_places=2)
     type = serializers.ChoiceField(choices=Item.TYPE_CHOICES)
     brand_id = serializers.IntegerField(required=False)
@@ -175,6 +179,8 @@ class CreateItemSerializer(serializers.Serializer):
         item = Item.objects.create(
             name=validated_data["name"],
             description=validated_data.get("description", ""),
+            category=validated_data.get("category", ""),
+            fabric=validated_data.get("fabric", ""),
             price=validated_data["price"],
             type=validated_data["type"],
             brand=brand,
@@ -250,6 +256,8 @@ class CreateItemSerializer(serializers.Serializer):
 
         instance.name = validated_data.get("name", instance.name)
         instance.description = validated_data.get("description", instance.description)
+        instance.category = validated_data.get("category", instance.category)
+        instance.fabric = validated_data.get("fabric", instance.fabric)
         instance.price = validated_data.get("price", instance.price)
         instance.type = validated_data.get("type", instance.type)
         instance.save()
@@ -318,6 +326,12 @@ class CreateItemSerializer(serializers.Serializer):
 
 
 UpdateItemSerializer = CreateItemSerializer
+
+
+class ItemCategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ItemCategory
+        fields = ["id", "name"]
 
 
 class CustomerRequirementSerializer(serializers.Serializer):

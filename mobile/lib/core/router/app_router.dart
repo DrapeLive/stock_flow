@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/analytics/agent_analytics_screen.dart';
 import '../../features/analytics/analytics_screen.dart';
+import '../../features/analytics/item_analytics_screen.dart';
 import '../../features/auth/forgot_screen.dart';
 import '../../features/auth/login_screen.dart';
 import '../../features/auth/reset_screen.dart';
@@ -20,6 +22,7 @@ import '../../features/orders/order_create_scanner_screen.dart';
 import '../../features/orders/order_create_search_screen.dart';
 import '../../features/orders/order_create_screen.dart';
 import '../../features/orders/order_status_screen.dart';
+import '../../features/profile/item_categories_screen.dart';
 import '../../features/profile/profile_screen.dart';
 import '../../features/summary/summary_screen.dart';
 import '../../features/users/agent_detail_screen.dart';
@@ -63,8 +66,31 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (c, s) => ResetScreen(token: Uri.decodeComponent(s.pathParameters['token'] ?? '')),
       ),
       GoRoute(path: '/admin', builder: (c, s) => const DashboardScreen()),
-      GoRoute(path: '/admin/profile', builder: (c, s) => const ProfileScreen()),
+      GoRoute(
+        path: '/admin/profile',
+        builder: (c, s) => ProfileScreen(
+          initialTab: s.uri.queryParameters['tab'] ?? 'profile',
+        ),
+      ),
+      GoRoute(
+        path: '/admin/profile/categories',
+        builder: (c, s) => const ItemCategoriesScreen(),
+      ),
       GoRoute(path: '/admin/analytics', builder: (c, s) => const AnalyticsScreen()),
+      GoRoute(
+        path: '/admin/analytics/agents',
+        builder: (c, s) => AgentAnalyticsScreen(
+          from: s.uri.queryParameters['from'] ?? '',
+          to: s.uri.queryParameters['to'] ?? '',
+        ),
+      ),
+      GoRoute(
+        path: '/admin/analytics/items',
+        builder: (c, s) => ItemAnalyticsScreen(
+          from: s.uri.queryParameters['from'] ?? '',
+          to: s.uri.queryParameters['to'] ?? '',
+        ),
+      ),
       GoRoute(path: '/admin/summary', builder: (c, s) => const SummaryScreen()),
       GoRoute(
         path: '/admin/bulk-import',

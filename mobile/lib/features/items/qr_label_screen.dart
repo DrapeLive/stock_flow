@@ -27,6 +27,8 @@ class _QrLabelScreenState extends ConsumerState<QrLabelScreen> {
   String? _error;
   String _itemName = '';
   String _price = '';
+  String _category = '';
+  String _fabric = '';
   List<Uint8List> _qrBytes = const [];
   QrLabel _label = const QrLabel(id: 0, qrCode: '');
 
@@ -69,6 +71,8 @@ class _QrLabelScreenState extends ConsumerState<QrLabelScreen> {
       setState(() {
         _itemName = s(data['name']);
         _price = s(data['price']);
+        _category = s(data['category']);
+        _fabric = s(data['fabric']);
         _label = label;
         _qrBytes = [bytes];
         _loading = false;
@@ -87,6 +91,8 @@ class _QrLabelScreenState extends ConsumerState<QrLabelScreen> {
     final doc = await buildQrLabelsPdf(
       itemName: _itemName,
       price: _price,
+      category: _category,
+      fabric: _fabric,
       labels: [_label],
       qrBytes: _qrBytes,
     );

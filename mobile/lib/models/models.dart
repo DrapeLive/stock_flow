@@ -162,6 +162,8 @@ class Item {
     required this.id,
     required this.name,
     this.type,
+    this.category = '',
+    this.fabric = '',
     required this.price,
     this.description,
     required this.variants,
@@ -172,6 +174,8 @@ class Item {
   final int id;
   final String name;
   final String? type;
+  final String category;
+  final String fabric;
   final String price;
   final String? description;
   final List<ItemVariant> variants;
@@ -185,11 +189,25 @@ class Item {
         id: asInt(json['id']) ?? 0,
         name: s(json['name']),
         type: json['type'] as String?,
+        category: s(json['category']),
+        fabric: s(json['fabric']),
         price: s(json['price']),
         description: json['description'] as String?,
         variants: asList(json['variants'], ItemVariant.fromJson),
         purgeOn: json['purge_on'] as String?,
         daysUntilPurge: asInt(json['days_until_purge']),
+      );
+}
+
+@immutable
+class ItemCategory {
+  const ItemCategory({required this.id, required this.name});
+  final int id;
+  final String name;
+
+  factory ItemCategory.fromJson(Map<String, dynamic> json) => ItemCategory(
+        id: asInt(json['id']) ?? 0,
+        name: s(json['name']),
       );
 }
 
@@ -934,6 +952,121 @@ class LeaderboardEntry {
 }
 
 @immutable
+class AgentAnalyticsRow {
+  const AgentAnalyticsRow({
+    this.id,
+    this.username,
+    this.orders = 0,
+    this.orderAmount,
+  });
+  final int? id;
+  final String? username;
+  final int orders;
+  final double? orderAmount;
+
+  factory AgentAnalyticsRow.fromJson(Map<String, dynamic> json) =>
+      AgentAnalyticsRow(
+        id: asInt(json['id']),
+        username: json['username'] as String?,
+        orders: asInt(json['orders']) ?? 0,
+        orderAmount: (json['order_amount'] as num?)?.toDouble(),
+      );
+}
+
+@immutable
+class AgentAnalyticsSummary {
+  const AgentAnalyticsSummary({
+    this.agents = 0,
+    this.orders = 0,
+    this.orderAmount,
+  });
+  final int agents;
+  final int orders;
+  final double? orderAmount;
+
+  factory AgentAnalyticsSummary.fromJson(Map<String, dynamic> json) =>
+      AgentAnalyticsSummary(
+        agents: asInt(json['agents']) ?? 0,
+        orders: asInt(json['orders']) ?? 0,
+        orderAmount: (json['order_amount'] as num?)?.toDouble(),
+      );
+}
+
+@immutable
+class AgentAnalyticsData {
+  const AgentAnalyticsData({
+    this.summary = const AgentAnalyticsSummary(),
+    this.agents = const [],
+  });
+  final AgentAnalyticsSummary summary;
+  final List<AgentAnalyticsRow> agents;
+
+  factory AgentAnalyticsData.fromJson(Map<String, dynamic> json) =>
+      AgentAnalyticsData(
+        summary: json['summary'] is Map<String, dynamic>
+            ? AgentAnalyticsSummary.fromJson(
+                json['summary'] as Map<String, dynamic>)
+            : const AgentAnalyticsSummary(),
+        agents: asList(json['agents'], AgentAnalyticsRow.fromJson),
+      );
+}
+
+@immutable
+class ItemSalesRow {
+  const ItemSalesRow({this.name = '', this.pieces = 0, this.sales});
+  final String name;
+  final int pieces;
+  final double? sales;
+
+  factory ItemSalesRow.fromJson(Map<String, dynamic> json) => ItemSalesRow(
+        name: json['name'] as String? ?? '',
+        pieces: asInt(json['pieces']) ?? 0,
+        sales: (json['sales'] as num?)?.toDouble(),
+      );
+}
+
+@immutable
+class ItemSalesSummary {
+  const ItemSalesSummary({
+    this.totalPieces = 0,
+    this.totalSales,
+    this.distinctItems = 0,
+  });
+  final int totalPieces;
+  final double? totalSales;
+  final int distinctItems;
+
+  factory ItemSalesSummary.fromJson(Map<String, dynamic> json) =>
+      ItemSalesSummary(
+        totalPieces: asInt(json['total_pieces']) ?? 0,
+        totalSales: (json['total_sales'] as num?)?.toDouble(),
+        distinctItems: asInt(json['distinct_items']) ?? 0,
+      );
+}
+
+@immutable
+class ItemAnalyticsData {
+  const ItemAnalyticsData({
+    this.summary = const ItemSalesSummary(),
+    this.categories = const [],
+    this.fabrics = const [],
+  });
+  final ItemSalesSummary summary;
+  final List<ItemSalesRow> categories;
+  final List<ItemSalesRow> fabrics;
+
+  factory ItemAnalyticsData.fromJson(Map<String, dynamic> json) =>
+      ItemAnalyticsData(
+        summary: json['summary'] is Map<String, dynamic>
+            ? ItemSalesSummary.fromJson(
+                json['summary'] as Map<String, dynamic>)
+            : const ItemSalesSummary(),
+        categories: asList(json['categories'], ItemSalesRow.fromJson),
+        fabrics: asList(json['fabrics'], ItemSalesRow.fromJson),
+      );
+}
+
+@immutable
 class TimeMetrics {
   const TimeMetrics({this.avgDispatchHours, this.medianDispatchHours, this.dispatchedWithin24hPct});
   final double? avgDispatchHours;
@@ -955,6 +1088,10 @@ class AnalyticsData {
     required this.topAgents,
     required this.topItems,
     this.timeMetrics,
+    this.agentAnalytics = const AgentAnalyticsData(),
+    this.hasAgentAnalytics = false,
+    this.itemAnalytics = const ItemAnalyticsData(),
+    this.hasItemAnalytics = false,
   });
   final AnalyticsKpis kpis;
   final List<TrendPoint> trend;
@@ -962,9 +1099,15 @@ class AnalyticsData {
   final List<LeaderboardEntry> topAgents;
   final List<LeaderboardEntry> topItems;
   final TimeMetrics? timeMetrics;
+  final AgentAnalyticsData agentAnalytics;
+  final bool hasAgentAnalytics;
+  final ItemAnalyticsData itemAnalytics;
+  final bool hasItemAnalytics;
 
   factory AnalyticsData.fromJson(Map<String, dynamic> json) {
     final rawTrend = json['trend'];
+    final rawAgentAnalytics = json['agent_analytics'];
+    final rawItemAnalytics = json['item_analytics'];
     assert(
       rawTrend is List,
       'Analytics payload mismatch: expected json["trend"] to be a list of '
@@ -984,6 +1127,14 @@ class AnalyticsData {
       timeMetrics: json['time_metrics'] is Map<String, dynamic>
           ? TimeMetrics.fromJson(json['time_metrics'] as Map<String, dynamic>)
           : null,
+      agentAnalytics: rawAgentAnalytics is Map<String, dynamic>
+          ? AgentAnalyticsData.fromJson(rawAgentAnalytics)
+          : const AgentAnalyticsData(),
+      hasAgentAnalytics: rawAgentAnalytics is Map<String, dynamic>,
+      itemAnalytics: rawItemAnalytics is Map<String, dynamic>
+          ? ItemAnalyticsData.fromJson(rawItemAnalytics)
+          : const ItemAnalyticsData(),
+      hasItemAnalytics: rawItemAnalytics is Map<String, dynamic>,
     );
   }
 }

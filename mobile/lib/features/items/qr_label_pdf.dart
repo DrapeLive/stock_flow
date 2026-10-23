@@ -35,9 +35,7 @@ class QrLabel {
 ///  - `react-qr-code` (single card) defaults to EC L.
 ///  - `qrcode` npm (print-all page, `QRCode.toDataURL`) defaults to EC M.
 int errorCorrectionLevelFor(QrLabelKind kind) =>
-    kind == QrLabelKind.single
-        ? QrErrorCorrectLevel.L
-        : QrErrorCorrectLevel.M;
+    kind == QrLabelKind.single ? QrErrorCorrectLevel.L : QrErrorCorrectLevel.M;
 
 /// Renders [data] as a PNG byte array using [QrPainter] (same as
 /// `QRCode.toDataURL` in the web app). The raster is generated large (1024px)
@@ -56,10 +54,18 @@ Future<Uint8List> qrPngBytes(
   final recorder = ui.PictureRecorder();
   final canvas = Canvas(recorder);
   painter.paint(canvas, const Size(size, size));
-  final image = await recorder.endRecording().toImage(size.toInt(), size.toInt());
+  final image =
+      await recorder.endRecording().toImage(size.toInt(), size.toInt());
   final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
   return byteData!.buffer.asUint8List();
 }
+
+/// Extra leading (in PDF points) applied between wrapped lines.
+///
+/// The `pdf` package's standard-14 Helvetica fonts use a ~1.19em line box,
+/// while the web labels use `lineHeight: 1.05`. Subtracting the difference per
+/// font size keeps wrapped lines the same distance apart on both platforms.
+double qrLabelLineSpacing(double fontSize) => fontSize * (1.05 - 1.19);
 
 /// 58mm x 90mm label page (web `qr/[id]` card).
 final PdfPageFormat qrLabelPageFormat =
@@ -68,9 +74,8 @@ final PdfPageFormat qrLabelPageFormat =
 /// 25mm x 50mm = 70.87pt x 141.73pt (web `QRLabelPdf.tsx`).
 final PdfPageFormat qrPrintAllPageFormat = PdfPageFormat(70.87, 141.73);
 
-PdfPageFormat pageFormatFor(QrLabelKind kind) => kind == QrLabelKind.single
-    ? qrLabelPageFormat
-    : qrPrintAllPageFormat;
+PdfPageFormat pageFormatFor(QrLabelKind kind) =>
+    kind == QrLabelKind.single ? qrLabelPageFormat : qrPrintAllPageFormat;
 
 /// Caption matching the web `qr/[id]` card (`Variant #<id>`).
 String qrLabelCaption(QrLabel label) => 'Variant #${label.id}';
@@ -98,11 +103,13 @@ String formatQrLabelPrice(String price) {
 }
 
 /// Builds one label page per [labels] entry (each has its own QR).
-/// `kind == printAll` mirrors `QRLabelPdf.tsx` (padding 4, gap 3, name 12/800,
-/// caption 11/600 plain black, QR 60x60, price 11/800).
+/// `kind == printAll` mirrors `QRLabelPdf.tsx` (padding 4, gap 1.5, name
+/// 11/800, caption 10/600 plain black, QR 60x60, price 10/800).
 Future<pw.Document> buildQrLabelsPdf({
   required String itemName,
   required String price,
+  String category = '',
+  String fabric = '',
   required List<QrLabel> labels,
   List<Uint8List>? qrBytes,
   QrLabelKind kind = QrLabelKind.single,
@@ -122,15 +129,17 @@ Future<pw.Document> buildQrLabelsPdf({
         pageFormat: pageFormatFor(kind),
         margin: pw.EdgeInsets.zero,
         build: (context) => kind == QrLabelKind.single
-            ? _buildSinglePage(itemName, price, label, bytes)
-            : _buildPrintAllPage(itemName, price, label, bytes),
+            ? _buildSinglePage(itemName, price, category, fabric, label, bytes)
+            : _buildPrintAllPage(
+                itemName, price, category, fabric, label, bytes),
       ),
     );
   }
   return doc;
 }
 
-pw.Widget _buildSinglePage(String itemName, String price, QrLabel label, Uint8List bytes) {
+pw.Widget _buildSinglePage(String itemName, String price, String category,
+    String fabric, QrLabel label, Uint8List bytes) {
   return pw.Center(
     child: pw.Container(
       padding: const pw.EdgeInsets.all(6),
@@ -140,12 +149,31 @@ pw.Widget _buildSinglePage(String itemName, String price, QrLabel label, Uint8Li
           pw.Text(
             itemName,
             textAlign: pw.TextAlign.center,
+            maxLines: 3,
+            overflow: pw.TextOverflow.clip,
             style: pw.TextStyle(
               fontSize: 11,
               fontWeight: pw.FontWeight.bold,
+              lineSpacing: qrLabelLineSpacing(11),
             ),
           ),
-          pw.SizedBox(height: 6),
+          if (category.trim().isNotEmpty || fabric.trim().isNotEmpty) ...[
+            pw.SizedBox(height: 2),
+            pw.Text(
+              [
+                if (category.trim().isNotEmpty) category.trim(),
+                if (fabric.trim().isNotEmpty) fabric.trim()
+              ].join('\n'),
+              textAlign: pw.TextAlign.center,
+              maxLines: 2,
+              overflow: pw.TextOverflow.clip,
+              style: pw.TextStyle(
+                fontSize: 8,
+                lineSpacing: qrLabelLineSpacing(8),
+              ),
+            ),
+          ],
+          pw.SizedBox(height: 4),
           pw.Container(
             padding: const pw.EdgeInsets.all(4),
             color: PdfColors.white,
@@ -155,10 +183,10 @@ pw.Widget _buildSinglePage(String itemName, String price, QrLabel label, Uint8Li
               height: 130,
             ),
           ),
-          pw.SizedBox(height: 6),
+          pw.SizedBox(height: 4),
           pw.Container(
-            padding: const pw.EdgeInsets.symmetric(
-                horizontal: 8, vertical: 2),
+            padding:
+                const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 1.5),
             decoration: pw.BoxDecoration(
               color: PdfColor.fromInt(0xFFF0F0F0),
               borderRadius: pw.BorderRadius.circular(4),
@@ -172,11 +200,11 @@ pw.Widget _buildSinglePage(String itemName, String price, QrLabel label, Uint8Li
               ),
             ),
           ),
-          pw.SizedBox(height: 6),
+          pw.SizedBox(height: 4),
           pw.Text(
             formatQrLabelPrice(price),
             style: pw.TextStyle(
-              fontSize: 14,
+              fontSize: 13,
               fontWeight: pw.FontWeight.bold,
             ),
           ),
@@ -187,47 +215,83 @@ pw.Widget _buildSinglePage(String itemName, String price, QrLabel label, Uint8Li
 }
 
 /// Mirrors `QRLabelPdf.tsx`: flex column, alignItems/justifyContent center,
-/// gap 3, padding 4, background white.
-pw.Widget _buildPrintAllPage(String itemName, String price, QrLabel label, Uint8List bytes) {
+/// padding 4, background white, with a 1.5pt gap between sections.
+///
+/// The item name/details block is wrapped in a [pw.Flexible] so the QR and
+/// price are always laid out: `pdf`'s flex implementation stops laying out
+/// fixed children as soon as their summed height overflows the page, which
+/// previously dropped the price on long two-line names.
+pw.Widget _buildPrintAllPage(String itemName, String price, String category,
+    String fabric, QrLabel label, Uint8List bytes) {
   final caption = qrPrintAllCaption(label);
+  const gap = 1.5;
   return pw.Container(
     padding: const pw.EdgeInsets.all(4),
     color: PdfColors.white,
     child: pw.Column(
       mainAxisAlignment: pw.MainAxisAlignment.center,
       children: [
-        pw.Text(
-          itemName,
-          textAlign: pw.TextAlign.center,
-          style: pw.TextStyle(
-            fontSize: 12,
-            fontWeight: pw.FontWeight.bold,
+        pw.Flexible(
+          child: pw.Column(
+            mainAxisSize: pw.MainAxisSize.min,
+            children: [
+              pw.Text(
+                itemName,
+                textAlign: pw.TextAlign.center,
+                maxLines: 2,
+                overflow: pw.TextOverflow.clip,
+                style: pw.TextStyle(
+                  fontSize: 11,
+                  fontWeight: pw.FontWeight.bold,
+                  lineSpacing: qrLabelLineSpacing(11),
+                ),
+              ),
+              if (category.trim().isNotEmpty || fabric.trim().isNotEmpty) ...[
+                pw.SizedBox(height: gap),
+                pw.Text(
+                  [
+                    if (category.trim().isNotEmpty) category.trim(),
+                    if (fabric.trim().isNotEmpty) fabric.trim()
+                  ].join('\n'),
+                  textAlign: pw.TextAlign.center,
+                  maxLines: 2,
+                  overflow: pw.TextOverflow.clip,
+                  style: pw.TextStyle(
+                    fontSize: 6.5,
+                    lineSpacing: qrLabelLineSpacing(6.5),
+                  ),
+                ),
+              ],
+            ],
           ),
         ),
         if (caption.isNotEmpty) ...[
-          pw.SizedBox(height: 3),
+          pw.SizedBox(height: gap),
           pw.Container(
-            padding: const pw.EdgeInsets.all(2),
+            padding: const pw.EdgeInsets.all(1.5),
             child: pw.Text(
               caption,
+              textAlign: pw.TextAlign.center,
+              maxLines: 1,
+              overflow: pw.TextOverflow.clip,
               style: pw.TextStyle(
-                fontSize: 11,
+                fontSize: 10,
                 fontWeight: pw.FontWeight.bold,
               ),
             ),
           ),
         ],
-        pw.SizedBox(height: 3),
+        pw.SizedBox(height: gap),
         pw.Image(
           pw.MemoryImage(bytes),
           width: 60,
           height: 60,
         ),
-        pw.SizedBox(height: 3),
+        pw.SizedBox(height: gap),
         pw.Text(
           formatQrLabelPrice(price),
           style: pw.TextStyle(
-            fontSize: 11,
+            fontSize: 10,
             fontWeight: pw.FontWeight.bold,
           ),
         ),

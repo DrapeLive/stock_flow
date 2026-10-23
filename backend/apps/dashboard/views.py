@@ -49,7 +49,14 @@ class AdminAnalyticsView(APIView):
             "never live item prices. Definitions: `total_sets` = sum of item "
             "quantities; `total_pieces` = sum(quantity × pieces-per-set); "
             "`total_value` = sum(item_price × quantity × pieces-per-set) "
-            "before GST, matching the per-order invoice `total_price`."
+            "before GST, matching the per-order invoice `total_price`. "
+            "`agent_analytics` groups the same placed orders by assigned "
+            "agent; unassigned orders are excluded, and its summary is the "
+            "sum of the returned agent rows. `item_analytics` groups the same "
+            "placed order items by their item's current category and fabric; "
+            "blank values are returned as `Uncategorized` / `Fabric not set`. "
+            "Rows whose Item was hard-deleted are skipped, matching the KPI "
+            "and invoice totals."
         ),
         responses={200: OpenApiTypes.OBJECT},
     )
@@ -97,18 +104,74 @@ class AdminAnalyticsView(APIView):
         total_sets = 0
         total_pieces = 0
         total_value = 0.0
+        agent_amounts = {}
+        sold_item_ids = set()
+        category_totals = {}
+        fabric_totals = {}
         item_rows = (
             OrderItem.objects
             .filter(order__in=placed_qs, item__isnull=False)
-            .values('item_price', 'size_group', 'item_type')
+            .values(
+                'item_id',
+                'order__agent_id',
+                'item_price',
+                'size_group',
+                'item_type',
+                'item__category',
+                'item__fabric',
+            )
             .annotate(qty=Sum('quantity'))
         )
         for row in item_rows:
             pcs = get_piece_count(row['size_group'], row['item_type'] or 'gents')
             qty = row['qty']
+            row_pieces = qty * pcs
+            row_value = float(row['item_price']) * row_pieces
             total_sets += qty
-            total_pieces += qty * pcs
-            total_value += float(row['item_price']) * qty * pcs
+            total_pieces += row_pieces
+            total_value += row_value
+            sold_item_ids.add(row['item_id'])
+            if row['order__agent_id'] is not None:
+                agent_amounts[row['order__agent_id']] = (
+                    agent_amounts.get(row['order__agent_id'], 0.0) + row_value
+                )
+
+            category = (row['item__category'] or '').strip() or 'Uncategorized'
+            fabric = (row['item__fabric'] or '').strip() or 'Fabric not set'
+            category_row = category_totals.setdefault(
+                category, {'pieces': 0, 'sales': 0.0}
+            )
+            category_row['pieces'] += row_pieces
+            category_row['sales'] += row_value
+            fabric_row = fabric_totals.setdefault(
+                fabric, {'pieces': 0, 'sales': 0.0}
+            )
+            fabric_row['pieces'] += row_pieces
+            fabric_row['sales'] += row_value
+
+        def breakdown_rows(totals):
+            rows = [
+                {
+                    'name': name,
+                    'pieces': values['pieces'],
+                    'sales': round(values['sales'], 2),
+                }
+                for name, values in totals.items()
+            ]
+            rows.sort(
+                key=lambda row: (-row['sales'], -row['pieces'], row['name'])
+            )
+            return rows
+
+        item_analytics = {
+            'summary': {
+                'total_pieces': total_pieces,
+                'total_sales': round(total_value, 2),
+                'distinct_items': len(sold_item_ids),
+            },
+            'categories': breakdown_rows(category_totals),
+            'fabrics': breakdown_rows(fabric_totals),
+        }
 
         kpis = {
             'total': placed_qs.count(),
@@ -143,6 +206,41 @@ class AdminAnalyticsView(APIView):
             .annotate(count=Count('id', distinct=True))
             .order_by('-count')[:10]
         )
+
+        agent_counts = (
+            placed_qs
+            .filter(agent__isnull=False)
+            .values('agent_id', 'agent__user__username')
+            .annotate(orders=Count('id', distinct=True))
+        )
+        agent_rows = [
+            {
+                'id': row['agent_id'],
+                'username': row['agent__user__username'],
+                'orders': row['orders'],
+                'order_amount': round(
+                    agent_amounts.get(row['agent_id'], 0.0), 2
+                ),
+            }
+            for row in agent_counts
+        ]
+        agent_rows.sort(
+            key=lambda row: (
+                -row['order_amount'],
+                -row['orders'],
+                row['username'],
+            )
+        )
+        agent_analytics = {
+            'summary': {
+                'agents': len(agent_rows),
+                'orders': sum(row['orders'] for row in agent_rows),
+                'order_amount': round(
+                    sum(row['order_amount'] for row in agent_rows), 2
+                ),
+            },
+            'agents': agent_rows,
+        }
 
         top_items = (
             OrderItem.objects
@@ -190,6 +288,8 @@ class AdminAnalyticsView(APIView):
                 {'id': a['agent_id'], 'username': a['agent__user__username'], 'count': a['count']}
                 for a in top_agents
             ],
+            'agent_analytics': agent_analytics,
+            'item_analytics': item_analytics,
             'top_items': [
                 {'name': i['item_name'], 'qty': i['qty']}
                 for i in top_items

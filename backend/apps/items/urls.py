@@ -3,15 +3,18 @@ from django.conf.urls.static import static
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
-from .views import ItemVariantViewSet, ItemViewSet, SizeRangesAPIView
+from .views import ItemCategoryViewSet, ItemVariantViewSet, ItemViewSet, SizeRangesAPIView
 
 item_router = DefaultRouter()
 variant_router = DefaultRouter()
+category_router = DefaultRouter()
 
 item_router.register(r"", ItemViewSet, basename="items")
 variant_router.register(r"", ItemVariantViewSet, basename="item-variants")
+category_router.register(r"", ItemCategoryViewSet, basename="item-categories")
 
 urlpatterns = [
+    path("categories/", include(category_router.urls)),
     path("", include(item_router.urls)),
     path("variants/", include(variant_router.urls)),
     path(

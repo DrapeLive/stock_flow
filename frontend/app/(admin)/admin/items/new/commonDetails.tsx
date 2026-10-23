@@ -15,7 +15,9 @@ import { ArrowLeft } from "lucide-react";
 import type { CommonDetails, ItemType } from "@/types/item";
 import { useEffect, useState } from "react";
 import { brandApi } from "@/lib/api/brand";
+import { itemApi } from "@/lib/api/item";
 import { Brand } from "@/types/brand";
+import type { ItemCategory } from "@/types/item";
 
 interface Props {
   value: CommonDetails;
@@ -33,6 +35,7 @@ export default function Step1CommonDetails({
   isSuperuser = false,
 }: Props) {
   const [brandData, setBrandData] = useState<Brand[]>([]);
+  const [categories, setCategories] = useState<ItemCategory[]>([]);
   const [loading, setLoading] = useState(false);
 
   const [mounted, setMounted] = useState(false);
@@ -53,11 +56,15 @@ export default function Step1CommonDetails({
       }
     };
     fetchData();
+    itemApi.getCategories().then(setCategories).catch((error) => {
+      console.error("Error fetching item categories:", error);
+    });
   }, []);
 
   const isValid =
     value.name.trim() !== "" &&
     value.price.trim() !== "" &&
+    value.category.trim() !== "" &&
     (!isSuperuser || value.brand_id);
 
   return (
@@ -95,11 +102,40 @@ export default function Step1CommonDetails({
         </Field>
 
         <Field>
+          <div className="flex items-center justify-between">
+            <FieldLabel>Category *</FieldLabel>
+            <a href="/admin/profile?tab=settings" target="_blank" rel="noreferrer" className="text-xs text-primary underline">
+              Manage categories
+            </a>
+          </div>
+          <Select value={value.category} onValueChange={(v) => set("category", v)}>
+            <SelectTrigger>
+              <SelectValue placeholder={categories.length ? "Select category" : "Add a category in Profile settings"} />
+            </SelectTrigger>
+            <SelectContent>
+              {categories.map((category) => (
+                <SelectItem key={category.id} value={category.name}>{category.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </Field>
+
+        <Field>
           <FieldLabel>Description</FieldLabel>
           <Textarea
             placeholder="Describe the item…"
             value={value.description}
             onChange={(e) => set("description", e.target.value)}
+          />
+        </Field>
+
+        <Field>
+          <FieldLabel>Fabric</FieldLabel>
+          <Input
+            placeholder="e.g. Cotton, Linen blend"
+            value={value.fabric}
+            onChange={(e) => set("fabric", e.target.value)}
+            maxLength={150}
           />
         </Field>
 

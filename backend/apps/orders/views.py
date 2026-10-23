@@ -526,7 +526,7 @@ class AdminDraftAcceptView(APIView):
                             "Order Placed",
                             f"Your unfinished order #{locked.id} for {customer_name}"
                             " was accepted by admin and is now pending",
-                            data={"order_id": str(locked.id)},
+                            data={"type": "order_status", "order_id": str(locked.id), "customer_name": customer_name},
                         ),
                         robust=True,
                     )
@@ -577,7 +577,7 @@ class AdminDraftRejectView(APIView):
                         "Draft Discarded",
                         f"Your unfinished order #{order_id} for {customer_name}"
                         " was discarded",
-                        data={"order_id": str(order_id)},
+                        data={"type": "order_status", "order_id": str(order_id), "customer_name": customer_name},
                     ),
                     robust=True,
                 )
@@ -1257,7 +1257,8 @@ class OrderViewSet(ModelViewSet):
                             notify_user_safely,
                             agent_user_id,
                             "Order Partially Dispatched",
-                            f"Packed items from order #{order.id} have been dispatched",
+                            f"Packed items from {order.customer.name if order.customer else 'Customer'}'s order have been dispatched",
+                            data={"type": "order_status", "order_id": str(pending_order.id), "customer_name": order.customer.name if order.customer else "Customer"},
                         ),
                         robust=True,
                     )
@@ -1319,6 +1320,7 @@ class OrderViewSet(ModelViewSet):
                     agent_user_id,
                     "Order Dispatched",
                     f"Order for {order.customer.name if order.customer else 'Customer'} has been dispatched",
+                    data={"type": "order_status", "order_id": str(order.id), "customer_name": order.customer.name if order.customer else "Customer"},
                 ),
                 robust=True,
             )

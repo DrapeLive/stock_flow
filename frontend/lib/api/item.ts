@@ -7,6 +7,7 @@ import type {
     ItemStockEntry,
     FrontendSizeRange,
     ItemType,
+    ItemCategory,
     CustomerRequirementResponse,
 } from "@/types/item";
 import { api } from "./axios";
@@ -18,6 +19,22 @@ export interface SizeRangeResponse {
 }
 
 export const itemApi = {
+    getCategories(): Promise<ItemCategory[]> {
+        return api.get<ItemCategory[]>("/api/items/categories/").then((r) => r.data);
+    },
+
+    createCategory(name: string): Promise<ItemCategory> {
+        return api.post<ItemCategory>("/api/items/categories/", { name }).then((r) => r.data);
+    },
+
+    updateCategory(id: number, name: string): Promise<ItemCategory> {
+        return api.patch<ItemCategory>(`/api/items/categories/${id}/`, { name }).then((r) => r.data);
+    },
+
+    deleteCategory(id: number): Promise<void> {
+        return api.delete(`/api/items/categories/${id}/`).then((r) => r.data);
+    },
+
     getAll(): Promise<ItemAllResponse> {
         return api.get<ItemAllResponse>("/api/items/").then((r) => r.data);
     },

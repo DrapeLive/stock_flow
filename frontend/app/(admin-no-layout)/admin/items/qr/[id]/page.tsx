@@ -6,6 +6,11 @@ import QRCode from "react-qr-code";
 import { itemApi } from "@/lib/api/item";
 import type { ItemQRResponse } from "@/types/item";
 
+// Matches the Helvetica used by the printed PDF labels so the browser print
+// and the `pdf` package output look the same.
+const LABEL_FONT_FAMILY =
+  "Helvetica, 'Helvetica Neue', Arial, 'Segoe UI', system-ui, sans-serif";
+
 const QRPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [item, setItem] = useState<ItemQRResponse | null>(null);
@@ -63,10 +68,10 @@ const QRPage: React.FC = () => {
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          gap: "6px",
-          padding: "6mm 4mm",
+          gap: "4px",
+          padding: "4mm 3mm",
           background: "white",
-          fontFamily: "system-ui, sans-serif",
+          fontFamily: LABEL_FONT_FAMILY,
           margin: "0 auto",
         }}
       >
@@ -77,7 +82,7 @@ const QRPage: React.FC = () => {
             fontWeight: 700,
             textAlign: "center",
             margin: 0,
-            lineHeight: 1.2,
+            lineHeight: 1.05,
             letterSpacing: "-0.01em",
           }}
         >
@@ -99,7 +104,8 @@ const QRPage: React.FC = () => {
             margin: 0,
             background: "#f0f0f0",
             borderRadius: "4px",
-            padding: "2px 8px",
+            padding: "1px 6px",
+            lineHeight: 1.1,
             letterSpacing: "0.02em",
           }}
         >
@@ -109,9 +115,10 @@ const QRPage: React.FC = () => {
         {/* Price */}
         <p
           style={{
-            fontSize: "14px",
+            fontSize: "13px",
             fontWeight: 800,
             margin: 0,
+            lineHeight: 1.05,
             letterSpacing: "-0.02em",
           }}
         >

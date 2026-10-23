@@ -43,6 +43,8 @@ export async function updateItem(
     price: common.price,
     type: common.type,
     ...(common.description && { description: common.description }),
+    category: common.category || "",
+    fabric: common.fabric || "",
     variants: Object.values(grouped).map((g) => ({
       ...(g.id ? { id: g.id } : {}), // existing variants carry their id
       sizes: g.sizes,

@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -12,7 +12,8 @@ import 'archived_item_card.dart';
 
 /// Mirrors `components/pages/profile/ProfilePage.tsx` (admin context).
 class ProfileScreen extends ConsumerStatefulWidget {
-  const ProfileScreen({super.key});
+  const ProfileScreen({super.key, this.initialTab = 'profile'});
+  final String initialTab;
 
   @override
   ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
@@ -31,10 +32,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   @override
   void initState() {
     super.initState();
+    if (['profile', 'settings', 'archives'].contains(widget.initialTab)) {
+      _tab = widget.initialTab;
+    }
     _loadProfile();
+    if (_tab == 'archives') _loadArchives();
   }
 
-Future<void> _loadProfile() async {
+  Future<void> _loadProfile() async {
     // Single source of truth: refreshProfile fetches, persists and publishes
     // the fresh profile. The screen keeps rendering the (cached) session user
     // in the meantime, so details are never blank.
@@ -90,11 +95,9 @@ Future<void> _loadProfile() async {
 
   @override
   Widget build(BuildContext context) {
-    final sessionUser =
-        ref.watch(sessionProvider.select((s) => s?.user));
-    final user = _profile ??
-        sessionUser ??
-        const AuthUser(id: 0, role: 'UNKNOWN');
+    final sessionUser = ref.watch(sessionProvider.select((s) => s?.user));
+    final user =
+        _profile ?? sessionUser ?? const AuthUser(id: 0, role: 'UNKNOWN');
 
     final displayName = (user.displayName?.isNotEmpty ?? false)
         ? user.displayName!
@@ -102,7 +105,7 @@ Future<void> _loadProfile() async {
             ? user.username!
             : 'User';
 
-return Scaffold(
+    return Scaffold(
       backgroundColor: const Color(0xFFFBFBFA),
       body: SafeArea(
         child: Column(
@@ -111,7 +114,9 @@ return Scaffold(
             Expanded(
               child: _tab == 'profile'
                   ? _profileTab(user, displayName)
-                  : _archivesTab(),
+                  : _tab == 'settings'
+                      ? _settingsTab()
+                      : _archivesTab(),
             ),
           ],
         ),
@@ -134,9 +139,8 @@ return Scaffold(
                   padding: EdgeInsets.zero,
                   icon: const Icon(Icons.arrow_back,
                       size: 20, color: Color(0xFF111827)),
-                  onPressed: () => context.canPop()
-                      ? context.pop()
-                      : context.go('/admin'),
+                  onPressed: () =>
+                      context.canPop() ? context.pop() : context.go('/admin'),
                 ),
               ),
               const SizedBox(width: 4),
@@ -151,8 +155,7 @@ return Scaffold(
                 ),
               ),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
                   color: AppColors.primary.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(999),
@@ -180,12 +183,11 @@ return Scaffold(
             decoration: BoxDecoration(
               color: const Color(0xFFF3F4F6),
               borderRadius: BorderRadius.circular(8),
-              border:
-                  Border.all(color: const Color(0xFFE5E7EB)),
+              border: Border.all(color: const Color(0xFFE5E7EB)),
             ),
             child: Row(
               children: [
-                for (final t in ['profile', 'archives'])
+                for (final t in ['profile', 'settings', 'archives'])
                   Expanded(
                     child: InkWell(
                       borderRadius: BorderRadius.circular(6),
@@ -219,8 +221,13 @@ return Scaffold(
   }
 
   Widget _profileTab(AuthUser user, String displayName) {
-    final infoRows = <
-        ({IconData icon, Color iconBg, Color iconFg, String label, String value})>[
+    final infoRows = <({
+      IconData icon,
+      Color iconBg,
+      Color iconFg,
+      String label,
+      String value
+    })>[
       (
         icon: Icons.person_outline,
         iconBg: const Color(0xFFDBEAFE),
@@ -256,8 +263,7 @@ return Scaffold(
           child: Column(
             children: [
               for (var i = 0; i < infoRows.length; i++) ...[
-                if (i > 0)
-                  const Divider(height: 1, color: Color(0xFFF9FAFB)),
+                if (i > 0) const Divider(height: 1, color: Color(0xFFF9FAFB)),
                 _infoRow(infoRows[i]),
               ],
             ],
@@ -290,8 +296,8 @@ return Scaffold(
             side: const BorderSide(color: Color(0xFFFFE4E6)),
             foregroundColor: const Color(0xFFF43F5E),
             padding: const EdgeInsets.symmetric(vertical: 16),
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           ),
           onPressed: _handleLogout,
           child: const Row(
@@ -309,8 +315,13 @@ return Scaffold(
   }
 
   Widget _infoRow(
-      ({IconData icon, Color iconBg, Color iconFg, String label, String value})
-          row) {
+      ({
+        IconData icon,
+        Color iconBg,
+        Color iconFg,
+        String label,
+        String value
+      }) row) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
@@ -361,8 +372,7 @@ return Scaffold(
       child: Column(
         children: [
           for (var i = 0; i < actions.length; i++) ...[
-            if (i > 0)
-              const Divider(height: 1, color: Color(0xFFF9FAFB)),
+            if (i > 0) const Divider(height: 1, color: Color(0xFFF9FAFB)),
             _actionRow(actions[i]),
           ],
         ],
@@ -384,8 +394,7 @@ return Scaffold(
                 color: action.iconBg,
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(action.icon,
-                  size: 17, color: action.iconColor),
+              child: Icon(action.icon, size: 17, color: action.iconColor),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -395,8 +404,7 @@ return Scaffold(
                       fontWeight: FontWeight.w800,
                       color: Color(0xFF4B5563))),
             ),
-            const Icon(Icons.chevron_right,
-                size: 19, color: Color(0xFFD1D5DB)),
+            const Icon(Icons.chevron_right, size: 19, color: Color(0xFFD1D5DB)),
           ],
         ),
       ),
@@ -417,23 +425,20 @@ return Scaffold(
           child: Text(
             'Archived items are permanently deleted 30 days after being '
             'archived. Existing orders keep their item details.',
-            style: TextStyle(
-                fontSize: 11,
-                color: Color(0xFF9CA3AF),
-                height: 1.4),
+            style:
+                TextStyle(fontSize: 11, color: Color(0xFF9CA3AF), height: 1.4),
           ),
         ),
         _sectionHeader('Archived Items'),
-if (_archivedItems.isEmpty)
+        if (_archivedItems.isEmpty)
           _emptyCard('No archived items')
         else
-          ..._archivedItems.map(
-              (item) => ArchivedItemCard(
-                    item: item,
-                    expanded: _expandedItem == item.id,
-                    onToggle: () => setState(() => _expandedItem =
-                        _expandedItem == item.id ? null : item.id),
-                  )),
+          ..._archivedItems.map((item) => ArchivedItemCard(
+                item: item,
+                expanded: _expandedItem == item.id,
+                onToggle: () => setState(() =>
+                    _expandedItem = _expandedItem == item.id ? null : item.id),
+              )),
         const SizedBox(height: 20),
         _sectionHeader('Archived Orders'),
         if (_archivedOrders.isEmpty)
@@ -441,6 +446,58 @@ if (_archivedItems.isEmpty)
         else
           ..._archivedOrders.map((order) => _archivedOrderRow(order)),
         const SizedBox(height: 20),
+      ],
+    );
+  }
+
+  Widget _settingsTab() {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        const Text('Settings',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+        const SizedBox(height: 5),
+        const Text('Manage admin configuration.',
+            style: TextStyle(fontSize: 12, color: Color(0xFF9CA3AF))),
+        const SizedBox(height: 16),
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFFF3F4F6)),
+          ),
+          child: ListTile(
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            leading: Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(
+                Icons.sell_outlined,
+                size: 19,
+                color: AppColors.primary,
+              ),
+            ),
+            title: const Text(
+              'Item Categories',
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+            ),
+            subtitle: const Text(
+              'Manage categories available when creating items.',
+              style: TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)),
+            ),
+            trailing: const Icon(
+              Icons.chevron_right,
+              size: 20,
+              color: Color(0xFFD1D5DB),
+            ),
+            onTap: () => context.push('/admin/profile/categories'),
+          ),
+        ),
       ],
     );
   }
@@ -481,7 +538,7 @@ if (_archivedItems.isEmpty)
     );
   }
 
-Widget _archivedOrderRow(Order order) {
+  Widget _archivedOrderRow(Order order) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(

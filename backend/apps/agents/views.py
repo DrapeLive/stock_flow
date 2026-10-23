@@ -176,6 +176,7 @@ class AgentItemsView(APIView):
                 agent.user_id,
                 "Items Assigned",
                 f"{assigned_count} item{'s' if assigned_count > 1 else ''} have been assigned to you",
+                data={"type": "item_assignment"},
             )
 
         return Response(result)
@@ -259,6 +260,7 @@ class AgentItemTransferView(APIView):
                 target_agent.user_id,
                 "Items Transferred",
                 f"{assigned_count} item{'s' if assigned_count > 1 else ''} have been transferred to you",
+                data={"type": "item_assignment"},
             )
 
         return Response(
@@ -316,6 +318,7 @@ class AgentItemCopyView(APIView):
                 target_agent.user_id,
                 "Items Copied",
                 f"{assigned_count} item{'s' if assigned_count > 1 else ''} have been copied to you",
+                data={"type": "item_assignment"},
             )
 
         return Response(

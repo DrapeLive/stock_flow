@@ -59,6 +59,9 @@ class _ItemEditScreenState extends ConsumerState<ItemEditScreen> {
 
   String _name = '';
   String _description = '';
+  String _category = '';
+  String _fabric = '';
+  List<ItemCategory> _categories = const [];
   String _price = '';
   String _type = 'gents';
   List<_VariantGroup> _groups = [];
@@ -72,6 +75,14 @@ class _ItemEditScreenState extends ConsumerState<ItemEditScreen> {
     super.initState();
     _localSeq = DateTime.now().microsecondsSinceEpoch.toString();
     _load();
+    _loadCategories();
+  }
+
+  Future<void> _loadCategories() async {
+    try {
+      final categories = await repos.item.categories();
+      if (mounted) setState(() => _categories = categories);
+    } catch (_) {}
   }
 
   Future<void> _load() async {
@@ -92,6 +103,8 @@ class _ItemEditScreenState extends ConsumerState<ItemEditScreen> {
       setState(() {
         _name = item.name;
         _description = item.description ?? '';
+        _category = item.category;
+        _fabric = item.fabric;
         _price = item.price;
         _type = (item.type == 'kids') ? 'kids' : 'gents';
         _itemSizes = {
@@ -258,6 +271,8 @@ bool get _isValid {
         'name': _name,
         'price': _price,
         'type': _type,
+        'category': _category,
+        'fabric': _fabric.trim(),
         if (_description.isNotEmpty) 'description': _description,
         'variants': groupedPayload,
       };
@@ -488,6 +503,27 @@ const Text('ITEM DETAILS',
             minLines: 3,
             maxLines: 6,
             onChanged: (v) => setState(() => _description = v),
+          ),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<String>(
+            value: _category.isNotEmpty ? _category : null,
+            decoration: const InputDecoration(labelText: 'Category', border: OutlineInputBorder()),
+            items: [
+              if (_category.isNotEmpty && !_categories.any((c) => c.name == _category))
+                DropdownMenuItem(value: _category, child: Text(_category)),
+              for (final category in _categories)
+                DropdownMenuItem(value: category.name, child: Text(category.name)),
+            ],
+            onChanged: (value) => setState(() => _category = value ?? ''),
+          ),
+          const SizedBox(height: 12),
+          StockFlowTextField(
+            label: 'Fabric',
+            hint: 'e.g. Cotton, Linen blend',
+            initialText: _fabric,
+            textCapitalization: TextCapitalization.words,
+            inputFormatters: [LengthLimitingTextInputFormatter(150)],
+            onChanged: (value) => setState(() => _fabric = value),
           ),
           const SizedBox(height: 12),
           if (_isBusinessAdmin)

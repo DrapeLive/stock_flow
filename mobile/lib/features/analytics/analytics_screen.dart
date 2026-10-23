@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart' hide TextDirection;
 
 import '../../core/theme/app_theme.dart';
@@ -13,7 +14,7 @@ import '../../models/models.dart';
 import '../../shared/admin_shell.dart';
 import '../../shared/widgets.dart';
 
-enum _Preset { today, sevenDays, thirtyDays, custom }
+enum _AnalyticsPreset { today, sevenDays, thirtyDays, custom }
 
 const _statusColors = <String, Color>{
   'draft': Color(0xFF9CA3AF),
@@ -35,77 +36,314 @@ const _statusLabels = <String, String>{
 /// Charts are drawn with plain Flutter widgets (no chart lib) to keep the
 /// exact colors/ordering of the recharts versions.
 class AnalyticsScreen extends ConsumerStatefulWidget {
-  const AnalyticsScreen({super.key});
+  const AnalyticsScreen({super.key, this.from = '', this.to = ''});
+
+  final String from;
+  final String to;
 
   @override
   ConsumerState<AnalyticsScreen> createState() => _AnalyticsScreenState();
 }
 
 class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
-  _Preset _preset = _Preset.thirtyDays;
+  _AnalyticsPreset _preset = _AnalyticsPreset.thirtyDays;
   String _from = '';
   String _to = '';
-  String _customFrom = '';
-  String _customTo = '';
+  String _dataFrom = '';
+  String _dataTo = '';
+  String _draftFrom = '';
+  String _draftTo = '';
   AnalyticsData? _data;
   bool _loading = true;
   bool _refetching = false;
   bool _valueUnlocked = false;
+  bool _customExpanded = true;
 
   @override
   void initState() {
     super.initState();
     final now = DateTime.now();
-    final to = DateFormat('y-MM-dd').format(now);
-    final from = DateFormat('y-MM-dd').format(now.subtract(const Duration(days: 30)));
-    _from = from;
-    _to = to;
+    if (widget.from.isNotEmpty || widget.to.isNotEmpty) {
+      _to =
+          widget.to.isNotEmpty ? widget.to : DateFormat('y-MM-dd').format(now);
+      _from = widget.from.isNotEmpty
+          ? widget.from
+          : DateFormat('y-MM-dd')
+              .format(now.subtract(const Duration(days: 30)));
+      _preset = _AnalyticsPreset.custom;
+    } else {
+      _to = DateFormat('y-MM-dd').format(now);
+      _from =
+          DateFormat('y-MM-dd').format(now.subtract(const Duration(days: 30)));
+    }
+    _draftFrom = _from;
+    _draftTo = _to;
     Perf.start('analytics');
-    _fetch(from, to);
+    _fetch(_from, _to);
   }
 
-  void _applyPreset(_Preset p) {
-    setState(() => _preset = p);
-    if (p == _Preset.custom) return;
+  void _applyPreset(_AnalyticsPreset preset) {
+    if (_refetching) return;
+    if (preset == _AnalyticsPreset.custom) {
+      setState(() {
+        _preset = _AnalyticsPreset.custom;
+        _customExpanded = true;
+        _draftFrom = _from;
+        _draftTo = _to;
+      });
+      return;
+    }
     final now = DateTime.now();
     final to = DateFormat('y-MM-dd').format(now);
     String from = to;
-    if (p == _Preset.sevenDays) {
-      from = DateFormat('y-MM-dd').format(now.subtract(const Duration(days: 7)));
-    } else if (p == _Preset.thirtyDays) {
-      from = DateFormat('y-MM-dd').format(now.subtract(const Duration(days: 30)));
+    if (preset == _AnalyticsPreset.sevenDays) {
+      from =
+          DateFormat('y-MM-dd').format(now.subtract(const Duration(days: 6)));
+    } else if (preset == _AnalyticsPreset.thirtyDays) {
+      from =
+          DateFormat('y-MM-dd').format(now.subtract(const Duration(days: 29)));
     }
-    _from = from;
-    _to = to;
-    _fetch(from, to);
+    setState(() {
+      _preset = preset;
+      _from = from;
+      _to = to;
+      _draftFrom = from;
+      _draftTo = to;
+      _customExpanded = false;
+    });
+    _fetch(from, to, forceRefresh: true);
   }
 
-  void _applyCustom() {
-    if (_customFrom.isEmpty && _customTo.isEmpty) return;
-    final todayStr = DateFormat('y-MM-dd').format(DateTime.now());
-    final threeMonths = DateFormat('y-MM-dd')
-        .format(DateTime.now().subtract(const Duration(days: 90)));
-    final finalFrom = _customFrom.isEmpty ? threeMonths : _customFrom;
-    final finalTo = _customTo.isEmpty ? todayStr : _customTo;
-    _from = finalFrom;
-    _to = finalTo;
-    _fetch(finalFrom, finalTo);
+  void _toggleCustomExpanded() {
+    if (_refetching) return;
+    setState(() {
+      _customExpanded = !_customExpanded;
+      _draftFrom = _from;
+      _draftTo = _to;
+    });
   }
 
-  Future<void> _fetch(String from, String to) async {
+  Future<void> _applyCustom() async {
+    if (_refetching || _draftFrom.isEmpty || _draftTo.isEmpty) return;
+    final applied = await _fetch(_draftFrom, _draftTo, forceRefresh: true);
+    if (applied && mounted) {
+      setState(() {
+        _preset = _AnalyticsPreset.custom;
+        _from = _draftFrom;
+        _to = _draftTo;
+        _customExpanded = false;
+      });
+    }
+  }
+
+  Future<String?> _pickDate(String current) async {
+    final now = DateTime.now();
+    final initial = current.isNotEmpty ? DateTime.tryParse(current) : null;
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initial ?? now,
+      firstDate: DateTime(now.year - 3),
+      lastDate: now,
+    );
+    return picked == null ? null : DateFormat('y-MM-dd').format(picked);
+  }
+
+  Widget _dateField({
+    required String label,
+    required String value,
+    required VoidCallback onPick,
+  }) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(10),
+      onTap: onPick,
+      child: Container(
+        height: 42,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border.all(color: const Color(0xFFE5E7EB)),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          children: [
+            Text(
+              value.isEmpty ? label : value,
+              style: TextStyle(
+                fontSize: 12,
+                color: value.isEmpty
+                    ? const Color(0xFF9CA3AF)
+                    : const Color(0xFF111827),
+              ),
+            ),
+            const Spacer(),
+            const Icon(
+              Icons.calendar_today_outlined,
+              size: 14,
+              color: Color(0xFF9CA3AF),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _presetBar() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+      child: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: AppColors.cardBorder),
+        ),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                for (final p in _AnalyticsPreset.values)
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 2),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(999),
+                        onTap: () => _applyPreset(p),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 7),
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: _preset == p
+                                ? AppColors.primary
+                                : const Color(0xFFF3F4F6),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            p == _AnalyticsPreset.today
+                                ? 'Today'
+                                : p == _AnalyticsPreset.sevenDays
+                                    ? '7D'
+                                    : p == _AnalyticsPreset.thirtyDays
+                                        ? '30D'
+                                        : 'Custom',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: _preset == p
+                                  ? Colors.white
+                                  : const Color(0xFF6B7280),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            if (_preset == _AnalyticsPreset.custom) ...[
+              const SizedBox(height: 8),
+              InkWell(
+                borderRadius: BorderRadius.circular(8),
+                onTap: _toggleCustomExpanded,
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.calendar_today_outlined,
+                      size: 16,
+                      color: AppColors.primary,
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        _customExpanded ? 'From – To' : '$_from – $_to',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: _customExpanded ? 11 : 12,
+                          fontWeight: _customExpanded
+                              ? FontWeight.w600
+                              : FontWeight.w700,
+                          color: _customExpanded
+                              ? const Color(0xFF9CA3AF)
+                              : const Color(0xFF111827),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (_customExpanded) ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _dateField(
+                        label: 'From',
+                        value: _draftFrom,
+                        onPick: () async {
+                          final d = await _pickDate(_draftFrom);
+                          if (d != null) setState(() => _draftFrom = d);
+                        },
+                      ),
+                    ),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 6),
+                      child: Text(
+                        'to',
+                        style:
+                            TextStyle(fontSize: 12, color: Color(0xFF9CA3AF)),
+                      ),
+                    ),
+                    Expanded(
+                      child: _dateField(
+                        label: 'To',
+                        value: _draftTo,
+                        onPick: () async {
+                          final d = await _pickDate(_draftTo);
+                          if (d != null) setState(() => _draftTo = d);
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                StockFlowButton(
+                  label: 'Apply',
+                  loading: _refetching,
+                  enabled: !_refetching,
+                  onPressed: _applyCustom,
+                ),
+              ],
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<bool> _fetch(
+    String from,
+    String to, {
+    bool forceRefresh = false,
+  }) async {
     setState(() {
       _refetching = true;
     });
     try {
-      final data = await repos.dashboard.analytics(from, to);
-      if (mounted) {
-        setState(() {
-          _data = data;
-          _loading = false;
-          _refetching = false;
-        });
-        Perf.end('analytics', 'TTC');
-      }
+      final data = await repos.dashboard.analytics(
+        from,
+        to,
+        forceRefresh: forceRefresh,
+      );
+      if (!mounted) return false;
+      setState(() {
+        _data = data;
+        _dataFrom = from;
+        _dataTo = to;
+        _loading = false;
+        _refetching = false;
+      });
+      Perf.end('analytics', 'TTC');
+      return true;
     } catch (_) {
       if (mounted) {
         setState(() {
@@ -113,6 +351,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
           _refetching = false;
         });
       }
+      return false;
     }
   }
 
@@ -154,172 +393,8 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
     );
   }
 
-  Widget _presetBar() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              for (final p in _Preset.values)
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 2),
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(999),
-                      onTap: () => _applyPreset(p),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 7),
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: _preset == p
-                              ? AppColors.primary
-                              : const Color(0xFFF3F4F6),
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: Text(
-                          p == _Preset.today
-                              ? 'Today'
-                              : p == _Preset.sevenDays
-                                  ? '7d'
-                                  : p == _Preset.thirtyDays
-                                      ? '30d'
-                                      : 'Custom',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            color: _preset == p
-                                ? Colors.white
-                                : const Color(0xFF6B7280),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          if (_preset == _Preset.custom)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _dateField(
-                            label: 'From',
-                            value: _customFrom,
-                            onPick: () async {
-                              final d = await _pickDate(_customFrom);
-                              if (d != null) {
-                                setState(() => _customFrom = d);
-                              }
-                            }),
-                      ),
-                      const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 6),
-                        child: Text('to',
-                            style: TextStyle(
-                                fontSize: 12, color: Color(0xFF9CA3AF))),
-                      ),
-                      Expanded(
-                        child: _dateField(
-                            label: 'To',
-                            value: _customTo,
-                            onPick: () async {
-                              final d = await _pickDate(_customTo);
-                              if (d != null) {
-                                setState(() => _customTo = d);
-                              }
-                            }),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: StockFlowButton(
-                          label: 'Apply',
-                          expand: false,
-                          enabled: _customFrom.isNotEmpty || _customTo.isNotEmpty,
-                          onPressed: _applyCustom,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: StockFlowButton(
-                          label: 'Clear',
-                          expand: false,
-                          enabled: _customFrom.isNotEmpty || _customTo.isNotEmpty,
-                          onPressed: () => setState(() {
-                            _customFrom = '';
-                            _customTo = '';
-                          }),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Future<String?> _pickDate(String current) async {
-    final now = DateTime.now();
-    final initial = current.isNotEmpty
-        ? DateTime.tryParse(current)
-        : null;
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: initial ?? now,
-      firstDate: DateTime(now.year - 3),
-      lastDate: now,
-    );
-    return picked == null ? null : DateFormat('y-MM-dd').format(picked);
-  }
-
-  Widget _dateField(
-      {required String label,
-      required String value,
-      required VoidCallback onPick}) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(10),
-      onTap: onPick,
-      child: Container(
-        height: 42,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border.all(color: const Color(0xFFE5E7EB)),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Row(
-          children: [
-            Text(
-              value.isEmpty ? label : value,
-              style: TextStyle(
-                fontSize: 12,
-                color: value.isEmpty
-                    ? const Color(0xFF9CA3AF)
-                    : const Color(0xFF111827),
-              ),
-            ),
-            const Spacer(),
-            const Icon(Icons.calendar_today_outlined,
-                size: 14, color: Color(0xFF9CA3AF)),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _body() {
-    if (_loading && _data == null) return const PageLoading();
+    if ((_loading || _refetching) && _data == null) return const PageLoading();
     final data = _data;
     if (data == null) {
       return EmptyState(
@@ -347,9 +422,20 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
           _timeMetricsCard(data.timeMetrics),
           _topCard('Top Customers',
               rows: data.topCustomers, color: const Color(0xFF3B82F6)),
-          _topCard('Top Agents',
-              rows: data.topAgents, color: const Color(0xFF3B82F6)),
-          _topItemsCard(data.topItems),
+          _topCard(
+            'Top Agents',
+            rows: data.topAgents,
+            color: const Color(0xFF3B82F6),
+            onTap: () => context.push(
+              '/admin/analytics/agents?from=$_dataFrom&to=$_dataTo',
+            ),
+          ),
+          _topItemsCard(
+            data.topItems,
+            onTap: () => context.push(
+              '/admin/analytics/items?from=$_dataFrom&to=$_dataTo',
+            ),
+          ),
         ],
       ),
     );
@@ -392,7 +478,8 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                             width: 10,
                             height: 10,
                             decoration: BoxDecoration(
-                              color: _statusColors[s.key] ?? const Color(0xFF3B82F6),
+                              color: _statusColors[s.key] ??
+                                  const Color(0xFF3B82F6),
                               shape: BoxShape.circle,
                             ),
                           ),
@@ -456,7 +543,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
               // explicitly; the trend card previously did not.
               width: double.infinity,
               height: 80,
-              child: _TrendPainter(points: trend, from: _from, to: _to),
+              child: _TrendPainter(points: trend, from: _dataFrom, to: _dataTo),
             ),
     );
   }
@@ -505,13 +592,20 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
   }
 
   Widget _topCard(String title,
-      {required List<LeaderboardEntry> rows, required Color color}) {
+      {required List<LeaderboardEntry> rows,
+      required Color color,
+      VoidCallback? onTap}) {
     if (rows.isEmpty) {
-      return _card(title: title, child: const _EmptyCardBody('No data in range'));
+      return _card(
+        title: title,
+        child: const _EmptyCardBody('No data in range'),
+        onTap: onTap,
+      );
     }
     final max = rows.fold<int>(0, (s, r) => math.max(s, r.count ?? 0));
     return _card(
       title: title,
+      onTap: onTap,
       child: Column(
         children: [
           for (final r in rows)
@@ -521,12 +615,11 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                 children: [
                   SizedBox(
                     width: 82,
-                    child: Text(
-                      _truncate(r.name ?? '', 11),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                          fontSize: 11, color: Color(0xFF4B5563))),
+                    child: Text(_truncate(r.name ?? '', 11),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            fontSize: 11, color: Color(0xFF4B5563))),
                   ),
                   Expanded(
                     child: Container(
@@ -563,8 +656,8 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                 alignment: Alignment.centerLeft,
                 child: Text(
                   'Top 3 customers account for ${_topThreePct(rows)}% of all orders',
-                  style: const TextStyle(
-                      fontSize: 12, color: Color(0xFF9CA3AF)),
+                  style:
+                      const TextStyle(fontSize: 12, color: Color(0xFF9CA3AF)),
                 ),
               ),
             ),
@@ -576,19 +669,22 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
   int _topThreePct(List<LeaderboardEntry> rows) {
     final total = rows.fold<int>(0, (s, r) => s + (r.count ?? 0));
     if (total == 0) return 0;
-    final top3 = rows
-        .take(3)
-        .fold<int>(0, (s, r) => s + (r.count ?? 0));
+    final top3 = rows.take(3).fold<int>(0, (s, r) => s + (r.count ?? 0));
     return (top3 * 100 / total).round();
   }
 
-  Widget _topItemsCard(List<LeaderboardEntry> items) {
+  Widget _topItemsCard(List<LeaderboardEntry> items, {VoidCallback? onTap}) {
     if (items.isEmpty) {
-      return _card(title: 'Top Items', child: const _EmptyCardBody('No data in range'));
+      return _card(
+        title: 'Top Items',
+        onTap: onTap,
+        child: const _EmptyCardBody('No data in range'),
+      );
     }
     final max = items.fold<int>(0, (s, r) => math.max(s, r.count ?? 0));
     return _card(
       title: 'Top Items',
+      onTap: onTap,
       child: SizedBox(
         height: 130,
         child: Row(
@@ -635,8 +731,9 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
     );
   }
 
-  Widget _card({required String title, required Widget child}) {
-    return Container(
+  Widget _card(
+      {required String title, required Widget child, VoidCallback? onTap}) {
+    final card = Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -657,6 +754,12 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
           child,
         ],
       ),
+    );
+    if (onTap == null) return card;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: card,
     );
   }
 
@@ -825,7 +928,8 @@ class _DonutPainterP extends CustomPainter {
     if (segments.isEmpty) return;
 
     final strokeWidth = radius * 0.55;
-    final rect = Rect.fromCircle(center: center, radius: radius - strokeWidth / 2);
+    final rect =
+        Rect.fromCircle(center: center, radius: radius - strokeWidth / 2);
 
     var startAngle = -math.pi / 2;
     final paint = Paint()
@@ -846,7 +950,8 @@ class _DonutPainterP extends CustomPainter {
 }
 
 class _TrendPainter extends StatelessWidget {
-  const _TrendPainter({required this.points, required this.from, required this.to});
+  const _TrendPainter(
+      {required this.points, required this.from, required this.to});
   final List<TrendPoint> points;
   final String from;
   final String to;
@@ -873,9 +978,7 @@ class _TrendPainterP extends CustomPainter {
     final end = DateTime.tryParse(to);
     if (start == null || end == null) return;
     final filled = <({String day, int count})>[];
-    for (var d = start;
-        !d.isAfter(end);
-        d = d.add(const Duration(days: 1))) {
+    for (var d = start; !d.isAfter(end); d = d.add(const Duration(days: 1))) {
       final key = DateFormat('y-MM-dd').format(d);
       filled.add((day: key, count: map[key] ?? 0));
     }
@@ -883,7 +986,8 @@ class _TrendPainterP extends CustomPainter {
     if (size.width <= 0 || size.height <= 0) return;
 
     final max = filled.fold<int>(0, (s, e) => math.max(s, e.count));
-    final min = filled.fold<int>(filled.first.count, (s, e) => math.min(s, e.count));
+    final min =
+        filled.fold<int>(filled.first.count, (s, e) => math.min(s, e.count));
     final range = math.max(1, max - min);
 
     final offset = 4.0;
@@ -894,7 +998,8 @@ class _TrendPainterP extends CustomPainter {
       final d = filled[i].day;
       final txt = TextPainter(
         text: TextSpan(
-            text: DateFormat('MMM d').format(DateTime.parse(d)), style: labelStyle),
+            text: DateFormat('MMM d').format(DateTime.parse(d)),
+            style: labelStyle),
         textDirection: TextDirection.ltr,
       )..layout();
       var x = dx - txt.width / 2;

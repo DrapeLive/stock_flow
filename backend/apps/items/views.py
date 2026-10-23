@@ -18,11 +18,12 @@ from apps.agents.models import Agent, AgentItem
 from apps.orders.models import OrderItem
 from apps.orders.utils import SIZE_MAPPING
 
-from .models import Item, ItemVariant, ItemVariantSize
+from .models import Item, ItemCategory, ItemVariant, ItemVariantSize
 from .serializers import (
     CreateItemSerializer,
     CustomerRequirementSerializer,
     ItemSerializer,
+    ItemCategorySerializer,
     ItemVariantSerializer,
     UpdateItemSerializer,
 )
@@ -123,6 +124,8 @@ def _sync_items_payload(request, qs, page, page_size):
                 "rev": item.catalog_updated_at.isoformat(),
                 "name": item.name,
                 "type": item.type,
+                "category": item.category,
+                "fabric": item.fabric,
                 "price": str(item.price),
                 "thumb": (
                     request.build_absolute_uri(first.image.url)
@@ -202,6 +205,7 @@ class ItemViewSet(ModelViewSet):
         delete_item_keep_history(instance)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+
     @action(detail=False, methods=["get"], url_path="stock-list")
     def get_stock_list(self, request):
         items = (
@@ -244,6 +248,8 @@ class ItemViewSet(ModelViewSet):
                     "id": item.id,
                     "name": item.name,
                     "type": item.type,
+                    "category": item.category,
+                    "fabric": item.fabric,
                     "price": str(item.price),
                     "image": request.build_absolute_uri(item.variants.first().image.url)
                     if item.variants.exists() and item.variants.first().image
@@ -435,6 +441,8 @@ class ItemViewSet(ModelViewSet):
                 "price": item.price,
                 "type": item.type,
                 "description": item.description,
+                "category": item.category,
+                "fabric": item.fabric,
                 "variants": response_variants,
                 "matched_variant_id": variant.id,
             }
@@ -563,6 +571,16 @@ class ItemViewSet(ModelViewSet):
                 "customers": serializer.data,
             }
         )
+
+
+class ItemCategoryViewSet(ModelViewSet):
+    queryset = ItemCategory.objects.all()
+    serializer_class = ItemCategorySerializer
+
+    def get_permissions(self):
+        if self.request.method in ["POST", "PUT", "PATCH", "DELETE"]:
+            return [IsAdmin()]
+        return [IsAuthenticated()]
 
 
 class ItemVariantViewSet(ModelViewSet):

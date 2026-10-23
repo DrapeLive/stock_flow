@@ -13,7 +13,9 @@ List<T> _fromList<T>(dynamic data, T Function(Map<String, dynamic>) map) =>
 
 List<int> _ints(dynamic data) {
   if (data is! List) return <int>[];
-  return data.map((e) => e is num ? e.toInt() : int.parse(e.toString())).toList();
+  return data
+      .map((e) => e is num ? e.toInt() : int.parse(e.toString()))
+      .toList();
 }
 
 Map<String, dynamic> _asMap(dynamic data) =>
@@ -89,7 +91,8 @@ class AuthRepo {
 
   Future<AuthUser> profile() async {
     try {
-      final res = await ApiClient.dio.get<Map<String, dynamic>>('/api/auth/profile/');
+      final res =
+          await ApiClient.dio.get<Map<String, dynamic>>('/api/auth/profile/');
       return AuthUser.fromJson(_asMap(res.data));
     } catch (e) {
       throw ApiClient.mapError(e);
@@ -98,7 +101,8 @@ class AuthRepo {
 
   Future<void> forgotPassword(String email) async {
     try {
-      await ApiClient.dio.post('/api/auth/forgot-password/', data: {'email': email});
+      await ApiClient.dio
+          .post('/api/auth/forgot-password/', data: {'email': email});
     } catch (e) {
       throw ApiClient.mapError(e);
     }
@@ -183,7 +187,8 @@ class OrderRepo {
 
   Future<Order> getOne(int id) async {
     final data = await AppCache.networkFirst('order', '$id', () async {
-      final res = await ApiClient.dio.get<Map<String, dynamic>>('/api/orders/$id/');
+      final res =
+          await ApiClient.dio.get<Map<String, dynamic>>('/api/orders/$id/');
       return res.data;
     });
     return Order.fromJson(_asMap(data));
@@ -262,8 +267,8 @@ class OrderRepo {
   /// (`DashboardScreen._loadDrafts`).
   Future<Paginated<Order>> getAdminDrafts() async {
     try {
-      final res =
-          await ApiClient.dio.get<Map<String, dynamic>>('/api/orders/admin-drafts/');
+      final res = await ApiClient.dio
+          .get<Map<String, dynamic>>('/api/orders/admin-drafts/');
       return Paginated.fromJson(_asMap(res.data), Order.fromJson);
     } catch (e) {
       throw ApiClient.mapError(e);
@@ -394,7 +399,8 @@ class OrderRepo {
   Future<Paginated<Order>> byCustomer(int customerId,
       {int page = 1, int pageSize = 50}) async {
     final query = {'customer': customerId, 'page': page, 'page_size': pageSize};
-    final data = await AppCache.networkFirst('orders', jsonEncode(query), () async {
+    final data =
+        await AppCache.networkFirst('orders', jsonEncode(query), () async {
       final res = await ApiClient.dio
           .get<Map<String, dynamic>>('/api/orders/', queryParameters: query);
       return res.data;
@@ -406,8 +412,9 @@ class OrderRepo {
   Future<Paginated<Order>> archived({int page = 1, int pageSize = 50}) async {
     final query = {'page': page, 'page_size': pageSize};
     final data = await AppCache.networkFirst('orders', 'archived', () async {
-      final res = await ApiClient.dio
-          .get<Map<String, dynamic>>('/api/orders/archived/', queryParameters: query);
+      final res = await ApiClient.dio.get<Map<String, dynamic>>(
+          '/api/orders/archived/',
+          queryParameters: query);
       return res.data;
     });
     return Paginated.fromJson(_asMap(data), Order.fromJson);
@@ -415,7 +422,8 @@ class OrderRepo {
 
   Future<List<OrderLog>> getLogs(int id) async {
     final data = await AppCache.networkFirst('logs', '$id', () async {
-      final res = await ApiClient.dio.get<List<dynamic>>('/api/orders/$id/logs/');
+      final res =
+          await ApiClient.dio.get<List<dynamic>>('/api/orders/$id/logs/');
       return res.data;
     });
     return _fromList(data, OrderLog.fromJson);
@@ -479,8 +487,7 @@ class OrderRepo {
 
   Future<void> deleteItem(int orderId, int itemId) async {
     try {
-      await ApiClient.dio
-          .delete('/api/orders/$orderId/delete-item/$itemId/');
+      await ApiClient.dio.delete('/api/orders/$orderId/delete-item/$itemId/');
       await _invalidateOrders();
     } catch (e) {
       throw ApiClient.mapError(e);
@@ -525,11 +532,13 @@ class OrderRepo {
   Future<List<Map<String, dynamic>>> unpacked() async {
     try {
       final data = await AppCache.networkFirst('unpacked', 'all', () async {
-        final res =
-            await ApiClient.dio.get<List<dynamic>>('/api/orders/order-items/unpacked/');
+        final res = await ApiClient.dio
+            .get<List<dynamic>>('/api/orders/order-items/unpacked/');
         return res.data;
       });
-      return (data as List).map((e) => (e as Map).cast<String, dynamic>()).toList();
+      return (data as List)
+          .map((e) => (e as Map).cast<String, dynamic>())
+          .toList();
     } catch (e) {
       throw ApiClient.mapError(e);
     }
@@ -563,6 +572,32 @@ class ItemVariantPayload {
 }
 
 class ItemRepo {
+  Future<List<ItemCategory>> categories() async {
+    final res =
+        await ApiClient.dio.get<List<dynamic>>('/api/items/categories/');
+    return _fromList(res.data, ItemCategory.fromJson);
+  }
+
+  Future<ItemCategory> createCategory(String name) async {
+    final res = await ApiClient.dio.post<Map<String, dynamic>>(
+      '/api/items/categories/',
+      data: {'name': name},
+    );
+    return ItemCategory.fromJson(_asMap(res.data));
+  }
+
+  Future<ItemCategory> updateCategory(int id, String name) async {
+    final res = await ApiClient.dio.patch<Map<String, dynamic>>(
+      '/api/items/categories/$id/',
+      data: {'name': name},
+    );
+    return ItemCategory.fromJson(_asMap(res.data));
+  }
+
+  Future<void> deleteCategory(int id) async {
+    await ApiClient.dio.delete<void>('/api/items/categories/$id/');
+  }
+
   /// Fetched once and cached for a week — mirrors the SizeRangeContext cache.
   Future<Map<String, dynamic>> sizeRanges() async {
     final data = await AppCache.staleWhileRevalidate(
@@ -599,7 +634,8 @@ class ItemRepo {
 
   Future<Item> getOne(int id) async {
     final data = await AppCache.networkFirst('item', '$id', () async {
-      final res = await ApiClient.dio.get<Map<String, dynamic>>('/api/items/$id/');
+      final res =
+          await ApiClient.dio.get<Map<String, dynamic>>('/api/items/$id/');
       return res.data;
     });
     return Item.fromJson(_asMap(data));
@@ -607,7 +643,8 @@ class ItemRepo {
 
   /// `GET /api/items/by-qr/?qr_code=...` — used by the QR label printer.
   Future<Map<String, dynamic>> byqrcode(String qrCode) async {
-    final data = await AppCache.networkFirst('items', 'byqr::$qrCode', () async {
+    final data =
+        await AppCache.networkFirst('items', 'byqr::$qrCode', () async {
       final res = await ApiClient.dio.get<Map<String, dynamic>>(
         '/api/items/by-qr/',
         queryParameters: {'qr_code': qrCode},
@@ -635,7 +672,8 @@ class ItemRepo {
   }
 
   /// Live per-order availability check for a scanned QR.
-  Future<CheckStockResult> checkOutOfStock(String qrCode, {int? orderId}) async {
+  Future<CheckStockResult> checkOutOfStock(String qrCode,
+      {int? orderId}) async {
     try {
       final res = await ApiClient.dio.get<Map<String, dynamic>>(
         '/api/items/by-qr/out-of-stock/',
@@ -656,8 +694,8 @@ class ItemRepo {
       'items',
       'variants',
       () async {
-        final res = await ApiClient.dio
-            .get<List<dynamic>>('/api/items/variants/all/');
+        final res =
+            await ApiClient.dio.get<List<dynamic>>('/api/items/variants/all/');
         return res.data;
       },
       ttl: const Duration(minutes: 15),
@@ -667,7 +705,8 @@ class ItemRepo {
 
   Future<Map<String, dynamic>> customerRequirements(int itemId) async {
     try {
-      final data = await AppCache.networkFirst('items', 'reqs::$itemId', () async {
+      final data =
+          await AppCache.networkFirst('items', 'reqs::$itemId', () async {
         final res = await ApiClient.dio.get<Map<String, dynamic>>(
           '/api/items/customer-requirements/',
           queryParameters: {'item_id': itemId},
@@ -684,7 +723,8 @@ class ItemRepo {
   /// uploaded afterwards via [patchVariantImage].
   Future<Item> create(Map<String, dynamic> body) async {
     try {
-      final res = await ApiClient.dio.post<Map<String, dynamic>>('/api/items/', data: body);
+      final res = await ApiClient.dio
+          .post<Map<String, dynamic>>('/api/items/', data: body);
       await _invalidateItems();
       return Item.fromJson(_asMap(res.data));
     } catch (e) {
@@ -699,6 +739,8 @@ class ItemRepo {
     required String description,
     required double price,
     required String type,
+    required String category,
+    required String fabric,
     required List<ItemVariantPayload> variants,
   }) async {
     try {
@@ -707,6 +749,8 @@ class ItemRepo {
       fd.fields.add(MapEntry('description', description));
       fd.fields.add(MapEntry('price', price.toString()));
       fd.fields.add(MapEntry('type', type));
+      fd.fields.add(MapEntry('category', category));
+      fd.fields.add(MapEntry('fabric', fabric));
       for (var i = 0; i < variants.length; i++) {
         final v = variants[i];
         if (v.imagePath != null) {
@@ -723,7 +767,8 @@ class ItemRepo {
               'variants[$i]sizes[$j]stock', v.sizes[j].stock.toString()));
         }
       }
-      final res = await ApiClient.dio.post<Map<String, dynamic>>('/api/items/', data: fd);
+      final res = await ApiClient.dio
+          .post<Map<String, dynamic>>('/api/items/', data: fd);
       await _invalidateItems();
       return Item.fromJson(_asMap(res.data));
     } catch (e) {
@@ -743,8 +788,8 @@ class ItemRepo {
 
   Future<Item> update(int id, Map<String, dynamic> body) async {
     try {
-      final res =
-          await ApiClient.dio.put<Map<String, dynamic>>('/api/items/$id/', data: body);
+      final res = await ApiClient.dio
+          .put<Map<String, dynamic>>('/api/items/$id/', data: body);
       await _invalidateItems();
       return Item.fromJson(_asMap(res.data));
     } catch (e) {
@@ -754,7 +799,8 @@ class ItemRepo {
 
   /// Multipart image upload for a variant (keeps `/api` prefix parity with the
   /// web's editItem/updateItem helpers).
-  Future<void> patchVariantImage(int variantId, String filePath, {String? filename}) async {
+  Future<void> patchVariantImage(int variantId, String filePath,
+      {String? filename}) async {
     try {
       final name = filename ?? filePath.split('/').last.split('\\').last;
       final form = FormData.fromMap({
@@ -789,15 +835,21 @@ class ItemRepo {
 // ---------------------------------------------------------------------------
 
 class CustomerRepo {
-  Future<Paginated<Customer>> list({int page = 1, int pageSize = 50, String? search}) async {
-    final query = {'page': page, 'page_size': pageSize, if (search != null && search.isNotEmpty) 'search': search};
+  Future<Paginated<Customer>> list(
+      {int page = 1, int pageSize = 50, String? search}) async {
+    final query = {
+      'page': page,
+      'page_size': pageSize,
+      if (search != null && search.isNotEmpty) 'search': search
+    };
     final key = jsonEncode(query);
     final data = await AppCache.staleWhileRevalidate(
       'customers',
       key,
       () async {
-        final res = await ApiClient.dio
-            .get<Map<String, dynamic>>('/api/customers/', queryParameters: query);
+        final res = await ApiClient.dio.get<Map<String, dynamic>>(
+            '/api/customers/',
+            queryParameters: query);
         return res.data;
       },
       ttl: const Duration(minutes: 10),
@@ -836,7 +888,8 @@ class CustomerRepo {
       'customer',
       '$id',
       () async {
-        final res = await ApiClient.dio.get<Map<String, dynamic>>('/api/customers/$id/');
+        final res = await ApiClient.dio
+            .get<Map<String, dynamic>>('/api/customers/$id/');
         return res.data;
       },
       ttl: const Duration(minutes: 10),
@@ -846,7 +899,8 @@ class CustomerRepo {
 
   Future<Customer> create(Map<String, dynamic> body) async {
     try {
-      final res = await ApiClient.dio.post<Map<String, dynamic>>('/api/customers/', data: body);
+      final res = await ApiClient.dio
+          .post<Map<String, dynamic>>('/api/customers/', data: body);
       await AppCache.invalidate('customers');
       return Customer.fromJson(_asMap(res.data));
     } catch (e) {
@@ -856,7 +910,8 @@ class CustomerRepo {
 
   Future<Customer> update(int id, Map<String, dynamic> body) async {
     try {
-      final res = await ApiClient.dio.patch<Map<String, dynamic>>('/api/customers/$id/', data: body);
+      final res = await ApiClient.dio
+          .patch<Map<String, dynamic>>('/api/customers/$id/', data: body);
       await AppCache.invalidate('customers');
       await AppCache.invalidate('customer');
       return Customer.fromJson(_asMap(res.data));
@@ -866,13 +921,15 @@ class CustomerRepo {
   }
 
   Future<Map<String, dynamic>> deleteInfo(int id) async {
-    final res = await ApiClient.dio.get<Map<String, dynamic>>('/api/customers/$id/delete_info/');
+    final res = await ApiClient.dio
+        .get<Map<String, dynamic>>('/api/customers/$id/delete_info/');
     return _asMap(res.data);
   }
 
   Future<void> delete(int id, String pin, {String? action}) async {
     try {
-      await ApiClient.dio.delete('/api/customers/$id/', data: {'pin': pin, if (action != null) 'action': action});
+      await ApiClient.dio.delete('/api/customers/$id/',
+          data: {'pin': pin, if (action != null) 'action': action});
       await AppCache.invalidate('customers');
       await AppCache.invalidate('customer');
     } catch (e) {
@@ -905,7 +962,8 @@ class AgentRepo {
         'agent',
         '$id',
         () async {
-          final res = await ApiClient.dio.get<Map<String, dynamic>>('/api/agents/$id/');
+          final res =
+              await ApiClient.dio.get<Map<String, dynamic>>('/api/agents/$id/');
           return res.data;
         },
         ttl: const Duration(minutes: 10),
@@ -926,7 +984,8 @@ class AgentRepo {
 
   Future<Agent> create(Map<String, dynamic> body) async {
     try {
-      final res = await ApiClient.dio.post<Map<String, dynamic>>('/api/agents/', data: body);
+      final res = await ApiClient.dio
+          .post<Map<String, dynamic>>('/api/agents/', data: body);
       await AppCache.invalidate('agents');
       return Agent.fromJson(_asMap(res.data));
     } catch (e) {
@@ -936,7 +995,8 @@ class AgentRepo {
 
   Future<Agent> update(int id, Map<String, dynamic> body) async {
     try {
-      final res = await ApiClient.dio.patch<Map<String, dynamic>>('/api/agents/$id/', data: body);
+      final res = await ApiClient.dio
+          .patch<Map<String, dynamic>>('/api/agents/$id/', data: body);
       await AppCache.invalidate('agents');
       await AppCache.invalidate('agent');
       return Agent.fromJson(_asMap(res.data));
@@ -946,11 +1006,13 @@ class AgentRepo {
   }
 
   Future<Map<String, dynamic>> deleteInfo(int id) async {
-    final res = await ApiClient.dio.get<Map<String, dynamic>>('/api/agents/$id/delete_info/');
+    final res = await ApiClient.dio
+        .get<Map<String, dynamic>>('/api/agents/$id/delete_info/');
     return _asMap(res.data);
   }
 
-  Future<void> delete(int id, String pin, {String? action, int? transferToId}) async {
+  Future<void> delete(int id, String pin,
+      {String? action, int? transferToId}) async {
     try {
       await ApiClient.dio.delete('/api/agents/$id/', data: {
         'pin': pin,
@@ -1024,7 +1086,8 @@ class TransportRepo {
       'transports',
       'active',
       () async {
-        final res = await ApiClient.dio.get<List<dynamic>>('/api/transports/active/');
+        final res =
+            await ApiClient.dio.get<List<dynamic>>('/api/transports/active/');
         return res.data;
       },
       ttl: const Duration(hours: 24),
@@ -1038,19 +1101,24 @@ class TransportRepo {
 // ---------------------------------------------------------------------------
 
 class DashboardRepo {
-  Future<AnalyticsData> analytics(String from, String to) async {
-    final data = await AppCache.staleWhileRevalidate(
-      'dash-v2',
-      '$from::$to',
-      () async {
-        final res = await ApiClient.dio.get<Map<String, dynamic>>(
-          '/api/dashboard/analytics/',
-          queryParameters: {'from': from, 'to': to},
-        );
-        return res.data;
-      },
-      ttl: const Duration(minutes: 15),
-    );
+  Future<AnalyticsData> analytics(String from, String to,
+      {bool forceRefresh = false}) async {
+    Future<dynamic> fetch() async {
+      final res = await ApiClient.dio.get<Map<String, dynamic>>(
+        '/api/dashboard/analytics/',
+        queryParameters: {'from': from, 'to': to},
+      );
+      return res.data;
+    }
+
+    final data = forceRefresh
+        ? await AppCache.networkFirst('dash-v4', '$from::$to', fetch)
+        : await AppCache.staleWhileRevalidate(
+            'dash-v4',
+            '$from::$to',
+            fetch,
+            ttl: const Duration(minutes: 15),
+          );
     return AnalyticsData.fromJson(_asMap(data));
   }
 }

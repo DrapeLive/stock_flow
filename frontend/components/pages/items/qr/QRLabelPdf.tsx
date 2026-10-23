@@ -15,6 +15,8 @@ interface Variant {
 interface Item {
   name: string;
   price: string | number;
+  category?: string;
+  fabric?: string;
   variants: Variant[];
 }
 interface QRLabelPdfProps {
@@ -30,22 +32,37 @@ const styles = StyleSheet.create({
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
-    gap: 3,
+    gap: 2,
     backgroundColor: "#fff",
   },
   name: {
-    fontSize: 12,
+    fontFamily: "Helvetica",
+    fontSize: 11,
     fontWeight: 800,
+    lineHeight: 1.05,
     textAlign: "center",
+    maxLines: 2,
+    textOverflow: "ellipsis",
+  },
+  details: {
+    fontFamily: "Helvetica",
+    fontSize: 6.5,
+    lineHeight: 1.05,
+    textAlign: "center",
+    maxLines: 2,
   },
   variant: {
-    fontSize: 11,
-    padding: 2,
+    fontFamily: "Helvetica",
+    fontSize: 10,
+    lineHeight: 1.05,
+    padding: 1.5,
     fontWeight: 600,
   },
   price: {
-    fontSize: 11,
+    fontFamily: "Helvetica",
+    fontSize: 10,
     fontWeight: 800,
+    lineHeight: 1.05,
   },
   qr: {
     width: 60,
@@ -59,6 +76,9 @@ export const QRLabelPdf = ({ item, qrImages, id }: QRLabelPdfProps) => (
       return (
         <Page key={variant.id} size={[70.87, 141.73]} style={styles.page}>
           <Text style={styles.name}>{item.name}</Text>
+          {(item.category || item.fabric) ? (
+            <Text style={styles.details}>{[item.category, item.fabric].filter(Boolean).join("\n")}</Text>
+          ) : null}
           {variant.display_order ? (
             <Text style={styles.variant}>Color #{variant.display_order}</Text>
           ) : null}

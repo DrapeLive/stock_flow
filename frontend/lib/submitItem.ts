@@ -44,6 +44,8 @@ export async function submitItem(
     name: common.name,
     price: Number(common.price),
     description: common.description || "",
+    category: common.category || "",
+    fabric: common.fabric || "",
     type: common.type,
     brand_id: common.brand_id,
     variants: variantPayload,

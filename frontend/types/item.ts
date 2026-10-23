@@ -23,7 +23,14 @@ export interface Item {
   type?: ItemType;
   price: string;
   description?: string;
+  category?: string;
+  fabric?: string;
   variants: ItemVariant[];
+}
+
+export interface ItemCategory {
+  id: number;
+  name: string;
 }
 
 export interface ItemVariantRequest {
@@ -40,6 +47,8 @@ export interface ItemVariantRequest {
 export interface ItemRequest {
   name: string;
   description?: string;
+  category?: string;
+  fabric?: string;
   price: string;
   type?: ItemType;
   variants: ItemVariantRequest[];
@@ -94,6 +103,8 @@ export interface ItemStockEntry {
 export interface CommonDetails {
   name: string;
   description: string;
+  category: string;
+  fabric: string;
   price: string;
   type: ItemType;
   brand_id: number | undefined;
@@ -102,6 +113,8 @@ export interface CommonDetails {
 export interface EditCommonDetails {
   name: string;
   description: string;
+  category: string;
+  fabric: string;
   price: string;
   type: ItemType;
 }

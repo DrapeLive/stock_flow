@@ -21,6 +21,8 @@ type QRPrintItem = {
     name: string;
     type: string;
     price: string;
+    category: string;
+    fabric: string;
     image: string | null;
     variants: ItemVariant[];
 };
@@ -63,6 +65,8 @@ export default function QRPrintPageContent() {
                         name: data.name,
                         type: data.type || "gents",
                         price: data.price,
+                        category: data.category || "",
+                        fabric: data.fabric || "",
                         image: variants[0]?.image || null,
                         variants,
                     };
@@ -77,6 +81,8 @@ export default function QRPrintPageContent() {
                         name: data.name,
                         type: "gents",
                         price: data.price,
+                        category: data.category || "",
+                        fabric: data.fabric || "",
                         image: matchedVariant?.image || null,
                         variants: [matchedVariant],
                     };
@@ -228,12 +234,12 @@ export default function QRPrintPageContent() {
                         {item.variants.map((variant, index) => (
                             <div
                                 key={variant.id}
-                                className="gap-4 bg-white border shadow-sm flex flex-col items-center justify-center w-full max-w-sm min-h-[150mm] px-4 py-6"
+                                className="gap-2 bg-white border shadow-sm flex flex-col items-center justify-center w-full max-w-sm min-h-[150mm] px-4 py-6"
                             >
-                                <p className="text-[24px] font-bold text-center">
+                                <p className="text-[20px] leading-tight font-bold text-center">
                                     {item.name}
                                 </p>
-                                <p className="text-[18px] bg-gray-100 px-2 py-1 rounded">
+                                <p className="text-[15px] leading-tight bg-gray-100 px-2 py-0.5 rounded">
                                     {variantColorLabel(variant.display_order, index + 1)}
                                 </p>
                                 <Image
@@ -242,9 +248,9 @@ export default function QRPrintPageContent() {
                                     alt="QR Code"
                                     width={150}
                                     height={150}
-                                    className="mt-3"
+                                    className="mt-2"
                                 />
-                                <p className="text-[24px] font-extrabold">
+                                <p className="text-[20px] leading-tight font-extrabold">
                                     Rs. {Number(item.price).toFixed(2)}
                                 </p>
                             </div>

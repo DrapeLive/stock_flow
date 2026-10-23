@@ -148,8 +148,8 @@ void main() {
       await pumpScreen(tester, const AnalyticsScreen(), container);
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Today'));
-      await tester.pumpAndSettle();
+      expect(trendPaintFinder, findsOneWidget);
+      expect(tester.getSize(trendPaintFinder).width, greaterThan(0));
 
       expect(find.text('Today'), findsWidgets);
       expect(trendPaintFinder, findsOneWidget);

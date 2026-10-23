@@ -30,6 +30,8 @@ class _QrPrintSelectScreenState extends ConsumerState<QrPrintSelectScreen> {
   String? _error;
   String _itemName = '';
   String _price = '';
+  String _category = '';
+  String _fabric = '';
   List<QrLabel> _labels = const [];
   List<Uint8List> _qrBytes = const [];
   List<ItemStockEntry> _items = const [];
@@ -64,6 +66,8 @@ final bytes = await Future.wait(
       setState(() {
         _itemName = data.name;
         _price = data.price;
+        _category = data.category;
+        _fabric = data.fabric;
         _labels = labels;
         _qrBytes = bytes;
         _loading = false;
@@ -100,6 +104,8 @@ Future<Uint8List> _buildPdf(PdfPageFormat format) async {
     final doc = await buildQrLabelsPdf(
       itemName: _itemName,
       price: _price,
+      category: _category,
+      fabric: _fabric,
       labels: _labels,
       qrBytes: _qrBytes,
       kind: QrLabelKind.printAll,

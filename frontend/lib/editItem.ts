@@ -15,6 +15,8 @@ export async function updateItem(
     price: common.price,
     type: common.type,
     ...(common.description && { description: common.description }),
+    category: common.category || "",
+    fabric: common.fabric || "",
     variants: variants.map((v) => ({
       id: v.backendId || undefined,
       sizes: [{

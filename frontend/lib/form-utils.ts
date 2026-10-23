@@ -47,6 +47,8 @@ export function itemToFormData(data: Record<string, any>): FormData {
 
   formData.append("name", data.name as string);
   formData.append("description", (data.description as string) || "");
+  formData.append("category", (data.category as string) || "");
+  formData.append("fabric", (data.fabric as string) || "");
   formData.append("price", String(data.price));
   formData.append("type", data.type as string);
 

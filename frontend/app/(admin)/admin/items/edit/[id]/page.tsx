@@ -35,6 +35,7 @@ import CropModal from "../../new/cropModal";
 import type {
   EditCommonDetails,
   EditableVariant,
+  ItemCategory,
   ItemType,
   FrontendSizeRange,
 } from "@/types/item";
@@ -62,17 +63,24 @@ export default function ItemEditPage() {
   const [common, setCommon] = useState<EditCommonDetails>({
     name: "",
     description: "",
+    category: "",
+    fabric: "",
     price: "",
     type: "gents",
   });
 
   const [variants, setVariants] = useState<EditableVariant[]>([]);
+  const [categories, setCategories] = useState<ItemCategory[]>([]);
   const [openAccordions, setOpenAccordions] = useState<string[]>([]);
   const [variantCrop, setVariantCrop] = useState<{
     src: string;
     backendId: number;
   } | null>(null);
   const fileRefs = useRef<Record<number, HTMLInputElement | null>>({});
+
+  useEffect(() => {
+    itemApi.getCategories().then(setCategories).catch(() => {});
+  }, []);
 
   const [deleteConfirm, setDeleteConfirm] = useState<{
     backendId: number;
@@ -248,6 +256,8 @@ export default function ItemEditPage() {
         setCommon({
           name: data.name,
           description: data.description ?? "",
+          category: data.category ?? "",
+          fabric: data.fabric ?? "",
           price: data.price,
           type: (data.type as ItemType) ?? "gents",
         });
@@ -460,6 +470,33 @@ export default function ItemEditPage() {
                   description: e.target.value,
                 }))
               }
+            />
+          </Field>
+
+          <Field>
+            <div className="flex items-center justify-between">
+              <FieldLabel>Category</FieldLabel>
+              <a href="/admin/profile/categories" target="_blank" rel="noreferrer" className="text-xs text-primary underline">Manage categories</a>
+            </div>
+            <select
+              value={common.category}
+              onChange={(event) => setCommon((p) => ({ ...p, category: event.target.value }))}
+              className="h-12 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm"
+            >
+              <option value="">Select category</option>
+              {common.category && !categories.some((c) => c.name === common.category) && <option value={common.category}>{common.category}</option>}
+              {categories.map((category) => <option key={category.id} value={category.name}>{category.name}</option>)}
+            </select>
+            <p className="text-xs text-gray-400">Manage category choices from the Item Categories page.</p>
+          </Field>
+
+          <Field>
+            <FieldLabel>Fabric</FieldLabel>
+            <Input
+              maxLength={150}
+              placeholder="e.g. Cotton, Linen blend"
+              value={common.fabric}
+              onChange={(e) => setCommon((p) => ({ ...p, fabric: e.target.value }))}
             />
           </Field>
 
