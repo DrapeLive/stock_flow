@@ -8,6 +8,7 @@ from collections import defaultdict
 from django.db import transaction
 
 from apps.accounts.permissions import (
+    IsAdmin,
     IsAdminOrSelfAgent,
     admin_business,
     check_admin_pin,
@@ -17,20 +18,119 @@ from apps.notification.utils import notify_user_safely
 from apps.orders.models import Order
 
 from .models import Agent, AgentItem
-from .serializers import AgentItemListSerializer, AgentSerializer
+from .serializers import (
+    AgentItemListSerializer,
+    AgentSerializer,
+    InactiveAgentSerializer,
+)
 
 
 class AgentViewSet(ModelViewSet):
     serializer_class = AgentSerializer
     permission_classes = [IsAdminOrSelfAgent]
 
+    def get_permissions(self):
+        if self.action == "restore":
+            return [IsAdmin()]
+        return super().get_permissions()
+
     def get_queryset(self):
         user = self.request.user
+        include_inactive = (
+            self.action == "list"
+            and user.role == "ADMIN"
+            and self.request.query_params.get("inactive") == "true"
+        )
+        qs = Agent.objects.filter(is_active=not include_inactive)
 
         if user.role == "ADMIN":
-            return Agent.objects.filter(is_active=True).order_by('-id')
+            return qs.order_by('-id')
 
-        return Agent.objects.filter(user=user, is_active=True).order_by('-id')
+        return qs.filter(user=user).order_by('-id')
+
+    def get_serializer_class(self):
+        if (
+            self.action == "list"
+            and self.request.query_params.get("inactive") == "true"
+        ):
+            return InactiveAgentSerializer
+        return AgentSerializer
+
+    def list(self, request, *args, **kwargs):
+        if (
+            request.query_params.get("inactive") == "true"
+            and request.user.role != "ADMIN"
+        ):
+            return Response(
+                {"error": "Forbidden"}, status=status.HTTP_403_FORBIDDEN
+            )
+        return super().list(request, *args, **kwargs)
+
+    def create(self, request, *args, **kwargs):
+        conflict = self._deactivated_conflict(request.data)
+        if conflict is not None:
+            return Response(
+                {
+                    "error": "This agent was deleted.",
+                    "code": "agent_deactivated",
+                    "agent_id": conflict.id,
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return super().create(request, *args, **kwargs)
+
+    @staticmethod
+    def _deactivated_conflict(data):
+        username = data.get("username")
+        email = data.get("email")
+        inactive = Agent.objects.select_related("user").filter(is_active=False)
+        if username:
+            match = inactive.filter(user__username=username).first()
+            if match is not None:
+                return match
+        if email:
+            match = inactive.filter(user__email=email).first()
+            if match is not None:
+                return match
+        return None
+
+    @action(detail=True, methods=["post"])
+    def restore(self, request, pk=None):
+        agent = (
+            Agent.objects.select_related("user").filter(pk=pk).first()
+        )
+        if agent is None:
+            return Response(
+                {"error": "Not found."}, status=status.HTTP_404_NOT_FOUND
+            )
+        if agent.is_active:
+            return Response(
+                {"error": "Agent is already active"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        display_name = request.data.get("display_name")
+        contact = request.data.get("contact")
+
+        with transaction.atomic():
+            agent.is_active = True
+            agent.deactivated_at = None
+            agent_fields = ["is_active", "deactivated_at"]
+            if contact is not None:
+                agent.contact = contact
+                agent_fields.append("contact")
+            agent.save(update_fields=agent_fields)
+
+            user = agent.user
+            user.is_active = True
+            user_fields = ["is_active"]
+            if display_name is not None:
+                user.display_name = display_name
+                user_fields.append("display_name")
+            user.save(update_fields=user_fields)
+
+        serializer = AgentSerializer(agent, context={"request": request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=["get"])
     def delete_info(self, request, pk=None):

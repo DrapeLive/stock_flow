@@ -942,6 +942,40 @@ class CustomerRepo {
 // Agents
 // ---------------------------------------------------------------------------
 
+/// A soft-deleted agent returned by `GET /api/agents/?inactive=true`.
+class InactiveAgent {
+  const InactiveAgent({
+    required this.id,
+    required this.displayName,
+    this.email,
+    this.contact,
+    this.deactivatedAt,
+  });
+  final int id;
+  final String displayName;
+  final String? email;
+  final String? contact;
+  final String? deactivatedAt;
+
+  factory InactiveAgent.fromJson(Map<String, dynamic> json) {
+    final user = json['user'] is Map
+        ? (json['user'] as Map).cast<String, dynamic>()
+        : const <String, dynamic>{};
+    final id = asInt(json['id']) ?? 0;
+    final name = (user['display_name'] as String?)?.trim();
+    final username = user['username'] as String?;
+    return InactiveAgent(
+      id: id,
+      displayName: (name != null && name.isNotEmpty)
+          ? name
+          : (username ?? 'Agent $id'),
+      email: user['email'] as String?,
+      contact: json['contact'] as String?,
+      deactivatedAt: json['deactivated_at'] as String?,
+    );
+  }
+}
+
 class AgentRepo {
   Future<List<Agent>> list() async {
     final data = await AppCache.staleWhileRevalidate(
@@ -987,6 +1021,39 @@ class AgentRepo {
       final res = await ApiClient.dio
           .post<Map<String, dynamic>>('/api/agents/', data: body);
       await AppCache.invalidate('agents');
+      return Agent.fromJson(_asMap(res.data));
+    } catch (e) {
+      throw ApiClient.mapError(e);
+    }
+  }
+
+  /// `GET /api/agents/?inactive=true` — ADMIN-only soft-deleted agents.
+  Future<List<InactiveAgent>> listInactive() async {
+    try {
+      final res = await ApiClient.dio.get<List<dynamic>>(
+        '/api/agents/',
+        queryParameters: const {'inactive': 'true'},
+      );
+      return _fromList(res.data, InactiveAgent.fromJson);
+    } catch (e) {
+      throw ApiClient.mapError(e);
+    }
+  }
+
+  /// `POST /api/agents/{id}/restore/` — reactivates the agent and its login.
+  Future<Agent> restore(int id, {String? displayName, String? contact}) async {
+    try {
+      final res = await ApiClient.dio.post<Map<String, dynamic>>(
+        '/api/agents/$id/restore/',
+        data: {
+          if (displayName != null && displayName.trim().isNotEmpty)
+            'display_name': displayName.trim(),
+          if (contact != null && contact.trim().isNotEmpty)
+            'contact': contact.trim(),
+        },
+      );
+      await AppCache.invalidate('agents');
+      await AppCache.invalidate('agent');
       return Agent.fromJson(_asMap(res.data));
     } catch (e) {
       throw ApiClient.mapError(e);

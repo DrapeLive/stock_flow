@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/api/api_client.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/derive_username.dart';
 import '../../data/repositories.dart';
@@ -94,12 +95,87 @@ class _AgentNewScreenState extends ConsumerState<AgentNewScreen> {
       if (!mounted) return;
       AppToast.success(context, 'Agent created successfully');
       context.pushReplacement('/admin/users/agents/${agent.id}');
+    } on ApiException catch (e) {
+      final data = e.data;
+      final code = data is Map ? data['code'] : null;
+      if (code == 'agent_deactivated') {
+        final rawId = data is Map ? data['agent_id'] : null;
+        final agentId = rawId is num ? rawId.toInt() : int.tryParse('$rawId');
+        if (mounted) setState(() => _submitting = false);
+        if (agentId != null && mounted) {
+          await _offerRestore(agentId);
+          return;
+        }
+      }
+      if (mounted) AppToast.error(context, e.message);
+      if (mounted) setState(() => _submitting = false);
     } catch (e) {
       if (mounted) {
         AppToast.error(context,
             e.toString().replaceFirst('Exception: ', ''));
       }
-      setState(() => _submitting = false);
+      if (mounted) setState(() => _submitting = false);
+    }
+  }
+
+  /// A create attempt collided with a soft-deleted agent. Offer to restore
+  /// that account instead, reusing the name/contact already typed here.
+  Future<void> _offerRestore(int agentId) async {
+    final nameCtrl = TextEditingController(text: _nameCtrl.text.trim());
+    final contactCtrl = TextEditingController(text: _contactCtrl.text.trim());
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Agent already exists',
+            style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+                'An agent with this username or email was deleted. Restore '
+                'the existing account instead of creating a new one.'),
+            const SizedBox(height: 12),
+            TextField(
+              controller: nameCtrl,
+              decoration: const InputDecoration(labelText: 'Display name'),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: contactCtrl,
+              decoration: const InputDecoration(labelText: 'Contact'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Restore Agent'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _submitting = true);
+    try {
+      final agent = await repos.agent.restore(
+        agentId,
+        displayName: nameCtrl.text.trim(),
+        contact: contactCtrl.text.trim(),
+      );
+      if (!mounted) return;
+      AppToast.success(context, 'Agent restored successfully');
+      context.pushReplacement('/admin/users/agents/${agent.id}');
+    } catch (e) {
+      if (mounted) {
+        AppToast.error(context, e.toString().replaceFirst('Exception: ', ''));
+      }
+      if (mounted) setState(() => _submitting = false);
     }
   }
 

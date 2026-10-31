@@ -1135,102 +1135,142 @@ class _DeleteWithTransferDialogState extends State<DeleteWithTransferDialog> {
   @override
   Widget build(BuildContext context) {
     final counts = _info;
-    return AlertDialog(
-      title: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFEE2E2),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(Icons.shield_outlined, color: Color(0xFFDC2626), size: 20),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              _isAgent ? 'Delete Agent' : 'Delete Customer',
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
-            ),
-          ),
-        ],
-      ),
-      content: _fetching
-          ? const SizedBox(
-              height: 80,
-              child: Center(child: CircularProgressIndicator(strokeWidth: 2.5)),
-            )
-          : _loading
-              ? const SizedBox(
-                  height: 100,
-                  child: Center(child: CircularProgressIndicator(strokeWidth: 2.5)),
-                )
-              : Column(
+    final busy = _fetching || _loading;
+    final availableHeight = MediaQuery.sizeOf(context).height -
+        MediaQuery.viewInsetsOf(context).bottom;
+    final maxHeight = availableHeight * 0.9;
+
+    return Dialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: maxHeight),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
+                child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      '${widget.entityName} $kEmDash ${_summary(counts)}',
-                      style: const TextStyle(fontSize: 13, color: Color(0xFF374151)),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFEE2E2),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(Icons.shield_outlined,
+                              color: Color(0xFFDC2626), size: 20),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            _isAgent ? 'Delete Agent' : 'Delete Customer',
+                            style: const TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.w800),
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 16),
-                    if (_isAgent) ...[
-                      _RadioTile(
-                        value: 'transfer',
-                        group: _action,
-                        enabled: _transfers.isNotEmpty,
-                        label: 'Transfer customers to another agent',
-                        onChanged: (v) => setState(() => _action = v),
+                    const SizedBox(height: 20),
+                    if (_fetching)
+                      const SizedBox(
+                        height: 80,
+                        child: Center(
+                            child: CircularProgressIndicator(strokeWidth: 2.5)),
+                      )
+                    else if (_loading)
+                      const SizedBox(
+                        height: 100,
+                        child: Center(
+                            child: CircularProgressIndicator(strokeWidth: 2.5)),
+                      )
+                    else ...[
+                      Text(
+                        '${widget.entityName} $kEmDash ${_summary(counts)}',
+                        style: const TextStyle(
+                            fontSize: 13, color: Color(0xFF374151)),
                       ),
-                      if (_action == 'transfer')
-                        Padding(
-                          padding: const EdgeInsets.only(left: 24, top: 8, bottom: 8),
-                          child: DropdownButtonFormField<int>(
-                            value: _transferToId,
-                            hint: Text('Select agent...',
-                                style: TextStyle(
-                                    fontSize: 13, color: AppColors.textMuted)),
-                            items: [
-                              for (final t in _transfers)
-                                DropdownMenuItem(value: t.id, child: Text(t.name)),
-                            ],
-                            onChanged: (v) => setState(() => _transferToId = v),
-                            decoration: InputDecoration(
-                              isDense: true,
-                              contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 10),
-                              border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(10)),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(10),
-                                borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                      const SizedBox(height: 16),
+                      if (_isAgent) ...[
+                        _RadioTile(
+                          value: 'transfer',
+                          group: _action,
+                          enabled: _transfers.isNotEmpty,
+                          label: 'Transfer customers to another agent',
+                          onChanged: (v) => setState(() => _action = v),
+                        ),
+                        if (_action == 'transfer')
+                          Padding(
+                            padding: const EdgeInsets.only(
+                                left: 24, top: 8, bottom: 8),
+                            child: DropdownButtonFormField<int>(
+                              value: _transferToId,
+                              hint: Text('Select agent...',
+                                  style: TextStyle(
+                                      fontSize: 13,
+                                      color: AppColors.textMuted)),
+                              items: [
+                                for (final t in _transfers)
+                                  DropdownMenuItem(
+                                      value: t.id, child: Text(t.name)),
+                              ],
+                              onChanged: (v) =>
+                                  setState(() => _transferToId = v),
+                              decoration: InputDecoration(
+                                isDense: true,
+                                contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 10),
+                                border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10)),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: const BorderSide(
+                                      color: Color(0xFFE5E7EB)),
+                                ),
                               ),
                             ),
                           ),
+                        _RadioTile(
+                          value: 'deactivate',
+                          group: _action,
+                          label:
+                              'Keep historical references (Deactivate agent)',
+                          onChanged: (v) => setState(() => _action = v),
                         ),
-                      _RadioTile(
-                        value: 'deactivate',
-                        group: _action,
-                        label: 'Keep historical references (Deactivate agent)',
-                        onChanged: (v) => setState(() => _action = v),
-                      ),
-                    ] else
-                      Padding(
-                        padding: const EdgeInsets.all(10),
-                        child: Container(
-                          width: double.infinity,
+                      ] else
+                        Padding(
                           padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF9FAFB),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Text(
-                            'Keep historical references (Deactivate customer). All historical data will be preserved.',
-                            style: TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF9FAFB),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Text(
+                              'Keep historical references (Deactivate customer). All historical data will be preserved.',
+                              style: TextStyle(
+                                  fontSize: 12, color: Color(0xFF6B7280)),
+                            ),
                           ),
                         ),
-                      ),
-                    const Divider(),
+                      const Divider(),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+            if (!busy)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
                     const Text(
                       'Enter your 6-digit PIN to confirm',
                       textAlign: TextAlign.center,
@@ -1250,7 +1290,9 @@ class _DeleteWithTransferDialogState extends State<DeleteWithTransferDialog> {
                       autofocus: false,
                       textAlign: TextAlign.center,
                       style: const TextStyle(
-                          fontSize: 24, fontWeight: FontWeight.w800, letterSpacing: 12),
+                          fontSize: 24,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 12),
                       decoration: const InputDecoration(
                         labelText: 'PIN',
                         counterText: '',
@@ -1282,19 +1324,32 @@ class _DeleteWithTransferDialogState extends State<DeleteWithTransferDialog> {
                     ],
                   ],
                 ),
-      actions: [
-        TextButton(
-          onPressed: _loading ? null : () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+              ),
+            Padding(
+              padding: const EdgeInsets.all(8),
+              child: OverflowBar(
+                alignment: MainAxisAlignment.end,
+                spacing: 8,
+                children: [
+                  TextButton(
+                    onPressed:
+                        _loading ? null : () => Navigator.of(context).pop(),
+                    child: const Text('Cancel'),
+                  ),
+                  FilledButton(
+                    style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFFDC2626),
+                        foregroundColor: Colors.white),
+                    onPressed: busy ? null : _confirm,
+                    child: Text(
+                        _action == 'transfer' ? 'Transfer & Delete' : 'Deactivate'),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
-        FilledButton(
-          style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFFDC2626),
-              foregroundColor: Colors.white),
-          onPressed: _loading || _fetching ? null : _confirm,
-          child: Text(_action == 'transfer' ? 'Transfer & Delete' : 'Deactivate'),
-        ),
-      ],
+      ),
     );
   }
 }

@@ -485,6 +485,63 @@ void main() {
       expect(one.user.email, 'alpha@xlapparals.in');
     });
 
+    test('listInactive parses soft-deleted agents', () async {
+      mockGet('/api/agents/', query: const {'inactive': 'true'}, body: [
+        {
+          ...agentJson(),
+          'id': 7,
+          'user': {
+            'id': 70,
+            'username': 'deleted_agent',
+            'email': 'deleted@xlapparals.in',
+            'display_name': 'Deleted Agent',
+          },
+          'deactivated_at': '2026-10-01T10:00:00Z',
+        },
+      ]);
+
+      final agents = await repos.agent.listInactive();
+      expect(agents.single.id, 7);
+      expect(agents.single.displayName, 'Deleted Agent');
+      expect(agents.single.email, 'deleted@xlapparals.in');
+      expect(agents.single.deactivatedAt, startsWith('2026-10-01'));
+    });
+
+    test('restore posts typed details and invalidates agent caches', () async {
+      mockGet('/api/agents/', body: [agentJson()]);
+      await repos.agent.list();
+      expect(canReadCache('agents'), isTrue);
+
+      mockPost(
+        '/api/agents/2/restore/',
+        body: agentJson(),
+        data: const JsonBody({
+          'display_name': 'Restored Name',
+          'contact': '9999999999',
+        }),
+      );
+
+      final restored = await repos.agent.restore(
+        2,
+        displayName: 'Restored Name',
+        contact: '9999999999',
+      );
+      expect(restored.id, 2);
+      expect(canReadCache('agents'), isFalse);
+    });
+
+    test('restore surfaces backend errors', () async {
+      mockPost('/api/agents/2/restore/',
+          status: 400, body: {'error': 'Agent is already active'});
+
+      expect(
+        () => repos.agent.restore(2),
+        throwsA(isA<ApiException>()
+            .having((e) => e.statusCode, 'statusCode', 400)
+            .having((e) => e.message, 'message', 'Agent is already active')),
+      );
+    });
+
     test('item assignment + transfer/copy/delete flows', () async {
       mockPost('/api/agents/2/items/');
       mockPost('/api/agents/2/items/transfer/');

@@ -191,3 +191,10 @@ class AgentSerializer(serializers.ModelSerializer):
             instance.contact = validated_data["contact"]
         instance.save()
         return instance
+
+
+class InactiveAgentSerializer(AgentSerializer):
+    deactivated_at = serializers.DateTimeField(read_only=True)
+
+    class Meta(AgentSerializer.Meta):
+        fields = AgentSerializer.Meta.fields + ("deactivated_at",)

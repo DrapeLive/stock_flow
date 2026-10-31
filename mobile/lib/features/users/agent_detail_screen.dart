@@ -381,29 +381,10 @@ class _AgentDetailScreenState extends ConsumerState<AgentDetailScreen> {
       AppToast.error(context, 'No other agents available');
       return;
     }
-    final targetId = await showModalBottomSheet<int>(
-      context: context,
-      showDragHandle: true,
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Text(
-                mode == 'transfer' ? 'Transfer Items' : 'Copy Items',
-                style: const TextStyle(
-                    fontSize: 15, fontWeight: FontWeight.w800),
-              ),
-            ),
-            for (final t in targets)
-              ListTile(
-                title: Text(t.displayName),
-                onTap: () => Navigator.pop(ctx, t.id),
-              ),
-          ],
-        ),
-      ),
+    final targetId = await showAgentPickerSheet(
+      context,
+      title: mode == 'transfer' ? 'Transfer Items' : 'Copy Items',
+      agents: targets,
     );
     if (targetId == null) return;
     try {
@@ -551,6 +532,86 @@ class _AgentDetailScreenState extends ConsumerState<AgentDetailScreen> {
             borderRadius: BorderRadius.circular(10),
             borderSide: BorderSide(color: AppColors.primary)),
       );
+}
+
+Future<int?> showAgentPickerSheet(
+  BuildContext context, {
+  required String title,
+  required List<Agent> agents,
+}) {
+  return showModalBottomSheet<int>(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
+    showDragHandle: true,
+    builder: (ctx) => AgentPickerSheet(
+      title: title,
+      agents: agents,
+      onSelected: (id) => Navigator.pop(ctx, id),
+    ),
+  );
+}
+
+class AgentPickerSheet extends StatelessWidget {
+  const AgentPickerSheet({
+    super.key,
+    required this.title,
+    required this.agents,
+    required this.onSelected,
+  });
+
+  final String title;
+  final List<Agent> agents;
+  final ValueChanged<int> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final maxHeight = MediaQuery.sizeOf(context).height * 0.7;
+    return SafeArea(
+      top: false,
+      left: false,
+      right: false,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: maxHeight),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text(
+                title,
+                style: const TextStyle(
+                    fontSize: 15, fontWeight: FontWeight.w800),
+              ),
+            ),
+            if (agents.isEmpty)
+              const Padding(
+                padding: EdgeInsets.fromLTRB(16, 8, 16, 24),
+                child: Text(
+                  'No other agents available',
+                  style: TextStyle(fontSize: 13, color: Color(0xFF9CA3AF)),
+                ),
+              )
+            else
+              Flexible(
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  padding: const EdgeInsets.only(bottom: 8),
+                  itemCount: agents.length,
+                  itemBuilder: (context, index) {
+                    final agent = agents[index];
+                    return ListTile(
+                      title: Text(agent.displayName),
+                      onTap: () => onSelected(agent.id),
+                    );
+                  },
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------

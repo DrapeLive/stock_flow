@@ -79,12 +79,18 @@ void mockGet(
   );
 }
 
-void mockPost(String path, {dynamic body, Map<String, dynamic>? query}) {
+void mockPost(
+  String path, {
+  dynamic body,
+  Map<String, dynamic>? query,
+  int status = 200,
+  Object? data,
+}) {
   dioAdapter.onPost(
     path,
-    (server) => server.reply(200, body ?? const <String, dynamic>{}),
+    (server) => server.reply(status, body ?? const <String, dynamic>{}),
     queryParameters: query ?? const <String, dynamic>{},
-    data: Matchers.any,
+    data: data ?? Matchers.any,
   );
 }
 

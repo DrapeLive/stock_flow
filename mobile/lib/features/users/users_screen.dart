@@ -321,6 +321,191 @@ class _CustomersTabState extends ConsumerState<_CustomersTab> {
 }
 
 // ---------------------------------------------------------------------------
+// Deleted (soft-deleted) agents — restore instead of re-creating.
+// ---------------------------------------------------------------------------
+
+class _DeletedAgentsSheet extends StatefulWidget {
+  const _DeletedAgentsSheet();
+
+  @override
+  State<_DeletedAgentsSheet> createState() => _DeletedAgentsSheetState();
+}
+
+class _DeletedAgentsSheetState extends State<_DeletedAgentsSheet> {
+  List<InactiveAgent> _agents = const [];
+  bool _loading = true;
+  String? _error;
+  final Set<int> _restoring = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final agents = await repos.agent.listInactive();
+      if (!mounted) return;
+      setState(() {
+        _agents = agents;
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = e.toString().replaceFirst('Exception: ', '');
+      });
+    }
+  }
+
+  Future<void> _restore(InactiveAgent agent) async {
+    if (_restoring.contains(agent.id)) return;
+    final ok = await confirmDialog(
+      context,
+      title: 'Restore agent?',
+      message: 'Restore ${agent.displayName}? They will be able to sign in '
+          'again and their customers and assignments are kept.',
+      confirmLabel: 'Restore',
+    );
+    if (!ok || !mounted) return;
+
+    setState(() => _restoring.add(agent.id));
+    try {
+      await repos.agent.restore(agent.id);
+      if (!mounted) return;
+      setState(() {
+        _agents = _agents.where((a) => a.id != agent.id).toList();
+        _restoring.remove(agent.id);
+      });
+      AppToast.success(context, 'Agent restored successfully');
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _restoring.remove(agent.id));
+      AppToast.error(context, e.toString().replaceFirst('Exception: ', ''));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        child: SizedBox(
+          height: MediaQuery.of(context).size.height * 0.6,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  const Expanded(
+                    child: Text('Deleted agents',
+                        style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF111827))),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close, size: 20),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Expanded(child: _body()),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _body() {
+    if (_loading) return const PageLoading(label: 'Loading deleted agents');
+    if (_error != null) {
+      return EmptyState(
+        icon: Icons.error_outline,
+        title: 'Could not load deleted agents',
+        subtitle: _error,
+        action: StockFlowButton(
+          label: 'Retry',
+          expand: false,
+          onPressed: _load,
+        ),
+      );
+    }
+    if (_agents.isEmpty) {
+      return const EmptyState(
+        icon: Icons.person_off_outlined,
+        title: 'No deleted agents',
+        subtitle: 'Deleted agents appear here so you can restore their account.',
+      );
+    }
+    return ListView.separated(
+      itemCount: _agents.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 8),
+      itemBuilder: (context, i) {
+        final agent = _agents[i];
+        final restoring = _restoring.contains(agent.id);
+        final deletedOn = agent.deactivatedAt?.split('T').first;
+        return Container(
+          padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFF3F4F6)),
+          ),
+          child: Row(
+            children: [
+              StockflowAvatar(id: agent.id, name: agent.displayName, radius: 18),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(agent.displayName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF111827))),
+                    if (agent.email?.isNotEmpty == true)
+                      Text(agent.email!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              fontSize: 12, color: Color(0xFF9CA3AF))),
+                    if (deletedOn != null)
+                      Text('Deleted $deletedOn',
+                          style: const TextStyle(
+                              fontSize: 10, color: Color(0xFF9CA3AF))),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              OutlinedButton(
+                onPressed: restoring ? null : () => _restore(agent),
+                child: restoring
+                    ? const SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Text('Restore'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Agents tab — mirrors `AgentsList.tsx`
 // ---------------------------------------------------------------------------
 
@@ -367,6 +552,16 @@ class _AgentsTabState extends ConsumerState<_AgentsTab> {
         .toList();
   }
 
+  Future<void> _openDeleted() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => const _DeletedAgentsSheet(),
+    );
+    if (mounted) _fetch();
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_loading && _agents.isEmpty) return const PageLoading();
@@ -374,11 +569,20 @@ class _AgentsTabState extends ConsumerState<_AgentsTab> {
       return EmptyState(
         icon: Icons.people_outline,
         title: 'No Agents',
-        action: StockFlowButton(
-          label: 'Add Agent',
-          expand: false,
-          icon: const Icon(Icons.add, size: 16),
-          onPressed: () => context.push('/admin/users/agents/new'),
+        action: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            StockFlowButton(
+              label: 'Add Agent',
+              expand: false,
+              icon: const Icon(Icons.add, size: 16),
+              onPressed: () => context.push('/admin/users/agents/new'),
+            ),
+            TextButton(
+              onPressed: _openDeleted,
+              child: const Text('Deleted agents'),
+            ),
+          ],
         ),
       );
     }
@@ -404,6 +608,11 @@ class _AgentsTabState extends ConsumerState<_AgentsTab> {
                           fontWeight: FontWeight.w800,
                           color: Color(0xFF111827))),
                 ),
+                TextButton(
+                  onPressed: _openDeleted,
+                  child: const Text('Deleted agents'),
+                ),
+                const SizedBox(width: 4),
                 StockFlowButton(
                   label: 'Add Agent',
                   expand: false,
